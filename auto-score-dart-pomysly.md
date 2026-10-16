@@ -291,6 +291,18 @@ Głos wyzwalany ze **zdarzenia silnika gry**, nie z kliknięcia w UI. Dzięki te
 - Wyłączony autofocus, auto-ekspozycja i auto-balans bieli.
 - Rozdzielczość 1080p (lub 720p z MJPG, jeśli USB się dławi).
 
+## Sprzęt i pomiary (2026-10-16)
+
+- **Kamera:** Logitech HD Pro Webcam C920 (USB `046d:0892`), jedna, podpięta do Maca przez hub USB (link 480 Mb/s, pełne USB 2.0). Na stojaku, tarcza przyklejona na stałe.
+- **Decyzja:** zostajemy przy jednej kamerze na Macu. Druga dopiero w etapie 3.
+- **Klatki na Macu:** AVFoundation udostępnia dla C920 tylko formaty nieskompresowane (`uyvy422` itd.), bez MJPEG i H.264. Zmierzone: 1080p ≈ 5 kl./s, 720p ≈ 10 kl./s, w obu przypadkach ≈ 20 MB/s, czyli limit nieskompresowanego obrazu na USB 2.0. 30 kl./s z ulotki dotyczy trybów skompresowanych.
+- **Decyzja:** 1080p przy 5 kl./s. Analizujemy nieruchome klatki przed i po wbiciu, więc liczba klatek ma małe znaczenie, a rozdzielczość dużą (≈ 3 px/mm, pierścień double ≈ 24 px). Na mini PC (Linux, v4l2) da się włączyć MJPEG i 30 kl./s.
+- **Kamerę wskazujemy po nazwie** (`"HD Pro Webcam C920:none"`), a nie po indeksie, bo indeksy AVFoundation zmieniają się po restarcie.
+- **Uprawnienia:** zgodę na kamerę dostaje aplikacja, która uruchamia proces. Procesy uruchamiane przez agenta w Claude Code nie dostają klatek, nawet bez sandboxa; polecenia uruchamiane przez użytkownika (`!` lub Terminal) dostają. Agent pracuje więc na nagraniach, a żywą kamerę uruchamia człowiek.
+- **Źródło klatek w developmencie:** nagranie wideo (`spikes/camera/*.mp4`, poza gitem) za tym samym interfejsem `CameraSource` co żywa kamera. Komenda nagrania:
+  `ffmpeg -hide_banner -f avfoundation -framerate 30.000030 -video_size 1920x1080 -pixel_format uyvy422 -i "HD Pro Webcam C920:none" -t 180 -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p spikes/camera/session-NN.mp4`
+- **Rzut obok tarczy i odbicie:** kamera ich nie zobaczy przy żadnej liczbie klatek. Obsługa przez ręczny wpis (Miss) i przycisk Nowa runda.
+
 ## Ścieżka prototypu
 
 1. Podgląd i zapis klatek z kamery (OpenCV), ustawienia na sztywno.
@@ -532,7 +544,7 @@ Plan realizujemy jako serię PR-ów przez [claude-rollout](https://boldare.githu
 | pnpm | ✅ 12.10 |
 | `claude` na PATH | ⚠️ zainstalowany pod Node 22; pod Node 24 ustawić `claudeBin` w manifeście albo doinstalować |
 | Repozytorium lokalne (`main`) ze szkieletem monorepo | ✅ bez pierwszego commita |
-| Repozytorium na GitHubie | ❌ |
+| Repozytorium na GitHubie | ⏸️ na razie git tylko lokalnie (decyzja 2026-10-15); rollout ruszy dopiero po wypchnięciu repo |
 | CI (checki `test`, `typecheck`, `lint`) | ✅ workflow gotowy, zadziała po pushu |
 | Konto bota z rolą Write i tokenem, ruleset na gałęzi bazowej, squash merge | ❌ do założenia ręcznie (patrz strona Accounts) |
 | Skill zainstalowany w `~/.claude/skills/rollout` | ✅ |
@@ -543,23 +555,28 @@ Plan realizujemy jako serię PR-ów przez [claude-rollout](https://boldare.githu
 2. Zainstalować skill: `git clone https://github.com/boldare/claude-rollout ~/.claude/skills/rollout && cd ~/.claude/skills/rollout && npm ci`.
 3. PR 0, ręcznie (poza rolloutem): `git init`, szkielet monorepo pnpm, pusty pakiet z jednym testem, GitHub Actions z checkami `test`, `typecheck`, `lint`, repo na GitHubie.
 4. Założyć konto bota, ruleset na `main` i włączyć squash merge.
-5. Katalog rolloutu poza repo: `~/.rollouts/autoscore-etap1/` z `manifest.yaml`. `briefing.sources` wskazuje na `CLAUDE.md` i ten plik (ścieżki absolutne), żeby briefy pisał agent.
+5. ✅ Manifest w repo: `rollout/etap1/manifest.yaml` (wersjonowany, przechodzi walidację), a w katalogu rolloutu `~/.rollouts/autoscore-etap1/` jest do niego dowiązanie. Stan rolloutu (ledger, logi, inbox, briefy) zostaje poza repo. `briefing.sources` wskazuje na `CLAUDE.md` i ten plik, więc briefy pisze agent. Do uzupełnienia po założeniu repo: `repo.github`, `repo.public`, token bota.
 6. `rollout preflight`, potem `rollout preflight --live`.
 7. Dry run na jednym PR-ze (`--only P1 --dry-run`) we własnym terminalu, nie w sesji Claude Code.
 
-### Etap 1 jako PR-y (szkic manifestu)
+### Etap 1 jako PR-y (zgodnie z [`rollout/etap1/manifest.yaml`](rollout/etap1/manifest.yaml))
 
 | PR | Zakres | Zależy od |
 |---|---|---|
 | P1 | `schema`: kontrakt trafienia (Zod) z kodowaniem Bull/Outer Bull/miss, zdarzenia domenowe | — |
 | P2 | `engine`: X01 dla meczu 1v1 (bust, double-out, legi, kto zaczyna) z testami | P1 |
 | P3 | `engine`: zabawa (`placements`) i trening (Free run, Solo 501) z testami | P2 |
-| P4 | `server`: `POST /matches`, `POST .../throws`, undo, WebSocket, SQLite (zapis zdarzeniowy) | P2 |
+| P4 | `server`: `POST /matches`, `POST .../throws`, undo, WebSocket, SQLite (zapis zdarzeniowy) | P3 |
 | P5 | `web`: ekran gry z paskiem wyników i klawiaturą wpisu | P4 |
-| P6 | `server` + `web`: statystyki z tabeli rzutek, ekran podsumowania | P4, P5 |
-| P7 | `audio`: odczyt wyniku, `bust`, `winner` (Web Speech API) | P4 |
+| P6 | `server` + `web`: statystyki z tabeli rzutek, ekran podsumowania | P5 |
+| P7 | `audio`: odczyt wyniku, `bust`, `winner` (Web Speech API, odtwarzany we froncie) | P5 |
 
-Uwaga: `schema` idzie przed `engine` (odwrotnie niż w "Kolejności prac"), bo zgodnie z konwencją typy zdarzeń żyją tylko w `packages/schema`.
+Uwagi:
+
+- `schema` idzie przed `engine` (odwrotnie niż w "Kolejności prac"), bo zgodnie z konwencją typy zdarzeń żyją tylko w `packages/schema`.
+- `server` czeka na pełny silnik (P3), żeby API od razu obsługiwało wszystkie typy gier.
+- P6 i P7 mogą iść równolegle po P5.
+- Agenci nie mogą zmieniać `CLAUDE.md`, tego pliku ani `rollout/**` (`repo.forbid`), a plik spoza zakresu PR-a wraca do poprawki (`gates.preVerify.scope`).
 
 ---
 

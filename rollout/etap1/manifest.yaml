@@ -1,0 +1,129 @@
+# AutoScore Dart: Etap 1 (Mac bez kamery) jako seria PR-ów.
+# Źródło: CLAUDE.md i auto-score-dart-pomysly.md (sekcja "Realizacja przez claude-rollout").
+# Opis pól: ~/.claude/skills/rollout/docs/manifest.html
+# Ten plik jest w repo; ~/.rollouts/autoscore-etap1/manifest.yaml to dowiązanie do niego.
+# Stan rolloutu (ledger, logi, inbox, briefy) zostaje w ~/.rollouts/autoscore-etap1/.
+rollout: autoscore-etap1
+model: opus
+# claude jest binarką natywną zainstalowaną pod Node 22; działa niezależnie od wersji Node.
+claudeBin: ~/.nvm/versions/node/v22.18.0/bin/claude
+
+repo:
+  path: ~/Documents/00_Nauka/AutoScoreDart
+  # TODO: repo na GitHubie jeszcze nie istnieje (git na razie lokalnie). Nazwa robocza.
+  github: KrzysztofLesniewski/autoscore-dart
+  base: main
+  public: false # TODO: zmienić, jeśli repo będzie publiczne
+  # Node 24 z nvm przed domyślnym Node 22. pnpm jest z Homebrew.
+  pathPrepend: [~/.nvm/versions/node/v24.22.0/bin]
+  install: pnpm install --frozen-lockfile
+  requiredChecks: ['test', 'typecheck', 'lint'] # joby z .github/workflows/ci.yml
+  # TODO: token konta bota (rola Write), patrz docs/accounts.html
+  agentToken: ~/.config/rollout/agent-gh-token
+  maintainers: [KrzysztofLesniewski]
+  merge: { method: squash, admin: auto }
+  # Plan i decyzje trzyma człowiek; agenci ich nie zmieniają.
+  forbid:
+    - auto-score-dart-pomysly.md
+    - CLAUDE.md
+    - 'rollout/**'
+  alwaysInScope:
+    - pnpm-lock.yaml
+  denylist: [/Users/]
+  verify:
+    common:
+      - pnpm install --frozen-lockfile
+      - pnpm test
+      - pnpm typecheck
+      - pnpm lint
+
+briefing:
+  sources:
+    - title: CLAUDE.md (zasady, stack, reguły X01, konwencje; wiążące)
+      path: ~/Documents/00_Nauka/AutoScoreDart/CLAUDE.md
+      kind: markdown
+    - title: Plan i decyzje projektu (sekcja "Etap 1 jako PR-y" opisuje zakres P1-P7)
+      path: ~/Documents/00_Nauka/AutoScoreDart/auto-score-dart-pomysly.md
+      kind: markdown
+
+policy:
+  concurrency: 2
+  merge: human # driver scala po mojej akceptacji
+  approval: github # akceptacja = review na GitHubie PR-a otwartego przez bota
+  # Agent odpowiada na pytania z briefu tylko tym, co rozstrzyga plan; reszta trafia do mnie.
+  delegate: {}
+
+# Małe kroki: plik spoza zakresu PR-a wraca do implementera przed weryfikacją.
+gates:
+  preVerify:
+    scope: true
+
+prs:
+  - id: P1
+    branch: feat/schema-events
+    title: 'feat(schema): hit event contract and domain events'
+    brief: briefs/P1.md
+    priority: 70
+    effort: { implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**']
+
+  - id: P2
+    branch: feat/engine-x01-match
+    title: 'feat(engine): X01 rules for 1v1 match'
+    brief: briefs/P2.md
+    deps: [P1]
+    priority: 60
+    effort: { implement: xhigh, verify: xhigh }
+    changeset: none
+    scope: ['packages/engine/**', 'packages/schema/**']
+
+  - id: P3
+    branch: feat/engine-casual-practice
+    title: 'feat(engine): casual placements and practice modes'
+    brief: briefs/P3.md
+    deps: [P2]
+    priority: 50
+    effort: { implement: xhigh, verify: xhigh }
+    changeset: none
+    scope: ['packages/engine/**', 'packages/schema/**']
+
+  - id: P4
+    branch: feat/server-api
+    title: 'feat(server): match API, WebSocket and event-sourced SQLite storage'
+    brief: briefs/P4.md
+    deps: [P3]
+    priority: 40
+    effort: { implement: xhigh, verify: xhigh }
+    changeset: none
+    scope: ['packages/server/**', 'packages/schema/**', 'package.json']
+
+  - id: P5
+    branch: feat/web-game-screen
+    title: 'feat(web): game screen with scoreboard and manual input keypad'
+    brief: briefs/P5.md
+    deps: [P4]
+    priority: 30
+    effort: { implement: xhigh, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'package.json', 'eslint.config.js']
+
+  - id: P6
+    branch: feat/stats
+    title: 'feat: player statistics and match summary'
+    brief: briefs/P6.md
+    deps: [P5]
+    priority: 20
+    effort: { implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'packages/web/**', 'packages/schema/**']
+
+  - id: P7
+    branch: feat/audio-announcer
+    title: 'feat(audio): score, bust and winner announcements'
+    brief: briefs/P7.md
+    deps: [P5]
+    priority: 10
+    effort: { implement: high, verify: high }
+    changeset: none
+    scope: ['packages/audio/**', 'packages/web/**']

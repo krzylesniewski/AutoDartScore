@@ -8,3 +8,8 @@ coverage/
 !.env.example
 *.sqlite
 *.sqlite-journal
+
+# Nagrania z kamery (duże pliki, poza gitem)
+*.mp4
+*.mov
+*.mkv
