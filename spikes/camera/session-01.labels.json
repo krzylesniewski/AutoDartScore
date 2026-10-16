@@ -1,6 +1,6 @@
 {
   "video": "spikes/camera/session-01.mp4",
-  "note": "Prawdziwe trafienia podane przez gracza (2026-10-16). Wszystkie jako single (gracz nie podał D/T). Czasy i id zdarzeń z detect-events.mjs; klatka 'after' to pierwszy stabilny obraz po wbiciu.",
+  "note": "Prawdziwe trafienia podane przez gracza (2026-10-16). Wszystkie trafienia to single (potwierdzone przez gracza). Czasy i id zdarzeń z detect-events.mjs; klatka 'after' to pierwszy stabilny obraz po wbiciu.",
   "turns": [
     {
       "turn": 1,
