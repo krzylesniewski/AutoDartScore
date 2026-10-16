@@ -1,2 +1,2 @@
-// Kontrakt zdarzeń (Zod). Wypełniany w PR P1.
-export const PACKAGE_NAME = '@autoscore/schema';
+export * from './hit.js';
+export * from './domain-events.js';
