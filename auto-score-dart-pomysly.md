@@ -311,6 +311,8 @@ Skrypt `spikes/camera/detect-events.mjs` (Node + ffmpeg, bez OpenCV) na `session
 - **Wniosek 1: rzut to skok, nie ruch.** Przy 5 kl./s lotka pojawia się z klatki na klatkę. Trzeba porównywać z ostatnią stabilną klatką odniesienia, a nie tylko z poprzednią klatką.
 - **Wniosek 2: autofocus i ekspozycja przeszkadzają.** Autofocus daje zmiany na konturach całej tarczy, ekspozycja rozmyte pojaśnienia. Rozróżniamy je po rozproszeniu zmiany (ile kratek kadru się zmieniło), ale docelowo trzeba je wyłączyć w kamerze. Na macOS AVFoundation tego nie udostępnia: do sprawdzenia narzędzie UVC (np. `uvc-util`) albo aplikacja Logitecha.
 - **Wniosek 3: wyjmowanie lotek rozpoznajemy po długości ruchu** (ręka w kadrze dłużej niż ok. 1,5 s).
+- **Prawdziwe trafienia** (od gracza) są w `spikes/camera/session-01.labels.json`: tura 1: 5, 20, 1; tura 2: 5, miss (lotka na obudowie), 1; tura 3: 20, 20, 20. Każde wykryte wbicie odpowiada jednej lotce, w tej samej kolejności.
+- **Wniosek 4: odczyt segmentu „na oko” z tego ujęcia jest zawodny.** Kamera patrzy z boku, tarcza jest obrócona (na górze kadru 14 i 9, a 20 po prawej), a trzonek i lotka zasłaniają miejsce wbicia grotu. Potrzebna kalibracja (homografia do płaskiej tarczy z orientacją segmentów) i lokalizacja grotu, a nie środka lotki.
 - **Następny krok detekcji:** maska tarczy (analiza tylko obszaru tarczy), drugie nagranie z listą prawdziwych trafień, potem lokalizacja grotu.
 
 ## Ścieżka prototypu

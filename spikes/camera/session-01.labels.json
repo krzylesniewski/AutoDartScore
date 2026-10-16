@@ -1,0 +1,30 @@
+{
+  "video": "spikes/camera/session-01.mp4",
+  "note": "Prawdziwe trafienia podane przez gracza (2026-10-16). Wszystkie jako single (gracz nie podał D/T). Czasy i id zdarzeń z detect-events.mjs; klatka 'after' to pierwszy stabilny obraz po wbiciu.",
+  "turns": [
+    {
+      "turn": 1,
+      "darts": [
+        { "eventId": "02", "afterTime": 5.4, "segment": 5, "multiplier": 1 },
+        { "eventId": "03", "afterTime": 9.0, "segment": 20, "multiplier": 1 },
+        { "eventId": "04", "afterTime": 13.3, "segment": 1, "multiplier": 1 }
+      ]
+    },
+    {
+      "turn": 2,
+      "darts": [
+        { "eventId": "06", "afterTime": 29.3, "segment": 5, "multiplier": 1 },
+        { "eventId": "07", "afterTime": 32.9, "segment": 0, "multiplier": 0, "comment": "miss: lotka na obudowie (surround), widoczna w kadrze" },
+        { "eventId": "08", "afterTime": 36.0, "segment": 1, "multiplier": 1 }
+      ]
+    },
+    {
+      "turn": 3,
+      "darts": [
+        { "eventId": "12", "afterTime": 50.0, "segment": 20, "multiplier": 1 },
+        { "eventId": "13", "afterTime": 52.2, "segment": 20, "multiplier": 1 },
+        { "eventId": "15", "afterTime": 55.2, "segment": 20, "multiplier": 1 }
+      ]
+    }
+  ]
+}
