@@ -13,3 +13,6 @@ coverage/
 *.mp4
 *.mov
 *.mkv
+
+# Wyniki spike'ów (klatki, porównania)
+spikes/**/out/

@@ -303,6 +303,16 @@ Głos wyzwalany ze **zdarzenia silnika gry**, nie z kliknięcia w UI. Dzięki te
   `ffmpeg -hide_banner -f avfoundation -framerate 30.000030 -video_size 1920x1080 -pixel_format uyvy422 -i "HD Pro Webcam C920:none" -t 180 -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p spikes/camera/session-NN.mp4`
 - **Rzut obok tarczy i odbicie:** kamera ich nie zobaczy przy żadnej liczbie klatek. Obsługa przez ręczny wpis (Miss) i przycisk Nowa runda.
 
+## Spike: wykrywanie wbić na nagraniu (2026-10-16)
+
+Skrypt `spikes/camera/detect-events.mjs` (Node + ffmpeg, bez OpenCV) na `session-01.mp4` (76 s, 3 rundy po 3 lotki):
+
+- **Wynik:** 9/9 lotek wykrytych jako `candidate_dart` (także lotka na obudowie), 2/2 wyjmowania jako `hand_or_removal`, fałszywe zmiany oznaczone jako `global_change` (start kamery, autofocus) albo `noise` (drobny dryf światła). Progi dobrane na tym samym nagraniu, więc to wynik orientacyjny; potrzebne drugie nagranie do sprawdzenia.
+- **Wniosek 1: rzut to skok, nie ruch.** Przy 5 kl./s lotka pojawia się z klatki na klatkę. Trzeba porównywać z ostatnią stabilną klatką odniesienia, a nie tylko z poprzednią klatką.
+- **Wniosek 2: autofocus i ekspozycja przeszkadzają.** Autofocus daje zmiany na konturach całej tarczy, ekspozycja rozmyte pojaśnienia. Rozróżniamy je po rozproszeniu zmiany (ile kratek kadru się zmieniło), ale docelowo trzeba je wyłączyć w kamerze. Na macOS AVFoundation tego nie udostępnia: do sprawdzenia narzędzie UVC (np. `uvc-util`) albo aplikacja Logitecha.
+- **Wniosek 3: wyjmowanie lotek rozpoznajemy po długości ruchu** (ręka w kadrze dłużej niż ok. 1,5 s).
+- **Następny krok detekcji:** maska tarczy (analiza tylko obszaru tarczy), drugie nagranie z listą prawdziwych trafień, potem lokalizacja grotu.
+
 ## Ścieżka prototypu
 
 1. Podgląd i zapis klatek z kamery (OpenCV), ustawienia na sztywno.
