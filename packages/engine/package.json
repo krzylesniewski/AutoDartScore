@@ -1,0 +1,19 @@
+{
+  "name": "@autoscore/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@autoscore/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.4"
+  }
+}

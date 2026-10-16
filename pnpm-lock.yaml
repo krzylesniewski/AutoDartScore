@@ -182,6 +182,16 @@ importers:
         specifier: ^8.71.2
         version: 8.71.2(eslint@10.12.0)(typescript@6.0.3)
 
+  packages/engine:
+    dependencies:
+      '@autoscore/schema':
+        specifier: workspace:*
+        version: link:../schema
+    devDependencies:
+      vitest:
+        specifier: ^5.0.4
+        version: 5.0.4(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5))
+
   packages/schema:
     dependencies:
       zod:
