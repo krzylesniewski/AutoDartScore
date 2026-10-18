@@ -121,7 +121,7 @@ prs:
   # Historia meczów, head-to-head, wykres formy, profil gracza (plan: tabela "Etap 1 jako PR-y").
   - id: P8
     branch: feat/history-profiles
-    title: 'feat: match history, head-to-head, form chart and player profiles'
+    title: 'feat: match history, head-to-head, form chart, player profiles and ranking'
     brief: briefs/P8.md
     deps: [P6]
     priority: 5
