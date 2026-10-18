@@ -58,31 +58,12 @@ gates:
   preVerify:
     scope: true
 
+# P1 (schema) i P2 (silnik X01 1v1) zrobione ręcznie i scalone do main 2026-10-18.
 prs:
-  - id: P1
-    branch: feat/schema-events
-    title: 'feat(schema): hit event contract and domain events'
-    brief: briefs/P1.md
-    priority: 70
-    effort: { implement: high, verify: high }
-    changeset: none
-    scope: ['packages/schema/**']
-
-  - id: P2
-    branch: feat/engine-x01-match
-    title: 'feat(engine): X01 rules for 1v1 match'
-    brief: briefs/P2.md
-    deps: [P1]
-    priority: 60
-    effort: { implement: xhigh, verify: xhigh }
-    changeset: none
-    scope: ['packages/engine/**', 'packages/schema/**']
-
   - id: P3
     branch: feat/engine-casual-practice
     title: 'feat(engine): casual placements and practice modes'
     brief: briefs/P3.md
-    deps: [P2]
     priority: 50
     effort: { implement: xhigh, verify: xhigh }
     changeset: none

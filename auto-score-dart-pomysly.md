@@ -575,8 +575,8 @@ Plan realizujemy jako serię PR-ów przez [claude-rollout](https://boldare.githu
 
 | PR | Zakres | Zależy od |
 |---|---|---|
-| P1 | `schema`: kontrakt trafienia (Zod) z kodowaniem Bull/Outer Bull/miss, zdarzenia domenowe | — |
-| P2 | `engine`: X01 dla meczu 1v1 (bust, double-out, legi, kto zaczyna) z testami | P1 |
+| P1 ✅ | `schema`: kontrakt trafienia (Zod) z kodowaniem Bull/Outer Bull/miss, zdarzenia domenowe | — |
+| P2 ✅ | `engine`: X01 dla meczu 1v1 (bust, double-out, legi, kto zaczyna) z testami | P1 |
 | P3 | `engine`: zabawa (`placements`) i trening (Free run, Solo 501) z testami | P2 |
 | P4 | `server`: `POST /matches`, `POST .../throws`, undo, WebSocket, SQLite (zapis zdarzeniowy) | P3 |
 | P5 | `web`: ekran gry z paskiem wyników i klawiaturą wpisu | P4 |
@@ -585,6 +585,7 @@ Plan realizujemy jako serię PR-ów przez [claude-rollout](https://boldare.githu
 
 Uwagi:
 
+- P1 i P2 zrobione ręcznie w sesji i scalone do `main` (2026-10-18), więc nie ma ich już w manifeście; rollout zaczyna od P3.
 - `schema` idzie przed `engine` (odwrotnie niż w "Kolejności prac"), bo zgodnie z konwencją typy zdarzeń żyją tylko w `packages/schema`.
 - `server` czeka na pełny silnik (P3), żeby API od razu obsługiwało wszystkie typy gier.
 - P6 i P7 mogą iść równolegle po P5.
