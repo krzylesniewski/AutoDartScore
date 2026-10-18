@@ -49,7 +49,7 @@ export function HomeScreen() {
 
   const reloadGames = useCallback(async (): Promise<void> => {
     try {
-      setGames({ status: 'ready', games: await listMatches('unfinished') });
+      setGames({ status: 'ready', games: await listMatches({ status: 'unfinished' }) });
     } catch {
       setGames({ status: 'error' });
     }
@@ -57,7 +57,7 @@ export function HomeScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    listMatches('unfinished').then(
+    listMatches({ status: 'unfinished' }).then(
       (loaded) => {
         if (!cancelled) {
           setGames({ status: 'ready', games: loaded });

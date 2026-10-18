@@ -19,7 +19,7 @@ function json(status: number, body: unknown): Response {
 }
 
 const createdAt = '2026-10-15T18:30:00.000Z';
-const players = ['Anna', 'Bartek', 'Celina', 'Darek', 'Ela'].map((name, index) => ({ id: `p${index + 1}`, name, avatar: index === 1 ? '🎯' : null, guest: false, createdAt }));
+const players = ['Anna', 'Bartek', 'Celina', 'Darek', 'Ela'].map((name, index) => ({ id: `p${index + 1}`, name, avatar: index === 1 ? '🎯' : null, guest: false, archivedAt: null, createdAt }));
 
 function item(overrides: Partial<MatchListItem>): MatchListItem {
   return {
@@ -35,6 +35,9 @@ function item(overrides: Partial<MatchListItem>): MatchListItem {
     legIndex: 0,
     players: [player('p1', 'Anna', { remaining: 321, legsWon: 0 }), player('p2', 'Bartek', { remaining: 140, legsWon: 0 })],
     freeRun: null,
+    winnerId: null,
+    placements: [],
+    endedAt: null,
     updatedAt: '2026-10-18T10:05:00.000Z',
     ...overrides,
   };
@@ -77,7 +80,7 @@ beforeEach(() => {
       }
       if (url === '/api/players') {
         const body = call.body as { name: string; avatar?: string; guest: boolean };
-        return json(201, { id: 'p_new', name: body.name, avatar: body.avatar ?? null, guest: body.guest, createdAt });
+        return json(201, { id: 'p_new', name: body.name, avatar: body.avatar ?? null, guest: body.guest, archivedAt: null, createdAt });
       }
       if (url === '/api/matches?status=unfinished') {
         return json(200, games);

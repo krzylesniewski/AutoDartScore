@@ -16,13 +16,13 @@ beforeEach(() => {
     'fetch',
     vi.fn(async (url: string) => {
       urls.push(url);
-      if (url === '/api/players') {
+      if (url === '/api/players' || url === '/api/players?archived=include') {
         return json(200, [
-          { id: 'p1', name: 'Anna', avatar: null, guest: false, createdAt },
-          { id: 'p 2', name: 'Bartek', avatar: null, guest: false, createdAt },
+          { id: 'p1', name: 'Anna', avatar: null, guest: false, archivedAt: null, createdAt },
+          { id: 'p 2', name: 'Bartek', avatar: null, guest: false, archivedAt: null, createdAt },
         ]);
       }
-      if (url === '/api/matches?status=unfinished') {
+      if (url === '/api/matches?status=unfinished' || url === '/api/matches') {
         return json(200, []);
       }
       if (url.startsWith('/api/stats/rankings')) {
@@ -46,6 +46,16 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Start gry' })).toBeTruthy();
     expect(await screen.findByText('Brak gier do dokończenia.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Statystyki' }).getAttribute('href')).toBe('#/stats');
+    expect(screen.getByRole('link', { name: 'Historia' }).getAttribute('href')).toBe('#/history');
+  });
+
+  it('opens the match history on #/history', async () => {
+    window.location.hash = '#/history';
+    render(<App />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Historia' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Historia' }).getAttribute('aria-current')).toBe('page');
+    expect(await screen.findByText('Brak gier w historii.')).toBeTruthy();
+    expect(urls).toContain('/api/matches');
   });
 
   it('renders the start screen without a hash', async () => {

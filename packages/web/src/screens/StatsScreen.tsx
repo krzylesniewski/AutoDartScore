@@ -1,7 +1,11 @@
-import type { Player, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
-import { useEffect, useState } from 'react';
-import { ApiRequestError, getPlayerStats, getRankings, listPlayers } from '../api/client';
+import type { MatchListItem, Player, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
+import { useEffect, useState, type DependencyList } from 'react';
+import { ApiRequestError, getPlayerForm, getPlayerStats, getRankings, listMatches, listPlayers } from '../api/client';
 import { AppNav } from '../components/AppNav';
+import { FormChart } from '../components/FormChart';
+import { HeadToHeadPanel } from '../components/HeadToHeadPanel';
+import { MatchHistoryList } from '../components/MatchHistoryList';
+import { PlayerProfile } from '../components/PlayerProfile';
 import { RankingBoard } from '../components/RankingBoard';
 import { WarningIcon } from '../components/icons';
 import { formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../game/format-stat';
@@ -45,6 +49,32 @@ function statItems(stats: PlayerStats): readonly [string, string][] {
 }
 
 type Loaded<T> = { status: 'loading' } | { status: 'ready'; value: T } | { status: 'error'; message: string };
+
+// Pobiera od nowa przy zmianie deps, a nie load, bo load to nowa funkcja przy każdym renderze.
+// Odpowiedź starego zapytania jest pomijana. keepPrevious zostawia poprzednią wartość do czasu nowej odpowiedzi.
+function useLoaded<T>(load: () => Promise<T>, errorMessage: string, deps: DependencyList, keepPrevious = false): Loaded<T> {
+  const [loaded, setLoaded] = useState<Loaded<T>>({ status: 'loading' });
+  useEffect(() => {
+    let cancelled = false;
+    setLoaded((previous) => (keepPrevious && previous.status === 'ready' ? previous : { status: 'loading' }));
+    load().then(
+      (value) => {
+        if (!cancelled) {
+          setLoaded({ status: 'ready', value });
+        }
+      },
+      () => {
+        if (!cancelled) {
+          setLoaded({ status: 'error', message: errorMessage });
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, deps);
+  return loaded;
+}
 
 export function StatsScreen({ playerId }: { playerId: string | null }) {
   return (
@@ -114,28 +144,17 @@ function Ranking() {
 }
 
 function PlayerCard({ playerId }: { playerId: string }) {
-  const [players, setPlayers] = useState<Loaded<Player[]>>({ status: 'loading' });
+  // Zmiana profilu zwiększa version, co odświeża chipy graczy, profil i historię z nowym imieniem.
+  // Lista graczy zostaje na ekranie w trakcie odświeżania, więc profil i wybrany rywal nie znikają.
+  const [version, setVersion] = useState(0);
+  const players = useLoaded<Player[]>(() => listPlayers({ archived: 'include' }), pl.loadPlayersFailed, [version], true);
   const [filter, setFilter] = useState<StatsFilter>('all');
   const [stats, setStats] = useState<Loaded<PlayerStats>>({ status: 'loading' });
-
-  useEffect(() => {
-    let cancelled = false;
-    listPlayers().then(
-      (value) => {
-        if (!cancelled) {
-          setPlayers({ status: 'ready', value });
-        }
-      },
-      () => {
-        if (!cancelled) {
-          setPlayers({ status: 'error', message: pl.loadPlayersFailed });
-        }
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const form = useLoaded<PlayerForm>(() => getPlayerForm(playerId, filter), pl.formFailed, [playerId, filter]);
+  const history = useLoaded<MatchListItem[]>(() => listMatches({ playerId }), pl.loadMatchesFailed, [playerId, version]);
+  const known = players.status === 'ready' ? players.value : [];
+  const colorIndex = known.findIndex((player) => player.id === playerId);
+  const current = known[colorIndex];
 
   useEffect(() => {
     let cancelled = false;
@@ -167,6 +186,8 @@ function PlayerCard({ playerId }: { playerId: string }) {
         </a>
       </div>
 
+      {current && <PlayerProfile player={current} colorIndex={colorIndex} onChanged={() => setVersion((value) => value + 1)} />}
+
       <section className="flex flex-col gap-2">
         <h2 className={label}>{pl.players}</h2>
         {players.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
@@ -186,6 +207,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
               >
                 {player.avatar && <span aria-hidden="true">{player.avatar}</span>}
                 {player.name}
+                {player.archivedAt !== null && <span className="text-base text-(--color-text-muted) uppercase">{pl.archived}</span>}
               </button>
             ))}
           </div>
@@ -198,6 +220,29 @@ function PlayerCard({ playerId }: { playerId: string }) {
       </section>
 
       <StatsCard stats={stats} />
+
+      <section aria-labelledby="player-form" className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 id="player-form" className={label}>
+            {pl.form}
+          </h2>
+          <span className="text-[15px] text-(--color-text-muted)">{pl.formSubtitle}</span>
+        </div>
+        {form.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
+        {form.status === 'error' && <ErrorText text={form.message} />}
+        {form.status === 'ready' && <FormChart points={form.value.points} />}
+      </section>
+
+      {current && <HeadToHeadPanel key={playerId} player={current} opponents={known.filter((player) => player.id !== playerId)} />}
+
+      <section aria-labelledby="player-history" className="flex flex-col gap-2">
+        <h2 id="player-history" className={label}>
+          {pl.playerHistory}
+        </h2>
+        {history.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
+        {history.status === 'error' && <ErrorText text={history.message} />}
+        {history.status === 'ready' && <MatchHistoryList games={history.value} now={new Date()} />}
+      </section>
     </main>
   );
 }

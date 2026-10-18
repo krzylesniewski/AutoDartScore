@@ -1,4 +1,4 @@
-import type { MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, PlayerStatLine } from '@autoscore/schema';
+import type { MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
 
 export function player(id: string, name: string, overrides: Partial<MatchSnapshotPlayer> = {}): MatchSnapshotPlayer {
   return { id, name, avatar: null, guest: false, remaining: 501, legsWon: null, place: null, dartsThrownInLeg: 0, ...overrides };
@@ -73,4 +73,30 @@ export function summary(overrides: Partial<MatchSummary> = {}): MatchSummary {
     legs: [],
     ...overrides,
   };
+}
+
+export function listItem(overrides: Partial<MatchListItem> = {}): MatchListItem {
+  return {
+    id: 'm1',
+    type: 'match',
+    practiceMode: null,
+    startingScore: 501,
+    legsToWin: 2,
+    createdAt: '2026-10-18T10:00:00.000Z',
+    status: 'in_progress',
+    abandonment: null,
+    currentPlayerId: 'p1',
+    legIndex: 0,
+    players: [player('p1', 'Anna', { legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })],
+    freeRun: null,
+    winnerId: null,
+    placements: [],
+    endedAt: null,
+    updatedAt: '2026-10-18T10:05:00.000Z',
+    ...overrides,
+  };
+}
+
+export function profile(id: string, name: string, overrides: Partial<Player> = {}): Player {
+  return { id, name, avatar: null, guest: false, archivedAt: null, createdAt: '2026-10-15T18:30:00.000Z', ...overrides };
 }
