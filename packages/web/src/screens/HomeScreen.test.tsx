@@ -441,6 +441,74 @@ describe('HomeScreen: games to finish', () => {
     expect(await within(unfinished()).findByText('Nie udało się porzucić meczu')).toBeTruthy();
   });
 
+  describe('end practice', () => {
+    const freeRun = item({
+      id: 'm_free',
+      type: 'practice',
+      practiceMode: 'free_run',
+      startingScore: null,
+      legsToWin: null,
+      players: [player('p1', 'Anna', { remaining: null, dartsThrownInLeg: 5 })],
+      freeRun: { dartsThrown: 5, totalPoints: 120, average: 72 },
+    });
+    const emptySolo = item({
+      id: 'm_solo',
+      type: 'practice',
+      practiceMode: 'solo_501',
+      startingScore: 501,
+      legsToWin: null,
+      players: [player('p2', 'Bartek', { remaining: 501, dartsThrownInLeg: 0 })],
+    });
+
+    beforeEach(() => {
+      games = [freeRun, emptySolo, firstLeg];
+    });
+
+    it('offers Zakończ trening only on a practice row with darts', async () => {
+      render(<HomeScreen />);
+      expect(within(await row('Trening: Free run')).getByRole('button', { name: 'Zakończ trening: Trening: Free run' })).toBeTruthy();
+      expect(within(await row('Trening: Solo 501')).queryByRole('button', { name: /^Zakończ trening/ })).toBeNull();
+      expect(within(await row('Anna vs Bartek')).queryByRole('button', { name: /^Zakończ trening/ })).toBeNull();
+    });
+
+    it('ends the session after the dialog and reloads the list', async () => {
+      render(<HomeScreen />);
+      const practice = await row('Trening: Free run');
+      respond = (call) => (call.url.endsWith('/end') ? Promise.resolve(json(200, snapshot({ id: 'm_free', type: 'practice', status: 'ended', endedAt: '2026-10-18T11:00:00.000Z' }))) : null);
+      fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
+      const dialog = screen.getByRole('dialog', { name: 'Zakończyć trening?' });
+      games = [emptySolo, firstLeg];
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Zakończ trening' }));
+
+      await vi.waitFor(() => expect(within(unfinished()).queryByText('Trening: Free run')).toBeNull());
+      expect(calls.find((call) => call.url === '/api/matches/m_free/end')).toEqual({ url: '/api/matches/m_free/end', method: 'POST', body: undefined });
+      expect(calls.filter((call) => call.url === '/api/matches?status=unfinished')).toHaveLength(2);
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('posts nothing on Anuluj and on Escape', async () => {
+      render(<HomeScreen />);
+      const practice = await row('Trening: Free run');
+      fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Anuluj' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+
+      fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(calls.some((call) => call.method === 'POST')).toBe(false);
+    });
+
+    it('shows a failed end', async () => {
+      render(<HomeScreen />);
+      const practice = await row('Trening: Free run');
+      respond = (call) => (call.url.endsWith('/end') ? Promise.resolve(json(409, { error: 'practice_ended', message: 'Match is ended' })) : null);
+      fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Zakończ trening' }));
+      expect(await within(unfinished()).findByText('Nie udało się zakończyć treningu')).toBeTruthy();
+    });
+  });
+
   it('shows the empty list', async () => {
     games = [];
     render(<HomeScreen />);

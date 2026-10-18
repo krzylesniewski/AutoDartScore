@@ -3,6 +3,7 @@ import { useMatch } from '../api/use-match';
 import { useMatchSummary } from '../api/use-match-summary';
 import { useAnnouncer } from '../audio/use-announcer';
 import { AbandonDialog } from '../components/AbandonDialog';
+import { EndPracticeDialog } from '../components/EndPracticeDialog';
 import { EventBanner } from '../components/EventBanner';
 import { Keypad } from '../components/Keypad';
 import { MatchHeader } from '../components/MatchHeader';
@@ -11,6 +12,7 @@ import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
 import { WarningIcon } from '../components/icons';
+import { canEndPractice } from '../game/can-end-practice';
 import { pl } from '../i18n/pl';
 
 const NEW_GAME_HREF = '#/';
@@ -20,11 +22,13 @@ const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
-  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo, sendAbandon, sendResume } = useMatch(matchId, audio.onLiveMessage);
+  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo, sendAbandon, sendResume, sendEndPractice } = useMatch(matchId, audio.onLiveMessage);
   // Zabawa i trening potrzebują podsumowania dopiero po końcu gry. Free run nigdy się nie kończy.
   const stats = useMatchSummary(matchId, state?.eventSeq ?? null, state !== null && (state.type === 'match' || state.finished));
   const [abandoning, setAbandoning] = useState(false);
   const closeDialog = useCallback(() => setAbandoning(false), []);
+  const [ending, setEnding] = useState(false);
+  const closeEndDialog = useCallback(() => setEnding(false), []);
 
   if (notFound) {
     return (
@@ -41,11 +45,16 @@ export function GameScreen({ matchId }: { matchId: string }) {
   }
 
   const abandoned = state?.status === 'abandoned';
+  const ended = state?.status === 'ended';
   // Gra mogła się zmienić na innym urządzeniu. Wtedy okno znika i nie wraca samo po wznowieniu.
   if (abandoning && state && state.status !== 'in_progress') {
     setAbandoning(false);
   }
-  const keypadDisabled = !state || abandoned || connection !== 'open';
+  // To samo dla końca treningu: inne urządzenie mogło go zakończyć albo cofnąć wszystkie rzutki.
+  if (ending && state && !canEndPractice(state)) {
+    setEnding(false);
+  }
+  const keypadDisabled = !state || abandoned || ended || connection !== 'open';
 
   return (
     <div className="flex h-full flex-col">
@@ -57,6 +66,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
         onEffectsChange={audio.setEffectsEnabled}
         onAbandon={() => setAbandoning(true)}
         onResume={sendResume}
+        onEndPractice={() => setEnding(true)}
       />
       <main className="grid min-h-0 flex-1 grid-cols-1 content-start gap-(--space-page) overflow-auto p-(--space-page) landscape:grid-cols-[var(--scoreboard-width)_1fr]">
         <div className="flex flex-col gap-4">
@@ -73,7 +83,14 @@ export function GameScreen({ matchId }: { matchId: string }) {
               </a>
             </Notice>
           )}
-          {state && <TurnPanel state={state} lastTurn={lastTurn} busy={busy} undoDisabled={abandoned} onUndo={sendUndo} />}
+          {ended && (
+            <Notice text={pl.practiceEndedReadOnly}>
+              <a href={HOME_HREF} className="ml-auto underline">
+                {pl.home}
+              </a>
+            </Notice>
+          )}
+          {state && <TurnPanel state={state} lastTurn={lastTurn} busy={busy} undoDisabled={abandoned || ended} onUndo={sendUndo} />}
           {/* TurnPanel zostaje po końcu gry, żeby Cofnij poprawiło źle wpisaną zwycięską rzutkę. */}
           {state?.finished ? (
             <MatchSummaryPanel state={state} summary={stats.summary} error={stats.error} />
@@ -90,6 +107,15 @@ export function GameScreen({ matchId }: { matchId: string }) {
           onConfirm={(playerId, reason) => {
             setAbandoning(false);
             sendAbandon(playerId, reason);
+          }}
+        />
+      )}
+      {ending && (
+        <EndPracticeDialog
+          onCancel={closeEndDialog}
+          onConfirm={() => {
+            setEnding(false);
+            sendEndPractice();
           }}
         />
       )}

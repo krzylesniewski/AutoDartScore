@@ -29,6 +29,14 @@ export function PauseIcon({ className }: IconProps) {
   );
 }
 
+export function StopIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M6 6h12v12H6z" />
+    </Svg>
+  );
+}
+
 export function BustIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

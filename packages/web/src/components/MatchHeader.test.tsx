@@ -87,4 +87,42 @@ describe('MatchHeader', () => {
     expect(screen.queryByRole('button', { name: 'Wznów mecz' })).toBeNull();
     expect(screen.queryByText('Porzucony')).toBeNull();
   });
+
+  describe('practice', () => {
+    const freeRun = (darts: number) =>
+      snapshot({
+        type: 'practice',
+        practiceMode: 'free_run',
+        startingScore: null,
+        legsToWin: null,
+        players: [player('p1', 'Anna', { remaining: null, dartsThrownInLeg: darts })],
+      });
+
+    it('offers Zakończ trening after the first dart', () => {
+      const onEndPractice = vi.fn();
+      render(<MatchHeader state={freeRun(1)} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={onEndPractice} />);
+      screen.getByRole('button', { name: 'Zakończ trening' }).click();
+      expect(onEndPractice).toHaveBeenCalled();
+      expect(screen.queryByText('Zakończony')).toBeNull();
+    });
+
+    it('hides Zakończ trening with 0 darts and in a 1v1', () => {
+      const { unmount } = render(<MatchHeader state={freeRun(0)} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={vi.fn()} />);
+      expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
+      unmount();
+
+      const match = snapshot({ legIndex: 1, players: [player('p1', 'Anna', { legsWon: 1, dartsThrownInLeg: 3 }), player('p2', 'Bartek', { legsWon: 0, dartsThrownInLeg: 3 })] });
+      render(<MatchHeader state={match} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={vi.fn()} />);
+      expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
+    });
+
+    it('shows the Zakończony chip with an icon and no resume in an ended session', () => {
+      const state = { ...freeRun(4), status: 'ended' as const, endedAt: '2026-10-15T19:00:00.000Z' };
+      render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={vi.fn()} onResume={vi.fn()} />);
+      const chip = screen.getByText('Zakończony');
+      expect(chip.querySelector('svg')).not.toBeNull();
+      expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Wznów mecz' })).toBeNull();
+    });
+  });
 });

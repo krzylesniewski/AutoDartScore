@@ -79,15 +79,18 @@ function progress(game: GameState, finished: boolean): Progress {
   }
 }
 
-function status(finished: boolean, abandonment: Abandonment | null): MatchStatus {
+function status(finished: boolean, abandonment: Abandonment | null, endedAt: string | null): MatchStatus {
   if (finished) {
     return 'finished';
+  }
+  if (endedAt) {
+    return 'ended';
   }
   return abandonment ? 'abandoned' : 'in_progress';
 }
 
-// Porzucona gra zachowuje rzucającego i rzutki tury, żeby podgląd pokazywał stan z chwili przerwania.
-export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number, abandonment: Abandonment | null): MatchSnapshot {
+// Porzucona gra i zakończony trening zachowują rzucającego i rzutki tury, żeby podgląd pokazywał stan z chwili przerwania.
+export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number, abandonment: Abandonment | null, endedAt: string | null): MatchSnapshot {
   const finished = isGameFinished(game);
   const { perPlayer, startingScore, ...rest } = progress(game, finished);
   return {
@@ -99,8 +102,9 @@ export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number
     countsToStats: match.countsToStats,
     createdAt: match.createdAt,
     finished,
-    status: status(finished, abandonment),
+    status: status(finished, abandonment, endedAt),
     abandonment,
+    endedAt,
     eventSeq,
     ...rest,
     players: match.players.map((player, index) => ({

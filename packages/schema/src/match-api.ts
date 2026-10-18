@@ -80,6 +80,7 @@ export const MatchSnapshot = z.object({
   finished: z.boolean(),
   status: MatchStatus,
   abandonment: Abandonment.nullable(), // tylko gdy gra jest porzucona. Historię trzyma log
+  endedAt: z.iso.datetime().nullable(), // tylko w zakończonym treningu
   eventSeq: z.int().min(0), // seq ostatniego wpisu w logu, 0 dla pustego logu
   currentPlayerId: PlayerId.nullable(),
   legIndex: z.int().min(0),

@@ -2,7 +2,7 @@ import { LiveMessage } from '@autoscore/schema';
 import type { Hit, HitEvent, MatchSnapshot } from '@autoscore/schema';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
-import { API_BASE, ApiRequestError, abandonMatch, postThrow, resumeMatch, undo } from './client';
+import { API_BASE, ApiRequestError, abandonMatch, endPractice, postThrow, resumeMatch, undo } from './client';
 import { newEventId } from './event-id';
 
 export const MATCH_NOT_FOUND_CLOSE_CODE = 4404;
@@ -38,6 +38,7 @@ export interface UseMatch {
   sendUndo(): void;
   sendAbandon(playerId: string, reason: string | null): void;
   sendResume(): void;
+  sendEndPractice(): void;
 }
 
 function liveUrl(matchId: string): string {
@@ -240,5 +241,17 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     });
   }, [matchId, enqueue, acceptState]);
 
-  return { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo, sendAbandon, sendResume };
+  const sendEndPractice = useCallback(() => {
+    enqueue(async () => {
+      try {
+        const state = await endPractice(matchId);
+        setError(null);
+        acceptState(state);
+      } catch {
+        setError(pl.endPracticeFailed);
+      }
+    });
+  }, [matchId, enqueue, acceptState]);
+
+  return { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo, sendAbandon, sendResume, sendEndPractice };
 }

@@ -14,8 +14,8 @@ Front potrzebuje działającego serwera. Vite przekazuje `/api` (także WebSocke
 
 Routing przez hash w `src/App.tsx`:
 
-- `#/`: ekran startowy. Po lewej formularz nowej gry: najpierw „Mecz 1v1”, „Zabawa” albo „Trening”, potem gracze (od ostatnio aktywnego) z przyciskiem „+ Nowy gracz” (imię i avatar emoji) i opcje zależne od typu: punkty startowe, liczba legów albo tryb treningu (Free run, Solo 501). Po prawej podsumowanie wybranych ustawień i lista gier do dokończenia (w trakcie i porzuconych, od najnowszej) z przyciskiem „Dokończ” oraz „Porzuć” po co najmniej jednym ukończonym legu.
-- `#/matches/:id`: ekran gry. Pasek wyników, trzy sloty rzutek, suma tury, podpowiedź zamknięcia, klawiatura (1-20, 25, Miss, S/D/T), „Cofnij”, „Porzuć mecz” (z potwierdzeniem, po co najmniej jednym ukończonym legu) i przełączniki głosu i efektów. Porzucona gra jest tylko do odczytu, z przyciskiem „Wznów mecz”. „Nowa runda” i „Do weryfikacji” są nieaktywne, z etykietą „Wkrótce”.
+- `#/`: ekran startowy. Po lewej formularz nowej gry: najpierw „Mecz 1v1”, „Zabawa” albo „Trening”, potem gracze (od ostatnio aktywnego) z przyciskiem „+ Nowy gracz” (imię i avatar emoji) i opcje zależne od typu: punkty startowe, liczba legów albo tryb treningu (Free run, Solo 501). Po prawej podsumowanie wybranych ustawień i lista gier do dokończenia (w trakcie i porzuconych, od najnowszej) z przyciskiem „Dokończ”, „Porzuć” po co najmniej jednym ukończonym legu oraz „Zakończ trening” (z potwierdzeniem) w treningu po pierwszej rzutce. Zakończony trening znika z listy.
+- `#/matches/:id`: ekran gry. Pasek wyników, trzy sloty rzutek, suma tury, podpowiedź zamknięcia, klawiatura (1-20, 25, Miss, S/D/T), „Cofnij”, „Porzuć mecz” (z potwierdzeniem, po co najmniej jednym ukończonym legu), „Zakończ trening” (z potwierdzeniem, w treningu po pierwszej rzutce) i przełączniki głosu i efektów. Porzucona gra jest tylko do odczytu, z przyciskiem „Wznów mecz”. Zakończony trening jest tylko do odczytu, bez wznowienia. „Nowa runda” i „Do weryfikacji” są nieaktywne, z etykietą „Wkrótce”.
 - `#/stats`: ranking graczy po średniej z ukończonych legów i cztery kafelki z pierwszą trójką (rekordowy leg, najwyższe zamknięcie, najkrótszy leg, liczba 180), z filtrem typu gier.
 - `#/stats/:playerId`: karta statystyk jednego gracza z filtrem typu gier.
 - Każdy inny adres przekierowuje na `#/`.
@@ -24,8 +24,8 @@ Routing przez hash w `src/App.tsx`:
 
 - `src/api/`: klient REST, generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook podsumowania meczu.
 - `src/audio/`: głos przez Web Speech API, efekty przez Web Audio API, hook `useAnnouncer`.
-- `src/components/`: górna nawigacja, avatar, formularz nowej gry z podsumowaniem, okno nowego gracza, lista gier do dokończenia, ranking, pasek wyników, panel tury, klawiatura, nagłówek gry, okno porzucenia meczu, panele statystyk i podsumowania meczu, przełączniki, ikony.
-- `src/game/`: podpowiedź zamknięcia, etykiety trafień, kolejność paska wyników, formatowanie statystyk, stan formularza nowej gry, teksty i data aktywności na liście gier do dokończenia, reguła porzucenia.
+- `src/components/`: górna nawigacja, avatar, formularz nowej gry z podsumowaniem, okno nowego gracza, lista gier do dokończenia, ranking, pasek wyników, panel tury, klawiatura, nagłówek gry, okna porzucenia meczu i zakończenia treningu, panele statystyk i podsumowania meczu, przełączniki, ikony.
+- `src/game/`: podpowiedź zamknięcia, etykiety trafień, kolejność paska wyników, formatowanie statystyk, stan formularza nowej gry, teksty i data aktywności na liście gier do dokończenia, reguły porzucenia i zakończenia treningu.
 - `src/screens/`: `HomeScreen`, `GameScreen` i `StatsScreen`.
 - `src/i18n/`: teksty po polsku.
 
