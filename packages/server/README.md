@@ -19,9 +19,9 @@ Oba skrypty uruchamiają `src/main.ts` przez `jiti`, bez kroku budowania. Przy s
 - `src/app.ts`: `buildApp`, czyli aplikacja Fastify z trasami i obsługą błędów.
 - `src/config.ts`: `loadConfig`, czyli odczyt zmiennych środowiskowych.
 - `src/errors.ts`: mapowanie błędów na `ApiError` i kody HTTP.
-- `src/routes/`: `players.ts`, `matches.ts` (gry, rzutki, cofnięcie), `live.ts` (WebSocket).
-- `src/match-service.ts`: komendy gry (utworzenie, rzutka, cofnięcie, subskrypcja).
-- `src/replay.ts`: wybór rzutek, które się liczą, i odtworzenie stanu w silniku.
+- `src/routes/`: `players.ts`, `matches.ts` (gry, lista gier, rzutki, cofnięcie, porzucenie i wznowienie), `live.ts` (WebSocket).
+- `src/match-service.ts`: komendy gry (utworzenie, rzutka, cofnięcie, porzucenie, wznowienie, lista, subskrypcja).
+- `src/replay.ts`: wybór rzutek, które się liczą, stan porzucenia i odtworzenie stanu w silniku.
 - `src/snapshot.ts`: budowa `MatchSnapshot` ze stanu silnika.
 - `src/live-hub.ts`: rozsyłanie wiadomości do subskrybentów jednej gry.
 - `src/serial-queue.ts`: kolejka komend per gra.
