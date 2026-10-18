@@ -22,7 +22,7 @@ export type NewMatch = Omit<StoredMatch, 'id' | 'createdAt' | 'players'> & { rea
 export type LogEntry =
   | { readonly seq: number; readonly type: 'throw' | 'undo'; readonly throwId: string; readonly createdAt: string }
   | { readonly seq: number; readonly type: 'match_abandoned'; readonly playerId: string; readonly reason: string | null; readonly createdAt: string }
-  | { readonly seq: number; readonly type: 'match_resumed'; readonly createdAt: string };
+  | { readonly seq: number; readonly type: 'match_resumed' | 'practice_ended'; readonly createdAt: string };
 
 export interface MatchLog {
   readonly entries: readonly LogEntry[];
@@ -47,6 +47,7 @@ export interface Store {
   appendUndo(matchId: string, throwId: string): Promise<number>;
   appendAbandon(matchId: string, playerId: string, reason: string | null): Promise<number>;
   appendResume(matchId: string): Promise<number>;
+  appendPracticeEnd(matchId: string): Promise<number>;
 }
 
 function now(): string {
@@ -109,6 +110,7 @@ function toLogEntry(row: Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'th
       }
       return { seq, type, playerId: row.player_id, reason: row.reason, createdAt };
     case 'match_resumed':
+    case 'practice_ended':
       return { seq, type, createdAt };
   }
 }
@@ -301,6 +303,10 @@ export function createStore(db: Kysely<Database>): Store {
 
     appendResume(matchId) {
       return appendLifecycle(matchId, { type: 'match_resumed' });
+    },
+
+    appendPracticeEnd(matchId) {
+      return appendLifecycle(matchId, { type: 'practice_ended' });
     },
   };
 }

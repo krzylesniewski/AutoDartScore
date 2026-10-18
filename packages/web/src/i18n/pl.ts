@@ -196,4 +196,11 @@ export const pl = {
   abandonedReadOnly: 'Mecz porzucony. Tylko do odczytu.',
   abandonFailed: 'Nie udało się porzucić meczu',
   resumeFailed: 'Nie udało się wznowić meczu',
+  endPractice: 'Zakończ trening',
+  endPracticeGame: (title: string) => `Zakończ trening: ${title}`,
+  endPracticeTitle: 'Zakończyć trening?',
+  endPracticeText: 'Trening zostanie zapisany jako zakończony i zniknie z listy gier do dokończenia. Nie da się go wznowić.',
+  statusEnded: 'Zakończony',
+  practiceEndedReadOnly: 'Trening zakończony. Tylko do odczytu.',
+  endPracticeFailed: 'Nie udało się zakończyć treningu',
 } as const;

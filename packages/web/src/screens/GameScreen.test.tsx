@@ -433,6 +433,83 @@ describe('abandon and resume', () => {
   });
 });
 
+describe('end practice', () => {
+  const freeRun = snapshot({
+    id: MATCH_ID,
+    type: 'practice',
+    practiceMode: 'free_run',
+    startingScore: null,
+    legsToWin: null,
+    countsToStats: false,
+    eventSeq: 2,
+    currentPlayerId: 'p1',
+    currentDarts: [
+      { segment: 20, multiplier: 3 },
+      { segment: 5, multiplier: 1 },
+    ],
+    players: [player('p1', 'Anna', { remaining: null, dartsThrownInLeg: 2 })],
+    freeRun: { dartsThrown: 2, totalPoints: 65, average: 97.5 },
+  });
+  const endedState: MatchSnapshot = { ...freeRun, eventSeq: 3, status: 'ended', endedAt: '2026-10-15T19:00:00.000Z' };
+
+  function dialog(): HTMLElement {
+    return screen.getByRole('dialog', { name: 'Zakończyć trening?' });
+  }
+
+  it('hides Zakończ trening before the first dart', () => {
+    connect({ ...freeRun, eventSeq: 0, currentDarts: [], players: [player('p1', 'Anna', { remaining: null })], freeRun: { dartsThrown: 0, totalPoints: 0, average: 0 } });
+    expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
+  });
+
+  it('confirms, posts the end and shows the session read-only', async () => {
+    respond = async () => json(200, endedState);
+    connect(freeRun);
+    tap('Zakończ trening');
+    expect(within(dialog()).getByText('Trening zostanie zapisany jako zakończony i zniknie z listy gier do dokończenia. Nie da się go wznowić.')).toBeTruthy();
+
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Zakończ trening' }));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/end`, body: undefined });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(await screen.findByText('Trening zakończony. Tylko do odczytu.')).toBeTruthy();
+    expect(screen.getByText('Zakończony')).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: 'Ekran startowy' }).map((link) => link.getAttribute('href'))).toEqual(['#/', '#/']);
+    expect((screen.getByRole('button', { name: '20' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Miss' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
+    expect(screen.getByText('Anna')).toBeTruthy();
+  });
+
+  it('closes on Anuluj and on Escape without a request', () => {
+    connect(freeRun);
+    tap('Zakończ trening');
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Anuluj' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    tap('Zakończ trening');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
+  it('closes the dialog when another device ends the session', () => {
+    const ws = connect(freeRun);
+    tap('Zakończ trening');
+    ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: endedState.eventSeq, state: endedState });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
+  it('shows a failed end', async () => {
+    respond = async () => json(409, { error: 'nothing_to_end', message: 'Match has no throw yet' });
+    connect(freeRun);
+    tap('Zakończ trening');
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Zakończ trening' }));
+    expect(await screen.findByText('Nie udało się zakończyć treningu')).toBeTruthy();
+  });
+});
+
 describe('voice', () => {
   class FakeUtterance {
     readonly text: string;

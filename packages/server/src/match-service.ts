@@ -12,7 +12,7 @@ import {
 } from '@autoscore/schema';
 import { HttpError, invalidRequest, notFound } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
-import { abandonment, effectiveThrows, gameConfig, lastActivityAt, lastSeq, replayMatch } from './replay.js';
+import { abandonment, effectiveThrows, gameConfig, lastActivityAt, lastSeq, practiceEndedAt, replayMatch } from './replay.js';
 import type { SerialQueue } from './serial-queue.js';
 import { toSnapshot } from './snapshot.js';
 import type { NewMatch, Store, StoredMatch } from './store/store.js';
@@ -24,6 +24,7 @@ export interface MatchService {
   undo(id: string): Promise<UndoResult>;
   abandon(id: string, request: AbandonMatchRequest): Promise<MatchSnapshot>;
   resume(id: string): Promise<MatchSnapshot>;
+  endPractice(id: string): Promise<MatchSnapshot>;
   list(query: MatchListQuery): Promise<MatchListItem[]>;
   // null, gdy gry nie ma. Inaczej funkcja do wypisania gniazda.
   subscribe(id: string, socket: LiveSocket): Promise<(() => void) | null>;
@@ -54,17 +55,26 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
       seq: lastSeq(log),
       game: replayMatch(match, throws).state,
       abandonment: abandonment(log),
+      endedAt: practiceEndedAt(log),
       updatedAt: lastActivityAt(log, match),
     };
   }
 
   async function snapshot(match: StoredMatch): Promise<MatchSnapshot> {
-    const { game, seq, abandonment } = await load(match);
-    return toSnapshot(match, game, seq, abandonment);
+    const { game, seq, abandonment, endedAt } = await load(match);
+    return toSnapshot(match, game, seq, abandonment, endedAt);
   }
 
   function abandoned(id: string): HttpError {
     return new HttpError(409, 'match_abandoned', `Match ${id} is abandoned`);
+  }
+
+  function finished(id: string): HttpError {
+    return new HttpError(409, 'match_finished', `Match ${id} is finished`);
+  }
+
+  function ended(id: string): HttpError {
+    return new HttpError(409, 'practice_ended', `Match ${id} is ended`);
   }
 
   function publishState(id: string, state: MatchSnapshot): void {
@@ -154,7 +164,10 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
           return repeated;
         }
 
-        const { game, abandonment } = await load(match);
+        const { game, abandonment, endedAt } = await load(match);
+        if (endedAt) {
+          throw ended(id);
+        }
         if (abandonment) {
           throw abandoned(id);
         }
@@ -172,7 +185,7 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
         }
 
         const { throw: record, seq } = appended;
-        const state = toSnapshot(match, applied.state, seq, null);
+        const state = toSnapshot(match, applied.state, seq, null, null);
         const meta = { matchId: id, eventSeq: seq };
         hub.publish(id, [
           { type: 'throw_registered', ...meta, throw: record },
@@ -186,7 +199,10 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
     undo(id) {
       return queue(id, async () => {
         const match = await requireMatch(id);
-        const { throws, abandonment } = await load(match);
+        const { throws, abandonment, endedAt } = await load(match);
+        if (endedAt) {
+          throw ended(id);
+        }
         if (abandonment) {
           throw abandoned(id);
         }
@@ -195,7 +211,7 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
           throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no throw to undo`);
         }
         const seq = await store.appendUndo(id, last.id);
-        const state = toSnapshot(match, replayMatch(match, throws).state, seq, null);
+        const state = toSnapshot(match, replayMatch(match, throws).state, seq, null, null);
         const meta = { matchId: id, eventSeq: seq };
         hub.publish(id, [
           { type: 'throw_undone', ...meta, throwId: last.id },
@@ -211,9 +227,12 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
         if (!match.players.some((player) => player.id === request.playerId)) {
           throw new HttpError(400, 'not_a_participant', `Player ${request.playerId} does not play in match ${id}`);
         }
-        const { game, abandonment } = await load(match);
+        const { game, abandonment, endedAt } = await load(match);
         if (isGameFinished(game)) {
-          throw new HttpError(409, 'match_finished', `Match ${id} is finished`);
+          throw finished(id);
+        }
+        if (endedAt) {
+          throw ended(id);
         }
         if (abandonment) {
           throw abandoned(id);
@@ -239,12 +258,38 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
       });
     },
 
+    endPractice(id) {
+      return queue(id, async () => {
+        const match = await requireMatch(id);
+        if (match.type !== 'practice') {
+          throw new HttpError(409, 'not_practice', `Match ${id} is not a practice session`);
+        }
+        const { game, throws, abandonment, endedAt } = await load(match);
+        if (endedAt) {
+          throw ended(id);
+        }
+        if (isGameFinished(game)) {
+          throw finished(id);
+        }
+        if (abandonment) {
+          throw abandoned(id);
+        }
+        if (throws.length === 0) {
+          throw new HttpError(409, 'nothing_to_end', `Match ${id} has no throw yet`);
+        }
+        await store.appendPracticeEnd(id);
+        const state = await snapshot(match);
+        publishState(id, state);
+        return state;
+      });
+    },
+
     async list(query) {
       const items: MatchListItem[] = [];
       for (const match of await store.listMatches()) {
-        const { game, seq, abandonment, updatedAt } = await load(match);
-        const state = toSnapshot(match, game, seq, abandonment);
-        if (query.status === 'unfinished' && state.status === 'finished') {
+        const { game, seq, abandonment, endedAt, updatedAt } = await load(match);
+        const state = toSnapshot(match, game, seq, abandonment, endedAt);
+        if (query.status === 'unfinished' && (state.status === 'finished' || state.status === 'ended')) {
           continue;
         }
         const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, currentPlayerId, legIndex, players, freeRun } = state;

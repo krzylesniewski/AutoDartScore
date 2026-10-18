@@ -99,6 +99,10 @@ export function resume(app: FastifyInstance, matchId: string) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/resume` });
 }
 
+export function endPractice(app: FastifyInstance, matchId: string) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/end` });
+}
+
 export function listMatches(app: FastifyInstance, query = '') {
   return app.inject({ method: 'GET', url: `/matches${query}` });
 }

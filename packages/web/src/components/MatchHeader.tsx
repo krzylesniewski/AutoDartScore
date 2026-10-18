@@ -1,8 +1,9 @@
 import type { MatchSnapshot } from '@autoscore/schema';
 import { canAbandon } from '../game/can-abandon';
+import { canEndPractice } from '../game/can-end-practice';
 import { pl } from '../i18n/pl';
 import { EffectsToggle } from './EffectsToggle';
-import { PauseIcon, TargetIcon } from './icons';
+import { PauseIcon, StopIcon, TargetIcon } from './icons';
 import { VoiceToggle } from './VoiceToggle';
 
 export interface MatchHeaderProps {
@@ -13,12 +14,13 @@ export interface MatchHeaderProps {
   onEffectsChange(next: boolean): void;
   onAbandon?: () => void;
   onResume?: () => void;
+  onEndPractice?: () => void;
 }
 
 const chip = 'rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 text-(length:--text-button)';
 const button = 'flex min-h-12 items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-(length:--text-button) font-semibold';
 
-export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange, onAbandon, onResume }: MatchHeaderProps) {
+export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange, onAbandon, onResume, onEndPractice }: MatchHeaderProps) {
   return (
     <header className="flex items-center gap-4 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-(--space-page) py-2">
       <a href="#/" aria-label={pl.home} className="flex items-center gap-2 font-display text-(length:--text-heading) font-bold text-(--color-text)">
@@ -42,6 +44,17 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
           <button type="button" onClick={onAbandon} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
             {pl.abandonMatch}
           </button>
+        )}
+        {state && canEndPractice(state) && (
+          <button type="button" onClick={onEndPractice} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
+            {pl.endPractice}
+          </button>
+        )}
+        {state?.status === 'ended' && (
+          <span className={`${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold`}>
+            <StopIcon className="text-(--color-accent)" />
+            {pl.statusEnded}
+          </span>
         )}
         {state?.status === 'abandoned' && (
           <>

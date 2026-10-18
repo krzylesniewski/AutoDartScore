@@ -84,3 +84,7 @@ export function abandonMatch(id: string, body: AbandonMatchRequest): Promise<Mat
 export function resumeMatch(id: string): Promise<MatchSnapshot> {
   return request(`/matches/${encodeURIComponent(id)}/resume`, MatchSnapshot, { method: 'POST' });
 }
+
+export function endPractice(id: string): Promise<MatchSnapshot> {
+  return request(`/matches/${encodeURIComponent(id)}/end`, MatchSnapshot, { method: 'POST' });
+}

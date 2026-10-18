@@ -1,6 +1,7 @@
 import type { MatchListItem } from '@autoscore/schema';
 import { formatActivity } from '../game/activity-date';
 import { canAbandon } from '../game/can-abandon';
+import { canEndPractice } from '../game/can-end-practice';
 import { unfinishedRow } from '../game/unfinished-row';
 import { pl } from '../i18n/pl';
 import { PauseIcon, WarningIcon } from './icons';
@@ -14,13 +15,14 @@ export interface UnfinishedGamesProps {
   notice: string | null;
   onFinish(game: MatchListItem): void;
   onAbandon(game: MatchListItem): void;
+  onEndPractice(game: MatchListItem): void;
 }
 
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 const button =
   'flex h-11 shrink-0 items-center rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-4 font-display text-[19px] font-semibold disabled:opacity-40';
 
-export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon }: UnfinishedGamesProps) {
+export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon, onEndPractice }: UnfinishedGamesProps) {
   return (
     <section
       aria-labelledby="games-to-finish"
@@ -66,6 +68,11 @@ export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon 
                 {canAbandon(game) && (
                   <button type="button" aria-label={pl.abandonGame(row.title)} disabled={busy} onClick={() => onAbandon(game)} className={button}>
                     {pl.abandon}
+                  </button>
+                )}
+                {canEndPractice(game) && (
+                  <button type="button" aria-label={pl.endPracticeGame(row.title)} disabled={busy} onClick={() => onEndPractice(game)} className={button}>
+                    {pl.endPractice}
                   </button>
                 )}
               </li>

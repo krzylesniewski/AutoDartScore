@@ -15,6 +15,7 @@ const state = {
   finished: false,
   status: 'in_progress',
   abandonment: null,
+  endedAt: null,
   eventSeq: 3,
   currentPlayerId: 'p2',
   legIndex: 0,

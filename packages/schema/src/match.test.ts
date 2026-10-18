@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MatchType, Placement, PracticeMode } from './index.js';
+import { MatchStatus, MatchType, Placement, PracticeMode } from './index.js';
 
 describe('MatchType', () => {
   it.each(['match', 'casual', 'practice'])('accepts %s', (value) => {
@@ -34,5 +34,15 @@ describe('Placement', () => {
     ['an empty playerId', { playerId: '', place: 1 }],
   ])('rejects %s', (_name, value) => {
     expect(Placement.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('MatchStatus', () => {
+  it.each(['in_progress', 'abandoned', 'ended', 'finished'])('accepts %s', (value) => {
+    expect(MatchStatus.parse(value)).toBe(value);
+  });
+
+  it('rejects an unknown status', () => {
+    expect(MatchStatus.safeParse('paused').success).toBe(false);
   });
 });

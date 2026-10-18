@@ -2,7 +2,7 @@ import { replayGame, type ApplyResult, type GameConfig, type GameState } from '@
 import { StartingScore, type Abandonment, type ThrowRecord } from '@autoscore/schema';
 import type { MatchLog, StoredMatch } from './store/store.js';
 
-// Rzutki, które nadal się liczą: każdy wpis undo zdejmuje ostatnią z nich. Porzucenie i wznowienie nie zmieniają rzutek.
+// Rzutki, które nadal się liczą: każdy wpis undo zdejmuje ostatnią z nich. Porzucenie, wznowienie i koniec treningu nie zmieniają rzutek.
 export function effectiveThrows(log: MatchLog): ThrowRecord[] {
   const throws: ThrowRecord[] = [];
   for (const entry of log.entries) {
@@ -36,6 +36,20 @@ export function abandonment(log: MatchLog): Abandonment | null {
     }
   }
   return open;
+}
+
+// Czas zakończenia treningu albo null, gdy trening trwa.
+export function practiceEndedAt(log: MatchLog): string | null {
+  let endedAt: string | null = null;
+  for (const entry of log.entries) {
+    if (entry.type === 'practice_ended') {
+      if (endedAt) {
+        throw new Error(`Corrupt log: practice_ended at seq ${entry.seq} while the practice is already ended`);
+      }
+      endedAt = entry.createdAt;
+    }
+  }
+  return endedAt;
 }
 
 export function lastSeq(log: MatchLog): number {

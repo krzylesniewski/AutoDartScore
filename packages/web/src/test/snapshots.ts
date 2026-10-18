@@ -25,6 +25,7 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
     freeRun: null,
     status: overrides.finished ? 'finished' : 'in_progress',
     abandonment: null,
+    endedAt: null,
     ...overrides,
   };
 }

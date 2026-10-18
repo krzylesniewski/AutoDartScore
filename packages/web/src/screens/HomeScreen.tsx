@@ -1,8 +1,9 @@
 import { CreateMatchRequest, type MatchListItem, type Player } from '@autoscore/schema';
 import { useCallback, useEffect, useState } from 'react';
-import { ApiRequestError, abandonMatch, createMatch, listMatches, listPlayers, resumeMatch } from '../api/client';
+import { ApiRequestError, abandonMatch, createMatch, endPractice, listMatches, listPlayers, resumeMatch } from '../api/client';
 import { AbandonDialog } from '../components/AbandonDialog';
 import { AppNav } from '../components/AppNav';
+import { EndPracticeDialog } from '../components/EndPracticeDialog';
 import { GameSetupSummary } from '../components/GameSetupSummary';
 import { NewGameForm, type PlayerList } from '../components/NewGameForm';
 import { NewPlayerDialog } from '../components/NewPlayerDialog';
@@ -25,6 +26,7 @@ export function HomeScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [abandoning, setAbandoning] = useState<MatchListItem | null>(null);
+  const [ending, setEnding] = useState<MatchListItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,7 +134,22 @@ export function HomeScreen() {
     }
   }
 
+  async function end(game: MatchListItem): Promise<void> {
+    setEnding(null);
+    setBusy(true);
+    setNotice(null);
+    try {
+      await endPractice(game.id);
+      await reloadGames();
+    } catch {
+      setNotice(pl.endPracticeFailed);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const closeAbandon = useCallback(() => setAbandoning(null), []);
+  const closeEnd = useCallback(() => setEnding(null), []);
   const closeNewPlayer = useCallback(() => setCreatingPlayer(false), []);
 
   return (
@@ -154,11 +171,20 @@ export function HomeScreen() {
         />
         <div className="flex min-h-0 flex-col gap-5 lg:w-110 lg:shrink-0">
           <GameSetupSummary setup={setup} players={selected} />
-          <UnfinishedGames games={games} now={new Date()} busy={busy} notice={notice} onFinish={(game) => void finish(game)} onAbandon={setAbandoning} />
+          <UnfinishedGames
+            games={games}
+            now={new Date()}
+            busy={busy}
+            notice={notice}
+            onFinish={(game) => void finish(game)}
+            onAbandon={setAbandoning}
+            onEndPractice={setEnding}
+          />
         </div>
       </main>
       {creatingPlayer && <NewPlayerDialog onCreated={onPlayerCreated} onCancel={closeNewPlayer} />}
       {abandoning && <AbandonDialog state={abandoning} onCancel={closeAbandon} onConfirm={(playerId, reason) => void abandon(abandoning, playerId, reason)} />}
+      {ending && <EndPracticeDialog onCancel={closeEnd} onConfirm={() => void end(ending)} />}
     </div>
   );
 }

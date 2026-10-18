@@ -109,6 +109,7 @@ const snapshot = {
   finished: false,
   status: 'in_progress',
   abandonment: null,
+  endedAt: null,
   eventSeq: 1,
   currentPlayerId: 'p1',
   legIndex: 0,
@@ -164,6 +165,15 @@ describe('MatchSnapshot', () => {
   it('accepts an abandoned snapshot', () => {
     const abandoned = { ...snapshot, status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T18:40:00.000Z' } };
     expect(MatchSnapshot.parse(abandoned)).toEqual(abandoned);
+  });
+
+  it('accepts an ended snapshot', () => {
+    const ended = { ...snapshot, status: 'ended', endedAt: '2026-10-15T18:40:00.000Z' };
+    expect(MatchSnapshot.parse(ended)).toEqual(ended);
+  });
+
+  it('rejects an endedAt that is not an ISO date', () => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, status: 'ended', endedAt: 'wczoraj' }).success).toBe(false);
   });
 });
 
