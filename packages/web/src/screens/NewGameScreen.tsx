@@ -107,7 +107,12 @@ export function NewGameScreen() {
 
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
-      <h1 className="font-display text-5xl font-bold uppercase">{pl.newGame}</h1>
+      <div className="flex items-baseline justify-between gap-4">
+        <h1 className="font-display text-5xl font-bold uppercase">{pl.newGame}</h1>
+        <a href="#/stats" className="font-display text-xl font-semibold uppercase text-(--color-text) underline">
+          {pl.stats}
+        </a>
+      </div>
       <form onSubmit={(event) => void start(event)} className="flex flex-col gap-6">
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-2 font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)">{pl.gameType}</legend>

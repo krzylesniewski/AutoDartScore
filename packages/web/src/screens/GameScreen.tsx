@@ -1,12 +1,14 @@
-import type { MatchSnapshot } from '@autoscore/schema';
 import { useMatch } from '../api/use-match';
+import { useMatchSummary } from '../api/use-match-summary';
 import { useAnnouncer } from '../audio/use-announcer';
 import { EventBanner } from '../components/EventBanner';
 import { Keypad } from '../components/Keypad';
 import { MatchHeader } from '../components/MatchHeader';
+import { MatchStatsPanel } from '../components/MatchStatsPanel';
+import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
-import { TrophyIcon, WarningIcon } from '../components/icons';
+import { WarningIcon } from '../components/icons';
 import { pl } from '../i18n/pl';
 
 const NEW_GAME_HREF = '#/';
@@ -16,6 +18,8 @@ const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
   const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo } = useMatch(matchId, audio.onLiveMessage);
+  // Zabawa i trening potrzebują podsumowania dopiero po końcu gry. Free run nigdy się nie kończy.
+  const stats = useMatchSummary(matchId, state?.eventSeq ?? null, state !== null && (state.type === 'match' || state.finished));
 
   if (notFound) {
     return (
@@ -31,7 +35,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
     );
   }
 
-  const keypadDisabled = !state || state.finished || connection !== 'open';
+  const keypadDisabled = !state || connection !== 'open';
 
   return (
     <div className="flex h-full flex-col">
@@ -45,13 +49,18 @@ export function GameScreen({ matchId }: { matchId: string }) {
       <main className="grid min-h-0 flex-1 grid-cols-1 content-start gap-(--space-page) overflow-auto p-(--space-page) landscape:grid-cols-[var(--scoreboard-width)_1fr]">
         <div className="flex flex-col gap-4">
           {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
-          {state?.finished && <MatchOver state={state} />}
+          {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
         </div>
         <div className="relative flex flex-col gap-3">
           {connection === 'closed' && <Notice text={pl.connectionLost} />}
           {error && <Notice text={error} />}
           {state && <TurnPanel state={state} lastTurn={lastTurn} busy={busy} onUndo={sendUndo} />}
-          <Keypad onHit={sendHit} disabled={keypadDisabled} />
+          {/* TurnPanel zostaje po końcu gry, żeby Cofnij poprawiło źle wpisaną zwycięską rzutkę. */}
+          {state?.finished ? (
+            <MatchSummaryPanel state={state} summary={stats.summary} error={stats.error} />
+          ) : (
+            <Keypad onHit={sendHit} disabled={keypadDisabled} />
+          )}
           <EventBanner banner={banner} />
         </div>
       </main>
@@ -66,46 +75,4 @@ function Notice({ text }: { text: string }) {
       {text}
     </p>
   );
-}
-
-function MatchOver({ state }: { state: MatchSnapshot }) {
-  const name = (playerId: string | null) => state.players.find((player) => player.id === playerId)?.name ?? '';
-  return (
-    <section className="flex flex-col gap-2 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-4 font-display">
-      <h2 className="flex items-center gap-2 text-3xl font-bold uppercase">
-        <TrophyIcon className="text-(--color-text)" />
-        {pl.matchOver}
-      </h2>
-      <MatchResult state={state} name={name} />
-      <a href={NEW_GAME_HREF} className={link}>
-        {pl.newGame}
-      </a>
-    </section>
-  );
-}
-
-function MatchResult({ state, name }: { state: MatchSnapshot; name: (playerId: string | null) => string }) {
-  if (state.type === 'casual') {
-    return (
-      <ol className="text-2xl">
-        {[...state.placements]
-          .sort((a, b) => a.place - b.place)
-          .map((placement) => (
-            <li key={placement.playerId}>
-              {pl.place(placement.place)} {name(placement.playerId)}
-            </li>
-          ))}
-      </ol>
-    );
-  }
-  if (state.type === 'match') {
-    const winner = state.players.find((player) => player.id === state.winnerId);
-    const loser = state.players.find((player) => player.id !== state.winnerId);
-    return (
-      <p className="text-2xl">
-        {name(state.winnerId)} {pl.legsScore(winner?.legsWon ?? 0, loser?.legsWon ?? 0)}
-      </p>
-    );
-  }
-  return <p className="text-2xl">{state.players[0]?.name}</p>;
 }

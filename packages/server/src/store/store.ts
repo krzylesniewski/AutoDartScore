@@ -38,6 +38,8 @@ export interface Store {
   findPlayers(ids: readonly string[]): Promise<Player[]>;
   createMatch(match: NewMatch): Promise<string>;
   findMatch(id: string): Promise<StoredMatch | null>;
+  // Gry gracza, które wchodzą do statystyk, w kolejności utworzenia.
+  findMatchIdsForPlayer(playerId: string, types: readonly MatchType[]): Promise<string[]>;
   loadLog(matchId: string): Promise<MatchLog>;
   findThrowByEventId(eventId: string): Promise<ThrowRecord | null>;
   appendThrow(hit: NewThrow): Promise<{ throw: ThrowRecord; seq: number }>;
@@ -155,6 +157,23 @@ export function createStore(db: Kysely<Database>): Store {
         .orderBy('match_players.position')
         .execute();
       return toMatch(row, players.map(toPlayer));
+    },
+
+    async findMatchIdsForPlayer(playerId, types) {
+      if (types.length === 0) {
+        return [];
+      }
+      const rows = await db
+        .selectFrom('matches')
+        .innerJoin('match_players', 'match_players.match_id', 'matches.id')
+        .select('matches.id')
+        .where('match_players.player_id', '=', playerId)
+        .where('matches.counts_to_stats', '=', 1)
+        .where('matches.type', 'in', [...types])
+        .orderBy('matches.created_at')
+        .orderBy('matches.id')
+        .execute();
+      return rows.map((row) => row.id);
     },
 
     async loadLog(matchId) {

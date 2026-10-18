@@ -1,3 +1,17 @@
+// 1 rzutka, 2-4 rzutki (bez 12-14), reszta rzutek.
+function dartsWord(count: number): string {
+  if (count === 1) {
+    return 'rzutka';
+  }
+  const lastDigit = count % 10;
+  const lastTwo = count % 100;
+  return lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14) ? 'rzutki' : 'rzutek';
+}
+
+function darts(count: number): string {
+  return `${count} ${dartsWord(count)}`;
+}
+
 // Wszystkie teksty widoczne dla użytkownika.
 export const pl = {
   newGame: 'Nowa gra',
@@ -60,7 +74,7 @@ export const pl = {
   throwFailed: 'Nie udało się wysłać rzutki',
   undoFailed: 'Nie udało się cofnąć rzutki',
   place: (place: number) => `${place}. miejsce`,
-  darts: (count: number) => (count === 1 ? '1 rzutka' : `${count} rzutki`),
+  darts,
   legsScore: (winner: number, loser: number) => `${winner}:${loser} w legach`,
   appName: 'AUTO Score',
   throwQueue: 'Kolejka rzutów',
@@ -77,4 +91,29 @@ export const pl = {
   effects: 'Efekty dźwiękowe',
   effectsOn: 'włączone',
   effectsOff: 'wyłączone',
+  stats: 'Statystyki',
+  matchStats: 'Statystyki meczu',
+  matchSummary: 'Podsumowanie meczu',
+  statsFilter: 'Typ gier',
+  filterAll: 'Wszystkie',
+  filterMatch: 'Mecze 1v1',
+  statAverage: 'Średnia (3 rzutki)',
+  statFirst9: 'First 9',
+  stat180: '180',
+  stat140: '140+',
+  stat100: '100+',
+  stat60: '60+',
+  statHighestCheckout: 'Najwyższe zamknięcie',
+  statHighestCheckoutShort: 'Max zamk.',
+  statDoubles: '% doubli',
+  statBestLeg: 'Najlepszy leg',
+  statLegsWon: 'Wygrane legi',
+  statMatchesWon: 'Wygrane mecze',
+  noThrows: 'Brak rzutów',
+  statsFailed: 'Nie udało się pobrać statystyk',
+  summaryFailed: 'Nie udało się pobrać podsumowania',
+  playerNotFound: 'Nie znaleziono gracza',
+  legResult: (winner: string, count: number, checkout: number) => `${winner} · ${darts(count)} · zamknięcie ${checkout}`,
+  lastLeg: (result: string) => `Ostatni leg: ${result}`,
+  legSummary: (leg: number, result: string) => `Leg ${leg}: ${result}`,
 } as const;
