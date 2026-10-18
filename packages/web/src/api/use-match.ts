@@ -55,7 +55,7 @@ function parseMessage(data: unknown): LiveMessage | null {
   }
 }
 
-export function useMatch(matchId: string): UseMatch {
+export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage) => void): UseMatch {
   const [state, setState] = useState<MatchSnapshot | null>(null);
   const [lastTurn, setLastTurn] = useState<LastTurn | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
@@ -69,6 +69,12 @@ export function useMatch(matchId: string): UseMatch {
   const commands = useRef<Promise<void>>(Promise.resolve());
   const queued = useRef(0);
   const sequence = useRef(0);
+  const liveListener = useRef(onLiveMessage);
+
+  // Callback w refie, żeby nowa funkcja z renderu nie otwierała socketu od nowa.
+  useEffect(() => {
+    liveListener.current = onLiveMessage;
+  }, [onLiveMessage]);
 
   // Jedyna droga zmiany stanu. Wiadomości z WebSocketa i odpowiedzi POST mogą przyjść w dowolnej kolejności,
   // więc starszy snapshot nigdy nie nadpisuje nowszego.
@@ -128,6 +134,7 @@ export function useMatch(matchId: string): UseMatch {
         const message = parseMessage(event.data);
         if (message) {
           handle(message);
+          liveListener.current?.(message);
         }
       });
       ws.addEventListener('close', (event: CloseEvent) => {

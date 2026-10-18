@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@autoscore/audio": "workspace:*",
     "@autoscore/engine": "workspace:*",
     "@autoscore/schema": "workspace:*",
     "@fontsource/barlow": "^5.3.0",

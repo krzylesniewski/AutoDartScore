@@ -52,3 +52,19 @@ export function WarningIcon({ className }: IconProps) {
     </Svg>
   );
 }
+
+export function SpeakerIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M3 9h4l5-5v16l-5-5H3zm11-1v8a4.5 4.5 0 000-8zm0-4.8v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z" />
+    </Svg>
+  );
+}
+
+export function SpeakerOffIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M3 9h4l5-5v16l-5-5H3zm13.76-.2L19 11.04l2.24-2.24.96.96L19.96 12l2.24 2.24-.96.96L19 12.96l-2.24 2.24-.96-.96L18.04 12 15.8 9.76z" />
+    </Svg>
+  );
+}

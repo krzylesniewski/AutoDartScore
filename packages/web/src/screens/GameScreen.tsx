@@ -1,16 +1,19 @@
 import type { MatchSnapshot } from '@autoscore/schema';
 import { useMatch } from '../api/use-match';
+import { useAnnouncer } from '../audio/use-announcer';
 import { EventBanner } from '../components/EventBanner';
 import { Keypad } from '../components/Keypad';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
+import { VoiceToggle } from '../components/VoiceToggle';
 import { TrophyIcon, WarningIcon } from '../components/icons';
 import { pl } from '../i18n/pl';
 
 const NEW_GAME_HREF = '#/';
 
 export function GameScreen({ matchId }: { matchId: string }) {
-  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo } = useMatch(matchId);
+  const voice = useAnnouncer();
+  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo } = useMatch(matchId, voice.onLiveMessage);
 
   if (notFound) {
     return (
@@ -36,6 +39,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
         {state?.finished && <MatchOver state={state} />}
       </div>
       <div className="flex flex-col gap-4">
+        <VoiceToggle enabled={voice.enabled} onChange={voice.setEnabled} />
         {state && <TurnPanel state={state} lastTurn={lastTurn} busy={busy} onUndo={sendUndo} />}
         <EventBanner banner={banner} />
         {error && <Notice text={error} />}
