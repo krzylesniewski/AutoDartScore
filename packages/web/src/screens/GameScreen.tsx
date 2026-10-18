@@ -14,8 +14,8 @@ const NEW_GAME_HREF = '#/';
 const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 
 export function GameScreen({ matchId }: { matchId: string }) {
-  const voice = useAnnouncer();
-  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo } = useMatch(matchId, voice.onLiveMessage);
+  const audio = useAnnouncer();
+  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo } = useMatch(matchId, audio.onLiveMessage);
 
   if (notFound) {
     return (
@@ -35,7 +35,13 @@ export function GameScreen({ matchId }: { matchId: string }) {
 
   return (
     <div className="flex h-full flex-col">
-      <MatchHeader state={state} voiceEnabled={voice.enabled} onVoiceChange={voice.setEnabled} />
+      <MatchHeader
+        state={state}
+        voiceEnabled={audio.voiceEnabled}
+        onVoiceChange={audio.setVoiceEnabled}
+        effectsEnabled={audio.effectsEnabled}
+        onEffectsChange={audio.setEffectsEnabled}
+      />
       <main className="grid min-h-0 flex-1 grid-cols-1 content-start gap-(--space-page) overflow-auto p-(--space-page) landscape:grid-cols-[var(--scoreboard-width)_1fr]">
         <div className="flex flex-col gap-4">
           {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}

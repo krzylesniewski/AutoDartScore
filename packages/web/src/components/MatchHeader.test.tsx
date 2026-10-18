@@ -5,7 +5,7 @@ import { MatchHeader } from './MatchHeader';
 
 describe('MatchHeader', () => {
   it('shows the match chips', () => {
-    render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} />);
+    render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
     expect(screen.getByText('AUTO Score')).toBeTruthy();
     expect(screen.getByText('501')).toBeTruthy();
     expect(screen.getByText('Double-out')).toBeTruthy();
@@ -15,7 +15,7 @@ describe('MatchHeader', () => {
   });
 
   it('shows Zabawa and no Best of in a casual game', () => {
-    render(<MatchHeader state={casual(['Anna', 'Bartek', 'Celina'])} voiceEnabled={false} onVoiceChange={vi.fn()} />);
+    render(<MatchHeader state={casual(['Anna', 'Bartek', 'Celina'])} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
     expect(screen.getByText('Zabawa')).toBeTruthy();
     expect(screen.getByText('501')).toBeTruthy();
     expect(screen.queryByText(/Best of/)).toBeNull();
@@ -30,16 +30,25 @@ describe('MatchHeader', () => {
       legsToWin: null,
       players: [player('p1', 'Anna', { remaining: null })],
     });
-    render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} />);
+    render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
     expect(screen.getByText('Free run')).toBeTruthy();
     expect(screen.queryByText('Double-out')).toBeNull();
   });
 
   it('keeps the voice toggle without a state', () => {
     const onVoiceChange = vi.fn();
-    render(<MatchHeader state={null} voiceEnabled={false} onVoiceChange={onVoiceChange} />);
+    render(<MatchHeader state={null} voiceEnabled={false} onVoiceChange={onVoiceChange} effectsEnabled={true} onEffectsChange={vi.fn()} />);
     screen.getByRole('button', { name: 'Głos' }).click();
     expect(onVoiceChange).toHaveBeenCalledWith(true);
     expect(screen.queryByText('Double-out')).toBeNull();
+  });
+
+  it('turns the effects off from the header', () => {
+    const onEffectsChange = vi.fn();
+    render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={onEffectsChange} />);
+    const toggle = screen.getByRole('button', { name: 'Efekty dźwiękowe' });
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    toggle.click();
+    expect(onEffectsChange).toHaveBeenCalledWith(false);
   });
 });

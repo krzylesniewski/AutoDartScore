@@ -1,6 +1,8 @@
 import type { LiveMessage, MatchSnapshot } from '@autoscore/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAnnouncer, type Announcer, type Speaker } from './index.js';
+import { afterEach, vi } from 'vitest';
+import type { EffectPlayer, SoundEffect } from './index.js';
 
 const MATCH_ID = 'm_1';
 
@@ -130,5 +132,103 @@ describe('createAnnouncer', () => {
     expect(speaker.calls).toEqual(['cancel']);
     send(turnBatch(6, 45));
     expect(speaker.calls).toEqual(['cancel', 'cancel', 'speak:czterdzieści pięć']);
+  });
+});
+
+class FakeEffectPlayer implements EffectPlayer {
+  calls: string[] = [];
+
+  constructor(private readonly durationMs: number) {}
+
+  play(effect: SoundEffect): number {
+    this.calls.push(`play:${effect}`);
+    return this.durationMs;
+  }
+
+  stop(): void {
+    this.calls.push('stop');
+  }
+}
+
+const EFFECT_MS = 500;
+
+const legWon = (eventSeq: number): LiveMessage => ({ type: 'leg_won', matchId: MATCH_ID, eventSeq, playerId: 'anna', legIndex: 0, checkout: 40, dartsThrown: 15 });
+const matchWon = (eventSeq: number): LiveMessage => ({ type: 'match_won', matchId: MATCH_ID, eventSeq, playerId: 'anna', legsWon: { anna: 2, bartek: 0 } });
+const bustBatch = (eventSeq: number): LiveMessage[] => [throwRegistered(eventSeq), bust(eventSeq), stateUpdated(eventSeq)];
+
+describe('createAnnouncer with effects', () => {
+  let effects: FakeEffectPlayer;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    effects = new FakeEffectPlayer(EFFECT_MS);
+    announcer = createAnnouncer(speaker, effects);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('plays the effect first and speaks after it ends', () => {
+    send(bustBatch(5));
+    expect(effects.calls).toEqual(['stop', 'play:bust']);
+    expect(speaker.calls).toEqual(['cancel']);
+    vi.advanceTimersByTime(EFFECT_MS - 1);
+    expect(speaker.calls).toEqual(['cancel']);
+    vi.advanceTimersByTime(1);
+    expect(speaker.calls).toEqual(['cancel', 'speak:Bust']);
+  });
+
+  it('plays the long fanfare before Zwycięzca', () => {
+    send([throwRegistered(5), turnCompleted(5, 40), legWon(5), matchWon(5), stateUpdated(5)]);
+    expect(effects.calls).toEqual(['stop', 'play:fanfare_long']);
+    vi.advanceTimersByTime(EFFECT_MS);
+    expect(speaker.calls).toEqual(['cancel', 'speak:Zwycięzca']);
+  });
+
+  it('plays no effect on a plain turn and speaks at once', () => {
+    send(turnBatch(5, 100));
+    expect(effects.calls).toEqual(['stop']);
+    expect(speaker.calls).toEqual(['cancel', 'speak:sto']);
+  });
+
+  it('speaks at once when the player returns 0', () => {
+    announcer = createAnnouncer(speaker, new FakeEffectPlayer(0));
+    send(bustBatch(5));
+    expect(speaker.calls).toEqual(['cancel', 'speak:Bust']);
+  });
+
+  it('stops the effect and drops the pending speech on throw_undone', () => {
+    send(bustBatch(5));
+    announcer.handle({ type: 'throw_undone', matchId: MATCH_ID, eventSeq: 6, throwId: 't_5' });
+    expect(effects.calls).toEqual(['stop', 'play:bust', 'stop']);
+    vi.advanceTimersByTime(EFFECT_MS * 2);
+    expect(speaker.calls).toEqual(['cancel', 'cancel']);
+  });
+
+  it('stops the effect and drops the pending speech on stop', () => {
+    send(bustBatch(5));
+    announcer.stop();
+    expect(effects.calls).toEqual(['stop', 'play:bust', 'stop']);
+    vi.advanceTimersByTime(EFFECT_MS * 2);
+    expect(speaker.calls).toEqual(['cancel', 'cancel']);
+  });
+
+  it('cancels the pending speech and effect when the next announcement arrives', () => {
+    send(bustBatch(5));
+    vi.advanceTimersByTime(EFFECT_MS / 2);
+    send(turnBatch(6, 45));
+    expect(effects.calls).toEqual(['stop', 'play:bust', 'stop']);
+    expect(speaker.calls).toEqual(['cancel', 'cancel', 'speak:czterdzieści pięć']);
+    vi.advanceTimersByTime(EFFECT_MS * 2);
+    expect(speaker.calls).toEqual(['cancel', 'cancel', 'speak:czterdzieści pięć']);
+  });
+
+  it('keeps the pending speech and effect through a mid-turn batch', () => {
+    send(bustBatch(5));
+    send([throwRegistered(6), stateUpdated(6)]);
+    expect(effects.calls).toEqual(['stop', 'play:bust']);
+    vi.advanceTimersByTime(EFFECT_MS);
+    expect(speaker.calls).toEqual(['cancel', 'speak:Bust']);
   });
 });

@@ -309,24 +309,23 @@ describe('voice', () => {
     return speak.mock.calls.map(([utterance]) => (utterance as FakeUtterance).text);
   }
 
-  it('is off by default and stays silent', () => {
+  it('is on by default and reads the turn total', () => {
     const ws = connect();
-    expect(toggle().getAttribute('aria-pressed')).toBe('false');
-    sendTurn(ws);
-    expect(speak).not.toHaveBeenCalled();
-  });
-
-  it('reads the turn total after the toggle is on', () => {
-    const ws = connect();
-    fireEvent.click(toggle());
     expect(toggle().getAttribute('aria-pressed')).toBe('true');
     sendTurn(ws);
     expect(spokenTexts()).toEqual(['sto']);
   });
 
-  it('reads Bust and Zwycięzca', () => {
+  it('stays silent after the toggle is off', () => {
     const ws = connect();
     fireEvent.click(toggle());
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
+    sendTurn(ws);
+    expect(speak).not.toHaveBeenCalled();
+  });
+
+  it('reads Bust and Zwycięzca', () => {
+    const ws = connect();
     sendBatch(ws, { type: 'bust', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], remaining: 40 });
     expect(spokenTexts()).toEqual(['Bust']);
     sendBatch(ws, { type: 'match_won', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legsWon: { p1: 0, p2: 2 } });
@@ -335,26 +334,163 @@ describe('voice', () => {
 
   it('shows the voice state as text and keeps the name Głos', () => {
     connect();
-    expect(toggle().textContent).toContain('wyłączony');
-    fireEvent.click(toggle());
     expect(toggle().textContent).toContain('włączony');
     expect(toggle().textContent).not.toContain('wyłączony');
+    fireEvent.click(toggle());
+    expect(toggle().textContent).toContain('wyłączony');
   });
 
   it('keeps the setting after a new render', () => {
     const { unmount } = render(<GameScreen matchId={MATCH_ID} />);
     fireEvent.click(toggle());
     unmount();
-    expect(localStorage.getItem('autoscore.voice')).toBe('on');
+    expect(localStorage.getItem('autoscore.voice')).toBe('off');
     render(<GameScreen matchId={MATCH_ID} />);
-    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
   });
 
   it('never speaks on a keypad tap', async () => {
     connect();
-    fireEvent.click(toggle());
     tap('20');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
     expect(speak).not.toHaveBeenCalled();
+  });
+});
+
+describe('effects', () => {
+  class FakeParam {
+    value = 0;
+    setValueAtTime(): void {}
+    linearRampToValueAtTime(): void {}
+    exponentialRampToValueAtTime(): void {}
+  }
+
+  class FakeNode extends EventTarget {
+    connect(): void {}
+    disconnect(): void {}
+  }
+
+  class FakeAudioContext {
+    static oscillators = 0;
+    state = 'running';
+    currentTime = 0;
+    destination = new FakeNode();
+
+    createOscillator() {
+      FakeAudioContext.oscillators++;
+      return Object.assign(new FakeNode(), { type: 'sine', frequency: new FakeParam(), start() {}, stop() {} });
+    }
+
+    createGain() {
+      return Object.assign(new FakeNode(), { gain: new FakeParam() });
+    }
+
+    async resume(): Promise<void> {}
+    async close(): Promise<void> {}
+  }
+
+  class FakeUtterance {
+    readonly text: string;
+    lang = '';
+
+    constructor(text: string) {
+      this.text = text;
+    }
+  }
+
+  let speak: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    FakeAudioContext.oscillators = 0;
+    vi.stubGlobal('AudioContext', FakeAudioContext);
+    speak = vi.fn();
+    vi.stubGlobal('speechSynthesis', { speak, cancel: vi.fn(), getVoices: () => [] });
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  const BATCH_SEQ = 5;
+  const darts = [{ segment: 20, multiplier: 3 }] as const;
+
+  function sendBatch(ws: FakeWebSocket, event: LiveMessage): void {
+    ws.serverSend(event);
+    ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: BATCH_SEQ, state: { ...initial, eventSeq: BATCH_SEQ } });
+  }
+
+  function sendBust(ws: FakeWebSocket): void {
+    sendBatch(ws, { type: 'bust', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], remaining: 40 });
+  }
+
+  function toggle(): HTMLElement {
+    return screen.getByRole('button', { name: 'Efekty dźwiękowe' });
+  }
+
+  function spokenTexts(): string[] {
+    return speak.mock.calls.map(([utterance]) => (utterance as FakeUtterance).text);
+  }
+
+  function voiceOff(): void {
+    localStorage.setItem('autoscore.voice', 'off');
+  }
+
+  it('is on by default', () => {
+    connect();
+    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('plays a bust while the voice is off', () => {
+    voiceOff();
+    const ws = connect();
+    sendBust(ws);
+    expect(FakeAudioContext.oscillators).toBeGreaterThan(0);
+    expect(speak).not.toHaveBeenCalled();
+  });
+
+  it('plays nothing on a plain turn', () => {
+    const ws = connect();
+    sendBatch(ws, { type: 'turn_completed', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], total: 100, remaining: 337 });
+    expect(FakeAudioContext.oscillators).toBe(0);
+  });
+
+  it('plays nothing on a keypad tap', async () => {
+    connect();
+    tap('20');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(FakeAudioContext.oscillators).toBe(0);
+  });
+
+  it('stores the off setting and stays silent', () => {
+    const ws = connect();
+    fireEvent.click(toggle());
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
+    expect(localStorage.getItem('autoscore.effects')).toBe('off');
+    sendBust(ws);
+    expect(FakeAudioContext.oscillators).toBe(0);
+  });
+
+  it('reads Bust after the effect ends', () => {
+    vi.useFakeTimers();
+    const ws = connect();
+    sendBust(ws);
+    expect(FakeAudioContext.oscillators).toBeGreaterThan(0);
+    expect(speak).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(499);
+    });
+    expect(speak).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(spokenTexts()).toEqual(['Bust']);
+  });
+
+  it('reads Bust at once with the effects off', () => {
+    localStorage.setItem('autoscore.effects', 'off');
+    const ws = connect();
+    sendBust(ws);
+    expect(spokenTexts()).toEqual(['Bust']);
   });
 });
