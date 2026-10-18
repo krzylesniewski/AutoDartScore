@@ -583,10 +583,11 @@ Plan realizujemy jako serię PR-ów przez [claude-rollout](https://boldare.githu
 | P5b | `web`: ekran gry według makiet motywu A (`design/mockups`, tokeny z `design/theme.css`) | P5 |
 | P6 | `server` + `web`: statystyki z tabeli rzutek, ekran podsumowania | P5b |
 | P7 | `audio`: odczyt wyniku, `bust`, `winner` (Web Speech API, odtwarzany we froncie) | P5 |
-| P8 | `server` + `web` (+ `engine`, `schema`): historia meczów (`GET /matches`, lista ze szczegółami meczu), head-to-head z meczów 1v1, wykres formy (średnia z ostatnich meczów), profil gracza (edycja imienia i avatara, archiwizacja zamiast usuwania, zapisanie gościa po meczu), ranking graczy według średniej na 3 rzutki (patrz niżej); pełna historia rozbudowuje listę meczów z P9; reguła: przerwany leg porzuconego meczu nie wchodzi do średniej na 3 rzutki ani do rankingu (decyzja z P9) | P6, P9 |
+| P8 | `server` + `web` (+ `engine`, `schema`): historia meczów (`GET /matches`, lista ze szczegółami meczu), head-to-head z meczów 1v1, wykres formy (średnia z ostatnich meczów), profil gracza (edycja imienia i avatara, archiwizacja zamiast usuwania, zapisanie gościa po meczu); pełna historia rozbudowuje listę meczów z P9; reguła: przerwany leg porzuconego meczu nie wchodzi do średniej na 3 rzutki ani do rankingu (decyzja z P9) | P12 |
 | P9 | `schema` + `server` + `web`: porzucenie i wznowienie meczu (patrz niżej), lista nieskończonych meczów na ekranie startowym | P5b |
 | P10 | `audio` + `web`: efekty dźwiękowe dla bustu i wygranej (patrz niżej) | P5b, P7 |
 | P11 | dokumentacja: `README.md` w repo i w pakietach (patrz niżej), równolegle z resztą | P10 |
+| P12 | `web` + `server` + `schema`: ekran startowy i ekran statystyk według makiet `design/mockups/theme-a-new-game*.html` i `theme-a-stats.html`, punkty z sekcji „Ekran startowy i statystyki: punkty do implementacji” i jej „Decyzje” | P9 |
 
 Uwagi:
 
@@ -594,7 +595,7 @@ Uwagi:
 - `schema` idzie przed `engine` (odwrotnie niż w "Kolejności prac"), bo zgodnie z konwencją typy zdarzeń żyją tylko w `packages/schema`.
 - `server` czeka na pełny silnik (P3), żeby API od razu obsługiwało wszystkie typy gier.
 - P6 i P7 mogą iść równolegle po P5.
-- Ranking w P8 (decyzja 2026-10-18, na próbę): lista graczy posortowana według średniej na 3 rzutki z ostatnich 20 legów, ze wszystkich gier z `countsToStats` (1v1, Zabawa, Solo 501; bez Free run). Gracz trafia do rankingu po 5 legach. Obok średniej: % doubli i bilans wygranych. Goście i zarchiwizowani poza rankingiem. Liczony z odtworzenia logu, bez przechowywanych liczników. Elo lub Glicko ewentualnie później.
+- Ranking: zamiast rankingu w P8 (średnia z ostatnich 20 legów) jest lista graczy według średniej na 3 rzutki na ekranie statystyk w P12 (patrz „Ekran startowy i statystyki”, sekcja „Decyzje”). Elo lub Glicko ewentualnie później.
 - Porzucenie meczu w P9 (decyzja 2026-10-18): przycisk "Porzuć mecz" w górnym pasku ekranu gry z potwierdzeniem. Porzucenie to zdarzenie `match_abandoned` w logu (kto, kiedy, opcjonalny powód), nic nie jest usuwane. Porzucony mecz jest tylko do odczytu, z odznaką "Porzucony" (ikona i tekst). Wznowienie to zdarzenie `match_resumed` i gra toczy się dalej od miejsca przerwania. Ekran startowy (HOME) pokazuje listę nieskończonych meczów (w trakcie i porzuconych) z opcją kontynuacji lub wznowienia (wszystkie nieskończone gry, także Free run, bez limitu liczby i dni). Statystyki: porzucony mecz nie ma zwycięzcy i nie liczy się do bilansu meczów ani head-to-head; ukończone legi liczą się normalnie (wygrane legi, zamknięcia, najlepszy leg); przerwany leg nie wchodzi do średniej na 3 rzutki ani do rankingu. W Zabawie gracze, którzy już skończyli, zachowują miejsca.
 - Efekty dźwiękowe w P10 (decyzja 2026-10-18): krótki efekt przy buście (opadający "buzz", ok. 0,5 s) i przy wygranej (fanfara: krótka przy wygranym legu, dłuższa przy wygranym meczu i 1. miejscu w Zabawie). Dźwięki generowane w przeglądarce przez Web Audio API, bez plików i licencji. Efekt gra przed komunikatem głosowym z P7, który zostaje bez zmian. Wyzwalane przez zdarzenia domenowe silnika (`bust`, `leg_won`, `match_won`, `player_finished`), nie przez kliknięcia, i tylko na urządzeniu audio host. Przełącznik "Efekty dźwiękowe" niezależny od głosu, domyślnie włączony.
 - README w P11 (decyzja 2026-10-18): `README.md` w katalogu głównym po polsku: czym jest AUTO Score, stan (co działa po Etapie 1), wymagania (Node 24 przez nvm, pnpm), instalacja i uruchomienie (`pnpm install`, `pnpm dev`, adresy front i API, tablet w sieci lokalnej), konfiguracja przez zmienne środowiskowe (`PORT`, `HOST`, `DATABASE_PATH`, `AUTOSCORE_API_URL`), skrócona dokumentacja API (endpointy, kontrakt trafienia, WebSocket, przykład z curl), struktura monorepo, komendy (`test`, `typecheck`, `lint`), zasady gry X01 w skrócie, motyw i makiety (`design/`), jak rozwijamy projekt (rollout, PR-y). Krótkie `README.md` w każdym pakiecie (`engine`, `schema`, `server`, `web`, `audio`): za co odpowiada, główne API, jak testować. Bez duplikowania `CLAUDE.md`, linkować do niego. Tylko fakty sprawdzone w kodzie na `main`.
@@ -696,13 +697,14 @@ Makiety: `design/mockups/theme-a-new-game.html` (+ `.png`), `theme-a-new-game-10
 14. **Pusty stan:** mniej niż 3 graczy w kategorii albo brak gier w filtrze.
 15. **API:** np. `GET /stats/rankings?type=all|match|casual|practice`; obliczenia jako czyste funkcje z testami w Vitest.
 
-### Do ustalenia przed implementacją
+### Decyzje (2026-10-18, realizuje P12)
 
-- Czy na ekranie startowym jest wybór gościa (na makiecie go nie ma).
-- Czy Free run trafia do „Gier do dokończenia” (nie ma końca) i czy grę z listy da się porzucić.
-- Definicja „próby na double” (np. rzutka przy wyniku ≤ 40 parzystym albo 50).
-- Remisy w rankingu (ta sama pozycja czy kto pierwszy osiągnął) i minimalna liczba legów do średnich.
-- Nazwy kart: „Średnia ogólna” i „Najlepsza średnia w legu” mogą się mylić (propozycja: „Średnia (3 rzutki)” i „Rekordowy leg (średnia)”).
+- **Goście:** brak w UI. Okno „+ Nowy gracz” nie ma pola „Gość”; każdy nowy gracz jest zapisany. API może dalej przyjmować `guest`.
+- **Gry do dokończenia:** wszystkie nieskończone gry, także Free run, bez limitu (decyzja z P9). Wiersz ma „Dokończ”, a „Porzuć” (z potwierdzeniem) tylko wtedy, gdy gra ma co najmniej 1 ukończony leg. Ta sama reguła obowiązuje dla „Porzuć mecz” na ekranie gry (zmiana względem P9). Gra bez ukończonego lega zostaje na liście do dokończenia.
+- **Próba na double:** każda rzutka rzucona, gdy wynik gracza da się zamknąć jedną rzutką (parzysty ≤ 40 albo 50).
+- **Remisy:** ta sama pozycja dla równych wartości. **Minimum do średnich:** 3 ukończone legi.
+- **Ekran statystyk:** po lewej przewijana lista wszystkich graczy posortowana według średniej na 3 rzutki ze wszystkich legów („Średnia (3 rzutki)”), z pozycją, awatarem i liczbą legów. Po prawej 4 kafelki top 3: **Rekordowy leg (średnia)**, **Najwyższe zamknięcie**, **Najkrótszy leg**, **Liczba 180**. Średnia ogólna jest w liście, nie w kafelku; skuteczność doubli zostaje w karcie gracza z P6, nie w kafelku.
+- Ranking z P8 (średnia z ostatnich 20 legów) jest zastąpiony tą listą; P8 nie robi już rankingu.
 
 # Typy gier: mecz 1v1, zabawa i trening
 

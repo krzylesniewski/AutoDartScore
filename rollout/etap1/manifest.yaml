@@ -121,9 +121,9 @@ prs:
   # Historia meczów, head-to-head, wykres formy, profil gracza (plan: tabela "Etap 1 jako PR-y").
   - id: P8
     branch: feat/history-profiles
-    title: 'feat: match history, head-to-head, form chart, player profiles and ranking'
+    title: 'feat: match history, head-to-head, form chart and player profiles'
     brief: briefs/P8.md
-    deps: [P6, P9]
+    deps: [P12]
     priority: 5
     effort: { brief: high, implement: high, verify: high }
     changeset: none
@@ -161,3 +161,14 @@ prs:
     effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['README.md', 'packages/*/README.md']
+
+  # Ekran startowy i ekran statystyk według makiet (plan: "Ekran startowy i statystyki: punkty do implementacji" i "Decyzje").
+  - id: P12
+    branch: feat/home-stats-mockups
+    title: 'feat(web): start and statistics screens after the theme A mockups'
+    brief: briefs/P12.md
+    deps: [P9]
+    priority: 9
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'packages/server/**', 'packages/schema/**']
