@@ -1,4 +1,4 @@
-import { ApiError, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerStats, ThrowResult, UndoResult } from '@autoscore/schema';
+import { ApiError, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerStats, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
 import type { AbandonMatchRequest, CreateMatchRequest, CreatePlayerRequest, HitEvent, StatsFilter } from '@autoscore/schema';
 
 // Vite przekierowuje /api do serwera, więc front i API mają jeden adres.
@@ -67,6 +67,10 @@ export function undo(matchId: string): Promise<UndoResult> {
 
 export function getPlayerStats(playerId: string, filter: StatsFilter): Promise<PlayerStats> {
   return request(`/players/${encodeURIComponent(playerId)}/stats?type=${filter}`, PlayerStats);
+}
+
+export function getRankings(filter: StatsFilter): Promise<StatsRankings> {
+  return request(`/stats/rankings?type=${filter}`, StatsRankings);
 }
 
 export function getMatchSummary(matchId: string): Promise<MatchSummary> {

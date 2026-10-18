@@ -1,4 +1,4 @@
-import type { PlayerStats } from '@autoscore/schema';
+import type { PlayerStats, RankingEntry, StatsRankings } from '@autoscore/schema';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { statLine } from '../test/snapshots';
@@ -40,12 +40,34 @@ function stats(playerId: string, overrides: Partial<PlayerStats> = {}): PlayerSt
   };
 }
 
+function entry(playerId: string, name: string, position: number, value: number): RankingEntry {
+  return { playerId, name, avatar: playerId === 'p2' ? '🎯' : null, position, value };
+}
+
+const rankingsFixture: StatsRankings = {
+  filter: 'all',
+  games: 23,
+  legs: 61,
+  players: [
+    { playerId: 'p1', name: 'Anna', avatar: null, position: 1, average: 61.5, legs: 25 },
+    { playerId: 'p2', name: 'Bartek', avatar: '🎯', position: 2, average: 55.25, legs: 21 },
+    { playerId: 'p3', name: 'Celina', avatar: null, position: 3, average: 40, legs: 3 },
+    { playerId: 'p4', name: 'Darek', avatar: null, position: null, average: 70, legs: 2 },
+  ],
+  bestLegAverage: [entry('p1', 'Anna', 1, 98.33), entry('p2', 'Bartek', 2, 86.5), entry('p3', 'Celina', 3, 74.2)],
+  highestCheckout: [entry('p2', 'Bartek', 1, 121), entry('p3', 'Celina', 1, 121), entry('p1', 'Anna', 3, 80), entry('p4', 'Darek', 3, 80)],
+  shortestLeg: [entry('p1', 'Anna', 1, 15), entry('p2', 'Bartek', 2, 18)],
+  scores180: [entry('p2', 'Bartek', 1, 3)],
+};
+
 let urls: string[];
 let respondStats: (url: string) => Response;
+let rankings: StatsRankings;
 
 beforeEach(() => {
   urls = [];
   respondStats = (url) => json(200, stats(/players\/([^/]+)\/stats/.exec(url)?.[1] ?? ''));
+  rankings = rankingsFixture;
   window.location.hash = '#/stats';
   vi.stubGlobal(
     'fetch',
@@ -53,6 +75,9 @@ beforeEach(() => {
       urls.push(url);
       if (url === '/api/players') {
         return json(200, players);
+      }
+      if (url.startsWith('/api/stats/rankings')) {
+        return json(200, { ...rankings, filter: new URL(url, 'http://localhost').searchParams.get('type') });
       }
       return respondStats(url);
     }),
@@ -76,11 +101,99 @@ function value(term: string): string | null {
   return dt.nextElementSibling?.textContent ?? null;
 }
 
-describe('StatsScreen', () => {
-  it('shows the first player with the all filter and the card values', async () => {
+function tile(name: string): HTMLElement {
+  return screen.getByRole('region', { name });
+}
+
+function rows(container: HTMLElement): string[] {
+  return within(container)
+    .getAllByRole('listitem')
+    .map((item) => item.textContent ?? '');
+}
+
+describe('StatsScreen: ranking', () => {
+  it('lists every player by average with legs and positions', async () => {
     render(<StatsScreen playerId={null} />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Statystyki' }).getAttribute('aria-current')).toBe('page');
+    expect(await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów')).toBeTruthy();
+    expect(urls).toContain('/api/stats/rankings?type=all');
+
+    const list = tile('Średnia (3 rzutki)');
+    expect(rows(list)).toEqual(['1.AAnna25 legów61.50', '2.🎯Bartek21 legów55.25', '3.CCelina3 legi40.00', 'DDarek2 legi70.00']);
+    expect(within(list).getByRole('link', { name: /Bartek/ }).getAttribute('href')).toBe('#/stats/p2');
+    expect(within(list).getByText('Średnia od 3 ukończonych legów.')).toBeTruthy();
+  });
+
+  it('shows exactly 4 top 3 tiles and no doubles tile', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const tiles = ['Rekordowy leg (średnia)', 'Najwyższe zamknięcie', 'Najkrótszy leg', 'Liczba 180'];
+    expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label')).filter(Boolean)).toEqual(tiles);
+    expect(screen.queryByText('% doubli')).toBeNull();
+    expect(within(tile('Rekordowy leg (średnia)')).getByText('3 rzutki')).toBeTruthy();
+    expect(rows(tile('Rekordowy leg (średnia)'))).toEqual(['1.AAnna98.33', '2.🎯Bartek86.50', '3.CCelina74.20']);
+    expect(within(tile('Najwyższe zamknięcie')).getByText('checkout')).toBeTruthy();
+    expect(rows(tile('Najwyższe zamknięcie'))).toEqual(['1.🎯Bartek121', '1.CCelina121', '3.AAnna80', '3.DDarek80']);
+    expect(within(tile('Najkrótszy leg')).getByText('liczba rzutek')).toBeTruthy();
+    expect(within(tile('Liczba 180')).getByText('wszystkie gry')).toBeTruthy();
+  });
+
+  it('marks the leaders in the list and in the tiles', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const leaders = (container: HTMLElement) => [...container.querySelectorAll('[data-leader]')].map((row) => row.textContent);
+    expect(leaders(tile('Średnia (3 rzutki)'))).toEqual(['1.AAnna25 legów61.50']);
+    expect(leaders(tile('Najwyższe zamknięcie'))).toEqual(['1.🎯Bartek121', '1.CCelina121']);
+  });
+
+  it('says when a tile has fewer than 3 players', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(within(tile('Najkrótszy leg')).getByText('Za mało graczy w tej kategorii.')).toBeTruthy();
+    expect(within(tile('Liczba 180')).getByText('Za mało graczy w tej kategorii.')).toBeTruthy();
+    expect(within(tile('Najwyższe zamknięcie')).queryByText('Za mało graczy w tej kategorii.')).toBeNull();
+  });
+
+  it('shows one message instead of the list and tiles without games', async () => {
+    rankings = { ...rankingsFixture, games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], scores180: [] };
+    render(<StatsScreen playerId={null} />);
+    expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
+    expect(screen.getByText('Ranking graczy z całej historii · 0 gier, 0 legów')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Liczba 180' })).toBeNull();
+    expect(screen.queryByText('Średnia (3 rzutki)')).toBeNull();
+  });
+
+  it('refetches with ?type= on a filter change', async () => {
+    render(<StatsScreen playerId={null} />);
+    await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all'));
+    expect(screen.getByRole('button', { name: 'Wszystkie' }).getAttribute('aria-pressed')).toBe('true');
+    for (const [label, type] of [
+      ['Mecze 1v1', 'match'],
+      ['Zabawa', 'casual'],
+      ['Trening', 'practice'],
+    ] as const) {
+      fireEvent.click(screen.getByRole('button', { name: label }));
+      expect(screen.getByRole('button', { name: label }).getAttribute('aria-pressed')).toBe('true');
+      await vi.waitFor(() => expect(urls).toContain(`/api/stats/rankings?type=${type}`));
+    }
+  });
+
+  it('shows an error when the ranking fails to load', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json(500, { error: 'internal_error', message: 'Internal server error' })),
+    );
+    render(<StatsScreen playerId={null} />);
+    expect(await screen.findByText('Nie udało się pobrać statystyk')).toBeTruthy();
+  });
+});
+
+describe('StatsScreen: player card', () => {
+  it('shows the player card with the all filter and a link back to the ranking', async () => {
+    render(<StatsScreen playerId="p1" />);
     expect(screen.getByRole('heading', { name: 'Statystyki' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/new');
+    expect(screen.getByRole('link', { name: 'Ranking' }).getAttribute('href')).toBe('#/stats');
     await vi.waitFor(() => expect(document.querySelector('dl')).not.toBeNull());
     expect(urls).toContain('/api/players/p1/stats?type=all');
     expect(screen.getByRole('button', { name: 'Anna' }).getAttribute('aria-pressed')).toBe('true');
@@ -114,7 +227,7 @@ describe('StatsScreen', () => {
   });
 
   it('sets the hash when a player is chosen', async () => {
-    render(<StatsScreen playerId={null} />);
+    render(<StatsScreen playerId="p1" />);
     fireEvent.click(await screen.findByRole('button', { name: /Bartek/ }));
     expect(window.location.hash).toBe('#/stats/p2');
   });
@@ -147,8 +260,8 @@ describe('StatsScreen', () => {
         return json(200, []);
       }),
     );
-    render(<StatsScreen playerId={null} />);
+    render(<StatsScreen playerId="p1" />);
     expect(await screen.findByText('Brak graczy. Dodaj pierwszego.')).toBeTruthy();
-    expect(urls).toEqual(['/api/players']);
+    expect(urls).toContain('/api/players');
   });
 });

@@ -57,9 +57,14 @@ describe('MatchHeader', () => {
     expect(screen.getByRole('link', { name: 'Ekran startowy' }).getAttribute('href')).toBe('#/');
   });
 
-  it('offers Porzuć mecz in a game in progress', () => {
+  it('hides Porzuć mecz in a 1v1 before the first leg is completed', () => {
+    render(<MatchHeader state={snapshot({ legIndex: 0 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+  });
+
+  it('offers Porzuć mecz in a game in progress with a completed leg', () => {
     const onAbandon = vi.fn();
-    render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={onAbandon} />);
+    render(<MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={onAbandon} />);
     screen.getByRole('button', { name: 'Porzuć mecz' }).click();
     expect(onAbandon).toHaveBeenCalled();
     expect(screen.queryByText('Porzucony')).toBeNull();

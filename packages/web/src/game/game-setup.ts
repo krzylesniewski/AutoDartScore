@@ -1,0 +1,47 @@
+import type { BestOf, MatchType, PracticeMode, StartingScore } from '@autoscore/schema';
+
+// Stan formularza nowej gry. Gracze w kolejności wyboru.
+export interface GameSetup {
+  readonly type: MatchType;
+  readonly playerIds: readonly string[];
+  readonly startingScore: StartingScore;
+  readonly bestOf: BestOf;
+  readonly practiceMode: PracticeMode;
+}
+
+export const INITIAL_SETUP: GameSetup = { type: 'match', playerIds: [], startingScore: 501, bestOf: 3, practiceMode: 'free_run' };
+
+export const PLAYER_COUNT: Record<MatchType, { readonly min: number; readonly max: number }> = {
+  match: { min: 2, max: 2 },
+  casual: { min: 2, max: 4 },
+  practice: { min: 1, max: 1 },
+};
+
+// Przy limicie 1 wybór zastępuje poprzedni. Przy większym limicie gracz ponad limit nie jest dodawany.
+export function pickPlayer(setup: GameSetup, playerId: string): GameSetup {
+  const { playerIds } = setup;
+  if (playerIds.includes(playerId)) {
+    return { ...setup, playerIds: playerIds.filter((id) => id !== playerId) };
+  }
+  const { max } = PLAYER_COUNT[setup.type];
+  if (max === 1) {
+    return { ...setup, playerIds: [playerId] };
+  }
+  return playerIds.length < max ? { ...setup, playerIds: [...playerIds, playerId] } : setup;
+}
+
+// Zmiana typu przycina wybór do nowego limitu i zostawia najwcześniej wybranych.
+export function changeType(setup: GameSetup, type: MatchType): GameSetup {
+  return { ...setup, type, playerIds: setup.playerIds.slice(0, PLAYER_COUNT[type].max) };
+}
+
+export function createRequest(setup: GameSetup): unknown {
+  const playerIds = [...setup.playerIds];
+  if (setup.type === 'match') {
+    return { type: setup.type, playerIds, startingScore: setup.startingScore, bestOf: setup.bestOf };
+  }
+  if (setup.type === 'casual') {
+    return { type: setup.type, playerIds, startingScore: setup.startingScore };
+  }
+  return { type: setup.type, playerIds, practiceMode: setup.practiceMode };
+}

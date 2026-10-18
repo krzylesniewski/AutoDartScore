@@ -1,15 +1,29 @@
-// 1 rzutka, 2-4 rzutki (bez 12-14), reszta rzutek.
-function dartsWord(count: number): string {
+import { MIN_LEGS_FOR_AVERAGE } from '@autoscore/schema';
+
+// Polska odmiana po liczbie: 1, 2-4 (bez 12-14), reszta.
+function plural(count: number, one: string, few: string, many: string): string {
   if (count === 1) {
-    return 'rzutka';
+    return one;
   }
   const lastDigit = count % 10;
   const lastTwo = count % 100;
-  return lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14) ? 'rzutki' : 'rzutek';
+  return lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14) ? few : many;
 }
 
 function darts(count: number): string {
-  return `${count} ${dartsWord(count)}`;
+  return `${count} ${plural(count, 'rzutka', 'rzutki', 'rzutek')}`;
+}
+
+function games(count: number): string {
+  return `${count} ${plural(count, 'gra', 'gry', 'gier')}`;
+}
+
+function legsCount(count: number): string {
+  return `${count} ${plural(count, 'leg', 'legi', 'legów')}`;
+}
+
+function wonLegs(count: number): string {
+  return `${count} ${plural(count, 'wygranego lega', 'wygranych legów', 'wygranych legów')}`;
 }
 
 // Wszystkie teksty widoczne dla użytkownika.
@@ -26,7 +40,6 @@ export const pl = {
   newPlayer: '+ Nowy gracz',
   playerName: 'Imię',
   playerAvatar: 'Avatar (emoji)',
-  guest: 'Gość',
   addPlayer: 'Dodaj',
   cancel: 'Anuluj',
   startingScore: 'Punkty startowe',
@@ -38,6 +51,24 @@ export const pl = {
     casual: 'Wybierz od 2 do 4 graczy.',
     practice: 'Wybierz 1 gracza.',
   },
+  playersCount: (count: number) => `Gracze (${count})`,
+  playersSelected: (count: number, max: number) => `Wybrano ${count} z ${max} ${max === 1 ? 'gracza' : 'graczy'}.`,
+  drawHint: ' Kto zaczyna pierwszy leg, rozstrzyga losowanie.',
+  newPlayerTitle: 'Nowy gracz',
+  setupSummary: 'Podsumowanie',
+  noPlayersSelected: 'Nie wybrano graczy',
+  versus: 'vs',
+  summaryType: 'Typ',
+  summaryPoints: 'Punkty',
+  summaryFormat: 'Format',
+  summaryRules: 'Zasady',
+  summaryStarts: 'Zaczyna',
+  summaryMode: 'Tryb',
+  bestOfFormat: (bestOf: number) => `Best of ${bestOf} (do ${wonLegs(Math.ceil(bestOf / 2))})`,
+  casualFormat: 'Jeden leg, ranking miejsc',
+  rulesX01: 'Straight-in, double-out',
+  rulesFreeRun: 'Bez zasad, tylko notuje rzuty',
+  startsByDraw: 'Losowanie przy starcie',
   startGame: 'Start gry',
   loadPlayersFailed: 'Nie udało się pobrać listy graczy',
   requestFailed: 'Nie udało się połączyć z serwerem',
@@ -75,6 +106,8 @@ export const pl = {
   undoFailed: 'Nie udało się cofnąć rzutki',
   place: (place: number) => `${place}. miejsce`,
   darts,
+  games,
+  legsCount,
   legsScore: (winner: number, loser: number) => `${winner}:${loser} w legach`,
   appName: 'AUTO Score',
   throwQueue: 'Kolejka rzutów',
@@ -117,15 +150,43 @@ export const pl = {
   lastLeg: (result: string) => `Ostatni leg: ${result}`,
   legSummary: (leg: number, result: string) => `Leg ${leg}: ${result}`,
   home: 'Ekran startowy',
-  unfinishedGames: 'Nieskończone gry',
-  noUnfinishedGames: 'Brak nieskończonych gier.',
+  mainNav: 'Główna nawigacja',
+  settings: 'Ustawienia',
+  cameraNone: 'Kamera: brak',
+  voiceStatus: (enabled: boolean) => `Głos: ${enabled ? 'włączony' : 'wyłączony'}`,
+  gamesToFinish: 'Gry do dokończenia',
+  gamesToFinishCount: (count: number) => `Gry do dokończenia (${count})`,
+  newestFirst: 'od najnowszej',
+  noGamesToFinish: 'Brak gier do dokończenia.',
+  finish: 'Dokończ',
+  finishGame: (title: string) => `Dokończ: ${title}`,
+  abandon: 'Porzuć',
+  abandonGame: (title: string) => `Porzuć: ${title}`,
+  matchTitle: (first: string, second: string) => `${first} vs ${second}`,
+  matchDetail: (startingScore: number, leg: number, legs: number) => `Mecz 1v1 · ${startingScore} · leg ${leg} z ${legs}`,
+  legsState: (first: number, second: number) => `${first} : ${second}`,
+  casualTitle: (players: number) => `Zabawa, ${players} graczy`,
+  casualDetail: (startingScore: number, leader: string, remaining: number) => `${startingScore} · prowadzi ${leader} (${remaining})`,
+  casualState: (playing: number) => `${playing} os.`,
+  practiceTitle: (mode: string) => `Trening: ${mode}`,
+  soloDetail: (name: string, remaining: number) => `${name} · zostało ${remaining}`,
+  freeRunDetail: (name: string, dartsThrown: number) => `${name} · ${darts(dartsThrown)}`,
+  activityToday: (time: string) => `dziś ${time}`,
+  activityYesterday: 'wczoraj',
+  rankingSubtitle: (gameCount: number, legCount: number) => `Ranking graczy z całej historii · ${games(gameCount)}, ${legsCount(legCount)}`,
+  ranking: 'Ranking',
+  averageFootnote: `Średnia od ${MIN_LEGS_FOR_AVERAGE} ukończonych legów.`,
+  tileBestLeg: 'Rekordowy leg (średnia)',
+  tileBestLegUnit: '3 rzutki',
+  tileCheckoutUnit: 'checkout',
+  tileShortestLeg: 'Najkrótszy leg',
+  tileShortestLegUnit: 'liczba rzutek',
+  tile180: 'Liczba 180',
+  tile180Unit: 'wszystkie gry',
+  noGamesInFilter: 'Brak gier w tym filtrze.',
+  tooFewPlayers: 'Za mało graczy w tej kategorii.',
   loadMatchesFailed: 'Nie udało się pobrać listy gier',
-  statusInProgress: 'W trakcie',
   statusAbandoned: 'Porzucony',
-  continueMatch: 'Kontynuuj',
-  resume: 'Wznów',
-  preview: 'Podgląd',
-  lastActivity: 'Ostatnia aktywność',
   abandonMatch: 'Porzuć mecz',
   resumeMatch: 'Wznów mecz',
   abandonTitle: 'Porzucić mecz?',
