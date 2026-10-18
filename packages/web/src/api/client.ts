@@ -1,5 +1,5 @@
-import { ApiError, MatchSnapshot, Player, ThrowResult, UndoResult } from '@autoscore/schema';
-import type { CreateMatchRequest, CreatePlayerRequest, HitEvent } from '@autoscore/schema';
+import { ApiError, MatchSnapshot, MatchSummary, Player, PlayerStats, ThrowResult, UndoResult } from '@autoscore/schema';
+import type { CreateMatchRequest, CreatePlayerRequest, HitEvent, StatsFilter } from '@autoscore/schema';
 
 // Vite przekierowuje /api do serwera, więc front i API mają jeden adres.
 export const API_BASE = '/api';
@@ -59,4 +59,12 @@ export function postThrow(matchId: string, hit: HitEvent): Promise<ThrowResult> 
 
 export function undo(matchId: string): Promise<UndoResult> {
   return request(`/matches/${encodeURIComponent(matchId)}/undo`, UndoResult, { method: 'POST' });
+}
+
+export function getPlayerStats(playerId: string, filter: StatsFilter): Promise<PlayerStats> {
+  return request(`/players/${encodeURIComponent(playerId)}/stats?type=${filter}`, PlayerStats);
+}
+
+export function getMatchSummary(matchId: string): Promise<MatchSummary> {
+  return request(`/matches/${encodeURIComponent(matchId)}/summary`, MatchSummary);
 }

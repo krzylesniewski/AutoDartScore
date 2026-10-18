@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { GameScreen } from './screens/GameScreen';
 import { NewGameScreen } from './screens/NewGameScreen';
+import { StatsScreen } from './screens/StatsScreen';
 
 const HOME = '#/';
 
-type Route = { screen: 'new-game' } | { screen: 'game'; matchId: string } | null;
+type Route = { screen: 'new-game' } | { screen: 'game'; matchId: string } | { screen: 'stats'; playerId: string | null } | null;
 
 function parseRoute(hash: string): Route {
   if (hash === '' || hash === '#' || hash === HOME) {
@@ -13,6 +14,13 @@ function parseRoute(hash: string): Route {
   const game = /^#\/matches\/([^/]+)$/.exec(hash);
   if (game?.[1]) {
     return { screen: 'game', matchId: decodeURIComponent(game[1]) };
+  }
+  if (hash === '#/stats') {
+    return { screen: 'stats', playerId: null };
+  }
+  const stats = /^#\/stats\/([^/]+)$/.exec(hash);
+  if (stats?.[1]) {
+    return { screen: 'stats', playerId: decodeURIComponent(stats[1]) };
   }
   return null;
 }
@@ -36,6 +44,9 @@ export function App() {
 
   if (route?.screen === 'game') {
     return <GameScreen key={route.matchId} matchId={route.matchId} />;
+  }
+  if (route?.screen === 'stats') {
+    return <StatsScreen playerId={route.playerId} />;
   }
   return <NewGameScreen />;
 }

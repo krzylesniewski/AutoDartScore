@@ -1,7 +1,7 @@
 import { HitEvent, type LiveMessage, type MatchSnapshot } from '@autoscore/schema';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { player, snapshot } from '../test/snapshots';
+import { casual, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
 import { GameScreen } from './GameScreen';
 
 const MATCH_ID = 'm_42';
@@ -47,6 +47,9 @@ interface Call {
 
 let calls: Call[];
 let respond: (call: Call) => Promise<Response>;
+// GET .../summary idzie osobno, żeby asercje na calls dotyczyły tylko komend.
+let summaryCalls: string[];
+let respondSummary: (url: string) => Promise<Response>;
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -87,11 +90,17 @@ function tap(name: string): void {
 beforeEach(() => {
   FakeWebSocket.instances = [];
   calls = [];
+  summaryCalls = [];
   respond = async (call) => json(201, throwResult(call, initial));
+  respondSummary = async () => json(200, summary({ matchId: MATCH_ID, eventSeq: initial.eventSeq }));
   vi.stubGlobal('WebSocket', FakeWebSocket);
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
+      if (url.endsWith('/summary')) {
+        summaryCalls.push(url);
+        return respondSummary(url);
+      }
       const call = { url, body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined };
       calls.push(call);
       return respond(call);
@@ -112,9 +121,10 @@ describe('GameScreen', () => {
 
   it('renders names and each remaining score once from the first state_updated', () => {
     connect({ ...initial, currentDarts: [{ segment: 20, multiplier: 3 }] });
-    expect(screen.getByText('Anna')).toBeTruthy();
-    expect(screen.getByText('Bartek')).toBeTruthy();
-    expect(within(screen.getByRole('region', { name: 'Wyniki' })).getAllByText('501')).toHaveLength(1);
+    const scoreboard = within(screen.getByRole('region', { name: 'Wyniki' }));
+    expect(scoreboard.getByText('Anna')).toBeTruthy();
+    expect(scoreboard.getByText('Bartek')).toBeTruthy();
+    expect(scoreboard.getAllByText('501')).toHaveLength(1);
     expect(screen.getAllByText('437')).toHaveLength(1);
   });
 
@@ -262,8 +272,77 @@ describe('GameScreen', () => {
     });
     expect(screen.getByText('Koniec meczu')).toBeTruthy();
     expect(screen.getByText('Bartek 2:1 w legach')).toBeTruthy();
-    expect((screen.getByRole('button', { name: '20' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: '20' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('shows the summary table of a finished match', async () => {
+    const finished = {
+      ...initial,
+      finished: true,
+      currentPlayerId: null,
+      winnerId: 'p1',
+      players: [player('p1', 'Anna', { remaining: 0, legsWon: 1 }), player('p2', 'Bartek', { remaining: 301, legsWon: 0 })],
+    };
+    respondSummary = async () =>
+      json(
+        200,
+        summary({
+          matchId: MATCH_ID,
+          finished: true,
+          eventSeq: finished.eventSeq,
+          players: [summaryPlayer('p1', { dartsThrown: 6, average: 150.5, legsWon: 1 }), summaryPlayer('p2', { dartsThrown: 3, average: 0 })],
+          legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [] }],
+        }),
+      );
+    connect(finished);
+    const table = await screen.findByRole('table', { name: 'Podsumowanie meczu' });
+    expect(within(table).getByText('150.50')).toBeTruthy();
+    expect(screen.getByText('Leg 1: Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('shows the live stats panel under the scoreboard in a 1v1 match', async () => {
+    respondSummary = async () =>
+      json(200, summary({ matchId: MATCH_ID, eventSeq: initial.eventSeq, players: [summaryPlayer('p1'), summaryPlayer('p2', { dartsThrown: 3, average: 64 })] }));
+    connect();
+    const panel = screen.getByRole('table', { name: 'Statystyki meczu' });
+    expect(panel.closest('section')?.previousElementSibling).toBe(screen.getByRole('region', { name: 'Wyniki' }));
+    expect(await within(panel).findByText('64.00')).toBeTruthy();
+    expect(summaryCalls).toEqual([`/api/matches/${MATCH_ID}/summary`]);
+  });
+
+  it('has no stats panel and fetches no summary in a casual game in progress', () => {
+    connect(casual(['Anna', 'Bartek', 'Celina'], { id: MATCH_ID, eventSeq: 4, currentPlayerId: 'p1' }));
+    expect(screen.getByText('Celina')).toBeTruthy();
+    expect(screen.queryByRole('table', { name: 'Statystyki meczu' })).toBeNull();
+    expect(summaryCalls).toEqual([]);
+  });
+
+  it('keeps the newest summary when an older response arrives later', async () => {
+    const pending: ((eventSeq: number, average: number) => void)[] = [];
+    respondSummary = () =>
+      new Promise((resolve) => {
+        pending.push((eventSeq, average) =>
+          resolve(json(200, summary({ matchId: MATCH_ID, eventSeq, players: [summaryPlayer('p1', { dartsThrown: 3, average }), summaryPlayer('p2')] }))),
+        );
+      });
+    const ws = connect();
+    ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: 5, state: { ...initial, eventSeq: 5 } });
+    await vi.waitFor(() => expect(summaryCalls).toHaveLength(2));
+
+    const [older, newer] = pending;
+    const panel = screen.getByRole('table', { name: 'Statystyki meczu' });
+    newer?.(5, 99);
+    expect(await within(panel).findByText('99.00')).toBeTruthy();
+    older?.(4, 11);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(within(panel).getByText('99.00')).toBeTruthy();
+    expect(within(panel).queryByText('11.00')).toBeNull();
   });
 });
 
