@@ -139,3 +139,14 @@ prs:
     effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**']
+
+  # Efekty dźwiękowe dla bustu i wygranej (plan: uwaga "Efekty dźwiękowe w P10").
+  - id: P10
+    branch: feat/audio-effects
+    title: 'feat(audio): sound effects for bust and win'
+    brief: briefs/P10.md
+    deps: [P5b, P7]
+    priority: 15
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/audio/**', 'packages/web/**']
