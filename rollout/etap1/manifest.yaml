@@ -10,18 +10,16 @@ claudeBin: ~/.nvm/versions/node/v22.18.0/bin/claude
 
 repo:
   path: ~/Documents/00_Nauka/AutoScoreDart
-  # TODO: repo na GitHubie jeszcze nie istnieje (git na razie lokalnie). Nazwa robocza.
-  github: KrzysztofLesniewski/autoscore-dart
+  github: krzylesniewski/AutoDartScore
   base: main
-  public: false # TODO: zmienić, jeśli repo będzie publiczne
+  public: true
   # Node 24 z nvm przed domyślnym Node 22. pnpm jest z Homebrew.
   pathPrepend: [~/.nvm/versions/node/v24.22.0/bin]
   install: pnpm install --frozen-lockfile
   requiredChecks: ['test', 'typecheck', 'lint'] # joby z .github/workflows/ci.yml
-  # TODO: token konta bota (rola Write), patrz docs/accounts.html
-  agentToken: ~/.config/rollout/agent-gh-token
+  # Bez konta bota: agenci, PR-y i merge idą z loginu gh (KrzysztofLesniewski, rola Write).
   maintainers: [KrzysztofLesniewski]
-  merge: { method: squash, admin: auto }
+  merge: { method: squash, admin: false }
   # Plan i decyzje trzyma człowiek; agenci ich nie zmieniają.
   forbid:
     - auto-score-dart-pomysly.md
@@ -49,7 +47,7 @@ briefing:
 policy:
   concurrency: 2
   merge: human # driver scala po mojej akceptacji
-  approval: github # akceptacja = review na GitHubie PR-a otwartego przez bota
+  approval: inbox # akceptacja przez `rollout approve` (GitHub nie pozwala zatwierdzić własnego PR-a)
   # Agent odpowiada na pytania z briefu tylko tym, co rozstrzyga plan; reszta trafia do mnie.
   delegate: {}
 
@@ -65,7 +63,7 @@ prs:
     title: 'feat(engine): casual placements and practice modes'
     brief: briefs/P3.md
     priority: 50
-    effort: { implement: xhigh, verify: xhigh }
+    effort: { implement: high, verify: high }
     changeset: none
     scope: ['packages/engine/**', 'packages/schema/**']
 
@@ -75,7 +73,7 @@ prs:
     brief: briefs/P4.md
     deps: [P3]
     priority: 40
-    effort: { implement: xhigh, verify: xhigh }
+    effort: { implement: high, verify: high }
     changeset: none
     scope: ['packages/server/**', 'packages/schema/**', 'package.json']
 
@@ -85,7 +83,7 @@ prs:
     brief: briefs/P5.md
     deps: [P4]
     priority: 30
-    effort: { implement: xhigh, verify: high }
+    effort: { implement: high, verify: high }
     changeset: none
     scope: ['packages/web/**', 'package.json', 'eslint.config.js']
 
