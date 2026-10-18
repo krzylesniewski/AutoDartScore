@@ -45,7 +45,7 @@ briefing:
       kind: markdown
 
 policy:
-  concurrency: 2
+  concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
   merge: human # driver scala po mojej akceptacji
   approval: inbox # akceptacja przez `rollout approve` (GitHub nie pozwala zatwierdzić własnego PR-a)
   # Agent odpowiada na pytania z briefu tylko tym, co rozstrzyga plan; reszta trafia do mnie.
@@ -123,7 +123,7 @@ prs:
     branch: feat/history-profiles
     title: 'feat: match history, head-to-head, form chart, player profiles and ranking'
     brief: briefs/P8.md
-    deps: [P9]
+    deps: [P6, P9]
     priority: 5
     effort: { brief: high, implement: high, verify: high }
     changeset: none
@@ -134,7 +134,7 @@ prs:
     branch: feat/abandon-resume
     title: 'feat: abandon and resume a match, unfinished matches on home'
     brief: briefs/P9.md
-    deps: [P6]
+    deps: [P5b]
     priority: 8
     effort: { brief: high, implement: high, verify: high }
     changeset: none

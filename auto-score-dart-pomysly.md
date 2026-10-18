@@ -583,8 +583,8 @@ Plan realizujemy jako serię PR-ów przez [claude-rollout](https://boldare.githu
 | P5b | `web`: ekran gry według makiet motywu A (`design/mockups`, tokeny z `design/theme.css`) | P5 |
 | P6 | `server` + `web`: statystyki z tabeli rzutek, ekran podsumowania | P5b |
 | P7 | `audio`: odczyt wyniku, `bust`, `winner` (Web Speech API, odtwarzany we froncie) | P5 |
-| P8 | `server` + `web` (+ `engine`, `schema`): historia meczów (`GET /matches`, lista ze szczegółami meczu), head-to-head z meczów 1v1, wykres formy (średnia z ostatnich meczów), profil gracza (edycja imienia i avatara, archiwizacja zamiast usuwania, zapisanie gościa po meczu), ranking graczy według średniej na 3 rzutki (patrz niżej); pełna historia rozbudowuje listę meczów z P9 | P9 |
-| P9 | `schema` + `server` + `web`: porzucenie i wznowienie meczu (patrz niżej), lista nieskończonych meczów na ekranie startowym | P6 |
+| P8 | `server` + `web` (+ `engine`, `schema`): historia meczów (`GET /matches`, lista ze szczegółami meczu), head-to-head z meczów 1v1, wykres formy (średnia z ostatnich meczów), profil gracza (edycja imienia i avatara, archiwizacja zamiast usuwania, zapisanie gościa po meczu), ranking graczy według średniej na 3 rzutki (patrz niżej); pełna historia rozbudowuje listę meczów z P9 | P6, P9 |
+| P9 | `schema` + `server` + `web`: porzucenie i wznowienie meczu (patrz niżej), lista nieskończonych meczów na ekranie startowym | P5b |
 | P10 | `audio` + `web`: efekty dźwiękowe dla bustu i wygranej (patrz niżej) | P5b, P7 |
 
 Uwagi:
