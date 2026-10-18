@@ -649,7 +649,8 @@ Każdy etap ma kończyć się działającą rzeczą, którą da się użyć, bo 
 - **Gracze:** profil to imię plus avatar (emoji lub zdjęcie), bez kont i haseł na etapach 1-4. Nowy gracz dodawany w kreatorze gry przyciskiem "+ Nowy gracz". Gość bez zapisu statystyk, z opcją zapisania po meczu. Archiwizacja zamiast usuwania. Pod wersję online: opcjonalne `accountId` w profilu.
 - **Urządzenie:** na start monitor (Mac), później tablet i TV jako drugi ekran. Układ responsywny.
 - **Wyniki i zakończenia na ekranie:** podpowiedź zamknięcia (np. D12) i liczba rzutek do wygrania lega widoczne na ekranie gry, a na koniec lega i meczu ekran podsumowania (wynik, średnie, najwyższe zakończenie).
-- **Makiety:** ekran gry w dwóch ciemnych motywach (do porównania) są w osobnym artefakcie projektowym.
+- **Makiety:** [AUTO Score: ekran gry (2 motywy)](https://claude.ai/artifact/X3fQ7qb26tmktL3amc2pML). Obowiązuje motyw A (czerwony): ekrany „A: 2 graczy” i „A: 4 graczy”. Zielony wariant B („Ciemny nowoczesny”) jest odrzucony.
+- **Tokeny motywu A** w repo: `design/theme.css` (kolory, fonty, rozmiary z makiety 1440×810, promienie). Uwaga do P5: kremowy tekst na czerwonym akcencie ma kontrast 4,4:1, więc nadaje się tylko do dużego tekstu; mała odznaka „Rzuca” (13 px) z makiety wymaga większego, pogrubionego tekstu albo innego rozwiązania.
 
 # Typy gier: mecz 1v1, zabawa i trening
 

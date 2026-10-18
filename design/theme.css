@@ -1,0 +1,67 @@
+/*
+ * Motyw A: ciemny klasyczny (czerń, krem, czerwień z tarczy).
+ * Źródło: makiety "A: 2 graczy" i "A: 4 graczy" w artefakcie
+ * https://claude.ai/artifact/X3fQ7qb26tmktL3amc2pML (wariant B, zielony "Ciemny nowoczesny", odrzucony).
+ * Jedno źródło prawdy dla kolorów, typografii i promieni. Front (P5) podpina to pod Tailwinda.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap');
+
+:root {
+  /* Tła i powierzchnie, od najciemniejszej */
+  --color-bg: #0f0f0f; /* tło aplikacji */
+  --color-surface-header: #161616; /* górny pasek */
+  --color-surface: #1a1a1a; /* karty: sloty rzutek, suma tury, zamknięcie, wiersz gracza */
+  --color-surface-button: #1f1f1f; /* przyciski drugorzędne (Cofnij, Nowa runda) */
+  --color-surface-active: #222222; /* wiersz rzucającego gracza */
+
+  /* Obramowania */
+  --color-border-subtle: #2a2a2a; /* linia pod górnym paskiem */
+  --color-border: #2e2e2e; /* karty */
+  --color-border-strong: #3a3a3a; /* chipy, przyciski, przerywane "Dodaj gracza" */
+
+  /* Tekst */
+  --color-text: #f3ecd8; /* krem: główny tekst i wyniki (16,2:1 na tle) */
+  --color-text-muted: #a8a08a; /* etykiety, wynik czekających graczy (6,7:1 na karcie) */
+  --color-text-inverse: #0f0f0f; /* tekst na kremowym chipie (np. "Leg 2") */
+
+  /* Akcent: czerwień z tarczy. Rzucający, zamknięcie, slot czekający na rzutkę, "Do weryfikacji". */
+  --color-accent: #d8352a;
+  --color-on-accent: #fff7e6; /* 4,4:1 na akcencie: tylko tekst duży (≥24 px) albo pogrubiony ≥19 px */
+
+  /* Stan (kropki w górnym pasku: kamera, głos). Zawsze z tekstem obok, kolor nie niesie znaczenia sam. */
+  --color-status-ok: #3ddc84;
+
+  /* Kolory awatarów graczy 1-4 (tekst na nich: #111111) */
+  --color-avatar-1: #f2b134;
+  --color-avatar-2: #5aa9ff;
+  --color-avatar-3: #b28cff;
+  --color-avatar-4: #ff7f6e;
+  --color-on-avatar: #111111;
+
+  /* Typografia */
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif; /* liczby, wyniki, nazwa aplikacji; 600/700 */
+  --font-body: 'Barlow', 'Helvetica Neue', Arial, sans-serif; /* reszta; 400/500/600 */
+  --font-numeric: tabular-nums; /* font-variant-numeric dla wyników */
+
+  /* Rozmiary z makiety 1440×810 (monitor 16:9) */
+  --text-score-2p: 150px; /* pozostały wynik w pasku, 2 graczy */
+  --text-score-4p: 92px; /* pozostały wynik w pasku, 3-4 graczy */
+  --text-checkout: 120px; /* panel zamknięcia, np. D12 */
+  --text-dart: 100px; /* slot rzutki, np. T20 */
+  --text-turn-total: 68px; /* suma tury */
+  --text-player-name-2p: 40px;
+  --text-player-name-4p: 32px;
+  --text-heading: 28px; /* "Marek rzuca", nazwa aplikacji */
+  --text-button: 18px;
+  --text-label: 15px; /* etykiety WIELKIMI literami */
+  --tracking-label: 0.14em;
+
+  /* Kształt: kanciaste karty */
+  --radius-card: 6px; /* karty, przyciski */
+  --radius-chip: 4px; /* chipy, odznaki, panel zamknięcia */
+  --border-width: 2px; /* karty i przyciski */
+  --button-height: 56px;
+  --space-page: 24px; /* odstęp od krawędzi i między kolumnami */
+  --scoreboard-width: 520px; /* lewa kolumna z paskiem wyników */
+}

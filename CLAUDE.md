@@ -58,7 +58,7 @@ Szczegółowe pomysły i decyzje: `auto-score-dart-pomysly.md`.
 ## Front
 
 - React + Vite (SPA), TypeScript, Tailwind ze zmiennymi CSS jako tokenami motywu (kolory, typografia, promienie w jednym miejscu, żeby łatwo zmienić motyw).
-- Motyw wybrany: ciemny klasyczny (czerń, krem, czerwień i zieleń z tarczy, Barlow Condensed + Barlow, kanciaste karty). Implementuj przez tokeny.
+- Motyw wybrany: A, ciemny klasyczny (czerń, krem, czerwony akcent z tarczy, Barlow Condensed + Barlow, kanciaste karty). Tokeny (kolory, fonty, rozmiary, promienie) są w `design/theme.css` i to jest jedyne źródło kolorów: implementuj przez nie, bez kolorów wpisanych na sztywno. Makiety: https://claude.ai/artifact/X3fQ7qb26tmktL3amc2pML (ekrany „A: 2 graczy” i „A: 4 graczy”; zielony wariant B jest odrzucony).
 - Kolor nie może samodzielnie nieść znaczenia (bust, wygrana, weryfikacja mają też ikonę i tekst).
 - Profil gracza: imię + avatar (emoji lub zdjęcie), bez haseł. Dodawanie gracza w kreatorze gry. Gość bez zapisu statystyk. Archiwizacja zamiast usuwania. Opcjonalne `accountId` pod wersję online.
 - Główny ekran na start: monitor. Ekran gry (2 kolumny): po lewej pasek wyników (kolejka rzutów: rzucający zawsze na górze, następni pod nim, animowana zamiana; wiersz = avatar, imię, pozostały wynik; wolne miejsca graczy 3 i 4 jako przerywane wiersze "Dodaj gracza"), w środku 3 sloty rzutek, suma tury, panel zamknięcia (np. D12) i przyciski Cofnij, Nowa runda, Do weryfikacji. Bez podglądu tarczy na ekranie gry. Ręczny wpis przez klawiaturę: przyciski 1-20, 25 (Bull) i Miss oraz przełącznik mnożnika S/D/T. Pozostały wynik pokazujemy tylko raz, w pasku wyników.
