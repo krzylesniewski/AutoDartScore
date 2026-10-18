@@ -33,6 +33,7 @@ export type NewThrow = Omit<ThrowRecord, 'id' | 'receivedAt'>;
 
 export interface Store {
   createPlayer(request: CreatePlayerRequest): Promise<Player>;
+  // Bez gości, od ostatnio aktywnego. Gracze bez gier na końcu.
   listPlayers(): Promise<Player[]>;
   findPlayers(ids: readonly string[]): Promise<Player[]>;
   createMatch(match: NewMatch): Promise<string>;
@@ -54,6 +55,14 @@ function now(): string {
 
 function toPlayer(row: Selectable<PlayersTable>): Player {
   return { id: row.id, name: row.name, avatar: row.avatar, guest: row.guest === 1, createdAt: row.created_at };
+}
+
+// Daty ISO w UTC porównują się jak tekst.
+function later(a: string | null, b: string | null): string | null {
+  if (a === null) {
+    return b;
+  }
+  return b === null || a > b ? a : b;
 }
 
 function toThrow(row: Selectable<ThrowsTable>): ThrowRecord {
@@ -147,9 +156,28 @@ export function createStore(db: Kysely<Database>): Store {
       return toPlayer(row);
     },
 
+    // Ostatnia aktywność to najnowszy wpis w logu albo utworzenie gry gracza. Sortowanie w TS, bo NULL-e
+    // trafiają na początek albo koniec zależnie od silnika bazy.
     async listPlayers() {
-      const rows = await db.selectFrom('players').selectAll().where('guest', '=', 0).orderBy('name').orderBy('id').execute();
-      return rows.map(toPlayer);
+      const rows = await db
+        .selectFrom('players')
+        .leftJoin('match_players', 'match_players.player_id', 'players.id')
+        .leftJoin('matches', 'matches.id', 'match_players.match_id')
+        .leftJoin('match_events', 'match_events.match_id', 'matches.id')
+        .select(['players.id', 'players.name', 'players.avatar', 'players.guest', 'players.created_at'])
+        .select((eb) => [eb.fn.max('match_events.created_at').as('last_event_at'), eb.fn.max('matches.created_at').as('last_match_at')])
+        .where('players.guest', '=', 0)
+        .groupBy(['players.id', 'players.name', 'players.avatar', 'players.guest', 'players.created_at'])
+        .execute();
+      return rows
+        .map((row) => ({ player: toPlayer(row), at: later(row.last_event_at, row.last_match_at) }))
+        .sort((a, b) => {
+          if (a.at !== b.at) {
+            return a.at === null ? 1 : b.at === null ? -1 : b.at.localeCompare(a.at);
+          }
+          return a.player.name.localeCompare(b.player.name, 'pl') || a.player.id.localeCompare(b.player.id);
+        })
+        .map((entry) => entry.player);
     },
 
     async findPlayers(ids) {
