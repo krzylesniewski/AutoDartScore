@@ -53,7 +53,7 @@ export function createCasualMatch(config: CasualMatchConfig): CasualMatchState {
   };
 }
 
-// Indeksy pochodzą ze zwalidowanej konfiguracji, więc brak elementu oznacza uszkodzony stan, a nie złe dane wejściowe.
+// Brak elementu oznacza niespójny stan (np. currentPlayerIndex spoza playerIds), a nie zły rzut, więc to nie jest EngineError.
 function at<T>(items: readonly T[], index: number): T {
   const item = items[index];
   if (item === undefined) {

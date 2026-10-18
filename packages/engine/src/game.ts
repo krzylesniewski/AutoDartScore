@@ -97,7 +97,6 @@ export function isGameFinished(game: GameState): boolean {
   }
 }
 
-// Free run zostaje w logu zdarzeń, ale nie wchodzi do agregatów statystyk.
 export function countsToStats(config: GameConfig): boolean {
   return !(config.type === 'practice' && config.practiceMode === 'free_run');
 }

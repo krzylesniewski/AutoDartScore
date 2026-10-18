@@ -42,7 +42,8 @@ export const MatchWon = z.object({
 });
 export type MatchWon = z.infer<typeof MatchWon>;
 
-// Zabawa: gracz zamknął leg, zajął miejsce i wypada z kolejki. Pozostali grają dalej.
+// Zabawa: gracz zamknął leg, zajął miejsce i wypada z kolejki. Pozostali grają dalej, dopóki nie zostanie jeden gracz.
+// Wtedy ten gracz dostaje ostatnie miejsce i grę kończy casual_finished.
 export const PlayerFinished = z.object({
   type: z.literal('player_finished'),
   ...base,
@@ -54,7 +55,7 @@ export type PlayerFinished = z.infer<typeof PlayerFinished>;
 
 export const CasualFinished = z.object({
   type: z.literal('casual_finished'),
-  placements: z.array(Placement).min(2).max(4), // w kolejności miejsc
+  placements: z.array(Placement).min(2).max(4), // silnik podaje je w kolejności miejsc
 });
 export type CasualFinished = z.infer<typeof CasualFinished>;
 

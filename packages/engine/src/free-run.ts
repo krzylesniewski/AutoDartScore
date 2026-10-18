@@ -3,7 +3,7 @@ import { EngineError } from './errors.js';
 import { hitPoints } from './points.js';
 import type { ApplyResult } from './x01-match.js';
 
-// Trening Free run: swobodne rzucanie bez zasad i bez końca. Silnik tylko liczy rzutki i punkty sesji.
+// Trening Free run: swobodne rzucanie bez zasad i bez końca. Silnik tylko notuje rzutki: ich liczbę, sumę punktów i podejścia.
 // Nie emituje zdarzeń domenowych, więc nie wyzwala odczytu wyniku.
 
 export interface FreeRunConfig {
