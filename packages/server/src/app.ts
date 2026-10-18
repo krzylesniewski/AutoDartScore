@@ -8,7 +8,9 @@ import { createMatchService } from './match-service.js';
 import { liveRoutes } from './routes/live.js';
 import { matchRoutes } from './routes/matches.js';
 import { playerRoutes } from './routes/players.js';
+import { statsRoutes } from './routes/stats.js';
 import { createSerialQueue } from './serial-queue.js';
+import { createStatsService } from './stats-service.js';
 import { createStore } from './store/store.js';
 
 export interface AppOptions {
@@ -37,5 +39,6 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   playerRoutes(app, store);
   await matchRoutes(app, service);
   liveRoutes(app, service);
+  statsRoutes(app, createStatsService({ store }));
   return app;
 }
