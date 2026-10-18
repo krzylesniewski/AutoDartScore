@@ -87,11 +87,22 @@ prs:
     changeset: none
     scope: ['packages/web/**', 'package.json', 'eslint.config.js']
 
+  # Wygląd ekranu gry według makiet motywu A (design/mockups, tokeny w design/theme.css).
+  - id: P5b
+    branch: feat/web-theme-a
+    title: 'feat(web): game screen styled after the theme A mockups'
+    brief: briefs/P5b.md
+    deps: [P5]
+    priority: 35
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+
   - id: P6
     branch: feat/stats
     title: 'feat: player statistics and match summary'
     brief: briefs/P6.md
-    deps: [P5]
+    deps: [P5b]
     priority: 20
     effort: { brief: high, implement: high, verify: high }
     changeset: none
