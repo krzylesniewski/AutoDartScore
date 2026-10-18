@@ -1,6 +1,6 @@
 # @autoscore/server
 
-Serwer API: REST i WebSocket na Fastify. Jest jedynym źródłem prawdy o stanie gry. Zapisuje każdą rzutkę i każde cofnięcie jako wpis w logu zdarzeń w SQLite. Stan gry nie jest zapisywany. Serwer odtwarza go z rzutek, które nadal się liczą, przez silnik z `@autoscore/engine`. Komendy jednej gry wykonują się po kolei, a różne gry nie blokują się nawzajem.
+Serwer API: REST i WebSocket na Fastify. Jest jedynym źródłem prawdy o stanie gry. Zapisuje każdą rzutkę, każde cofnięcie oraz każde porzucenie i wznowienie gry jako wpis w logu zdarzeń w SQLite. Stan gry nie jest zapisywany. Serwer odtwarza go z rzutek, które nadal się liczą, przez silnik z `@autoscore/engine`. Status porzucenia wynika z wpisów porzucenia i wznowienia. Komendy jednej gry wykonują się po kolei, a różne gry nie blokują się nawzajem.
 
 Baza to SQLite przez wbudowany moduł `node:sqlite` i Kysely, bez natywnych bindingów. Migracje używają tylko typów text, integer i real i nie używają funkcji JSON, żeby dało się przejść na PostgreSQL.
 
@@ -19,10 +19,11 @@ Oba skrypty uruchamiają `src/main.ts` przez `jiti`, bez kroku budowania. Przy s
 - `src/app.ts`: `buildApp`, czyli aplikacja Fastify z trasami i obsługą błędów.
 - `src/config.ts`: `loadConfig`, czyli odczyt zmiennych środowiskowych.
 - `src/errors.ts`: mapowanie błędów na `ApiError` i kody HTTP.
-- `src/routes/`: `players.ts`, `matches.ts` (gry, lista gier, rzutki, cofnięcie, porzucenie i wznowienie), `live.ts` (WebSocket).
+- `src/routes/`: `players.ts`, `matches.ts` (gry, lista gier, rzutki, cofnięcie, porzucenie i wznowienie), `live.ts` (WebSocket), `stats.ts` (statystyki gracza i podsumowanie meczu).
 - `src/match-service.ts`: komendy gry (utworzenie, rzutka, cofnięcie, porzucenie, wznowienie, lista, subskrypcja).
 - `src/replay.ts`: wybór rzutek, które się liczą, stan porzucenia i odtworzenie stanu w silniku.
 - `src/snapshot.ts`: budowa `MatchSnapshot` ze stanu silnika.
+- `src/stats-service.ts` i `src/stats/`: statystyki liczone z odtworzenia logu.
 - `src/live-hub.ts`: rozsyłanie wiadomości do subskrybentów jednej gry.
 - `src/serial-queue.ts`: kolejka komend per gra.
 - `src/store/store.ts`: warstwa dostępu do danych.

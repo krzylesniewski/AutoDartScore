@@ -22,11 +22,11 @@ Routing przez hash w `src/App.tsx`:
 
 ## Struktura
 
-- `src/api/`: klient REST, generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem.
+- `src/api/`: klient REST, generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook podsumowania meczu.
 - `src/audio/`: głos przez Web Speech API, efekty przez Web Audio API, hook `useAnnouncer`.
-- `src/components/`: pasek wyników, panel tury, klawiatura, nagłówek, przełączniki, ikony.
-- `src/game/`: podpowiedź zamknięcia, etykiety trafień, kolejność paska wyników.
-- `src/screens/`: `NewGameScreen` i `GameScreen`.
+- `src/components/`: pasek wyników, panel tury, klawiatura, nagłówek, okno porzucenia meczu, panele statystyk i podsumowania meczu, przełączniki, ikony.
+- `src/game/`: podpowiedź zamknięcia, etykiety trafień, kolejność paska wyników, formatowanie statystyk.
+- `src/screens/`: `HomeScreen`, `NewGameScreen`, `GameScreen` i `StatsScreen`.
 - `src/i18n/`: teksty po polsku.
 
 ## Dźwięk
