@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Hit } from './hit.js';
+import { Placement } from './match.js';
 
 // Zdarzenia domenowe silnika gry. Te same zdarzenia odbierają WebSocket i warstwa audio.
 const base = {
@@ -41,5 +42,21 @@ export const MatchWon = z.object({
 });
 export type MatchWon = z.infer<typeof MatchWon>;
 
-export const DomainEvent = z.discriminatedUnion('type', [TurnCompleted, Bust, LegWon, MatchWon]);
+// Zabawa: gracz zamknął leg, zajął miejsce i wypada z kolejki. Pozostali grają dalej.
+export const PlayerFinished = z.object({
+  type: z.literal('player_finished'),
+  ...base,
+  place: Placement.shape.place,
+  checkout: LegWon.shape.checkout,
+  dartsThrown: LegWon.shape.dartsThrown,
+});
+export type PlayerFinished = z.infer<typeof PlayerFinished>;
+
+export const CasualFinished = z.object({
+  type: z.literal('casual_finished'),
+  placements: z.array(Placement).min(2).max(4), // w kolejności miejsc
+});
+export type CasualFinished = z.infer<typeof CasualFinished>;
+
+export const DomainEvent = z.discriminatedUnion('type', [TurnCompleted, Bust, LegWon, MatchWon, PlayerFinished, CasualFinished]);
 export type DomainEvent = z.infer<typeof DomainEvent>;
