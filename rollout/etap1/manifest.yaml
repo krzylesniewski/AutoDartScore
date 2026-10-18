@@ -63,7 +63,7 @@ prs:
     title: 'feat(engine): casual placements and practice modes'
     brief: briefs/P3.md
     priority: 50
-    effort: { implement: high, verify: high }
+    effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/engine/**', 'packages/schema/**']
 
@@ -73,7 +73,7 @@ prs:
     brief: briefs/P4.md
     deps: [P3]
     priority: 40
-    effort: { implement: high, verify: high }
+    effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/server/**', 'packages/schema/**', 'package.json']
 
@@ -83,7 +83,7 @@ prs:
     brief: briefs/P5.md
     deps: [P4]
     priority: 30
-    effort: { implement: high, verify: high }
+    effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/web/**', 'package.json', 'eslint.config.js']
 
@@ -93,7 +93,7 @@ prs:
     brief: briefs/P6.md
     deps: [P5]
     priority: 20
-    effort: { implement: high, verify: high }
+    effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/server/**', 'packages/web/**', 'packages/schema/**']
 
@@ -103,6 +103,6 @@ prs:
     brief: briefs/P7.md
     deps: [P5]
     priority: 10
-    effort: { implement: high, verify: high }
+    effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/audio/**', 'packages/web/**']
