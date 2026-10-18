@@ -118,7 +118,7 @@ prs:
     changeset: none
     scope: ['packages/audio/**', 'packages/web/**']
 
-  # Historia meczów, head-to-head, wykres formy, profil gracza, numer tury gracza (plan: tabela "Etap 1 jako PR-y").
+  # Historia meczów, head-to-head, wykres formy, profil gracza (plan: tabela "Etap 1 jako PR-y").
   - id: P8
     branch: feat/history-profiles
     title: 'feat: match history, head-to-head, form chart and player profiles'

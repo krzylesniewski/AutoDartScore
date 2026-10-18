@@ -583,7 +583,7 @@ Plan realizujemy jako serię PR-ów przez [claude-rollout](https://boldare.githu
 | P5b | `web`: ekran gry według makiet motywu A (`design/mockups`, tokeny z `design/theme.css`) | P5 |
 | P6 | `server` + `web`: statystyki z tabeli rzutek, ekran podsumowania | P5b |
 | P7 | `audio`: odczyt wyniku, `bust`, `winner` (Web Speech API, odtwarzany we froncie) | P5 |
-| P8 | `server` + `web` (+ `engine`, `schema`): historia meczów (`GET /matches`, lista ze szczegółami meczu), head-to-head z meczów 1v1, wykres formy (średnia z ostatnich meczów), profil gracza (edycja imienia i avatara, archiwizacja zamiast usuwania, zapisanie gościa po meczu), numer tury gracza w stanie meczu (nagłówek "Tura N" na ekranie gry) | P6 |
+| P8 | `server` + `web` (+ `engine`, `schema`): historia meczów (`GET /matches`, lista ze szczegółami meczu), head-to-head z meczów 1v1, wykres formy (średnia z ostatnich meczów), profil gracza (edycja imienia i avatara, archiwizacja zamiast usuwania, zapisanie gościa po meczu) | P6 |
 
 Uwagi:
 
