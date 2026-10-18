@@ -1,0 +1,40 @@
+# @autoscore/web
+
+Front: SPA w React 19 i Vite, układ pod tablet w poziomie. Style to Tailwind 4 oparty tylko na tokenach motywu z [design/theme.css](../../design/theme.css), importowanych w `src/theme.css`. Teksty dla użytkownika są po polsku w `src/i18n/pl.ts`.
+
+## Uruchomienie
+
+```sh
+pnpm --filter @autoscore/web dev
+```
+
+Front potrzebuje działającego serwera. Vite przekazuje `/api` (także WebSocket) do adresu z `AUTOSCORE_API_URL`, domyślnie `http://localhost:3000`, i obcina prefiks `/api`. Serwer Vite nasłuchuje na wszystkich interfejsach, więc tablet w sieci otwiera `http://<adres-IP-komputera>:5173`. Całość, czyli serwer i front razem, uruchamia `pnpm dev` w katalogu głównym, zobacz [README](../../README.md).
+
+## Ekrany
+
+Routing przez hash w `src/App.tsx`:
+
+- `#/`: kreator nowej gry. Najpierw wybór „Mecz 1v1”, „Zabawa” albo „Trening”, potem gracze z przyciskiem „+ Nowy gracz” (imię, avatar emoji, gość). Dalej punkty startowe (mecz i zabawa), liczba legów (mecz) albo tryb treningu (Free run, Solo 501).
+- `#/matches/:id`: ekran gry. Pasek wyników, trzy sloty rzutek, suma tury, podpowiedź zamknięcia, klawiatura (1-20, 25, Miss, S/D/T), „Cofnij” i przełączniki głosu i efektów. „Nowa runda” i „Do weryfikacji” są nieaktywne, z etykietą „Wkrótce”.
+- Każdy inny adres przekierowuje na `#/`.
+
+## Struktura
+
+- `src/api/`: klient REST, generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem.
+- `src/audio/`: głos przez Web Speech API, efekty przez Web Audio API, hook `useAnnouncer`.
+- `src/components/`: pasek wyników, panel tury, klawiatura, nagłówek, przełączniki, ikony.
+- `src/game/`: podpowiedź zamknięcia, etykiety trafień, kolejność paska wyników.
+- `src/screens/`: `NewGameScreen` i `GameScreen`.
+- `src/i18n/`: teksty po polsku.
+
+## Dźwięk
+
+Głos i efekty są domyślnie włączone na każdym urządzeniu. Wybór z przełączników zostaje w `localStorage` pod kluczami `autoscore.voice` i `autoscore.effects`. Na drugim ekranie wyłącz je ręcznie, żeby wynik nie był czytany dwa razy. Nic nie wyłącza ich automatycznie. Logikę komunikatów dostarcza [@autoscore/audio](../audio/README.md).
+
+## Testy
+
+```sh
+pnpm --filter @autoscore/web test
+```
+
+Vitest w środowisku jsdom z Testing Library. Konfiguracja jest w bloku `test` w `vite.config.ts`, a przygotowanie środowiska w `src/test-setup.ts`.
