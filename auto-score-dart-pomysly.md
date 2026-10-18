@@ -662,6 +662,48 @@ Każdy etap ma kończyć się działającą rzeczą, którą da się użyć, bo 
 - **Zrzuty ekranów A** w repo (1440×810): `design/mockups/theme-a-2-players.png`, `design/mockups/theme-a-4-players.png`, `design/mockups/theme-a-new-game.png` (ekran startowy: typ gry, gracze, punkty, liczba legów, podsumowanie, przewijana lista gier do dokończenia z przyciskiem Dokończ), `design/mockups/theme-a-new-game-10-players.png` (ten sam ekran przy 10 graczach: chipy zawijają się w 2 rzędy, bez wyszukiwarki, kolejność od ostatnio grających; miejsca starczy do ok. 20 graczy, potem lista musi się przewijać albo pokazywać tylko ostatnio grających), `design/mockups/theme-a-stats.png` (statystyki: filtr typu gry, zawsze z całej historii, bez filtra okresu; 6 rankingów top 3, m.in. najlepsza średnia w legu). Liczby na makietach są przykładowe. Na makietach brakuje klawiatury ręcznego wpisu (decyzja zapadła później), więc P5 musi ją zaprojektować w tym samym stylu.
 - **Tokeny motywu A** w repo: `design/theme.css` (kolory, fonty, rozmiary z makiety 1440×810, promienie). Uwaga do P5: kremowy tekst na czerwonym akcencie ma kontrast 4,4:1, więc nadaje się tylko do dużego tekstu; mała odznaka „Rzuca” (13 px) z makiety wymaga większego, pogrubionego tekstu albo innego rozwiązania.
 
+## Ekran startowy i statystyki: punkty do implementacji
+
+Makiety: `design/mockups/theme-a-new-game.html` (+ `.png`), `theme-a-new-game-10-players.html`, `theme-a-stats.html`. Kolory i fonty tylko z `design/theme.css`. Liczby i gracze na makietach są przykładowe.
+
+### Ekran startowy („Nowa gra”, P5)
+
+1. **Nawigacja:** górny pasek z „Nowa gra / Statystyki / Ustawienia” i kropkami stanu kamery i głosu (stan z serwera, z tekstem obok kropki).
+2. **Typ gry** (`match` / `casual` / `practice`) zmienia resztę formularza:
+   - Mecz 1v1: dokładnie 2 graczy, punkty 301/501/701, Best of 1/3/5 (`legsToWin` = 1/2/3).
+   - Zabawa: 3-4 graczy (2 dopuszczalne), punkty, bez wyboru legów.
+   - Trening: 1 gracz i tryb Free run / Solo 501 zamiast punktów i legów.
+3. **Gracze:** lista z `GET /players` (bez zarchiwizowanych), kolejność od ostatnio grających, chipy z awatarem; zaznaczanie z limitem zależnym od typu gry. Lista się zawija; przy ok. 20+ graczach przewijanie (bez wyszukiwarki).
+4. **„+ Nowy gracz”:** okno z imieniem i awatarem (emoji lub zdjęcie), `POST /players`, nowy gracz od razu zaznaczony.
+5. **Podpowiedź pod graczami** liczy na żywo („Wybierz 2 graczy.”, „Wybrano 2 z 2 graczy.”).
+6. **„Start gry”** nieaktywny, dopóki formularz nie jest poprawny. Klik: `POST /matches` z typem, graczami i ustawieniami; losowanie, kto zaczyna, robi serwer (silnik dostaje `firstPlayerIndex`); potem przejście do ekranu gry.
+7. **Podsumowanie** (prawa karta) to tylko widok stanu formularza, bez osobnych danych.
+8. **Gry do dokończenia:** `GET /matches?status=in_progress`, od ostatnio przerwanej; wiersz = nazwa, opis (typ, punkty, leg), stan (np. `1 : 0`), data przerwania i przycisk „Dokończ” (otwiera ekran gry ze stanem odtworzonym z rzutek). Lista przewija się wewnątrz karty, z widocznym paskiem. Pusta lista: komunikat zamiast karty z wierszami.
+9. **Dostępność:** przełączniki jako `<button aria-pressed>`, nawigacja jako linki z `aria-current`, cele dotykowe ≥ 44 px.
+
+### Ekran statystyk (P6)
+
+10. **Filtr typu gry:** Wszystkie / Mecze 1v1 / Zabawa / Trening (Trening = Solo 501). Zawsze cała historia, bez filtra okresu. Tylko mecze z `countsToStats` (Free run nigdy) i tylko zapisani gracze (goście pomijani).
+11. **Nagłówek:** liczba gier i legów w wybranym filtrze.
+12. **Sześć rankingów, top 3 każdy**, liczone z tabeli rzutek (nie z liczników):
+    - **Najlepsza średnia w legu:** najwyższa średnia na 3 rzutki w jednym legu (punkty / rzutki × 3). Rekord, szczytowa forma.
+    - **Średnia ogólna:** średnia na 3 rzutki ze wszystkich rzutek gracza we wszystkich legach. Typowy poziom. Busty dodają rzutki bez punktów.
+    - **Najwyższe zamknięcie:** największy `checkout` z `leg_won`.
+    - **Najkrótszy leg:** najmniej rzutek w wygranym legu (`dartsThrown` z `leg_won`, z bustami).
+    - **Liczba 180:** tury z sumą 180.
+    - **Skuteczność doubli:** trafione double zamykające / próby.
+13. **Wyróżnienie lidera:** czerwony znacznik, numer i większa, jaśniejsza liczba (kolor nie jest jedynym wyróżnieniem).
+14. **Pusty stan:** mniej niż 3 graczy w kategorii albo brak gier w filtrze.
+15. **API:** np. `GET /stats/rankings?type=all|match|casual|practice`; obliczenia jako czyste funkcje z testami w Vitest.
+
+### Do ustalenia przed implementacją
+
+- Czy na ekranie startowym jest wybór gościa (na makiecie go nie ma).
+- Czy Free run trafia do „Gier do dokończenia” (nie ma końca) i czy grę z listy da się porzucić.
+- Definicja „próby na double” (np. rzutka przy wyniku ≤ 40 parzystym albo 50).
+- Remisy w rankingu (ta sama pozycja czy kto pierwszy osiągnął) i minimalna liczba legów do średnich.
+- Nazwy kart: „Średnia ogólna” i „Najlepsza średnia w legu” mogą się mylić (propozycja: „Średnia (3 rzutki)” i „Rekordowy leg (średnia)”).
+
 # Typy gier: mecz 1v1, zabawa i trening
 
 | | Mecz 1v1 | Zabawa (3-4 graczy) |
