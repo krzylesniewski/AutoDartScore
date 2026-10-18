@@ -1,8 +1,8 @@
 import { replayGame, type ApplyResult, type GameConfig, type GameState } from '@autoscore/engine';
-import { StartingScore, type ThrowRecord } from '@autoscore/schema';
+import { StartingScore, type Abandonment, type ThrowRecord } from '@autoscore/schema';
 import type { MatchLog, StoredMatch } from './store/store.js';
 
-// Rzutki, które nadal się liczą: każdy wpis undo zdejmuje ostatnią z nich.
+// Rzutki, które nadal się liczą: każdy wpis undo zdejmuje ostatnią z nich. Porzucenie i wznowienie nie zmieniają rzutek.
 export function effectiveThrows(log: MatchLog): ThrowRecord[] {
   const throws: ThrowRecord[] = [];
   for (const entry of log.entries) {
@@ -12,15 +12,38 @@ export function effectiveThrows(log: MatchLog): ThrowRecord[] {
         throw new Error(`Corrupt log: throw ${entry.throwId} at seq ${entry.seq} is missing`);
       }
       throws.push(record);
-    } else if (throws.pop()?.id !== entry.throwId) {
+    } else if (entry.type === 'undo' && throws.pop()?.id !== entry.throwId) {
       throw new Error(`Corrupt log: undo at seq ${entry.seq} does not match the last effective throw`);
     }
   }
   return throws;
 }
 
+// Otwarte porzucenie albo null, gdy gra nie jest porzucona.
+export function abandonment(log: MatchLog): Abandonment | null {
+  let open: Abandonment | null = null;
+  for (const entry of log.entries) {
+    if (entry.type === 'match_abandoned') {
+      if (open) {
+        throw new Error(`Corrupt log: match_abandoned at seq ${entry.seq} while the match is already abandoned`);
+      }
+      open = { playerId: entry.playerId, reason: entry.reason, at: entry.createdAt };
+    } else if (entry.type === 'match_resumed') {
+      if (!open) {
+        throw new Error(`Corrupt log: match_resumed at seq ${entry.seq} without an open abandonment`);
+      }
+      open = null;
+    }
+  }
+  return open;
+}
+
 export function lastSeq(log: MatchLog): number {
   return log.entries.at(-1)?.seq ?? 0;
+}
+
+export function lastActivityAt(log: MatchLog, match: StoredMatch): string {
+  return log.entries.at(-1)?.createdAt ?? match.createdAt;
 }
 
 function required<T>(value: T | null, field: string, matchId: string): T {

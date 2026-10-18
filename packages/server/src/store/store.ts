@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import type { Kysely, Selectable } from 'kysely';
+import type { Insertable, Kysely, Selectable } from 'kysely';
 import type { CreatePlayerRequest, MatchType, Player, PracticeMode, ThrowRecord } from '@autoscore/schema';
-import type { Database, MatchEventType, MatchesTable, PlayersTable, ThrowsTable } from '../db/database.js';
+import type { Database, MatchEventsTable, MatchesTable, PlayersTable, ThrowsTable } from '../db/database.js';
 
 // Jedyny moduł, który dotyka Kysely. Tylko wstawia i czyta: nic nie jest nadpisywane ani usuwane.
 
@@ -19,11 +19,10 @@ export interface StoredMatch {
 
 export type NewMatch = Omit<StoredMatch, 'id' | 'createdAt' | 'players'> & { readonly playerIds: readonly string[] };
 
-export interface LogEntry {
-  readonly seq: number;
-  readonly type: MatchEventType;
-  readonly throwId: string;
-}
+export type LogEntry =
+  | { readonly seq: number; readonly type: 'throw' | 'undo'; readonly throwId: string; readonly createdAt: string }
+  | { readonly seq: number; readonly type: 'match_abandoned'; readonly playerId: string; readonly reason: string | null; readonly createdAt: string }
+  | { readonly seq: number; readonly type: 'match_resumed'; readonly createdAt: string };
 
 export interface MatchLog {
   readonly entries: readonly LogEntry[];
@@ -40,10 +39,13 @@ export interface Store {
   findMatch(id: string): Promise<StoredMatch | null>;
   // Gry gracza, które wchodzą do statystyk, w kolejności utworzenia.
   findMatchIdsForPlayer(playerId: string, types: readonly MatchType[]): Promise<string[]>;
+  listMatches(): Promise<StoredMatch[]>;
   loadLog(matchId: string): Promise<MatchLog>;
   findThrowByEventId(eventId: string): Promise<ThrowRecord | null>;
   appendThrow(hit: NewThrow): Promise<{ throw: ThrowRecord; seq: number }>;
   appendUndo(matchId: string, throwId: string): Promise<number>;
+  appendAbandon(matchId: string, playerId: string, reason: string | null): Promise<number>;
+  appendResume(matchId: string): Promise<number>;
 }
 
 function now(): string {
@@ -83,6 +85,25 @@ function toMatch(row: Selectable<MatchesTable>, players: readonly Player[]): Sto
   };
 }
 
+function toLogEntry(row: Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'throw_id' | 'player_id' | 'reason' | 'created_at'>): LogEntry {
+  const { seq, type, created_at: createdAt } = row;
+  switch (type) {
+    case 'throw':
+    case 'undo':
+      if (row.throw_id === null) {
+        throw new Error(`Corrupt log: ${type} at seq ${seq} has no throw_id`);
+      }
+      return { seq, type, throwId: row.throw_id, createdAt };
+    case 'match_abandoned':
+      if (row.player_id === null) {
+        throw new Error(`Corrupt log: match_abandoned at seq ${seq} has no player_id`);
+      }
+      return { seq, type, playerId: row.player_id, reason: row.reason, createdAt };
+    case 'match_resumed':
+      return { seq, type, createdAt };
+  }
+}
+
 export function createStore(db: Kysely<Database>): Store {
   // Wywoływane w transakcji. Kolejność w logu nadaje serwer, a nie pole sequence od klienta.
   async function nextSeq(trx: Kysely<Database>, matchId: string): Promise<number> {
@@ -92,6 +113,25 @@ export function createStore(db: Kysely<Database>): Store {
       .where('match_id', '=', matchId)
       .executeTakeFirst();
     return Number(row?.seq ?? 0) + 1;
+  }
+
+  async function matchPlayers(matchId: string): Promise<Player[]> {
+    const rows = await db
+      .selectFrom('match_players')
+      .innerJoin('players', 'players.id', 'match_players.player_id')
+      .selectAll('players')
+      .where('match_players.match_id', '=', matchId)
+      .orderBy('match_players.position')
+      .execute();
+    return rows.map(toPlayer);
+  }
+
+  function appendLifecycle(matchId: string, entry: Pick<Insertable<MatchEventsTable>, 'type' | 'player_id' | 'reason'>): Promise<number> {
+    return db.transaction().execute(async (trx) => {
+      const seq = await nextSeq(trx, matchId);
+      await trx.insertInto('match_events').values({ match_id: matchId, seq, ...entry, created_at: now() }).execute();
+      return seq;
+    });
   }
 
   return {
@@ -146,17 +186,16 @@ export function createStore(db: Kysely<Database>): Store {
 
     async findMatch(id) {
       const row = await db.selectFrom('matches').selectAll().where('id', '=', id).executeTakeFirst();
-      if (!row) {
-        return null;
+      return row ? toMatch(row, await matchPlayers(id)) : null;
+    },
+
+    async listMatches() {
+      const rows = await db.selectFrom('matches').selectAll().orderBy('created_at').orderBy('id').execute();
+      const matches = [];
+      for (const row of rows) {
+        matches.push(toMatch(row, await matchPlayers(row.id)));
       }
-      const players = await db
-        .selectFrom('match_players')
-        .innerJoin('players', 'players.id', 'match_players.player_id')
-        .selectAll('players')
-        .where('match_players.match_id', '=', id)
-        .orderBy('match_players.position')
-        .execute();
-      return toMatch(row, players.map(toPlayer));
+      return matches;
     },
 
     async findMatchIdsForPlayer(playerId, types) {
@@ -179,13 +218,13 @@ export function createStore(db: Kysely<Database>): Store {
     async loadLog(matchId) {
       const entries = await db
         .selectFrom('match_events')
-        .select(['seq', 'type', 'throw_id'])
+        .select(['seq', 'type', 'throw_id', 'player_id', 'reason', 'created_at'])
         .where('match_id', '=', matchId)
         .orderBy('seq')
         .execute();
       const throws = await db.selectFrom('throws').selectAll().where('match_id', '=', matchId).execute();
       return {
-        entries: entries.map((entry) => ({ seq: entry.seq, type: entry.type, throwId: entry.throw_id })),
+        entries: entries.map(toLogEntry),
         throws: new Map(throws.map((row) => [row.id, toThrow(row)])),
       };
     },
@@ -226,6 +265,14 @@ export function createStore(db: Kysely<Database>): Store {
         await trx.insertInto('match_events').values({ match_id: matchId, seq, type: 'undo', throw_id: throwId, created_at: now() }).execute();
         return seq;
       });
+    },
+
+    appendAbandon(matchId, playerId, reason) {
+      return appendLifecycle(matchId, { type: 'match_abandoned', player_id: playerId, reason });
+    },
+
+    appendResume(matchId) {
+      return appendLifecycle(matchId, { type: 'match_resumed' });
     },
   };
 }

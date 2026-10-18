@@ -5,7 +5,7 @@ import { WarningIcon } from '../components/icons';
 import { formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../game/format-stat';
 import { pl } from '../i18n/pl';
 
-const HOME_HREF = '#/';
+const NEW_GAME_HREF = '#/new';
 
 const FILTERS: readonly { value: StatsFilter; label: string }[] = [
   { value: 'all', label: pl.filterAll },
@@ -98,7 +98,7 @@ export function StatsScreen({ playerId }: { playerId: string | null }) {
     <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
       <div className="flex items-baseline justify-between gap-4">
         <h1 className="font-display text-5xl font-bold uppercase">{pl.stats}</h1>
-        <a href={HOME_HREF} className="font-display text-xl font-semibold uppercase text-(--color-text) underline">
+        <a href={NEW_GAME_HREF} className="font-display text-xl font-semibold uppercase text-(--color-text) underline">
           {pl.newGame}
         </a>
       </div>

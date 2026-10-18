@@ -1,5 +1,5 @@
 import { freeRunAverage, isGameFinished, SOLO_501_STARTING_SCORE, type GameState } from '@autoscore/engine';
-import type { MatchSnapshot, MatchSnapshotPlayer, Player } from '@autoscore/schema';
+import type { Abandonment, MatchSnapshot, MatchSnapshotPlayer, MatchStatus, Player } from '@autoscore/schema';
 import type { StoredMatch } from './store/store.js';
 
 type Progress = Pick<MatchSnapshot, 'currentPlayerId' | 'legIndex' | 'turnIndex' | 'currentDarts' | 'winnerId' | 'placements' | 'freeRun'> & {
@@ -79,7 +79,15 @@ function progress(game: GameState, finished: boolean): Progress {
   }
 }
 
-export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number): MatchSnapshot {
+function status(finished: boolean, abandonment: Abandonment | null): MatchStatus {
+  if (finished) {
+    return 'finished';
+  }
+  return abandonment ? 'abandoned' : 'in_progress';
+}
+
+// Porzucona gra zachowuje rzucającego i rzutki tury, żeby podgląd pokazywał stan z chwili przerwania.
+export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number, abandonment: Abandonment | null): MatchSnapshot {
   const finished = isGameFinished(game);
   const { perPlayer, startingScore, ...rest } = progress(game, finished);
   return {
@@ -91,6 +99,8 @@ export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number
     countsToStats: match.countsToStats,
     createdAt: match.createdAt,
     finished,
+    status: status(finished, abandonment),
+    abandonment,
     eventSeq,
     ...rest,
     players: match.players.map((player, index) => ({

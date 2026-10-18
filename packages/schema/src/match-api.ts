@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { DomainEvent } from './domain-events.js';
 import { Hit, HitSource, Multiplier, Segment } from './hit.js';
-import { BestOf, MatchType, Placement, PracticeMode, StartingScore } from './match.js';
+import { BestOf, MatchStatus, MatchType, Placement, PracticeMode, StartingScore } from './match.js';
 
 const PlayerId = z.string().min(1);
 
@@ -61,6 +61,13 @@ export const MatchSnapshotPlayer = z.object({
 });
 export type MatchSnapshotPlayer = z.infer<typeof MatchSnapshotPlayer>;
 
+export const Abandonment = z.object({
+  playerId: PlayerId,
+  reason: z.string().nullable(),
+  at: z.iso.datetime(),
+});
+export type Abandonment = z.infer<typeof Abandonment>;
+
 // Stan gry wysyłany przez REST i WebSocket. Serwer buduje go od nowa z logu zdarzeń.
 export const MatchSnapshot = z.object({
   id: z.string().min(1),
@@ -71,6 +78,8 @@ export const MatchSnapshot = z.object({
   countsToStats: z.boolean(),
   createdAt: z.iso.datetime(),
   finished: z.boolean(),
+  status: MatchStatus,
+  abandonment: Abandonment.nullable(), // tylko gdy gra jest porzucona. Historię trzyma log
   eventSeq: z.int().min(0), // seq ostatniego wpisu w logu, 0 dla pustego logu
   currentPlayerId: PlayerId.nullable(),
   legIndex: z.int().min(0),
@@ -88,6 +97,32 @@ export const MatchSnapshot = z.object({
     .nullable(),
 });
 export type MatchSnapshot = z.infer<typeof MatchSnapshot>;
+
+// Lista gier bez szczegółów tury. updatedAt to czas ostatniego wpisu w logu albo utworzenia gry.
+export const MatchListItem = MatchSnapshot.pick({
+  id: true,
+  type: true,
+  practiceMode: true,
+  startingScore: true,
+  legsToWin: true,
+  createdAt: true,
+  status: true,
+  abandonment: true,
+  currentPlayerId: true,
+  legIndex: true,
+  players: true,
+  freeRun: true,
+}).extend({ updatedAt: z.iso.datetime() });
+export type MatchListItem = z.infer<typeof MatchListItem>;
+
+export const MatchListQuery = z.object({ status: z.literal('unfinished').optional() });
+export type MatchListQuery = z.infer<typeof MatchListQuery>;
+
+export const AbandonMatchRequest = z.object({
+  playerId: PlayerId,
+  reason: z.string().trim().min(1).max(200).optional(),
+});
+export type AbandonMatchRequest = z.infer<typeof AbandonMatchRequest>;
 
 export const ThrowResult = z.object({
   throw: ThrowRecord,

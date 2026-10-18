@@ -1,7 +1,7 @@
 import type { MatchSnapshot } from '@autoscore/schema';
 import { pl } from '../i18n/pl';
 import { EffectsToggle } from './EffectsToggle';
-import { TargetIcon } from './icons';
+import { PauseIcon, TargetIcon } from './icons';
 import { VoiceToggle } from './VoiceToggle';
 
 export interface MatchHeaderProps {
@@ -10,17 +10,20 @@ export interface MatchHeaderProps {
   onVoiceChange(next: boolean): void;
   effectsEnabled: boolean;
   onEffectsChange(next: boolean): void;
+  onAbandon?: () => void;
+  onResume?: () => void;
 }
 
 const chip = 'rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 text-(length:--text-button)';
+const button = 'flex min-h-12 items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-(length:--text-button) font-semibold';
 
-export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange }: MatchHeaderProps) {
+export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange, onAbandon, onResume }: MatchHeaderProps) {
   return (
     <header className="flex items-center gap-4 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-(--space-page) py-2">
-      <span className="flex items-center gap-2 font-display text-(length:--text-heading) font-bold">
+      <a href="#/" aria-label={pl.home} className="flex items-center gap-2 font-display text-(length:--text-heading) font-bold text-(--color-text)">
         <TargetIcon className="text-(--color-accent)" />
         {pl.appName}
-      </span>
+      </a>
       {state && (
         <ul className="flex flex-wrap items-center gap-2">
           {chips(state).map((label) => (
@@ -34,6 +37,22 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
         </ul>
       )}
       <div className="ml-auto flex gap-2">
+        {state?.status === 'in_progress' && (
+          <button type="button" onClick={onAbandon} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
+            {pl.abandonMatch}
+          </button>
+        )}
+        {state?.status === 'abandoned' && (
+          <>
+            <span className={`${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold`}>
+              <PauseIcon className="text-(--color-accent)" />
+              {pl.statusAbandoned}
+            </span>
+            <button type="button" onClick={onResume} className={`${button} border-(--color-text) bg-(--color-text) text-(--color-text-inverse)`}>
+              {pl.resumeMatch}
+            </button>
+          </>
+        )}
         <VoiceToggle enabled={voiceEnabled} onChange={onVoiceChange} />
         <EffectsToggle enabled={effectsEnabled} onChange={onEffectsChange} />
       </div>

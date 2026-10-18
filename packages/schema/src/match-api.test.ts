@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError, BestOf, CreateMatchRequest, MatchSnapshot, StartingScore, ThrowRecord, ThrowResult, UndoResult } from './index.js';
+import {
+  AbandonMatchRequest,
+  ApiError,
+  BestOf,
+  CreateMatchRequest,
+  MatchListItem,
+  MatchListQuery,
+  MatchSnapshot,
+  StartingScore,
+  ThrowRecord,
+  ThrowResult,
+  UndoResult,
+} from './index.js';
 
 describe('StartingScore', () => {
   it.each([301, 501, 701])('accepts %i', (value) => {
@@ -95,6 +107,8 @@ const snapshot = {
   countsToStats: true,
   createdAt: '2026-10-15T18:30:00.000Z',
   finished: false,
+  status: 'in_progress',
+  abandonment: null,
   eventSeq: 1,
   currentPlayerId: 'p1',
   legIndex: 0,
@@ -141,6 +155,52 @@ describe('MatchSnapshot', () => {
 
   it('rejects a negative eventSeq', () => {
     expect(MatchSnapshot.safeParse({ ...snapshot, eventSeq: -1 }).success).toBe(false);
+  });
+
+  it('requires status', () => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, status: undefined }).success).toBe(false);
+  });
+
+  it('accepts an abandoned snapshot', () => {
+    const abandoned = { ...snapshot, status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T18:40:00.000Z' } };
+    expect(MatchSnapshot.parse(abandoned)).toEqual(abandoned);
+  });
+});
+
+describe('AbandonMatchRequest', () => {
+  it('trims the reason', () => {
+    expect(AbandonMatchRequest.parse({ playerId: 'p1', reason: '  koniec prądu  ' })).toEqual({ playerId: 'p1', reason: 'koniec prądu' });
+  });
+
+  it('accepts a request without a reason', () => {
+    expect(AbandonMatchRequest.parse({ playerId: 'p1' })).toEqual({ playerId: 'p1' });
+  });
+
+  it.each([
+    ['an empty reason', { playerId: 'p1', reason: '   ' }],
+    ['a reason over 200 characters', { playerId: 'p1', reason: 'x'.repeat(201) }],
+    ['a missing player', { reason: 'koniec' }],
+  ])('rejects %s', (_name, value) => {
+    expect(AbandonMatchRequest.safeParse(value).success).toBe(false);
+  });
+
+  it('accepts a reason of 200 characters', () => {
+    expect(AbandonMatchRequest.safeParse({ playerId: 'p1', reason: 'x'.repeat(200) }).success).toBe(true);
+  });
+});
+
+describe('MatchListItem and MatchListQuery', () => {
+  it('parses a list item', () => {
+    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun } = snapshot;
+    const item = { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, updatedAt: '2026-10-15T18:31:00.000Z' };
+    expect(MatchListItem.parse(item)).toEqual(item);
+    expect(MatchListItem.safeParse({ ...item, updatedAt: undefined }).success).toBe(false);
+  });
+
+  it('accepts only the unfinished filter', () => {
+    expect(MatchListQuery.parse({})).toEqual({});
+    expect(MatchListQuery.parse({ status: 'unfinished' })).toEqual({ status: 'unfinished' });
+    expect(MatchListQuery.safeParse({ status: 'finished' }).success).toBe(false);
   });
 });
 

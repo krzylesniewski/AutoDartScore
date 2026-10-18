@@ -1,5 +1,5 @@
-import { ApiError, MatchSnapshot, MatchSummary, Player, PlayerStats, ThrowResult, UndoResult } from '@autoscore/schema';
-import type { CreateMatchRequest, CreatePlayerRequest, HitEvent, StatsFilter } from '@autoscore/schema';
+import { ApiError, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerStats, ThrowResult, UndoResult } from '@autoscore/schema';
+import type { AbandonMatchRequest, CreateMatchRequest, CreatePlayerRequest, HitEvent, StatsFilter } from '@autoscore/schema';
 
 // Vite przekierowuje /api do serwera, więc front i API mają jeden adres.
 export const API_BASE = '/api';
@@ -49,6 +49,10 @@ export function createMatch(body: CreateMatchRequest): Promise<MatchSnapshot> {
   return request('/matches', MatchSnapshot, postJson(body));
 }
 
+export function listMatches(status?: 'unfinished'): Promise<MatchListItem[]> {
+  return request(status ? `/matches?status=${status}` : '/matches', MatchListItem.array());
+}
+
 export function getMatch(id: string): Promise<MatchSnapshot> {
   return request(`/matches/${encodeURIComponent(id)}`, MatchSnapshot);
 }
@@ -67,4 +71,12 @@ export function getPlayerStats(playerId: string, filter: StatsFilter): Promise<P
 
 export function getMatchSummary(matchId: string): Promise<MatchSummary> {
   return request(`/matches/${encodeURIComponent(matchId)}/summary`, MatchSummary);
+}
+
+export function abandonMatch(id: string, body: AbandonMatchRequest): Promise<MatchSnapshot> {
+  return request(`/matches/${encodeURIComponent(id)}/abandon`, MatchSnapshot, postJson(body));
+}
+
+export function resumeMatch(id: string): Promise<MatchSnapshot> {
+  return request(`/matches/${encodeURIComponent(id)}/resume`, MatchSnapshot, { method: 'POST' });
 }
