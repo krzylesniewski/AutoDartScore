@@ -3,13 +3,15 @@ import { useMatch } from '../api/use-match';
 import { useAnnouncer } from '../audio/use-announcer';
 import { EventBanner } from '../components/EventBanner';
 import { Keypad } from '../components/Keypad';
+import { MatchHeader } from '../components/MatchHeader';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
-import { VoiceToggle } from '../components/VoiceToggle';
 import { TrophyIcon, WarningIcon } from '../components/icons';
 import { pl } from '../i18n/pl';
 
 const NEW_GAME_HREF = '#/';
+
+const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const voice = useAnnouncer();
@@ -17,12 +19,12 @@ export function GameScreen({ matchId }: { matchId: string }) {
 
   if (notFound) {
     return (
-      <main className="flex h-full flex-col items-center justify-center gap-4 p-6 font-display">
+      <main className="flex h-full flex-col items-center justify-center gap-4 p-(--space-page) font-display">
         <p className="flex items-center gap-2 text-3xl">
-          <WarningIcon className="text-warning" />
+          <WarningIcon className="text-(--color-accent)" />
           {pl.matchNotFound}
         </p>
-        <a href={NEW_GAME_HREF} className="text-xl uppercase text-board-green underline">
+        <a href={NEW_GAME_HREF} className={link}>
           {pl.newGame}
         </a>
       </main>
@@ -32,27 +34,29 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const keypadDisabled = !state || state.finished || connection !== 'open';
 
   return (
-    <main className="grid h-full grid-cols-1 gap-6 p-4 landscape:grid-cols-2">
-      <div className="flex flex-col gap-4">
-        {connection === 'closed' && <Notice text={pl.connectionLost} />}
-        {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-muted">{pl.loading}</p>}
-        {state?.finished && <MatchOver state={state} />}
-      </div>
-      <div className="flex flex-col gap-4">
-        <VoiceToggle enabled={voice.enabled} onChange={voice.setEnabled} />
-        {state && <TurnPanel state={state} lastTurn={lastTurn} busy={busy} onUndo={sendUndo} />}
-        <EventBanner banner={banner} />
-        {error && <Notice text={error} />}
-        <Keypad onHit={sendHit} disabled={keypadDisabled} />
-      </div>
-    </main>
+    <div className="flex h-full flex-col">
+      <MatchHeader state={state} voiceEnabled={voice.enabled} onVoiceChange={voice.setEnabled} />
+      <main className="grid min-h-0 flex-1 grid-cols-1 content-start gap-(--space-page) overflow-auto p-(--space-page) landscape:grid-cols-[var(--scoreboard-width)_1fr]">
+        <div className="flex flex-col gap-4">
+          {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
+          {state?.finished && <MatchOver state={state} />}
+        </div>
+        <div className="relative flex flex-col gap-3">
+          {connection === 'closed' && <Notice text={pl.connectionLost} />}
+          {error && <Notice text={error} />}
+          {state && <TurnPanel state={state} lastTurn={lastTurn} busy={busy} onUndo={sendUndo} />}
+          <Keypad onHit={sendHit} disabled={keypadDisabled} />
+          <EventBanner banner={banner} />
+        </div>
+      </main>
+    </div>
   );
 }
 
 function Notice({ text }: { text: string }) {
   return (
-    <p className="flex items-center gap-2 rounded-card border border-warning px-4 py-2 font-display text-xl text-warning">
-      <WarningIcon />
+    <p className="flex items-center gap-2 rounded-(--radius-card) border-(length:--border-width) border-(--color-accent) bg-(--color-surface) px-4 py-2 font-display text-xl text-(--color-text)">
+      <WarningIcon className="text-(--color-accent)" />
       {text}
     </p>
   );
@@ -61,13 +65,13 @@ function Notice({ text }: { text: string }) {
 function MatchOver({ state }: { state: MatchSnapshot }) {
   const name = (playerId: string | null) => state.players.find((player) => player.id === playerId)?.name ?? '';
   return (
-    <section className="flex flex-col gap-2 rounded-card border-l-4 border-board-green bg-surface p-4 font-display">
+    <section className="flex flex-col gap-2 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-4 font-display">
       <h2 className="flex items-center gap-2 text-3xl font-bold uppercase">
-        <TrophyIcon className="text-warning" />
+        <TrophyIcon className="text-(--color-text)" />
         {pl.matchOver}
       </h2>
       <MatchResult state={state} name={name} />
-      <a href={NEW_GAME_HREF} className="text-xl uppercase text-board-green underline">
+      <a href={NEW_GAME_HREF} className={link}>
         {pl.newGame}
       </a>
     </section>

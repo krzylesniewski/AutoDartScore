@@ -6,16 +6,20 @@ export interface VoiceToggleProps {
   onChange(next: boolean): void;
 }
 
+// Stan czyta czytnik z aria-pressed, a tekst obok nazwy jest tylko dla oka, żeby nazwa przycisku została "Głos".
 export function VoiceToggle({ enabled, onChange }: VoiceToggleProps) {
   return (
     <button
       type="button"
       aria-pressed={enabled}
       onClick={() => onChange(!enabled)}
-      className="flex min-h-12 items-center gap-2 self-end rounded-card border border-line bg-surface-raised px-5 font-display text-xl uppercase"
+      className="flex min-h-12 items-center gap-2 rounded-(--radius-chip) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-4 text-(length:--text-button) text-(--color-text-muted)"
     >
-      {enabled ? <SpeakerIcon /> : <SpeakerOffIcon />}
-      {pl.voice}
+      {enabled ? <SpeakerIcon className="text-(--color-text)" /> : <SpeakerOffIcon />}
+      <span>
+        {pl.voice}
+        <span aria-hidden="true">: {enabled ? pl.voiceOn : pl.voiceOff}</span>
+      </span>
     </button>
   );
 }

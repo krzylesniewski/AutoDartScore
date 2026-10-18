@@ -12,7 +12,9 @@ const MULTIPLIERS: readonly { value: Multiplier; label: string }[] = [
 
 const SEGMENTS = Array.from({ length: 20 }, (_, index) => index + 1);
 
-const key = 'min-h-12 min-w-12 rounded-card border border-line font-display text-2xl font-semibold disabled:opacity-40';
+const key =
+  'h-(--button-height) rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) font-display text-(length:--text-heading) font-bold disabled:opacity-40';
+const segmentKey = `${key} bg-(--color-surface-button) text-(--color-text)`;
 
 export interface KeypadProps {
   onHit(hit: Hit): void;
@@ -28,8 +30,8 @@ export function Keypad({ onHit, disabled }: KeypadProps) {
   }
 
   return (
-    <section aria-label={pl.keypad} className="flex flex-col gap-2">
-      <div role="group" aria-label={pl.multiplier} className="grid grid-cols-3 gap-2">
+    <section aria-label={pl.keypad} className="grid grid-cols-10 gap-2">
+      <div role="group" aria-label={pl.multiplier} className="col-span-6 grid grid-cols-3 gap-2">
         {MULTIPLIERS.map(({ value, label }) => (
           <button
             key={value}
@@ -37,32 +39,35 @@ export function Keypad({ onHit, disabled }: KeypadProps) {
             aria-pressed={multiplier === value}
             disabled={disabled}
             onClick={() => setMultiplier(value)}
-            className={`${key} ${multiplier === value ? 'border-board-green bg-board-green text-cream' : 'bg-surface text-muted'}`}
+            className={`${key} ${
+              multiplier === value ? 'border-(--color-text) bg-(--color-text) text-(--color-text-inverse)' : 'bg-(--color-surface-button) text-(--color-text-muted)'
+            }`}
           >
             {label}
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-5 gap-2">
-        {SEGMENTS.map((segment) => (
-          <button key={segment} type="button" disabled={disabled} onClick={() => hit(segment, multiplier)} className={`${key} bg-surface-raised`}>
-            {segment}
-          </button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          disabled={disabled || multiplier === 3}
-          onClick={() => hit(BULL_SEGMENT, multiplier === 2 ? 2 : 1)}
-          className={`${key} bg-surface-raised`}
-        >
-          {multiplier === 2 ? pl.bull : BULL_SEGMENT}
+      <button
+        type="button"
+        disabled={disabled || multiplier === 3}
+        onClick={() => hit(BULL_SEGMENT, multiplier === 2 ? 2 : 1)}
+        className={`col-span-2 ${segmentKey}`}
+      >
+        {multiplier === 2 ? pl.bull : BULL_SEGMENT}
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => hit(MISS_SEGMENT, 0)}
+        className={`col-span-2 ${key} bg-(--color-surface) text-(--color-text-muted)`}
+      >
+        {pl.miss}
+      </button>
+      {SEGMENTS.map((segment) => (
+        <button key={segment} type="button" disabled={disabled} onClick={() => hit(segment, multiplier)} className={segmentKey}>
+          {segment}
         </button>
-        <button type="button" disabled={disabled} onClick={() => hit(MISS_SEGMENT, 0)} className={`${key} bg-surface text-muted`}>
-          {pl.miss}
-        </button>
-      </div>
+      ))}
     </section>
   );
 }

@@ -114,7 +114,7 @@ describe('GameScreen', () => {
     connect({ ...initial, currentDarts: [{ segment: 20, multiplier: 3 }] });
     expect(screen.getByText('Anna')).toBeTruthy();
     expect(screen.getByText('Bartek')).toBeTruthy();
-    expect(screen.getAllByText('501')).toHaveLength(1);
+    expect(within(screen.getByRole('region', { name: 'Wyniki' })).getAllByText('501')).toHaveLength(1);
     expect(screen.getAllByText('437')).toHaveLength(1);
   });
 
@@ -195,7 +195,7 @@ describe('GameScreen', () => {
     const older = { ...initial, eventSeq: 3, players: [player('p1', 'Anna', { remaining: 333, legsWon: 0 }), player('p2', 'Bartek', { remaining: 437, legsWon: 0 })] };
     ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: 3, state: older });
     expect(screen.queryByText('333')).toBeNull();
-    expect(screen.getByText('501')).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: 'Wyniki' })).getByText('501')).toBeTruthy();
   });
 
   it('shows Nie znaleziono gry on close code 4404 and stops', () => {
@@ -331,6 +331,14 @@ describe('voice', () => {
     expect(spokenTexts()).toEqual(['Bust']);
     sendBatch(ws, { type: 'match_won', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legsWon: { p1: 0, p2: 2 } });
     expect(spokenTexts()).toEqual(['Bust', 'Zwycięzca']);
+  });
+
+  it('shows the voice state as text and keeps the name Głos', () => {
+    connect();
+    expect(toggle().textContent).toContain('wyłączony');
+    fireEvent.click(toggle());
+    expect(toggle().textContent).toContain('włączony');
+    expect(toggle().textContent).not.toContain('wyłączony');
   });
 
   it('keeps the setting after a new render', () => {
