@@ -2,6 +2,8 @@
 
 Serwer API: REST i WebSocket na Fastify. Jest jedynym źródłem prawdy o stanie gry. Zapisuje każdą rzutkę, każde cofnięcie, każde porzucenie i wznowienie gry oraz zakończenie treningu jako wpis w logu zdarzeń w SQLite. Stan gry nie jest zapisywany. Serwer odtwarza go z rzutek, które nadal się liczą, przez silnik z `@autoscore/engine`. Status porzucenia wynika z wpisów porzucenia i wznowienia, a status `ended` z wpisu zakończenia treningu. Komendy jednej gry wykonują się po kolei, a różne gry nie blokują się nawzajem.
 
+Profil gracza też nie jest nadpisywany. Wiersz w `players` zostaje taki, jak przy utworzeniu gracza, a każda zmiana imienia, avatara, archiwizacji albo zapisu gościa dopisuje do `player_changes` pełny profil z kolejnym `seq`. Każdy odczyt gracza bierze wiersz z najwyższym `seq`, więc gry, historia i ranking pokazują aktualne imię.
+
 Baza to SQLite przez wbudowany moduł `node:sqlite` i Kysely, bez natywnych bindingów. Migracje używają tylko typów text, integer i real i nie używają funkcji JSON, żeby dało się przejść na PostgreSQL.
 
 ## Uruchomienie
@@ -19,11 +21,11 @@ Oba skrypty uruchamiają `src/main.ts` przez `jiti`, bez kroku budowania. Przy s
 - `src/app.ts`: `buildApp`, czyli aplikacja Fastify z trasami i obsługą błędów.
 - `src/config.ts`: `loadConfig`, czyli odczyt zmiennych środowiskowych.
 - `src/errors.ts`: mapowanie błędów na `ApiError` i kody HTTP.
-- `src/routes/`: `players.ts`, `matches.ts` (gry, lista gier, rzutki, cofnięcie, porzucenie, wznowienie i zakończenie treningu), `live.ts` (WebSocket), `stats.ts` (statystyki gracza, podsumowanie meczu i ranking graczy).
+- `src/routes/`: `players.ts` (utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu), `matches.ts` (gry, lista gier z filtrami `status`, `playerId` i `type`, rzutki, cofnięcie, porzucenie, wznowienie i zakończenie treningu), `live.ts` (WebSocket), `stats.ts` (statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, podsumowanie meczu i ranking graczy).
 - `src/match-service.ts`: komendy gry (utworzenie, rzutka, cofnięcie, porzucenie, wznowienie, zakończenie treningu, lista, subskrypcja).
 - `src/replay.ts`: wybór rzutek, które się liczą, stan porzucenia, czas zakończenia treningu i odtworzenie stanu w silniku.
 - `src/snapshot.ts`: budowa `MatchSnapshot` ze stanu silnika.
-- `src/stats-service.ts` i `src/stats/`: statystyki liczone z odtworzenia logu. W `src/stats/` są `tally.ts` (sumy gracza w grze), `completed-legs.ts` (punkty i rzutki w ukończonych legach) i `rankings.ts` (ranking graczy i rekordy).
+- `src/stats-service.ts` i `src/stats/`: statystyki liczone z odtworzenia logu. W `src/stats/` są `tally.ts` (sumy gracza w grze), `completed-legs.ts` (punkty i rzutki w ukończonych legach), `rankings.ts` (ranking graczy i rekordy), `head-to-head.ts` (bilans dwóch graczy z ukończonych meczów 1v1) i `form.ts` (średnia z każdej z ostatnich gier). Średnia na 3 rzutki na karcie gracza, w rankingu, w bilansie i na wykresie formy liczy tylko ukończone legi.
 - `src/live-hub.ts`: rozsyłanie wiadomości do subskrybentów jednej gry.
 - `src/serial-queue.ts`: kolejka komend per gra.
 - `src/store/store.ts`: warstwa dostępu do danych.

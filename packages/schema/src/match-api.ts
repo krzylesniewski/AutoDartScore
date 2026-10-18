@@ -113,10 +113,18 @@ export const MatchListItem = MatchSnapshot.pick({
   legIndex: true,
   players: true,
   freeRun: true,
+  winnerId: true,
+  placements: true,
+  endedAt: true,
 }).extend({ updatedAt: z.iso.datetime() });
 export type MatchListItem = z.infer<typeof MatchListItem>;
 
-export const MatchListQuery = z.object({ status: z.literal('unfinished').optional() });
+// Filtry łączą się ze sobą. playerId to gracz na dowolnym miejscu.
+export const MatchListQuery = z.object({
+  status: z.literal('unfinished').optional(),
+  playerId: PlayerId.optional(),
+  type: MatchType.optional(),
+});
 export type MatchListQuery = z.infer<typeof MatchListQuery>;
 
 export const AbandonMatchRequest = z.object({

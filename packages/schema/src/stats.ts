@@ -19,7 +19,7 @@ const Average = z.number().min(0).nullable(); // null, gdy nie ma rzutek
 export const PlayerStatLine = z.object({
   dartsThrown: Count,
   points: Count,
-  average: Average,
+  average: Average, // w PlayerStats tylko ukończone legi, w MatchSummary wszystkie zamknięte tury gry
   first9Average: Average,
   scores180: Count,
   scores140: Count,
@@ -103,3 +103,40 @@ export const StatsRankings = z.object({
   scores180: z.array(RankingEntry),
 });
 export type StatsRankings = z.infer<typeof StatsRankings>;
+
+// Bilans dwóch graczy z ukończonych meczów 1v1. Porzucona gra nie ma zwycięzcy, więc nie wchodzi do bilansu.
+export const HeadToHead = z.object({
+  playerId: PlayerId,
+  opponentId: PlayerId,
+  matchesPlayed: Count,
+  matchesWon: Count,
+  opponentMatchesWon: Count,
+  legsWon: Count,
+  opponentLegsWon: Count,
+  average: Average, // tylko ukończone legi tych meczów
+  opponentAverage: Average,
+  lastPlayedAt: z.iso.datetime().nullable(),
+});
+export type HeadToHead = z.infer<typeof HeadToHead>;
+
+// Forma gracza: średnia na 3 rzutki z ukończonych legów każdej z ostatnich gier.
+export const FORM_GAMES = 20;
+
+export const PlayerFormQuery = z.object({ type: StatsFilter.default('all') });
+export type PlayerFormQuery = z.infer<typeof PlayerFormQuery>;
+
+export const PlayerFormPoint = z.object({
+  matchId: z.string().min(1),
+  type: MatchType,
+  createdAt: z.iso.datetime(),
+  average: z.number().min(0),
+  legs: z.int().min(1), // ukończone legi gracza w tej grze
+});
+export type PlayerFormPoint = z.infer<typeof PlayerFormPoint>;
+
+export const PlayerForm = z.object({
+  playerId: PlayerId,
+  filter: StatsFilter,
+  points: z.array(PlayerFormPoint).max(FORM_GAMES), // od najstarszej gry
+});
+export type PlayerForm = z.infer<typeof PlayerForm>;

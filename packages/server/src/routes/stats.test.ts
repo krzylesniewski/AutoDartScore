@@ -1,6 +1,6 @@
 import { ApiError, MatchSummary, PlayerStats } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { D, LEG_301, S, T, createGame, createPlayers, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
+import { D, LEG_301, MISS, S, T, abandon, createGame, createPlayers, endPractice, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
 
 let t: TestApp;
 let anna: string;
@@ -141,6 +141,23 @@ describe('GET /players/:id/stats', () => {
     expect(await stats(anna, 'casual')).toMatchObject({ dartsThrown: 6, highestCheckout: 121, legsWon: 1, matchesPlayed: 1, matchesWon: 1 });
     expect(await stats(bartek, 'casual')).toMatchObject({ dartsThrown: 3, legsWon: 0, matchesPlayed: 1, matchesWon: 0 });
     expect(await stats(anna, 'match')).toMatchObject({ dartsThrown: 0, matchesPlayed: 0 });
+  });
+
+  it('leaves the interrupted leg of an abandoned game out of the average, but not out of the darts', async () => {
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 3 });
+    // Bartek zaczyna drugi leg. Anna rzuca w nim S1 S1 S1, zanim gra zostaje porzucona.
+    await throwDarts(t.app, id, [...LEG_301, MISS, MISS, MISS, S(1), S(1), S(1)]);
+    expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
+
+    expect(await stats(anna)).toMatchObject({ dartsThrown: 9, points: 304, average: 150.5, legsWon: 1, matchesPlayed: 0 });
+    expect(await stats(bartek)).toMatchObject({ dartsThrown: 6, points: 0, average: 0 });
+  });
+
+  it('gives a null average to a Solo 501 ended before zero', async () => {
+    const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'solo_501', playerIds: [anna] });
+    await throwDarts(t.app, id, [T(20), T(20), T(20)]);
+    expect((await endPractice(t.app, id)).statusCode).toBe(200);
+    expect(await stats(anna, 'practice')).toMatchObject({ dartsThrown: 3, points: 180, average: null, first9Average: 180 });
   });
 
   it('answers 404 for an unknown player', async () => {

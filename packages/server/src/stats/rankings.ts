@@ -10,7 +10,7 @@ export interface RankedGame {
 }
 
 export interface RankingsInput {
-  readonly players: readonly Player[]; // tylko zapisani gracze, bez gości
+  readonly players: readonly Player[]; // tylko zapisani gracze, bez gości, także zarchiwizowani
   readonly games: readonly RankedGame[];
 }
 

@@ -1,6 +1,6 @@
 import { ApiError, MatchListItem } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LEG_301, S, abandon, createGame, createPlayers, listMatches, setup, throwDarts, type TestApp } from '../test-helpers.js';
+import { LEG_301, S, T, abandon, createGame, createPlayers, endPractice, listMatches, setup, throwDarts, type TestApp } from '../test-helpers.js';
 
 let t: TestApp;
 beforeEach(async () => {
@@ -72,6 +72,56 @@ describe('GET /matches', () => {
       [open.id, 'in_progress'],
       [finished.id, 'finished'],
     ]);
+  });
+
+  it('filters by player and by type, together with the status', async () => {
+    const [anna, bartek, celina] = (await createPlayers(t.app, 3)) as [string, string, string];
+    at('10:01:00');
+    const match = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 1 });
+    await throwDarts(t.app, match.id, LEG_301);
+    at('10:02:00');
+    const casual = await createGame(t.app, { type: 'casual', playerIds: [celina, bartek], startingScore: 301 });
+    await throwDarts(t.app, casual.id, LEG_301);
+    at('10:03:00');
+    const practice = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [bartek] });
+
+    expect((await list(`?playerId=${anna}`)).map((item) => item.id)).toEqual([match.id]);
+    expect((await list(`?playerId=${bartek}`)).map((item) => item.id)).toEqual([practice.id, casual.id, match.id]);
+    expect((await list('?type=casual')).map((item) => item.id)).toEqual([casual.id]);
+    expect((await list(`?playerId=${bartek}&type=practice`)).map((item) => item.id)).toEqual([practice.id]);
+    expect((await list(`?playerId=${celina}&type=match`)).map((item) => item.id)).toEqual([]);
+    expect((await list(`?playerId=${bartek}&status=unfinished`)).map((item) => item.id)).toEqual([practice.id]);
+    expect(await list('?playerId=nobody')).toEqual([]);
+  });
+
+  it('gives the result of finished games and the end of a practice', async () => {
+    const [anna, bartek] = (await createPlayers(t.app, 2)) as [string, string];
+    const match = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 1 });
+    await throwDarts(t.app, match.id, LEG_301);
+    const casual = await createGame(t.app, { type: 'casual', playerIds: [anna, bartek], startingScore: 301 });
+    await throwDarts(t.app, casual.id, LEG_301);
+    const practice = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
+    await throwDarts(t.app, practice.id, [T(20)]);
+    at('10:20:00');
+    expect((await endPractice(t.app, practice.id)).statusCode).toBe(200);
+
+    const items = new Map((await list()).map((item) => [item.id, item]));
+    expect(items.get(match.id)).toMatchObject({ status: 'finished', winnerId: anna, placements: [], endedAt: null });
+    expect(items.get(casual.id)).toMatchObject({
+      status: 'finished',
+      winnerId: null,
+      placements: [
+        { playerId: anna, place: 1 },
+        { playerId: bartek, place: 2 },
+      ],
+    });
+    expect(items.get(practice.id)).toMatchObject({ status: 'ended', winnerId: null, endedAt: '2026-10-18T10:20:00.000Z' });
+  });
+
+  it('rejects an unknown type with 400', async () => {
+    const response = await listMatches(t.app, '?type=bogus');
+    expect(response.statusCode).toBe(400);
+    expect(ApiError.parse(response.json()).error).toBe('invalid_request');
   });
 
   it('returns an empty list without games', async () => {

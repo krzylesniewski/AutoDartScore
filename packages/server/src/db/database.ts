@@ -54,8 +54,20 @@ export interface MatchEventsTable {
   created_at: string;
 }
 
+// Zmiany profilu: tylko dopisywanie. Każdy wiersz to pełny profil po zmianie, a aktualny ma najwyższy seq.
+export interface PlayerChangesTable {
+  player_id: string;
+  seq: number;
+  name: string;
+  avatar: string | null;
+  guest: number;
+  archived_at: string | null;
+  created_at: string;
+}
+
 export interface Database {
   players: PlayersTable;
+  player_changes: PlayerChangesTable;
   matches: MatchesTable;
   match_players: MatchPlayersTable;
   throws: ThrowsTable;
