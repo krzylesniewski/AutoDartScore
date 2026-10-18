@@ -1,6 +1,6 @@
 import { Hit, type DomainEvent } from '@autoscore/schema';
 import { EngineError } from './errors.js';
-import { hitPoints, isDouble } from './points.js';
+import { hitPoints, isBust } from './points.js';
 
 // X01, mecz 1v1: double-out, straight-in, best of N legów.
 // Czysta logika: bez I/O i bez losowości. Kto zaczyna pierwszy leg (losowanie) decyduje wywołujący.
@@ -29,8 +29,8 @@ export interface X01MatchState {
   readonly winnerIndex: 0 | 1 | null;
 }
 
-export interface ApplyResult {
-  readonly state: X01MatchState;
+export interface ApplyResult<S = X01MatchState> {
+  readonly state: S;
   readonly events: readonly DomainEvent[];
 }
 
@@ -108,8 +108,7 @@ export function applyThrow(state: X01MatchState, input: Hit): ApplyResult {
   const dartsThrown = withIndex(state.dartsThrownInLeg, player, state.dartsThrownInLeg[player] + 1);
   const after = state.remaining[player] - hitPoints(hit);
 
-  // Bust: poniżej zera, dokładnie 1 albo zero bez doubla. Wynik wraca do stanu sprzed tury, tura się kończy.
-  if (after < 0 || after === 1 || (after === 0 && !isDouble(hit))) {
+  if (isBust(after, hit)) {
     const remaining = withIndex(state.remaining, player, state.turnStartRemaining);
     return {
       state: nextTurn(state, remaining, dartsThrown),
