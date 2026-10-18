@@ -1,0 +1,24 @@
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    // Tablet w sieci lokalnej otwiera stronę po adresie IP komputera.
+    host: true,
+    // Proxy zamiast CORS: front i API są pod jednym adresem, także dla WebSocketa.
+    proxy: {
+      '/api': {
+        target: process.env.AUTOSCORE_API_URL ?? 'http://localhost:3000',
+        ws: true,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
+  },
+});
