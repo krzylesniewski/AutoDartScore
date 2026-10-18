@@ -1,0 +1,207 @@
+import { LiveMessage } from '@autoscore/schema';
+import type { Hit, HitEvent, MatchSnapshot } from '@autoscore/schema';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { pl } from '../i18n/pl';
+import { API_BASE, ApiRequestError, postThrow, undo } from './client';
+import { newEventId } from './event-id';
+
+export const MATCH_NOT_FOUND_CLOSE_CODE = 4404;
+export const RECONNECT_DELAY_MS = 1000;
+export const BANNER_DURATION_MS = 2500;
+export const KEYPAD_SOURCE = 'keypad';
+
+export type Connection = 'connecting' | 'open' | 'closed';
+
+export interface LastTurn {
+  readonly playerId: string;
+  readonly darts: readonly Hit[];
+  readonly total: number | null;
+  readonly bust: boolean;
+  readonly eventSeq: number;
+}
+
+export interface Banner {
+  readonly kind: 'bust' | 'win';
+  readonly playerName: string;
+  readonly place: number | null;
+}
+
+export interface UseMatch {
+  readonly state: MatchSnapshot | null;
+  readonly lastTurn: LastTurn | null;
+  readonly banner: Banner | null;
+  readonly error: string | null;
+  readonly busy: boolean;
+  readonly connection: Connection;
+  readonly notFound: boolean;
+  sendHit(hit: Hit): void;
+  sendUndo(): void;
+}
+
+function liveUrl(matchId: string): string {
+  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${protocol}://${location.host}${API_BASE}/matches/${encodeURIComponent(matchId)}/live`;
+}
+
+function parseMessage(data: unknown): LiveMessage | null {
+  if (typeof data !== 'string') {
+    return null;
+  }
+  try {
+    const parsed = LiveMessage.safeParse(JSON.parse(data));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export function useMatch(matchId: string): UseMatch {
+  const [state, setState] = useState<MatchSnapshot | null>(null);
+  const [lastTurn, setLastTurn] = useState<LastTurn | null>(null);
+  const [banner, setBanner] = useState<Banner | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [connection, setConnection] = useState<Connection>('connecting');
+  const [notFound, setNotFound] = useState(false);
+
+  const stateRef = useRef<MatchSnapshot | null>(null);
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const commands = useRef<Promise<void>>(Promise.resolve());
+  const queued = useRef(0);
+  const sequence = useRef(0);
+
+  // Jedyna droga zmiany stanu. Wiadomości z WebSocketa i odpowiedzi POST mogą przyjść w dowolnej kolejności,
+  // więc starszy snapshot nigdy nie nadpisuje nowszego.
+  const acceptState = useCallback((next: MatchSnapshot) => {
+    const current = stateRef.current;
+    if (current && next.eventSeq < current.eventSeq) {
+      return;
+    }
+    stateRef.current = next;
+    setState(next);
+  }, []);
+
+  const showBanner = useCallback((next: Banner) => {
+    clearTimeout(bannerTimer.current);
+    setBanner(next);
+    bannerTimer.current = setTimeout(() => setBanner(null), BANNER_DURATION_MS);
+  }, []);
+
+  useEffect(() => {
+    let socket: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let disposed = false;
+
+    function playerName(playerId: string): string {
+      return stateRef.current?.players.find((player) => player.id === playerId)?.name ?? '';
+    }
+
+    function handle(message: LiveMessage): void {
+      switch (message.type) {
+        case 'state_updated':
+          acceptState(message.state);
+          break;
+        case 'turn_completed':
+          setLastTurn({ playerId: message.playerId, darts: message.darts, total: message.total, bust: false, eventSeq: message.eventSeq });
+          break;
+        case 'bust':
+          setLastTurn({ playerId: message.playerId, darts: message.darts, total: null, bust: true, eventSeq: message.eventSeq });
+          showBanner({ kind: 'bust', playerName: playerName(message.playerId), place: null });
+          break;
+        case 'leg_won':
+          showBanner({ kind: 'win', playerName: playerName(message.playerId), place: null });
+          break;
+        case 'player_finished':
+          showBanner({ kind: 'win', playerName: playerName(message.playerId), place: message.place });
+          break;
+        default:
+          break;
+      }
+    }
+
+    function connect(): void {
+      setConnection('connecting');
+      const ws = new WebSocket(liveUrl(matchId));
+      socket = ws;
+      ws.addEventListener('open', () => setConnection('open'));
+      ws.addEventListener('message', (event: MessageEvent) => {
+        const message = parseMessage(event.data);
+        if (message) {
+          handle(message);
+        }
+      });
+      ws.addEventListener('close', (event: CloseEvent) => {
+        if (disposed) {
+          return;
+        }
+        setConnection('closed');
+        if (event.code === MATCH_NOT_FOUND_CLOSE_CODE) {
+          setNotFound(true);
+          return;
+        }
+        reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);
+      });
+    }
+
+    connect();
+    return () => {
+      disposed = true;
+      clearTimeout(reconnectTimer);
+      clearTimeout(bannerTimer.current);
+      socket?.close();
+    };
+  }, [matchId, acceptState, showBanner]);
+
+  // Komendy idą po kolei, więc szybkie stuknięcia docierają w kolejności stuknięć.
+  // Błąd jednej komendy nie blokuje następnych.
+  const enqueue = useCallback((command: () => Promise<void>) => {
+    queued.current += 1;
+    setBusy(true);
+    commands.current = commands.current.then(command).finally(() => {
+      queued.current -= 1;
+      if (queued.current === 0) {
+        setBusy(false);
+      }
+    });
+  }, []);
+
+  const sendHit = useCallback(
+    (hit: Hit) => {
+      const event: HitEvent = {
+        eventId: newEventId(),
+        matchId,
+        source: KEYPAD_SOURCE,
+        sequence: sequence.current++,
+        segment: hit.segment,
+        multiplier: hit.multiplier,
+        confidence: 1,
+        detectedAt: new Date().toISOString(),
+      };
+      enqueue(async () => {
+        try {
+          const result = await postThrow(matchId, event);
+          setError(null);
+          acceptState(result.state);
+        } catch {
+          setError(pl.throwFailed);
+        }
+      });
+    },
+    [matchId, enqueue, acceptState],
+  );
+
+  const sendUndo = useCallback(() => {
+    enqueue(async () => {
+      try {
+        const result = await undo(matchId);
+        setError(null);
+        acceptState(result.state);
+      } catch (caught) {
+        const nothingToUndo = caught instanceof ApiRequestError && caught.status === 409 && caught.code === 'nothing_to_undo';
+        setError(nothingToUndo ? pl.nothingToUndo : pl.undoFailed);
+      }
+    });
+  }, [matchId, enqueue, acceptState]);
+
+  return { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo };
+}

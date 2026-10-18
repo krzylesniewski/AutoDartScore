@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Motyw: ciemny klasyczny. Jedyne miejsce z kolorami, fontami i promieniami. */
+@theme {
+  --color-ink: #0b0b0a;
+  --color-surface: #171614;
+  --color-surface-raised: #24221f;
+  --color-line: #3a3732;
+  --color-cream: #f2ead8;
+  --color-muted: #9a9284;
+  --color-board-red: #c8312b;
+  --color-board-green: #1f8a4c;
+  --color-warning: #e0a526;
+
+  --font-display: "Barlow Condensed", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+
+  --radius-card: 2px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
