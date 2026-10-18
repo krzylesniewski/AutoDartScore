@@ -1,4 +1,5 @@
 import type { MatchSnapshot } from '@autoscore/schema';
+import { canAbandon } from '../game/can-abandon';
 import { pl } from '../i18n/pl';
 import { EffectsToggle } from './EffectsToggle';
 import { PauseIcon, TargetIcon } from './icons';
@@ -37,7 +38,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
         </ul>
       )}
       <div className="ml-auto flex gap-2">
-        {state?.status === 'in_progress' && (
+        {state && canAbandon(state) && (
           <button type="button" onClick={onAbandon} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
             {pl.abandonMatch}
           </button>

@@ -1,41 +1,42 @@
-import type { MatchListItem } from '@autoscore/schema';
-import { useEffect, useState } from 'react';
-import { listMatches, resumeMatch } from '../api/client';
-import { PauseIcon, TargetIcon, ThrowingIcon, WarningIcon } from '../components/icons';
+import { CreateMatchRequest, type MatchListItem, type Player } from '@autoscore/schema';
+import { useCallback, useEffect, useState } from 'react';
+import { ApiRequestError, abandonMatch, createMatch, listMatches, listPlayers, resumeMatch } from '../api/client';
+import { AbandonDialog } from '../components/AbandonDialog';
+import { AppNav } from '../components/AppNav';
+import { GameSetupSummary } from '../components/GameSetupSummary';
+import { NewGameForm, type PlayerList } from '../components/NewGameForm';
+import { NewPlayerDialog } from '../components/NewPlayerDialog';
+import { UnfinishedGames, type GameList } from '../components/UnfinishedGames';
+import { INITIAL_SETUP, changeType, createRequest, pickPlayer, type GameSetup } from '../game/game-setup';
 import { pl } from '../i18n/pl';
-
-const NEW_GAME_HREF = '#/new';
-
-// Pełne nazwy klas, bo Tailwind generuje CSS tylko dla klas zapisanych dosłownie.
-const AVATAR_COLORS = ['bg-(--color-avatar-1)', 'bg-(--color-avatar-2)', 'bg-(--color-avatar-3)', 'bg-(--color-avatar-4)'] as const;
-
-const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
-const action = 'flex min-h-12 items-center rounded-(--radius-card) border-(length:--border-width) px-5 font-display text-xl font-semibold uppercase';
-
-const dateFormat = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'short', timeStyle: 'short' });
 
 function matchHref(id: string): string {
   return `#/matches/${encodeURIComponent(id)}`;
 }
 
-type Load = { kind: 'loading' } | { kind: 'error' } | { kind: 'loaded'; matches: MatchListItem[] };
-
 export function HomeScreen() {
-  const [load, setLoad] = useState<Load>({ kind: 'loading' });
-  const [resumeError, setResumeError] = useState(false);
-  const [resuming, setResuming] = useState<string | null>(null);
+  const [players, setPlayers] = useState<PlayerList>({ status: 'loading' });
+  const [setup, setSetup] = useState<GameSetup>(INITIAL_SETUP);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [creatingPlayer, setCreatingPlayer] = useState(false);
+
+  const [games, setGames] = useState<GameList>({ status: 'loading' });
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [abandoning, setAbandoning] = useState<MatchListItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    listMatches('unfinished').then(
-      (matches) => {
+    listPlayers().then(
+      (loaded) => {
         if (!cancelled) {
-          setLoad({ kind: 'loaded', matches });
+          setPlayers({ status: 'ready', players: loaded });
         }
       },
       () => {
         if (!cancelled) {
-          setLoad({ kind: 'error' });
+          setPlayers({ status: 'error' });
         }
       },
     );
@@ -44,155 +45,120 @@ export function HomeScreen() {
     };
   }, []);
 
-  async function resume(id: string): Promise<void> {
-    setResuming(id);
-    setResumeError(false);
+  const reloadGames = useCallback(async (): Promise<void> => {
     try {
-      await resumeMatch(id);
-      window.location.hash = matchHref(id);
+      setGames({ status: 'ready', games: await listMatches('unfinished') });
     } catch {
-      setResumeError(true);
-      setResuming(null);
+      setGames({ status: 'error' });
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listMatches('unfinished').then(
+      (loaded) => {
+        if (!cancelled) {
+          setGames({ status: 'ready', games: loaded });
+        }
+      },
+      () => {
+        if (!cancelled) {
+          setGames({ status: 'error' });
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const request = CreateMatchRequest.safeParse(createRequest(setup));
+  const known = players.status === 'ready' ? players.players : [];
+  const selected = setup.playerIds.flatMap((id) => {
+    const colorIndex = known.findIndex((player) => player.id === id);
+    const player = known[colorIndex];
+    return player ? [{ player, colorIndex }] : [];
+  });
+
+  function onPlayerCreated(player: Player): void {
+    setCreatingPlayer(false);
+    setPlayers((current) => ({ status: 'ready', players: [player, ...(current.status === 'ready' ? current.players : [])] }));
+    setSetup((current) => pickPlayer(current, player.id));
+  }
+
+  async function start(): Promise<void> {
+    if (!request.success) {
+      return;
+    }
+    setSubmitting(true);
+    setStartError(null);
+    try {
+      const match = await createMatch(request.data);
+      window.location.hash = matchHref(match.id);
+    } catch (caught) {
+      setStartError(caught instanceof ApiRequestError ? caught.message : pl.requestFailed);
+      setSubmitting(false);
     }
   }
 
-  return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
-      <h1 className="flex items-center gap-3 font-display text-5xl font-bold uppercase">
-        <TargetIcon className="text-(--color-accent)" />
-        {pl.appName}
-      </h1>
-      <a
-        href={NEW_GAME_HREF}
-        className="flex min-h-14 items-center justify-center rounded-(--radius-card) bg-(--color-accent) px-6 font-display text-2xl font-bold uppercase text-(--color-on-accent)"
-      >
-        {pl.newGame}
-      </a>
-      <section aria-labelledby="unfinished-games" className="flex flex-col gap-3">
-        <h2 id="unfinished-games" className="font-display text-3xl font-bold uppercase">
-          {pl.unfinishedGames}
-        </h2>
-        {resumeError && <Notice text={pl.resumeFailed} />}
-        {load.kind === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
-        {load.kind === 'error' && <Notice text={pl.loadMatchesFailed} />}
-        {load.kind === 'loaded' && load.matches.length === 0 && <p className="text-(--color-text-muted)">{pl.noUnfinishedGames}</p>}
-        {load.kind === 'loaded' && load.matches.length > 0 && (
-          <ul className="flex flex-col gap-3">
-            {load.matches.map((match) => (
-              <MatchRow key={match.id} match={match} resuming={resuming !== null} onResume={() => void resume(match.id)} />
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
-  );
-}
-
-function typeLabel(match: MatchListItem): string {
-  if (match.type === 'match') {
-    return pl.typeMatch;
+  async function finish(game: MatchListItem): Promise<void> {
+    if (game.status !== 'abandoned') {
+      window.location.hash = matchHref(game.id);
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    try {
+      await resumeMatch(game.id);
+      window.location.hash = matchHref(game.id);
+    } catch {
+      setNotice(pl.resumeFailed);
+      setBusy(false);
+    }
   }
-  if (match.type === 'casual') {
-    return pl.typeCasual;
+
+  async function abandon(game: MatchListItem, playerId: string, reason: string | null): Promise<void> {
+    setAbandoning(null);
+    setBusy(true);
+    setNotice(null);
+    try {
+      const trimmed = reason?.trim();
+      await abandonMatch(game.id, { playerId, ...(trimmed ? { reason: trimmed } : {}) });
+      await reloadGames();
+    } catch {
+      setNotice(pl.abandonFailed);
+    } finally {
+      setBusy(false);
+    }
   }
-  return match.practiceMode === 'solo_501' ? pl.solo501 : pl.freeRun;
-}
 
-interface MatchRowProps {
-  match: MatchListItem;
-  resuming: boolean;
-  onResume(): void;
-}
+  const closeAbandon = useCallback(() => setAbandoning(null), []);
+  const closeNewPlayer = useCallback(() => setCreatingPlayer(false), []);
 
-function MatchRow({ match, resuming, onResume }: MatchRowProps) {
-  const abandoned = match.status === 'abandoned';
   return (
-    <li className="flex flex-col gap-3 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) p-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="font-display text-2xl font-bold uppercase">{typeLabel(match)}</span>
-        {/* W Solo 501 punkty startowe są już w nazwie trybu. */}
-        {match.type !== 'practice' && match.startingScore !== null && <span className="font-display text-2xl text-(--color-text-muted)">{match.startingScore}</span>}
-        <StatusBadge abandoned={abandoned} />
-        <span className="ml-auto flex items-baseline gap-2">
-          <span className={label}>{pl.lastActivity}</span>
-          <time dateTime={match.updatedAt} className="text-(--color-text-muted)">
-            {dateFormat.format(new Date(match.updatedAt))}
-          </time>
-        </span>
-      </div>
-      <ul className="flex flex-wrap gap-x-6 gap-y-2">
-        {match.players.map((player, index) => (
-          <li key={player.id} className="flex items-center gap-2 font-display text-xl">
-            <span
-              aria-hidden="true"
-              className={`flex size-8 shrink-0 items-center justify-center rounded-full font-bold text-(--color-on-avatar) ${AVATAR_COLORS[index] ?? AVATAR_COLORS[0]}`}
-            >
-              {player.avatar ?? player.name.charAt(0).toUpperCase()}
-            </span>
-            <span className="font-semibold">{player.name}</span>
-            <PlayerProgress player={player} />
-          </li>
-        ))}
-      </ul>
-      <div className="flex flex-wrap gap-3">
-        {abandoned ? (
-          <>
-            <button
-              type="button"
-              onClick={onResume}
-              disabled={resuming}
-              className={`${action} border-(--color-text) bg-(--color-text) text-(--color-text-inverse) disabled:opacity-40`}
-            >
-              {pl.resume}
-            </button>
-            <a href={matchHref(match.id)} className={`${action} border-(--color-border-strong) bg-(--color-surface-button) text-(--color-text)`}>
-              {pl.preview}
-            </a>
-          </>
-        ) : (
-          <a href={matchHref(match.id)} className={`${action} border-(--color-text) bg-(--color-text) text-(--color-text-inverse)`}>
-            {pl.continueMatch}
-          </a>
-        )}
-      </div>
-    </li>
-  );
-}
-
-function PlayerProgress({ player }: { player: MatchListItem['players'][number] }) {
-  if (player.place !== null) {
-    return <span className="text-(--color-text-muted)">{pl.place(player.place)}</span>;
-  }
-  return (
-    <>
-      {player.remaining !== null && <span className="font-bold tabular-nums">{player.remaining}</span>}
-      {player.legsWon !== null && (
-        <span className="text-(--color-text-muted)">
-          {pl.legs} {player.legsWon}
-        </span>
-      )}
-    </>
-  );
-}
-
-function StatusBadge({ abandoned }: { abandoned: boolean }) {
-  return (
-    <span
-      className={`flex items-center gap-2 rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 font-display text-lg font-semibold uppercase ${
-        abandoned ? 'border-(--color-accent) text-(--color-text)' : 'border-(--color-border-strong) text-(--color-text-muted)'
-      }`}
-    >
-      {abandoned ? <PauseIcon className="text-(--color-accent)" /> : <ThrowingIcon />}
-      {abandoned ? pl.statusAbandoned : pl.statusInProgress}
-    </span>
-  );
-}
-
-function Notice({ text }: { text: string }) {
-  return (
-    <p className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
-      <WarningIcon />
-      {text}
-    </p>
+    <div className="flex h-full flex-col">
+      <AppNav current="new-game" />
+      <main className="flex min-h-0 flex-1 flex-col gap-12 overflow-auto px-12 py-8 lg:flex-row lg:overflow-hidden">
+        <NewGameForm
+          setup={setup}
+          players={players}
+          canStart={request.success && !submitting}
+          error={startError}
+          onTypeChange={(type) => setSetup((current) => changeType(current, type))}
+          onPlayerToggle={(playerId) => setSetup((current) => pickPlayer(current, playerId))}
+          onStartingScoreChange={(startingScore) => setSetup((current) => ({ ...current, startingScore }))}
+          onBestOfChange={(bestOf) => setSetup((current) => ({ ...current, bestOf }))}
+          onPracticeModeChange={(practiceMode) => setSetup((current) => ({ ...current, practiceMode }))}
+          onNewPlayer={() => setCreatingPlayer(true)}
+          onStart={() => void start()}
+        />
+        <div className="flex min-h-0 flex-col gap-5 lg:w-110 lg:shrink-0">
+          <GameSetupSummary setup={setup} players={selected} />
+          <UnfinishedGames games={games} now={new Date()} busy={busy} notice={notice} onFinish={(game) => void finish(game)} onAbandon={setAbandoning} />
+        </div>
+      </main>
+      {creatingPlayer && <NewPlayerDialog onCreated={onPlayerCreated} onCancel={closeNewPlayer} />}
+      {abandoning && <AbandonDialog state={abandoning} onCancel={closeAbandon} onConfirm={(playerId, reason) => void abandon(abandoning, playerId, reason)} />}
+    </div>
   );
 }

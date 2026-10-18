@@ -1,11 +1,13 @@
-import type { Player, PlayerStats, StatsFilter } from '@autoscore/schema';
+import type { Player, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
 import { useEffect, useState } from 'react';
-import { ApiRequestError, getPlayerStats, listPlayers } from '../api/client';
+import { ApiRequestError, getPlayerStats, getRankings, listPlayers } from '../api/client';
+import { AppNav } from '../components/AppNav';
+import { RankingBoard } from '../components/RankingBoard';
 import { WarningIcon } from '../components/icons';
 import { formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../game/format-stat';
 import { pl } from '../i18n/pl';
 
-const NEW_GAME_HREF = '#/new';
+const RANKING_HREF = '#/stats';
 
 const FILTERS: readonly { value: StatsFilter; label: string }[] = [
   { value: 'all', label: pl.filterAll },
@@ -45,6 +47,73 @@ function statItems(stats: PlayerStats): readonly [string, string][] {
 type Loaded<T> = { status: 'loading' } | { status: 'ready'; value: T } | { status: 'error'; message: string };
 
 export function StatsScreen({ playerId }: { playerId: string | null }) {
+  return (
+    <div className="flex h-full flex-col">
+      <AppNav current="stats" />
+      {playerId === null ? <Ranking /> : <PlayerCard playerId={playerId} />}
+    </div>
+  );
+}
+
+function FilterButtons({ filter, onChange }: { filter: StatsFilter; onChange(filter: StatsFilter): void }) {
+  return (
+    <div className="flex flex-wrap gap-2.5">
+      {FILTERS.map((option) => (
+        <button key={option.value} type="button" aria-pressed={filter === option.value} onClick={() => onChange(option.value)} className={choiceStyle(filter === option.value)}>
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Ranking() {
+  const [filter, setFilter] = useState<StatsFilter>('all');
+  const [rankings, setRankings] = useState<Loaded<StatsRankings>>({ status: 'loading' });
+
+  useEffect(() => {
+    let cancelled = false;
+    setRankings({ status: 'loading' });
+    getRankings(filter).then(
+      (value) => {
+        if (!cancelled) {
+          setRankings({ status: 'ready', value });
+        }
+      },
+      () => {
+        if (!cancelled) {
+          setRankings({ status: 'error', message: pl.statsFailed });
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [filter]);
+
+  return (
+    <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-12 pt-7 pb-8 lg:overflow-hidden">
+      <div className="flex flex-wrap items-end justify-between gap-8">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="font-display text-[56px] leading-none font-bold uppercase">{pl.stats}</h1>
+          {rankings.status === 'ready' && <p className="text-[17px] text-(--color-text-muted)">{pl.rankingSubtitle(rankings.value.games, rankings.value.legs)}</p>}
+        </div>
+        <section aria-labelledby="ranking-filter" className="flex flex-col gap-2.5">
+          <h2 id="ranking-filter" className={label}>
+            {pl.gameType}
+          </h2>
+          <FilterButtons filter={filter} onChange={setFilter} />
+        </section>
+      </div>
+      {rankings.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
+      {rankings.status === 'error' && <ErrorText text={rankings.message} />}
+      {rankings.status === 'ready' && rankings.value.games === 0 && <p className="font-display text-2xl text-(--color-text-muted)">{pl.noGamesInFilter}</p>}
+      {rankings.status === 'ready' && rankings.value.games > 0 && <RankingBoard rankings={rankings.value} />}
+    </main>
+  );
+}
+
+function PlayerCard({ playerId }: { playerId: string }) {
   const [players, setPlayers] = useState<Loaded<Player[]>>({ status: 'loading' });
   const [filter, setFilter] = useState<StatsFilter>('all');
   const [stats, setStats] = useState<Loaded<PlayerStats>>({ status: 'loading' });
@@ -68,15 +137,10 @@ export function StatsScreen({ playerId }: { playerId: string | null }) {
     };
   }, []);
 
-  const selected = playerId ?? (players.status === 'ready' ? (players.value[0]?.id ?? null) : null);
-
   useEffect(() => {
-    if (selected === null) {
-      return;
-    }
     let cancelled = false;
     setStats({ status: 'loading' });
-    getPlayerStats(selected, filter).then(
+    getPlayerStats(playerId, filter).then(
       (value) => {
         if (!cancelled) {
           setStats({ status: 'ready', value });
@@ -92,14 +156,14 @@ export function StatsScreen({ playerId }: { playerId: string | null }) {
     return () => {
       cancelled = true;
     };
-  }, [selected, filter]);
+  }, [playerId, filter]);
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 overflow-auto p-6">
       <div className="flex items-baseline justify-between gap-4">
         <h1 className="font-display text-5xl font-bold uppercase">{pl.stats}</h1>
-        <a href={NEW_GAME_HREF} className="font-display text-xl font-semibold uppercase text-(--color-text) underline">
-          {pl.newGame}
+        <a href={RANKING_HREF} className="font-display text-xl font-semibold uppercase text-(--color-text) underline">
+          {pl.ranking}
         </a>
       </div>
 
@@ -114,11 +178,11 @@ export function StatsScreen({ playerId }: { playerId: string | null }) {
               <button
                 key={player.id}
                 type="button"
-                aria-pressed={player.id === selected}
+                aria-pressed={player.id === playerId}
                 onClick={() => {
                   window.location.hash = statsHref(player.id);
                 }}
-                className={`${choiceStyle(player.id === selected)} flex items-center gap-2`}
+                className={`${choiceStyle(player.id === playerId)} flex items-center gap-2`}
               >
                 {player.avatar && <span aria-hidden="true">{player.avatar}</span>}
                 {player.name}
@@ -130,16 +194,10 @@ export function StatsScreen({ playerId }: { playerId: string | null }) {
 
       <section className="flex flex-col gap-2">
         <h2 className={label}>{pl.statsFilter}</h2>
-        <div className="flex flex-wrap gap-2">
-          {FILTERS.map((option) => (
-            <button key={option.value} type="button" aria-pressed={filter === option.value} onClick={() => setFilter(option.value)} className={choiceStyle(filter === option.value)}>
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <FilterButtons filter={filter} onChange={setFilter} />
       </section>
 
-      {selected !== null && <StatsCard stats={stats} />}
+      <StatsCard stats={stats} />
     </main>
   );
 }

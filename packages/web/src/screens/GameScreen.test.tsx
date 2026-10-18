@@ -213,7 +213,7 @@ describe('GameScreen', () => {
     render(<GameScreen matchId={MATCH_ID} />);
     socket().serverClose(4404);
     expect(screen.getByText('Nie znaleziono gry')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/new');
+    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/');
     act(() => {
       vi.advanceTimersByTime(5000);
     });
@@ -281,8 +281,10 @@ describe('GameScreen', () => {
 });
 
 describe('abandon and resume', () => {
+  // Porzucić można dopiero po ukończonym legu.
+  const secondLeg: MatchSnapshot = { ...initial, legIndex: 1 };
   const abandonedState: MatchSnapshot = {
-    ...initial,
+    ...secondLeg,
     eventSeq: 5,
     status: 'abandoned',
     abandonment: { playerId: 'p2', reason: null, at: '2026-10-15T19:00:00.000Z' },
@@ -292,9 +294,14 @@ describe('abandon and resume', () => {
     return screen.getByRole('dialog', { name: 'Porzucić mecz?' });
   }
 
+  it('hides Porzuć mecz before the first leg is completed', () => {
+    connect();
+    expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+  });
+
   it('opens the dialog with the current player preselected and posts the abandon', async () => {
     respond = async () => json(200, abandonedState);
-    connect();
+    connect(secondLeg);
     tap('Porzuć mecz');
     expect(within(dialog()).getByText('Gra zostanie zapisana jako porzucona. Wznowisz ją z ekranu startowego.')).toBeTruthy();
     expect((within(dialog()).getByRole('radio', { name: 'Bartek' }) as HTMLInputElement).checked).toBe(true);
@@ -309,7 +316,7 @@ describe('abandon and resume', () => {
 
   it('sends the chosen player and a typed reason', async () => {
     respond = async () => json(200, abandonedState);
-    connect();
+    connect(secondLeg);
     tap('Porzuć mecz');
     fireEvent.click(within(dialog()).getByRole('radio', { name: 'Anna' }));
     fireEvent.change(within(dialog()).getByRole('textbox', { name: 'Powód (opcjonalnie)' }), { target: { value: ' koniec prądu ' } });
@@ -319,7 +326,7 @@ describe('abandon and resume', () => {
   });
 
   it('closes on Anuluj and on Escape without a request', () => {
-    connect();
+    connect(secondLeg);
     tap('Porzuć mecz');
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Anuluj' }));
     expect(screen.queryByRole('dialog')).toBeNull();

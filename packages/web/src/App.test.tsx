@@ -25,6 +25,9 @@ beforeEach(() => {
       if (url === '/api/matches?status=unfinished') {
         return json(200, []);
       }
+      if (url.startsWith('/api/stats/rankings')) {
+        return json(200, { filter: 'all', games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], scores180: [] });
+      }
       return json(200, { ...statLine(), playerId: 'p1', filter: 'all', matchesPlayed: 0, matchesWon: 0 });
     }),
   );
@@ -36,41 +39,39 @@ afterEach(() => {
 });
 
 describe('App', () => {
-  it('renders the home screen at #/', async () => {
+  it('renders the start screen at #/', async () => {
     window.location.hash = '#/';
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Nieskończone gry' })).toBeTruthy();
-    expect(await screen.findByText('Brak nieskończonych gier.')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Start gry' })).toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Nowa gra' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Start gry' })).toBeTruthy();
+    expect(await screen.findByText('Brak gier do dokończenia.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Statystyki' }).getAttribute('href')).toBe('#/stats');
   });
 
-  it('renders the home screen without a hash', async () => {
+  it('renders the start screen without a hash', async () => {
     window.location.hash = '';
     render(<App />);
-    expect(await screen.findByText('Brak nieskończonych gier.')).toBeTruthy();
+    expect(await screen.findByText('Brak gier do dokończenia.')).toBeTruthy();
   });
 
-  it('opens the new game screen on #/new with a link to the statistics', async () => {
+  it('redirects #/new to #/', async () => {
     window.location.hash = '#/new';
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Nowa gra' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Start gry' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Statystyki' }).getAttribute('href')).toBe('#/stats');
-    expect(screen.queryByRole('heading', { name: 'Nieskończone gry' })).toBeNull();
-    await vi.waitFor(() => expect(urls).toContain('/api/players'));
+    await vi.waitFor(() => expect(window.location.hash).toBe('#/'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Nowa gra' })).toBeTruthy();
   });
 
-  it('opens the statistics screen on #/stats', async () => {
+  it('opens the ranking on #/stats', async () => {
     window.location.hash = '#/stats';
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Statystyki' })).toBeTruthy();
-    await vi.waitFor(() => expect(urls).toContain('/api/players/p1/stats?type=all'));
+    expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
+    await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all'));
   });
 
   it('opens the statistics of the player in #/stats/:playerId', async () => {
     window.location.hash = `#/stats/${encodeURIComponent('p 2')}`;
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Statystyki' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
     await vi.waitFor(() => expect(urls).toContain('/api/players/p%202/stats?type=all'));
     expect((await screen.findByRole('button', { name: 'Bartek' })).getAttribute('aria-pressed')).toBe('true');
   });

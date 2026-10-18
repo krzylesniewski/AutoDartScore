@@ -24,6 +24,10 @@ function readEnabled(key: string): boolean {
   }
 }
 
+export function readVoiceEnabled(): boolean {
+  return readEnabled(VOICE_STORAGE_KEY);
+}
+
 function writeEnabled(key: string, enabled: boolean): void {
   try {
     localStorage.setItem(key, enabled ? 'on' : 'off');
@@ -40,7 +44,7 @@ interface AudioOutput {
 
 // Głos i efekty są domyślnie włączone na każdym urządzeniu. Drugi ekran wyłącza je sam, a wybór zostaje w localStorage.
 export function useAnnouncer(): UseAnnouncer {
-  const [voiceEnabled, setVoiceState] = useState(() => readEnabled(VOICE_STORAGE_KEY));
+  const [voiceEnabled, setVoiceState] = useState(readVoiceEnabled);
   const [effectsEnabled, setEffectsState] = useState(() => readEnabled(EFFECTS_STORAGE_KEY));
   const voiceRef = useRef(voiceEnabled);
   const effectsRef = useRef(effectsEnabled);

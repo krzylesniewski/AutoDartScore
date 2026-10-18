@@ -13,7 +13,7 @@ import { TurnPanel } from '../components/TurnPanel';
 import { WarningIcon } from '../components/icons';
 import { pl } from '../i18n/pl';
 
-const NEW_GAME_HREF = '#/new';
+const NEW_GAME_HREF = '#/';
 const HOME_HREF = '#/';
 
 const link = 'text-xl font-semibold uppercase text-(--color-text) underline';

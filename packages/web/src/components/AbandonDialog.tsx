@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { pl } from '../i18n/pl';
 
 export interface AbandonDialogProps {
-  state: MatchSnapshot;
+  state: Pick<MatchSnapshot, 'players' | 'currentPlayerId'>;
   onConfirm(playerId: string, reason: string | null): void;
   onCancel(): void;
 }

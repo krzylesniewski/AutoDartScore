@@ -65,3 +65,41 @@ export const MatchSummary = z.object({
   legs: z.array(MatchSummaryLeg), // jeden na leg_won, więc w zabawie lista jest pusta
 });
 export type MatchSummary = z.infer<typeof MatchSummary>;
+
+// Ranking graczy. Średnia liczy tylko ukończone legi, a pozycję dostaje gracz z co najmniej MIN_LEGS_FOR_AVERAGE legami.
+export const MIN_LEGS_FOR_AVERAGE = 3;
+
+export const RankingsQuery = z.object({ type: StatsFilter.default('all') });
+export type RankingsQuery = z.infer<typeof RankingsQuery>;
+
+export const RankedPlayer = z.object({
+  playerId: PlayerId,
+  name: z.string().min(1),
+  avatar: z.string().nullable(),
+  position: z.int().min(1).nullable(), // null poniżej MIN_LEGS_FOR_AVERAGE ukończonych legów
+  average: Average, // tylko ukończone legi
+  legs: Count, // ukończone legi
+});
+export type RankedPlayer = z.infer<typeof RankedPlayer>;
+
+// Remis daje tę samą pozycję, a następna pozycja jest pomijana (1, 1, 3).
+export const RankingEntry = z.object({
+  playerId: PlayerId,
+  name: z.string().min(1),
+  avatar: z.string().nullable(),
+  position: z.int().min(1),
+  value: z.number().min(0),
+});
+export type RankingEntry = z.infer<typeof RankingEntry>;
+
+export const StatsRankings = z.object({
+  filter: StatsFilter,
+  games: Count,
+  legs: Count,
+  players: z.array(RankedPlayer),
+  bestLegAverage: z.array(RankingEntry),
+  highestCheckout: z.array(RankingEntry),
+  shortestLeg: z.array(RankingEntry),
+  scores180: z.array(RankingEntry),
+});
+export type StatsRankings = z.infer<typeof StatsRankings>;

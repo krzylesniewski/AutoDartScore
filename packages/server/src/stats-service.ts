@@ -1,13 +1,16 @@
 import { isGameFinished } from '@autoscore/engine';
-import type { MatchSummary, MatchType, PlayerStats, StatsFilter } from '@autoscore/schema';
+import type { MatchSummary, MatchType, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
 import { notFound } from './errors.js';
 import { effectiveThrows, lastSeq, replayMatch } from './replay.js';
+import { completedPlayerLegs } from './stats/completed-legs.js';
+import { buildRankings } from './stats/rankings.js';
 import { EMPTY_TOTALS, mergeTotals, tallyGame, toStatLine } from './stats/tally.js';
 import type { Store, StoredMatch } from './store/store.js';
 
 export interface StatsService {
   playerStats(playerId: string, filter: StatsFilter): Promise<PlayerStats>;
   matchSummary(matchId: string): Promise<MatchSummary>;
+  rankings(filter: StatsFilter): Promise<StatsRankings>;
 }
 
 interface Dependencies {
@@ -27,7 +30,7 @@ export function createStatsService({ store }: Dependencies): StatsService {
     const log = await store.loadLog(match.id);
     const { state, events } = replayMatch(match, effectiveThrows(log));
     const playerIds = match.players.map((player) => player.id);
-    return { seq: lastSeq(log), finished: isGameFinished(state), playerIds, tally: tallyGame(match.type, playerIds, events) };
+    return { seq: lastSeq(log), finished: isGameFinished(state), playerIds, events, tally: tallyGame(match.type, playerIds, events) };
   }
 
   return {
@@ -69,6 +72,19 @@ export function createStatsService({ store }: Dependencies): StatsService {
         players: playerIds.map((playerId) => ({ ...toStatLine(tally.players.get(playerId) ?? EMPTY_TOTALS), playerId })),
         legs: [...tally.legs],
       };
+    },
+
+    async rankings(filter) {
+      const types = FILTER_TYPES[filter];
+      const games = [];
+      for (const match of await store.listMatches()) {
+        if (!match.countsToStats || !types.includes(match.type)) {
+          continue;
+        }
+        const { playerIds, events, tally } = await replayed(match);
+        games.push({ legs: completedPlayerLegs(match.type, playerIds, events), tally });
+      }
+      return { filter, ...buildRankings({ players: await store.listPlayers(), games }) };
     },
   };
 }

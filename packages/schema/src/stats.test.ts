@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MatchSummary, PlayerStats, PlayerStatsQuery, type PlayerStatLine } from './index.js';
+import { MIN_LEGS_FOR_AVERAGE, MatchSummary, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsRankings, type PlayerStatLine } from './index.js';
 
 const line: PlayerStatLine = {
   dartsThrown: 6,
@@ -97,5 +97,53 @@ describe('MatchSummary', () => {
 
   it('rejects an unknown game type', () => {
     expect(MatchSummary.safeParse({ matchId: 'm1', type: 'cricket', finished: false, eventSeq: 0, players: [], legs: [] }).success).toBe(false);
+  });
+});
+
+describe('StatsRankings', () => {
+  const anna = { playerId: 'p1', name: 'Anna', avatar: '🎯' };
+  const bartek = { playerId: 'p2', name: 'Bartek', avatar: null };
+
+  it('parses a ranking with a ranked and an unranked player', () => {
+    const rankings = {
+      filter: 'all',
+      games: 2,
+      legs: 4,
+      players: [
+        { ...anna, position: 1, average: 60.5, legs: 4 },
+        { ...bartek, position: null, average: 45, legs: 2 },
+      ],
+      bestLegAverage: [{ ...anna, position: 1, value: 75.25 }],
+      highestCheckout: [
+        { ...anna, position: 1, value: 40 },
+        { ...bartek, position: 1, value: 40 },
+      ],
+      shortestLeg: [{ ...anna, position: 1, value: 15 }],
+      scores180: [],
+    };
+    expect(StatsRankings.parse(rankings)).toEqual(rankings);
+  });
+
+  it('accepts position null only for a ranked player', () => {
+    expect(RankedPlayer.safeParse({ ...anna, position: null, average: 50, legs: 1 }).success).toBe(true);
+    expect(RankingEntry.safeParse({ ...anna, position: null, value: 50 }).success).toBe(false);
+  });
+
+  it('rejects position 0', () => {
+    expect(RankingEntry.safeParse({ ...anna, position: 0, value: 50 }).success).toBe(false);
+  });
+
+  it('needs 3 legs for an average', () => {
+    expect(MIN_LEGS_FOR_AVERAGE).toBe(3);
+  });
+});
+
+describe('RankingsQuery', () => {
+  it('defaults the filter to all', () => {
+    expect(RankingsQuery.parse({})).toEqual({ type: 'all' });
+  });
+
+  it('rejects an unknown filter', () => {
+    expect(RankingsQuery.safeParse({ type: 'bogus' }).success).toBe(false);
   });
 });

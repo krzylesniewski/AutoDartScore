@@ -1,4 +1,4 @@
-import { PlayerStatsQuery } from '@autoscore/schema';
+import { PlayerStatsQuery, RankingsQuery } from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import { invalidRequest } from '../errors.js';
 import type { StatsService } from '../stats-service.js';
@@ -14,6 +14,14 @@ export function statsRoutes(app: FastifyInstance, stats: StatsService): void {
       throw invalidRequest(parsed.error.issues);
     }
     return stats.playerStats(request.params.id, parsed.data.type);
+  });
+
+  app.get('/stats/rankings', async (request) => {
+    const parsed = RankingsQuery.safeParse(request.query);
+    if (!parsed.success) {
+      throw invalidRequest(parsed.error.issues);
+    }
+    return stats.rankings(parsed.data.type);
   });
 
   app.get<IdParams>('/matches/:id/summary', async (request) => stats.matchSummary(request.params.id));
