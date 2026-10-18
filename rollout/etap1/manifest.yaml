@@ -150,3 +150,14 @@ prs:
     effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/audio/**', 'packages/web/**']
+
+  # README repo i pakietów (plan: uwaga "README w P11"). Równolegle z resztą.
+  - id: P11
+    branch: docs/readme
+    title: 'docs: README for the repository and packages'
+    brief: briefs/P11.md
+    deps: [P10]
+    priority: 12
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['README.md', 'packages/*/README.md']
