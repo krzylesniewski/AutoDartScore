@@ -588,6 +588,7 @@ Plan realizujemy jako serię PR-ów przez [claude-rollout](https://boldare.githu
 | P10 | `audio` + `web`: efekty dźwiękowe dla bustu i wygranej (patrz niżej) | P5b, P7 |
 | P11 | dokumentacja: `README.md` w repo i w pakietach (patrz niżej), równolegle z resztą | P10 |
 | P12 | `web` + `server` + `schema`: ekran startowy i ekran statystyk według makiet `design/mockups/theme-a-new-game*.html` i `theme-a-stats.html`, punkty z sekcji „Ekran startowy i statystyki: punkty do implementacji” i jej „Decyzje” | P9 |
+| P13 | `web` + `server` + `schema`: „Zakończ trening” dla treningu (patrz „Decyzje” w sekcji ekranu startowego) | P12 |
 
 Uwagi:
 
@@ -700,7 +701,7 @@ Makiety: `design/mockups/theme-a-new-game.html` (+ `.png`), `theme-a-new-game-10
 ### Decyzje (2026-10-18, realizuje P12)
 
 - **Goście:** brak w UI. Okno „+ Nowy gracz” nie ma pola „Gość”; każdy nowy gracz jest zapisany. API może dalej przyjmować `guest`.
-- **Gry do dokończenia:** wszystkie nieskończone gry, także Free run, bez limitu (decyzja z P9). Wiersz ma „Dokończ”, a „Porzuć” (z potwierdzeniem) tylko wtedy, gdy gra ma co najmniej 1 ukończony leg. Ta sama reguła obowiązuje dla „Porzuć mecz” na ekranie gry (zmiana względem P9). Gra bez ukończonego lega zostaje na liście do dokończenia.
+- **Gry do dokończenia:** wszystkie nieskończone gry, także Free run, bez limitu (decyzja z P9). Wiersz ma „Dokończ”, a „Porzuć” (z potwierdzeniem) tylko wtedy, gdy gra ma co najmniej 1 ukończony leg. Ta sama reguła obowiązuje dla „Porzuć mecz” na ekranie gry (zmiana względem P9). Gra bez ukończonego lega zostaje na liście do dokończenia. **Trening (Solo 501 i Free run, decyzja z P12, realizuje P13):** zamiast „Porzuć” przycisk „Zakończ trening” na ekranie gry i w wierszu listy, dostępny po pierwszej rzutce, z potwierdzeniem; zapisuje zdarzenie w logu (nic nie jest usuwane), zamyka sesję i usuwa ją z „Gier do dokończenia”. Zakończony Free run zachowuje licznik sesji; Solo 501 zakończony przed zerem nie ma wygranego lega i przerwany leg nie wchodzi do średniej. Kropki stanu: lokalnie („Kamera: brak”, głos z ustawień urządzenia), endpoint statusu w Etapie 2. Awatar: tylko emoji, zdjęcia później.
 - **Próba na double:** każda rzutka rzucona, gdy wynik gracza da się zamknąć jedną rzutką (parzysty ≤ 40 albo 50).
 - **Remisy:** ta sama pozycja dla równych wartości. **Minimum do średnich:** 3 ukończone legi.
 - **Ekran statystyk:** po lewej przewijana lista wszystkich graczy posortowana według średniej na 3 rzutki ze wszystkich legów („Średnia (3 rzutki)”), z pozycją, awatarem i liczbą legów. Po prawej 4 kafelki top 3: **Rekordowy leg (średnia)**, **Najwyższe zamknięcie**, **Najkrótszy leg**, **Liczba 180**. Średnia ogólna jest w liście, nie w kafelku; skuteczność doubli zostaje w karcie gracza z P6, nie w kafelku.

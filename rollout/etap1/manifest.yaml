@@ -123,7 +123,7 @@ prs:
     branch: feat/history-profiles
     title: 'feat: match history, head-to-head, form chart and player profiles'
     brief: briefs/P8.md
-    deps: [P12]
+    deps: [P13]
     priority: 5
     effort: { brief: high, implement: high, verify: high }
     changeset: none
@@ -168,6 +168,17 @@ prs:
     title: 'feat(web): start and statistics screens after the theme A mockups'
     brief: briefs/P12.md
     deps: [P9]
+    priority: 9
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'packages/server/**', 'packages/schema/**']
+
+  # "Zakończ trening" dla Solo 501 i Free run (plan: "Decyzje" w sekcji ekranu startowego).
+  - id: P13
+    branch: feat/end-practice
+    title: 'feat: end a practice session from the game screen and the home list'
+    brief: briefs/P13.md
+    deps: [P12]
     priority: 9
     effort: { brief: high, implement: high, verify: high }
     changeset: none
