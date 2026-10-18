@@ -266,3 +266,87 @@ describe('GameScreen', () => {
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
   });
 });
+
+describe('voice', () => {
+  class FakeUtterance {
+    readonly text: string;
+    lang = '';
+
+    constructor(text: string) {
+      this.text = text;
+    }
+  }
+
+  let speak: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    speak = vi.fn();
+    vi.stubGlobal('speechSynthesis', { speak, cancel: vi.fn(), getVoices: () => [] });
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  const BATCH_SEQ = 5;
+  const darts = [{ segment: 20, multiplier: 3 }] as const;
+
+  function sendBatch(ws: FakeWebSocket, event: LiveMessage): void {
+    ws.serverSend(event);
+    ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: BATCH_SEQ, state: { ...initial, eventSeq: BATCH_SEQ } });
+  }
+
+  function sendTurn(ws: FakeWebSocket): void {
+    sendBatch(ws, { type: 'turn_completed', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], total: 100, remaining: 337 });
+  }
+
+  function toggle(): HTMLElement {
+    return screen.getByRole('button', { name: 'Głos' });
+  }
+
+  function spokenTexts(): string[] {
+    return speak.mock.calls.map(([utterance]) => (utterance as FakeUtterance).text);
+  }
+
+  it('is off by default and stays silent', () => {
+    const ws = connect();
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
+    sendTurn(ws);
+    expect(speak).not.toHaveBeenCalled();
+  });
+
+  it('reads the turn total after the toggle is on', () => {
+    const ws = connect();
+    fireEvent.click(toggle());
+    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+    sendTurn(ws);
+    expect(spokenTexts()).toEqual(['sto']);
+  });
+
+  it('reads Bust and Zwycięzca', () => {
+    const ws = connect();
+    fireEvent.click(toggle());
+    sendBatch(ws, { type: 'bust', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], remaining: 40 });
+    expect(spokenTexts()).toEqual(['Bust']);
+    sendBatch(ws, { type: 'match_won', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legsWon: { p1: 0, p2: 2 } });
+    expect(spokenTexts()).toEqual(['Bust', 'Zwycięzca']);
+  });
+
+  it('keeps the setting after a new render', () => {
+    const { unmount } = render(<GameScreen matchId={MATCH_ID} />);
+    fireEvent.click(toggle());
+    unmount();
+    expect(localStorage.getItem('autoscore.voice')).toBe('on');
+    render(<GameScreen matchId={MATCH_ID} />);
+    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('never speaks on a keypad tap', async () => {
+    connect();
+    fireEvent.click(toggle());
+    tap('20');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(speak).not.toHaveBeenCalled();
+  });
+});

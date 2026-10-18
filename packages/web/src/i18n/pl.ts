@@ -39,6 +39,7 @@ export const pl = {
   undo: 'Cofnij',
   nextRound: 'Nowa runda',
   toReview: 'Do weryfikacji',
+  voice: 'Głos',
   soon: 'Wkrótce',
   addPlayerSlot: 'Dodaj gracza',
   bust: 'Bust',
