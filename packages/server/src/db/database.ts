@@ -40,14 +40,17 @@ export interface ThrowsTable {
   received_at: string;
 }
 
-export type MatchEventType = 'throw' | 'undo';
+export type MatchEventType = 'throw' | 'undo' | 'match_abandoned' | 'match_resumed';
 
 // Log gry: tylko dopisywanie. Stan meczu wynika z odtworzenia wpisów w kolejności seq.
+// throw_id mają tylko throw i undo, player_id i reason tylko match_abandoned.
 export interface MatchEventsTable {
   match_id: string;
   seq: number;
   type: MatchEventType;
-  throw_id: string;
+  throw_id: string | null;
+  player_id: string | null;
+  reason: string | null;
   created_at: string;
 }
 

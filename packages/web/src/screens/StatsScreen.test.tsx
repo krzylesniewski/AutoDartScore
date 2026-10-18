@@ -80,7 +80,7 @@ describe('StatsScreen', () => {
   it('shows the first player with the all filter and the card values', async () => {
     render(<StatsScreen playerId={null} />);
     expect(screen.getByRole('heading', { name: 'Statystyki' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/');
+    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/new');
     await vi.waitFor(() => expect(document.querySelector('dl')).not.toBeNull());
     expect(urls).toContain('/api/players/p1/stats?type=all');
     expect(screen.getByRole('button', { name: 'Anna' }).getAttribute('aria-pressed')).toBe('true');

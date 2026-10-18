@@ -13,13 +13,15 @@ Kontrakt projektu: schematy Zod i typy TypeScript wspólne dla wszystkich pakiet
 
 Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (50 pkt, liczy się jako double), a 25×3 jest odrzucane.
 
-`match.ts`: `MatchType` (`match`, `casual`, `practice`), `PracticeMode` (`free_run`, `solo_501`), `StartingScore` (301, 501, 701), `BestOf` (1, 3, 5), `Placement`.
+`match.ts`: `MatchType` (`match`, `casual`, `practice`), `PracticeMode` (`free_run`, `solo_501`), `StartingScore` (301, 501, 701), `BestOf` (1, 3, 5), `Placement`, `MatchStatus` (`in_progress`, `abandoned`, `finished`).
 
 `player.ts`: `Player`, `CreatePlayerRequest`.
 
-`match-api.ts`: `CreateMatchRequest`, `ThrowRecord`, `MatchSnapshot`, `MatchSnapshotPlayer`, `ThrowResult`, `UndoResult`, `ApiError`.
+`match-api.ts`: `CreateMatchRequest`, `ThrowRecord`, `MatchSnapshot`, `MatchSnapshotPlayer`, `Abandonment`, `AbandonMatchRequest`, `MatchListQuery`, `MatchListItem`, `ThrowResult`, `UndoResult`, `ApiError`.
 
 `domain-events.ts`: `DomainEvent`, unia zdarzeń `TurnCompleted`, `Bust`, `LegWon`, `MatchWon`, `PlayerFinished`, `CasualFinished`.
+
+`stats.ts`: `StatsFilter`, `PlayerStatsQuery`, `PlayerStatLine`, `PlayerStats`, `MatchSummaryLeg`, `MatchSummaryPlayer`, `MatchSummary`.
 
 `live.ts`: `LiveMessage`, unia wiadomości WebSocket. Obejmuje `StateUpdated`, `ThrowRegistered`, `ThrowUndone` i zdarzenia domenowe, każde z polami `matchId` i `eventSeq`.
 

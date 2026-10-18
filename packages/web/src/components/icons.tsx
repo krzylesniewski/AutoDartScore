@@ -21,6 +21,14 @@ export function ThrowingIcon({ className }: IconProps) {
   );
 }
 
+export function PauseIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M6 4h4v16H6zm8 0h4v16h-4z" />
+    </Svg>
+  );
+}
+
 export function BustIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

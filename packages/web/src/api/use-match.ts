@@ -2,7 +2,7 @@ import { LiveMessage } from '@autoscore/schema';
 import type { Hit, HitEvent, MatchSnapshot } from '@autoscore/schema';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
-import { API_BASE, ApiRequestError, postThrow, undo } from './client';
+import { API_BASE, ApiRequestError, abandonMatch, postThrow, resumeMatch, undo } from './client';
 import { newEventId } from './event-id';
 
 export const MATCH_NOT_FOUND_CLOSE_CODE = 4404;
@@ -36,6 +36,8 @@ export interface UseMatch {
   readonly notFound: boolean;
   sendHit(hit: Hit): void;
   sendUndo(): void;
+  sendAbandon(playerId: string, reason: string | null): void;
+  sendResume(): void;
 }
 
 function liveUrl(matchId: string): string {
@@ -210,5 +212,33 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     });
   }, [matchId, enqueue, acceptState]);
 
-  return { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo };
+  const sendAbandon = useCallback(
+    (playerId: string, reason: string | null) => {
+      const trimmed = reason?.trim();
+      enqueue(async () => {
+        try {
+          const state = await abandonMatch(matchId, { playerId, ...(trimmed ? { reason: trimmed } : {}) });
+          setError(null);
+          acceptState(state);
+        } catch {
+          setError(pl.abandonFailed);
+        }
+      });
+    },
+    [matchId, enqueue, acceptState],
+  );
+
+  const sendResume = useCallback(() => {
+    enqueue(async () => {
+      try {
+        const state = await resumeMatch(matchId);
+        setError(null);
+        acceptState(state);
+      } catch {
+        setError(pl.resumeFailed);
+      }
+    });
+  }, [matchId, enqueue, acceptState]);
+
+  return { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo, sendAbandon, sendResume };
 }

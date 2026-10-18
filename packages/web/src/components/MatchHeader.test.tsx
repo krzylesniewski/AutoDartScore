@@ -51,4 +51,35 @@ describe('MatchHeader', () => {
     toggle.click();
     expect(onEffectsChange).toHaveBeenCalledWith(false);
   });
+
+  it('links the app name to the home screen', () => {
+    render(<MatchHeader state={null} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+    expect(screen.getByRole('link', { name: 'Ekran startowy' }).getAttribute('href')).toBe('#/');
+  });
+
+  it('offers Porzuć mecz in a game in progress', () => {
+    const onAbandon = vi.fn();
+    render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={onAbandon} />);
+    screen.getByRole('button', { name: 'Porzuć mecz' }).click();
+    expect(onAbandon).toHaveBeenCalled();
+    expect(screen.queryByText('Porzucony')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Wznów mecz' })).toBeNull();
+  });
+
+  it('shows the Porzucony badge and Wznów mecz in an abandoned game', () => {
+    const onResume = vi.fn();
+    const state = snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T19:00:00.000Z' } });
+    render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onResume={onResume} />);
+    expect(screen.getByText('Porzucony')).toBeTruthy();
+    screen.getByRole('button', { name: 'Wznów mecz' }).click();
+    expect(onResume).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+  });
+
+  it('shows neither in a finished game', () => {
+    render(<MatchHeader state={snapshot({ finished: true })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Wznów mecz' })).toBeNull();
+    expect(screen.queryByText('Porzucony')).toBeNull();
+  });
 });

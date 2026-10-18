@@ -19,3 +19,6 @@ export type StartingScore = z.infer<typeof StartingScore>;
 // Liczba legów w meczu 1v1. Nieparzysta, więc zawsze jest zwycięzca.
 export const BestOf = z.union([z.literal(1), z.literal(3), z.literal(5)]);
 export type BestOf = z.infer<typeof BestOf>;
+
+export const MatchStatus = z.enum(['in_progress', 'abandoned', 'finished']);
+export type MatchStatus = z.infer<typeof MatchStatus>;

@@ -14,17 +14,19 @@ Front potrzebuje działającego serwera. Vite przekazuje `/api` (także WebSocke
 
 Routing przez hash w `src/App.tsx`:
 
-- `#/`: kreator nowej gry. Najpierw wybór „Mecz 1v1”, „Zabawa” albo „Trening”, potem gracze z przyciskiem „+ Nowy gracz” (imię, avatar emoji, gość). Dalej punkty startowe (mecz i zabawa), liczba legów (mecz) albo tryb treningu (Free run, Solo 501).
-- `#/matches/:id`: ekran gry. Pasek wyników, trzy sloty rzutek, suma tury, podpowiedź zamknięcia, klawiatura (1-20, 25, Miss, S/D/T), „Cofnij” i przełączniki głosu i efektów. „Nowa runda” i „Do weryfikacji” są nieaktywne, z etykietą „Wkrótce”.
+- `#/`: ekran startowy. Link „Nowa gra” i lista nieskończonych gier (w trakcie i porzuconych, także Free run) z przyciskami „Kontynuuj” albo „Wznów” i „Podgląd”.
+- `#/new`: kreator nowej gry. Najpierw wybór „Mecz 1v1”, „Zabawa” albo „Trening”, potem gracze z przyciskiem „+ Nowy gracz” (imię, avatar emoji, gość). Dalej punkty startowe (mecz i zabawa), liczba legów (mecz) albo tryb treningu (Free run, Solo 501).
+- `#/matches/:id`: ekran gry. Pasek wyników, trzy sloty rzutek, suma tury, podpowiedź zamknięcia, klawiatura (1-20, 25, Miss, S/D/T), „Cofnij”, „Porzuć mecz” (z potwierdzeniem) i przełączniki głosu i efektów. Porzucona gra jest tylko do odczytu, z przyciskiem „Wznów mecz”. „Nowa runda” i „Do weryfikacji” są nieaktywne, z etykietą „Wkrótce”.
+- `#/stats` i `#/stats/:playerId`: statystyki graczy.
 - Każdy inny adres przekierowuje na `#/`.
 
 ## Struktura
 
-- `src/api/`: klient REST, generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem.
+- `src/api/`: klient REST, generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook podsumowania meczu.
 - `src/audio/`: głos przez Web Speech API, efekty przez Web Audio API, hook `useAnnouncer`.
-- `src/components/`: pasek wyników, panel tury, klawiatura, nagłówek, przełączniki, ikony.
-- `src/game/`: podpowiedź zamknięcia, etykiety trafień, kolejność paska wyników.
-- `src/screens/`: `NewGameScreen` i `GameScreen`.
+- `src/components/`: pasek wyników, panel tury, klawiatura, nagłówek, okno porzucenia meczu, panele statystyk i podsumowania meczu, przełączniki, ikony.
+- `src/game/`: podpowiedź zamknięcia, etykiety trafień, kolejność paska wyników, formatowanie statystyk.
+- `src/screens/`: `HomeScreen`, `NewGameScreen`, `GameScreen` i `StatsScreen`.
 - `src/i18n/`: teksty po polsku.
 
 ## Dźwięk

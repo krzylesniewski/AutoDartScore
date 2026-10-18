@@ -18,10 +18,11 @@ export interface TurnPanelProps {
   state: MatchSnapshot;
   lastTurn: LastTurn | null;
   busy: boolean;
+  undoDisabled?: boolean;
   onUndo(): void;
 }
 
-export function TurnPanel({ state, lastTurn, busy, onUndo }: TurnPanelProps) {
+export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo }: TurnPanelProps) {
   // Pusta tura zaraz po zamknięciu pokazuje ostatnią turę, dopóki nie przyjdzie kolejna zmiana stanu.
   const shown = state.currentDarts.length === 0 && lastTurn?.eventSeq === state.eventSeq ? lastTurn : null;
   const darts: readonly Hit[] = shown ? shown.darts : state.currentDarts;
@@ -54,7 +55,7 @@ export function TurnPanel({ state, lastTurn, busy, onUndo }: TurnPanelProps) {
         <button
           type="button"
           onClick={onUndo}
-          disabled={busy}
+          disabled={busy || undoDisabled}
           className={`${button} border-(--color-border-strong) bg-(--color-surface-button) disabled:opacity-40`}
         >
           <UndoIcon />

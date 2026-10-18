@@ -23,6 +23,8 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
     winnerId: null,
     placements: [],
     freeRun: null,
+    status: overrides.finished ? 'finished' : 'in_progress',
+    abandonment: null,
     ...overrides,
   };
 }

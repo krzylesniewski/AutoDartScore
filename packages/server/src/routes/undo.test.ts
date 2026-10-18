@@ -31,9 +31,9 @@ describe('POST /matches/:id/undo', () => {
 
     expect(await countRows(t.db, 'throws')).toBe(2);
     expect(await logEntries(t.db, id)).toEqual([
-      { seq: 1, type: 'throw', throw_id: first.throw.id },
-      { seq: 2, type: 'throw', throw_id: second.throw.id },
-      { seq: 3, type: 'undo', throw_id: second.throw.id },
+      { seq: 1, type: 'throw', throw_id: first.throw.id, player_id: null, reason: null },
+      { seq: 2, type: 'throw', throw_id: second.throw.id, player_id: null, reason: null },
+      { seq: 3, type: 'undo', throw_id: second.throw.id, player_id: null, reason: null },
     ]);
   });
 

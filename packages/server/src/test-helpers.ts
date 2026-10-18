@@ -91,6 +91,18 @@ export function undo(app: FastifyInstance, matchId: string) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/undo` });
 }
 
+export function abandon(app: FastifyInstance, matchId: string, payload: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/abandon`, payload });
+}
+
+export function resume(app: FastifyInstance, matchId: string) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/resume` });
+}
+
+export function listMatches(app: FastifyInstance, query = '') {
+  return app.inject({ method: 'GET', url: `/matches${query}` });
+}
+
 export async function getMatch(app: FastifyInstance, matchId: string): Promise<MatchSnapshot> {
   const response = await app.inject({ method: 'GET', url: `/matches/${matchId}` });
   expect(response.statusCode).toBe(200);
@@ -103,7 +115,7 @@ export async function countRows(db: Kysely<Database>, table: 'throws' | 'match_e
 }
 
 export async function logEntries(db: Kysely<Database>, matchId: string) {
-  return db.selectFrom('match_events').select(['seq', 'type', 'throw_id']).where('match_id', '=', matchId).orderBy('seq').execute();
+  return db.selectFrom('match_events').select(['seq', 'type', 'throw_id', 'player_id', 'reason']).where('match_id', '=', matchId).orderBy('seq').execute();
 }
 
 export function remaining(state: MatchSnapshot): (number | null)[] {

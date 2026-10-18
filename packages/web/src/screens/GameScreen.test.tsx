@@ -213,7 +213,7 @@ describe('GameScreen', () => {
     render(<GameScreen matchId={MATCH_ID} />);
     socket().serverClose(4404);
     expect(screen.getByText('Nie znaleziono gry')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/');
+    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/new');
     act(() => {
       vi.advanceTimersByTime(5000);
     });
@@ -266,6 +266,7 @@ describe('GameScreen', () => {
     connect({
       ...initial,
       finished: true,
+      status: 'finished',
       currentPlayerId: null,
       winnerId: 'p2',
       players: [player('p1', 'Anna', { remaining: 501, legsWon: 1 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2 })],
@@ -275,12 +276,91 @@ describe('GameScreen', () => {
     expect(screen.queryByRole('button', { name: '20' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+  });
+});
+
+describe('abandon and resume', () => {
+  const abandonedState: MatchSnapshot = {
+    ...initial,
+    eventSeq: 5,
+    status: 'abandoned',
+    abandonment: { playerId: 'p2', reason: null, at: '2026-10-15T19:00:00.000Z' },
+  };
+
+  function dialog(): HTMLElement {
+    return screen.getByRole('dialog', { name: 'Porzucić mecz?' });
+  }
+
+  it('opens the dialog with the current player preselected and posts the abandon', async () => {
+    respond = async () => json(200, abandonedState);
+    connect();
+    tap('Porzuć mecz');
+    expect(within(dialog()).getByText('Gra zostanie zapisana jako porzucona. Wznowisz ją z ekranu startowego.')).toBeTruthy();
+    expect((within(dialog()).getByRole('radio', { name: 'Bartek' }) as HTMLInputElement).checked).toBe(true);
+    expect((within(dialog()).getByRole('radio', { name: 'Anna' }) as HTMLInputElement).checked).toBe(false);
+
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Porzuć mecz' }));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/abandon`, body: { playerId: 'p2' } });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(await screen.findByText('Mecz porzucony. Tylko do odczytu.')).toBeTruthy();
+  });
+
+  it('sends the chosen player and a typed reason', async () => {
+    respond = async () => json(200, abandonedState);
+    connect();
+    tap('Porzuć mecz');
+    fireEvent.click(within(dialog()).getByRole('radio', { name: 'Anna' }));
+    fireEvent.change(within(dialog()).getByRole('textbox', { name: 'Powód (opcjonalnie)' }), { target: { value: ' koniec prądu ' } });
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Porzuć mecz' }));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.body).toEqual({ playerId: 'p1', reason: 'koniec prądu' });
+  });
+
+  it('closes on Anuluj and on Escape without a request', () => {
+    connect();
+    tap('Porzuć mecz');
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Anuluj' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    tap('Porzuć mecz');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
+  it('shows an abandoned game read-only and resumes it', async () => {
+    respond = async () => json(200, { ...abandonedState, eventSeq: 6, status: 'in_progress', abandonment: null });
+    connect(abandonedState);
+    expect(screen.getByText('Porzucony')).toBeTruthy();
+    expect(screen.getByText('Mecz porzucony. Tylko do odczytu.')).toBeTruthy();
+    // Link w nagłówku i link obok komunikatu.
+    expect(screen.getAllByRole('link', { name: 'Ekran startowy' }).map((link) => link.getAttribute('href'))).toEqual(['#/', '#/']);
+    expect((screen.getByRole('button', { name: '20' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Miss' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+
+    tap('Wznów mecz');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/resume`, body: undefined });
+    await vi.waitFor(() => expect((screen.getByRole('button', { name: '20' }) as HTMLButtonElement).disabled).toBe(false));
+    expect(screen.queryByText('Mecz porzucony. Tylko do odczytu.')).toBeNull();
+  });
+
+  it('shows a failed resume', async () => {
+    respond = async () => json(409, { error: 'match_not_abandoned', message: 'Match is not abandoned' });
+    connect(abandonedState);
+    tap('Wznów mecz');
+    expect(await screen.findByText('Nie udało się wznowić meczu')).toBeTruthy();
   });
 
   it('shows the summary table of a finished match', async () => {
     const finished = {
       ...initial,
       finished: true,
+      status: 'finished' as const,
       currentPlayerId: null,
       winnerId: 'p1',
       players: [player('p1', 'Anna', { remaining: 0, legsWon: 1 }), player('p2', 'Bartek', { remaining: 301, legsWon: 0 })],

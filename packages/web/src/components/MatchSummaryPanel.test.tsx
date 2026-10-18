@@ -73,7 +73,7 @@ describe('MatchSummaryPanel', () => {
     expect(screen.getByText('Leg 1: Bartek · 12 rzutek · zamknięcie 121')).toBeTruthy();
     expect(screen.getByText('Anna 55.00 · Bartek 75.25')).toBeTruthy();
     expect(screen.getByText('Leg 3: Bartek · 21 rzutek · zamknięcie 32')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/');
+    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/new');
   });
 
   it('orders a casual game by place and has no legs', () => {

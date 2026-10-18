@@ -3,7 +3,7 @@ import { formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../ga
 import { pl } from '../i18n/pl';
 import { TrophyIcon } from './icons';
 
-const NEW_GAME_HREF = '#/';
+const NEW_GAME_HREF = '#/new';
 
 const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';

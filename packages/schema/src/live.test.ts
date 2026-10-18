@@ -13,6 +13,8 @@ const state = {
   countsToStats: true,
   createdAt: '2026-10-15T18:30:00.000Z',
   finished: false,
+  status: 'in_progress',
+  abandonment: null,
   eventSeq: 3,
   currentPlayerId: 'p2',
   legIndex: 0,

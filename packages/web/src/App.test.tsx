@@ -22,6 +22,9 @@ beforeEach(() => {
           { id: 'p 2', name: 'Bartek', avatar: null, guest: false, createdAt },
         ]);
       }
+      if (url === '/api/matches?status=unfinished') {
+        return json(200, []);
+      }
       return json(200, { ...statLine(), playerId: 'p1', filter: 'all', matchesPlayed: 0, matchesWon: 0 });
     }),
   );
@@ -33,11 +36,27 @@ afterEach(() => {
 });
 
 describe('App', () => {
-  it('opens the new game screen on #/ with a link to the statistics', async () => {
+  it('renders the home screen at #/', async () => {
     window.location.hash = '#/';
     render(<App />);
+    expect(screen.getByRole('heading', { name: 'Nieskończone gry' })).toBeTruthy();
+    expect(await screen.findByText('Brak nieskończonych gier.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Start gry' })).toBeNull();
+  });
+
+  it('renders the home screen without a hash', async () => {
+    window.location.hash = '';
+    render(<App />);
+    expect(await screen.findByText('Brak nieskończonych gier.')).toBeTruthy();
+  });
+
+  it('opens the new game screen on #/new with a link to the statistics', async () => {
+    window.location.hash = '#/new';
+    render(<App />);
     expect(screen.getByRole('heading', { name: 'Nowa gra' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Start gry' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Statystyki' }).getAttribute('href')).toBe('#/stats');
+    expect(screen.queryByRole('heading', { name: 'Nieskończone gry' })).toBeNull();
     await vi.waitFor(() => expect(urls).toContain('/api/players'));
   });
 
