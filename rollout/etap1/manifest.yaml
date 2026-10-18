@@ -123,8 +123,19 @@ prs:
     branch: feat/history-profiles
     title: 'feat: match history, head-to-head, form chart, player profiles and ranking'
     brief: briefs/P8.md
-    deps: [P6]
+    deps: [P9]
     priority: 5
     effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/server/**', 'packages/web/**', 'packages/schema/**', 'packages/engine/**']
+
+  # Porzucenie i wznowienie meczu, lista nieskończonych meczów na HOME (plan: uwaga "Porzucenie meczu w P9").
+  - id: P9
+    branch: feat/abandon-resume
+    title: 'feat: abandon and resume a match, unfinished matches on home'
+    brief: briefs/P9.md
+    deps: [P6]
+    priority: 8
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**']

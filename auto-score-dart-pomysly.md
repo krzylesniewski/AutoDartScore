@@ -583,7 +583,8 @@ Plan realizujemy jako serię PR-ów przez [claude-rollout](https://boldare.githu
 | P5b | `web`: ekran gry według makiet motywu A (`design/mockups`, tokeny z `design/theme.css`) | P5 |
 | P6 | `server` + `web`: statystyki z tabeli rzutek, ekran podsumowania | P5b |
 | P7 | `audio`: odczyt wyniku, `bust`, `winner` (Web Speech API, odtwarzany we froncie) | P5 |
-| P8 | `server` + `web` (+ `engine`, `schema`): historia meczów (`GET /matches`, lista ze szczegółami meczu), head-to-head z meczów 1v1, wykres formy (średnia z ostatnich meczów), profil gracza (edycja imienia i avatara, archiwizacja zamiast usuwania, zapisanie gościa po meczu), ranking graczy według średniej na 3 rzutki (patrz niżej) | P6 |
+| P8 | `server` + `web` (+ `engine`, `schema`): historia meczów (`GET /matches`, lista ze szczegółami meczu), head-to-head z meczów 1v1, wykres formy (średnia z ostatnich meczów), profil gracza (edycja imienia i avatara, archiwizacja zamiast usuwania, zapisanie gościa po meczu), ranking graczy według średniej na 3 rzutki (patrz niżej); pełna historia rozbudowuje listę meczów z P9 | P9 |
+| P9 | `schema` + `server` + `web`: porzucenie i wznowienie meczu (patrz niżej), lista nieskończonych meczów na ekranie startowym | P6 |
 
 Uwagi:
 
@@ -592,7 +593,7 @@ Uwagi:
 - `server` czeka na pełny silnik (P3), żeby API od razu obsługiwało wszystkie typy gier.
 - P6 i P7 mogą iść równolegle po P5.
 - Ranking w P8 (decyzja 2026-10-18, na próbę): lista graczy posortowana według średniej na 3 rzutki z ostatnich 20 legów, ze wszystkich gier z `countsToStats` (1v1, Zabawa, Solo 501; bez Free run). Gracz trafia do rankingu po 5 legach. Obok średniej: % doubli i bilans wygranych. Goście i zarchiwizowani poza rankingiem. Liczony z odtworzenia logu, bez przechowywanych liczników. Elo lub Glicko ewentualnie później.
-- Ranking w P8 (decyzja 2026-10-18, na próbę): lista graczy posortowana według średniej na 3 rzutki z ostatnich 20 legów, ze wszystkich gier z `countsToStats` (1v1, Zabawa, Solo 501; bez Free run). Gracz trafia do rankingu po 5 legach. Obok średniej: % doubli i bilans wygranych. Goście i zarchiwizowani poza rankingiem. Liczony z odtworzenia logu, bez przechowywanych liczników. Elo/Glicko ewentualnie później.
+- Porzucenie meczu w P9 (decyzja 2026-10-18): przycisk "Porzuć mecz" w górnym pasku ekranu gry z potwierdzeniem. Porzucenie to zdarzenie `match_abandoned` w logu (kto, kiedy, opcjonalny powód), nic nie jest usuwane. Porzucony mecz jest tylko do odczytu, z odznaką "Porzucony" (ikona i tekst). Wznowienie to zdarzenie `match_resumed` i gra toczy się dalej od miejsca przerwania. Ekran startowy (HOME) pokazuje listę nieskończonych meczów (w trakcie i porzuconych) z opcją kontynuacji lub wznowienia. Statystyki: porzucony mecz nie ma zwycięzcy i nie liczy się do bilansu meczów ani head-to-head; ukończone legi liczą się normalnie (wygrane legi, zamknięcia, najlepszy leg); przerwany leg nie wchodzi do średniej na 3 rzutki ani do rankingu. W Zabawie gracze, którzy już skończyli, zachowują miejsca.
 - Agenci nie mogą zmieniać `CLAUDE.md`, tego pliku ani `rollout/**` (`repo.forbid`), a plik spoza zakresu PR-a wraca do poprawki (`gates.preVerify.scope`).
 
 ---
