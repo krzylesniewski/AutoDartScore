@@ -74,4 +74,7 @@ export const pl = {
   legNumber: (leg: number) => `Leg ${leg}`,
   voiceOn: 'włączony',
   voiceOff: 'wyłączony',
+  effects: 'Efekty dźwiękowe',
+  effectsOn: 'włączone',
+  effectsOff: 'wyłączone',
 } as const;

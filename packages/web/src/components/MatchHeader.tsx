@@ -1,5 +1,6 @@
 import type { MatchSnapshot } from '@autoscore/schema';
 import { pl } from '../i18n/pl';
+import { EffectsToggle } from './EffectsToggle';
 import { TargetIcon } from './icons';
 import { VoiceToggle } from './VoiceToggle';
 
@@ -7,11 +8,13 @@ export interface MatchHeaderProps {
   state: MatchSnapshot | null;
   voiceEnabled: boolean;
   onVoiceChange(next: boolean): void;
+  effectsEnabled: boolean;
+  onEffectsChange(next: boolean): void;
 }
 
 const chip = 'rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 text-(length:--text-button)';
 
-export function MatchHeader({ state, voiceEnabled, onVoiceChange }: MatchHeaderProps) {
+export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange }: MatchHeaderProps) {
   return (
     <header className="flex items-center gap-4 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-(--space-page) py-2">
       <span className="flex items-center gap-2 font-display text-(length:--text-heading) font-bold">
@@ -30,8 +33,9 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange }: MatchHeaderP
           )}
         </ul>
       )}
-      <div className="ml-auto">
+      <div className="ml-auto flex gap-2">
         <VoiceToggle enabled={voiceEnabled} onChange={onVoiceChange} />
+        <EffectsToggle enabled={effectsEnabled} onChange={onEffectsChange} />
       </div>
     </header>
   );
