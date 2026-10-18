@@ -12,3 +12,10 @@ export const Placement = z.object({
   place: z.int().min(1).max(4),
 });
 export type Placement = z.infer<typeof Placement>;
+
+export const StartingScore = z.union([z.literal(301), z.literal(501), z.literal(701)]);
+export type StartingScore = z.infer<typeof StartingScore>;
+
+// Liczba legów w meczu 1v1. Nieparzysta, więc zawsze jest zwycięzca.
+export const BestOf = z.union([z.literal(1), z.literal(3), z.literal(5)]);
+export type BestOf = z.infer<typeof BestOf>;
