@@ -117,3 +117,14 @@ prs:
     effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/audio/**', 'packages/web/**']
+
+  # Historia meczów, head-to-head, wykres formy, profil gracza, numer tury gracza (plan: tabela "Etap 1 jako PR-y").
+  - id: P8
+    branch: feat/history-profiles
+    title: 'feat: match history, head-to-head, form chart and player profiles'
+    brief: briefs/P8.md
+    deps: [P6]
+    priority: 5
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'packages/web/**', 'packages/schema/**', 'packages/engine/**']
