@@ -47,6 +47,23 @@ describe('Scoreboard', () => {
     }
   });
 
+  it('marks only the next player in a rotating 1v1', () => {
+    render(<Scoreboard state={snapshot({ currentPlayerId: 'p1' })} size="large" />);
+    const next = screen.getByText('Następny').closest('li');
+    expect(next && within(next).getByText('Bartek')).toBeTruthy();
+    expect(next?.getAttribute('aria-current')).toBeNull();
+    const thrower = screen.getByText('Rzuca').closest('li');
+    expect(thrower && within(thrower).queryByText('Następny')).toBeNull();
+    expect(screen.getAllByText('Następny')).toHaveLength(1);
+  });
+
+  it('names the free slots by player number', () => {
+    render(<Scoreboard state={casual(['Anna', 'Bartek'])} size="large" />);
+    for (const name of ['Dodaj gracza 3', 'Dodaj gracza 4']) {
+      expect((screen.getByRole('button', { name }) as HTMLButtonElement).disabled).toBe(true);
+    }
+  });
+
   it('renders the names in compact size', () => {
     render(<Scoreboard state={snapshot()} size="compact" />);
     expect(screen.getByText('Anna')).toBeTruthy();

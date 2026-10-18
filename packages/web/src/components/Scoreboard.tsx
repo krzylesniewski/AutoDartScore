@@ -1,57 +1,107 @@
 import type { MatchSnapshot, MatchSnapshotPlayer } from '@autoscore/schema';
 import { scoreboardOrder } from '../game/scoreboard-order';
 import { pl } from '../i18n/pl';
-import { PlaceIcon, ThrowingIcon } from './icons';
+import { PlaceIcon, PlusIcon, ThrowingIcon } from './icons';
 
 const MAX_PLAYERS = 4;
 
+// Wysokości w px, bo obrót kolejki przesuwa wiersze przez translateY. Zawierają odstęp pod wierszem (pb).
 const sizes = {
-  large: { rowHeight: 112, row: 'gap-4 px-4', avatar: 'h-16 w-16 text-4xl', name: 'text-3xl', score: 'text-7xl', meta: 'text-lg' },
-  compact: { rowHeight: 48, row: 'gap-2 px-2', avatar: 'h-8 w-8 text-lg', name: 'text-lg', score: 'text-3xl', meta: 'text-xs' },
+  large2: {
+    rowHeight: 248,
+    slotHeight: 76,
+    row: 'gap-4 pb-3',
+    card: 'gap-4 px-5',
+    avatar: 'size-21 text-4xl',
+    name: 'text-(length:--text-player-name-2p)',
+    score: 'text-(length:--text-score-2p)',
+    meta: 'text-(length:--text-label)',
+    nameBlock: 'flex-col gap-1',
+  },
+  large4: {
+    rowHeight: 164,
+    slotHeight: 76,
+    row: 'gap-4 pb-3',
+    card: 'gap-4 px-5',
+    avatar: 'size-15 text-3xl',
+    name: 'text-(length:--text-player-name-4p)',
+    score: 'text-(length:--text-score-4p)',
+    meta: 'text-(length:--text-label)',
+    nameBlock: 'flex-col gap-1',
+  },
+  compact: {
+    rowHeight: 52,
+    slotHeight: 52,
+    row: 'gap-2 pb-1',
+    card: 'gap-2 px-2',
+    avatar: 'size-8 text-lg',
+    name: 'text-lg',
+    score: 'text-3xl',
+    meta: 'text-xs',
+    nameBlock: 'flex-row items-center gap-2',
+  },
 } as const;
+
+type Size = 'large' | 'compact';
+type Style = (typeof sizes)[keyof typeof sizes];
+
+// Pełne nazwy klas, bo Tailwind generuje CSS tylko dla klas zapisanych dosłownie.
+const AVATAR_COLORS = ['bg-(--color-avatar-1)', 'bg-(--color-avatar-2)', 'bg-(--color-avatar-3)', 'bg-(--color-avatar-4)'] as const;
+
+const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 
 export interface ScoreboardProps {
   state: MatchSnapshot;
-  size: 'large' | 'compact';
+  size: Size;
   rotate?: boolean;
 }
 
 export function Scoreboard({ state, size, rotate = true }: ScoreboardProps) {
-  const style = sizes[size];
+  const style = styleFor(size, state.players.length);
   const players = scoreboardOrder(state, rotate);
   const freeSlots = state.type === 'casual' && size === 'large' ? MAX_PLAYERS - state.players.length : 0;
-  const rows = players.length + freeSlots;
+  const slotsTop = players.length * style.rowHeight;
+  const nextId = nextPlayerId(state);
 
   return (
     <section aria-label={pl.scoreboard} className="flex flex-col gap-2">
+      {size === 'large' && (
+        <div className="flex items-baseline justify-between gap-4">
+          <span className={label}>{pl.throwQueue}</span>
+          {rotate && <span className="text-(--color-text-muted)">{pl.throwerOnTop}</span>}
+        </div>
+      )}
       {state.type === 'match' && state.legsToWin !== null && (
-        <p className={`font-display uppercase tracking-wide text-muted ${style.meta}`}>
+        <p className={label}>
           {pl.legs} {pl.legsTarget(state.legsToWin)}
         </p>
       )}
-      <ol className="relative" style={{ height: rows * style.rowHeight }}>
+      <ol className="relative" style={{ height: slotsTop + freeSlots * style.slotHeight }}>
         {players.map((player, index) => (
           <li
             key={player.id}
             aria-current={player.id === state.currentPlayerId ? 'true' : undefined}
-            className="absolute inset-x-0 top-0 pb-1 transition-transform duration-300 ease-out motion-reduce:transition-none"
+            className={`absolute inset-x-0 top-0 transition-transform duration-300 ease-out motion-reduce:transition-none ${style.row}`}
             style={{ height: style.rowHeight, transform: `translateY(${index * style.rowHeight}px)` }}
           >
-            <PlayerRow player={player} state={state} size={size} />
+            <PlayerRow player={player} state={state} style={style} next={player.id === nextId} />
           </li>
         ))}
         {Array.from({ length: freeSlots }, (_, slot) => (
           <li
             key={`slot-${slot}`}
-            className="absolute inset-x-0 top-0 pb-1"
-            style={{ height: style.rowHeight, transform: `translateY(${(players.length + slot) * style.rowHeight}px)` }}
+            className={`absolute inset-x-0 top-0 ${style.row}`}
+            style={{ height: style.slotHeight, transform: `translateY(${slotsTop + slot * style.slotHeight}px)` }}
           >
             <button
               type="button"
               disabled
-              className={`flex h-full w-full items-center rounded-card border-2 border-dashed border-line font-display text-muted ${style.row} ${style.name}`}
+              className="flex h-full w-full items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) border-dashed border-(--color-border-strong) font-display text-(length:--text-button) font-semibold text-(--color-text-muted)"
             >
-              {pl.addPlayerSlot}
+              <PlusIcon />
+              <span>
+                <span>{pl.addPlayerSlot}</span> <span>{state.players.length + slot + 1}</span>
+              </span>
             </button>
           </li>
         ))}
@@ -60,65 +110,89 @@ export function Scoreboard({ state, size, rotate = true }: ScoreboardProps) {
   );
 }
 
+function styleFor(size: Size, playerCount: number): Style {
+  if (size === 'compact') {
+    return sizes.compact;
+  }
+  return playerCount <= 2 ? sizes.large2 : sizes.large4;
+}
+
+// Następny po rzucającym wśród grających, po kolei z listy graczy i w kółko.
+function nextPlayerId(state: MatchSnapshot): string | null {
+  const active = state.players.filter((player) => player.place === null);
+  const throwerIndex = active.findIndex((player) => player.id === state.currentPlayerId);
+  if (state.finished || active.length < 2 || throwerIndex < 0) {
+    return null;
+  }
+  return active[(throwerIndex + 1) % active.length]?.id ?? null;
+}
+
 interface PlayerRowProps {
   player: MatchSnapshotPlayer;
   state: MatchSnapshot;
-  size: 'large' | 'compact';
+  style: Style;
+  next: boolean;
 }
 
-function PlayerRow({ player, state, size }: PlayerRowProps) {
-  const style = sizes[size];
+function PlayerRow({ player, state, style, next }: PlayerRowProps) {
   const throwing = player.id === state.currentPlayerId;
+  const colorIndex = state.players.findIndex((candidate) => candidate.id === player.id);
   return (
     <div
-      className={`flex h-full items-center rounded-card border-l-4 ${style.row} ${
-        throwing ? 'border-board-green bg-surface-raised' : 'border-transparent bg-surface'
+      className={`flex h-full items-center rounded-(--radius-card) border-(length:--border-width) ${style.card} ${
+        throwing ? 'border-(--color-accent) bg-(--color-surface-active)' : 'border-(--color-border) bg-(--color-surface)'
       }`}
     >
-      <span className={`flex items-center justify-center rounded-card bg-ink font-display ${style.avatar}`}>
+      <span className="flex w-[1em] text-(length:--text-label) text-(--color-accent)">{throwing && <ThrowingIcon />}</span>
+      <span
+        className={`flex shrink-0 items-center justify-center rounded-full font-display font-bold text-(--color-on-avatar) ${style.avatar} ${AVATAR_COLORS[colorIndex] ?? AVATAR_COLORS[0]}`}
+      >
         {player.avatar ?? player.name.charAt(0).toUpperCase()}
       </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className={`truncate font-display font-semibold ${style.name}`}>{player.name}</span>
+      <span className={`flex min-w-0 flex-1 items-start ${style.nameBlock}`}>
+        <span className={`max-w-full truncate font-display leading-tight font-semibold ${style.name}`}>{player.name}</span>
         {throwing && (
-          <span className={`flex items-center gap-1 font-display uppercase text-board-green ${style.meta}`}>
-            <ThrowingIcon />
+          <span className="rounded-(--radius-chip) bg-(--color-accent) px-2 font-display text-xl font-bold uppercase tracking-(--tracking-label) text-(--color-on-accent)">
             {pl.throwing}
           </span>
         )}
+        {next && <span className={`font-display font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted) ${style.meta}`}>{pl.next}</span>}
       </span>
       {player.legsWon !== null && (
         <span className={`flex flex-col items-center font-display ${style.meta}`}>
-          <span className="uppercase text-muted">{pl.legs}</span>
-          <span className="text-cream">{player.legsWon}</span>
+          <span className="uppercase tracking-(--tracking-label) text-(--color-text-muted)">{pl.legs}</span>
+          <span className="text-2xl font-bold">{player.legsWon}</span>
         </span>
       )}
       {player.place !== null ? (
-        <span className={`flex items-center gap-1 font-display font-semibold text-warning ${style.name}`}>
+        <span className="flex items-center gap-1 rounded-(--radius-chip) bg-(--color-text) px-3 py-1 font-display text-2xl font-bold text-(--color-text-inverse)">
           <PlaceIcon />
           {pl.place(player.place)}
         </span>
       ) : state.freeRun ? (
-        <FreeRunCounter freeRun={state.freeRun} size={size} />
+        <FreeRunCounter freeRun={state.freeRun} style={style} />
       ) : (
-        <span className={`font-display font-bold tabular-nums ${style.score}`}>{player.remaining}</span>
+        <span
+          className={`font-display leading-none font-bold tabular-nums ${style.score} ${throwing ? 'text-(--color-text)' : 'text-(--color-text-muted)'}`}
+        >
+          {player.remaining}
+        </span>
       )}
     </div>
   );
 }
 
-function FreeRunCounter({ freeRun, size }: { freeRun: NonNullable<MatchSnapshot['freeRun']>; size: 'large' | 'compact' }) {
-  const style = sizes[size];
+function FreeRunCounter({ freeRun, style }: { freeRun: NonNullable<MatchSnapshot['freeRun']>; style: Style }) {
   const items = [
     [pl.total, String(freeRun.totalPoints)],
     [pl.dartsThrown, String(freeRun.dartsThrown)],
     [pl.average, freeRun.average.toFixed(1)],
   ] as const;
   return (
-    <dl className="flex gap-4 font-display">
-      {items.map(([label, value]) => (
-        <div key={label} className="flex flex-col items-end">
-          <dt className={`uppercase text-muted ${style.meta}`}>{label}</dt>
+    <dl className="flex gap-5 font-display">
+      {items.map(([term, value]) => (
+        <div key={term} className="flex flex-col items-end">
+          <dt className={`uppercase tracking-(--tracking-label) text-(--color-text-muted) ${style.meta}`}>{term}</dt>
           <dd className={`font-bold tabular-nums ${style.name}`}>{value}</dd>
         </div>
       ))}

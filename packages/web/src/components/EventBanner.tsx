@@ -2,14 +2,15 @@ import type { Banner } from '../api/use-match';
 import { pl } from '../i18n/pl';
 import { BustIcon, TrophyIcon } from './icons';
 
-// Pasek nad klawiaturą, nie okno. Region role="status" istnieje stale, żeby czytnik ekranu odczytał zmianę.
+// Nakładka nad kolumną tury, żeby nie przesuwała układu i nie łapała dotyku.
+// Region role="status" istnieje stale, żeby czytnik ekranu odczytał zmianę.
 export function EventBanner({ banner }: { banner: Banner | null }) {
   return (
-    <div role="status" className="min-h-14">
+    <div role="status" className="pointer-events-none absolute inset-x-0 top-0 z-10">
       {banner && (
         <p
-          className={`flex items-center gap-3 rounded-card px-4 py-2 font-display text-3xl font-bold uppercase ${
-            banner.kind === 'bust' ? 'bg-board-red text-cream' : 'bg-board-green text-cream'
+          className={`flex animate-banner-in items-center gap-3 rounded-(--radius-card) px-5 py-3 font-display text-4xl font-bold uppercase motion-reduce:animate-none ${
+            banner.kind === 'bust' ? 'bg-(--color-accent) text-(--color-on-accent)' : 'bg-(--color-text) text-(--color-text-inverse)'
           }`}
         >
           {banner.kind === 'bust' ? <BustIcon /> : <TrophyIcon />}
