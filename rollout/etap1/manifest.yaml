@@ -43,6 +43,11 @@ briefing:
     - title: Plan i decyzje projektu (sekcja "Etap 1 jako PR-y" opisuje zakres P1-P7)
       path: ~/Documents/00_Nauka/AutoScoreDart/auto-score-dart-pomysly.md
       kind: markdown
+    # Tylko dla PR-ów z briefTags: [a2].
+    - title: Ekran startowy A2, zakres wdrożenia (wiążący dla P14; tylko UI, bez nowych funkcji)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/new-game-a2.md
+      kind: markdown
+      tag: a2
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -183,3 +188,15 @@ prs:
     effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/web/**', 'packages/server/**', 'packages/schema/**']
+
+  # Ekran startowy w wariancie A2: tylko wygląd istniejącego ekranu, bez nowych funkcji (design/new-game-a2.md).
+  - id: P14
+    branch: feat/web-home-a2
+    title: 'feat(web): start screen in the A2 layout'
+    brief: briefs/P14.md
+    deps: [P8]
+    priority: 7
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [a2]
