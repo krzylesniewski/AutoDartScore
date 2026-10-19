@@ -492,3 +492,76 @@ describe('StatsScreen: player history', () => {
     expect(within(section).getByRole('link', { name: 'Szczegóły: Anna 2 : 1 Bartek' }).getAttribute('href')).toBe('#/matches/m9');
   });
 });
+
+describe('StatsScreen: responsive layout', () => {
+  function classes(element: Element | null | undefined): string[] {
+    return element?.getAttribute('class')?.split(' ') ?? [];
+  }
+
+  it('scrolls the ranking page below xl and keeps it fixed on a monitor', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const main = classes(screen.getByRole('main'));
+    expect(main).toEqual(expect.arrayContaining(['overflow-auto', 'xl:overflow-hidden']));
+    expect(main).not.toContain('lg:overflow-hidden');
+    expect(main).not.toContain('overflow-hidden');
+    expect(classes(screen.getByRole('heading', { level: 1 })).some((name) => name.includes('clamp('))).toBe(true);
+  });
+
+  it('uses one column without a prefix and clips the lists only from xl', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const list = tile('Średnia (3 rzutki)');
+    const board = list.parentElement;
+    expect(classes(board)).toEqual(expect.arrayContaining(['grid-cols-1', 'lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]', 'xl:min-h-0', 'xl:flex-1']));
+    expect(classes(board)).not.toContain('flex-1');
+    expect(classes(tile('Najkrótszy leg').parentElement)).toEqual(expect.arrayContaining(['grid-cols-1', 'sm:grid-cols-2']));
+    const ranking = classes(list.querySelector('ol'));
+    expect(ranking).toContain('xl:overflow-y-auto');
+    expect(ranking).not.toContain('overflow-y-auto');
+    expect(ranking).not.toContain('flex-1');
+    const tileList = classes(tile('Najkrótszy leg').querySelector('ol'));
+    expect(tileList).toContain('xl:overflow-y-auto');
+    expect(tileList).not.toContain('overflow-y-auto');
+  });
+
+  it('adapts the ranking rows to the width of their card', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const list = tile('Średnia (3 rzutki)');
+    expect(classes(list)).toContain('@container');
+    expect(classes(tile('Najwyższe zamknięcie'))).toContain('@container');
+    const row = list.querySelector('[data-leader]');
+    expect(classes(row)).toContain('min-h-13');
+    expect(classes(row)).not.toContain('h-13');
+    const variants = [row, ...(row?.querySelectorAll('*') ?? [])].flatMap((element) => classes(element));
+    expect(variants.some((name) => name.startsWith('@max-'))).toBe(true);
+    const name = within(list).getByText('Anna');
+    expect(classes(name)).toEqual(expect.arrayContaining(['min-w-0', 'truncate']));
+    expect(classes(within(list).getByText('61.50'))).toContain('shrink-0');
+  });
+
+  it('scales the player card and keeps long names inside the chips', async () => {
+    render(<StatsScreen playerId="p1" />);
+    const chip = await screen.findByRole('button', { name: 'Anna' });
+    const main = classes(screen.getByRole('main'));
+    expect(main).toEqual(expect.arrayContaining(['p-4', 'sm:p-6']));
+    expect(main).not.toContain('p-6');
+    const title = screen.getByRole('heading', { level: 1 });
+    expect(classes(title).some((name) => name.includes('clamp('))).toBe(true);
+    expect(classes(title.parentElement)).toContain('flex-wrap');
+    expect(classes(chip)).toContain('max-w-full');
+    expect(classes(within(chip).getByText('Anna'))).toEqual(expect.arrayContaining(['min-w-0', 'truncate']));
+  });
+
+  it('puts history rows on two lines in a narrow container', async () => {
+    history = [listItem({ id: 'm9', status: 'finished', winnerId: 'p1', players: [player('p1', 'Anna', { legsWon: 2 }), player('p2', 'Bartek', { legsWon: 1 })] })];
+    render(<StatsScreen playerId="p1" />);
+    const section = await screen.findByRole('region', { name: 'Historia gier' });
+    await within(section).findByText('Anna 2 : 1 Bartek');
+    expect(classes(within(section).getByRole('list'))).toContain('@container');
+    const [row] = within(section).getAllByRole('listitem');
+    expect(classes(row).some((name) => name.startsWith('@max-xl:'))).toBe(true);
+    expect(classes(row)).toEqual(expect.arrayContaining(['flex', 'items-center', 'gap-4']));
+  });
+});

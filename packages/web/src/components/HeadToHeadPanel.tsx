@@ -11,7 +11,7 @@ export interface HeadToHeadPanelProps {
 }
 
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
-const chip = 'flex min-h-11 items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-xl';
+const chip = 'flex min-h-11 max-w-full items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-xl';
 
 function chipStyle(selected: boolean): string {
   return `${chip} ${selected ? 'border-(--color-text) bg-(--color-text) text-(--color-text-inverse)' : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text)'}`;
@@ -59,7 +59,7 @@ export function HeadToHeadPanel({ player, opponents }: HeadToHeadPanelProps) {
           {opponents.map((candidate) => (
             <button key={candidate.id} type="button" aria-pressed={candidate.id === opponentId} onClick={() => setOpponentId(candidate.id)} className={chipStyle(candidate.id === opponentId)}>
               {candidate.avatar && <span aria-hidden="true">{candidate.avatar}</span>}
-              {candidate.name}
+              <span className="min-w-0 truncate">{candidate.name}</span>
             </button>
           ))}
         </div>
