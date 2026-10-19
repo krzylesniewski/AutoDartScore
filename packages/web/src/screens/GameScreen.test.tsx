@@ -287,7 +287,7 @@ describe('GameScreen', () => {
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
-    expect(screen.getByText('Koniec meczu').closest('.sticky')).toBeNull();
+    expect(screen.getByText('Mecz zakończony').closest('.sticky')).toBeNull();
   });
 
   it('brings the game screen back after Cofnij on the match end view', async () => {
@@ -322,6 +322,7 @@ describe('GameScreen', () => {
       }),
     );
     expect(screen.getByText('Koniec meczu')).toBeTruthy();
+    expect(screen.getByText('Koniec meczu').closest('.sticky')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Rewanż' })).toBeNull();
   });
 
