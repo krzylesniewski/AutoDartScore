@@ -1,4 +1,5 @@
 import type { MatchSnapshot, MatchSnapshotPlayer } from '@autoscore/schema';
+import { formatDecimal } from '../game/format-stat';
 import { scoreboardOrder } from '../game/scoreboard-order';
 import { pl } from '../i18n/pl';
 import { PlaceIcon, PlusIcon, ThrowingIcon } from './icons';
@@ -234,7 +235,7 @@ function FreeRunCounter({ freeRun, style, className }: { freeRun: NonNullable<Ma
   const items = [
     [pl.total, String(freeRun.totalPoints)],
     [pl.dartsThrown, String(freeRun.dartsThrown)],
-    [pl.average, freeRun.average.toFixed(1)],
+    [pl.average, formatDecimal(freeRun.average, 1)],
   ] as const;
   return (
     <dl className={`flex shrink-0 font-display ${style.counter} ${className}`}>

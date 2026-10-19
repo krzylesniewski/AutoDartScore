@@ -488,7 +488,7 @@ describe('abandon and resume', () => {
       );
     connect(finished);
     const table = await screen.findByRole('table', { name: 'Podsumowanie meczu' });
-    expect(within(table).getByText('150.50')).toBeTruthy();
+    expect(within(table).getByText('150,50')).toBeTruthy();
     expect(screen.getByText('Leg 1')).toBeTruthy();
     expect(screen.getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
@@ -501,7 +501,7 @@ describe('abandon and resume', () => {
     connect();
     const panel = screen.getByRole('table', { name: 'Statystyki meczu' });
     expect(panel.closest('section')?.previousElementSibling).toBe(screen.getByRole('region', { name: 'Wyniki' }));
-    expect(await within(panel).findByText('64.00')).toBeTruthy();
+    expect(await within(panel).findByText('64,00')).toBeTruthy();
     expect(summaryCalls).toEqual([`/api/matches/${MATCH_ID}/summary`]);
   });
 
@@ -527,13 +527,13 @@ describe('abandon and resume', () => {
     const [older, newer] = pending;
     const panel = screen.getByRole('table', { name: 'Statystyki meczu' });
     newer?.(5, 99);
-    expect(await within(panel).findByText('99.00')).toBeTruthy();
+    expect(await within(panel).findByText('99,00')).toBeTruthy();
     older?.(4, 11);
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(within(panel).getByText('99.00')).toBeTruthy();
-    expect(within(panel).queryByText('11.00')).toBeNull();
+    expect(within(panel).getByText('99,00')).toBeTruthy();
+    expect(within(panel).queryByText('11,00')).toBeNull();
   });
 });
 

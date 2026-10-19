@@ -8,7 +8,7 @@ import { MatchHistoryList } from '../components/MatchHistoryList';
 import { PlayerProfile } from '../components/PlayerProfile';
 import { RankingBoard } from '../components/RankingBoard';
 import { WarningIcon } from '../components/icons';
-import { formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../game/format-stat';
+import { formatAverage, formatBestLeg, formatDoublesParts, formatNumber } from '../game/format-stat';
 import { pl } from '../i18n/pl';
 
 const RANKING_HREF = '#/stats';
@@ -22,6 +22,9 @@ const FILTERS: readonly { value: StatsFilter; label: string }[] = [
 
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 const choice = 'min-h-12 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-xl';
+// Poniżej sm przyciski filtra tworzą jeden pasek z przegródkami, jak Segmented w kreatorze gry.
+const segment =
+  'max-sm:min-w-0 max-sm:flex-1 max-sm:whitespace-nowrap max-sm:rounded-none max-sm:border-0 max-sm:border-(--color-border) max-sm:px-2 max-sm:text-lg max-sm:not-first:border-l-(length:--border-width)';
 
 function choiceStyle(selected: boolean): string {
   return `${choice} ${selected ? 'border-(--color-text) bg-(--color-text) text-(--color-text-inverse)' : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text)'}`;
@@ -31,20 +34,21 @@ function statsHref(playerId: string): string {
   return `#/stats/${encodeURIComponent(playerId)}`;
 }
 
-function statItems(stats: PlayerStats): readonly [string, string][] {
+function statItems(stats: PlayerStats): { term: string; value: string; detail?: string }[] {
+  const doubles = formatDoublesParts(stats);
   return [
-    [pl.dartsThrown, String(stats.dartsThrown)],
-    [pl.statAverage, formatAverage(stats.average)],
-    [pl.statFirst9, formatAverage(stats.first9Average)],
-    [pl.stat180, String(stats.scores180)],
-    [pl.stat140, String(stats.scores140)],
-    [pl.stat100, String(stats.scores100)],
-    [pl.stat60, String(stats.scores60)],
-    [pl.statHighestCheckout, formatNumber(stats.highestCheckout)],
-    [pl.statDoubles, formatDoubles(stats)],
-    [pl.statBestLeg, formatBestLeg(stats.bestLegDarts)],
-    [pl.statLegsWon, String(stats.legsWon)],
-    [pl.statMatchesWon, `${stats.matchesWon}/${stats.matchesPlayed}`],
+    { term: pl.dartsThrown, value: String(stats.dartsThrown) },
+    { term: pl.statAverage, value: formatAverage(stats.average) },
+    { term: pl.statFirst9, value: formatAverage(stats.first9Average) },
+    { term: pl.stat180, value: String(stats.scores180) },
+    { term: pl.stat140, value: String(stats.scores140) },
+    { term: pl.stat100, value: String(stats.scores100) },
+    { term: pl.stat60, value: String(stats.scores60) },
+    { term: pl.statHighestCheckout, value: formatNumber(stats.highestCheckout) },
+    { term: pl.statDoubles, value: doubles.value, ...(doubles.detail === null ? {} : { detail: doubles.detail }) },
+    { term: pl.statBestLeg, value: formatBestLeg(stats.bestLegDarts) },
+    { term: pl.statLegsWon, value: String(stats.legsWon) },
+    { term: pl.statMatchesWon, value: `${stats.matchesWon}/${stats.matchesPlayed}` },
   ];
 }
 
@@ -87,9 +91,9 @@ export function StatsScreen({ playerId }: { playerId: string | null }) {
 
 function FilterButtons({ filter, onChange }: { filter: StatsFilter; onChange(filter: StatsFilter): void }) {
   return (
-    <div className="flex flex-wrap gap-2.5">
+    <div className="flex flex-wrap gap-2.5 max-sm:w-full max-sm:flex-nowrap max-sm:gap-0 max-sm:overflow-hidden max-sm:rounded-(--radius-card) max-sm:border-(length:--border-width) max-sm:border-(--color-border-strong)">
       {FILTERS.map((option) => (
-        <button key={option.value} type="button" aria-pressed={filter === option.value} onClick={() => onChange(option.value)} className={choiceStyle(filter === option.value)}>
+        <button key={option.value} type="button" aria-pressed={filter === option.value} onClick={() => onChange(option.value)} className={`${choiceStyle(filter === option.value)} ${segment}`}>
           {option.label}
         </button>
       ))}
@@ -128,7 +132,7 @@ function Ranking() {
           <h1 className="font-display text-[length:clamp(2.5rem,10vw,3.5rem)] leading-none font-bold uppercase">{pl.stats}</h1>
           {rankings.status === 'ready' && <p className="text-[17px] text-(--color-text-muted)">{pl.rankingSubtitle(rankings.value.games, rankings.value.legs)}</p>}
         </div>
-        <section aria-labelledby="ranking-filter" className="flex flex-col gap-2.5">
+        <section aria-labelledby="ranking-filter" className="flex flex-col gap-2.5 max-sm:w-full">
           <h2 id="ranking-filter" className={label}>
             {pl.gameType}
           </h2>
@@ -178,12 +182,13 @@ function PlayerCard({ playerId }: { playerId: string }) {
   }, [playerId, filter]);
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-5 overflow-auto p-4 sm:gap-6 sm:p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="font-display text-[length:clamp(2.25rem,9vw,3rem)] leading-none font-bold uppercase">{pl.stats}</h1>
-        <a href={RANKING_HREF} className="font-display text-xl font-semibold uppercase text-(--color-text) underline">
+    <main className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-5 overflow-auto p-4 sm:gap-6 sm:p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-4 max-sm:flex-col max-sm:items-start max-sm:gap-2">
+        <a href={RANKING_HREF} className="inline-flex min-h-11 items-center gap-1 font-display text-xl font-semibold uppercase text-(--color-text) underline sm:order-last">
+          <span aria-hidden="true" className="sm:hidden">←</span>
           {pl.ranking}
         </a>
+        <h1 className="font-display text-[length:clamp(2.25rem,9vw,3rem)] leading-none font-bold uppercase">{pl.stats}</h1>
       </div>
 
       {current && <PlayerProfile player={current} colorIndex={colorIndex} onChanged={() => setVersion((value) => value + 1)} />}
@@ -194,7 +199,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
         {players.status === 'error' && <ErrorText text={players.message} />}
         {players.status === 'ready' && players.value.length === 0 && <p className="text-(--color-text-muted)">{pl.noPlayers}</p>}
         {players.status === 'ready' && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1">
             {players.value.map((player) => (
               <button
                 key={player.id}
@@ -203,7 +208,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
                 onClick={() => {
                   window.location.hash = statsHref(player.id);
                 }}
-                className={`${choiceStyle(player.id === playerId)} flex max-w-full items-center gap-2`}
+                className={`${choiceStyle(player.id === playerId)} flex max-w-full items-center gap-2 max-sm:shrink-0`}
               >
                 {player.avatar && <span aria-hidden="true">{player.avatar}</span>}
                 <span className="min-w-0 truncate">{player.name}</span>
@@ -258,11 +263,17 @@ function StatsCard({ stats }: { stats: Loaded<PlayerStats> }) {
     return <p className="font-display text-2xl text-(--color-text-muted)">{pl.noThrows}</p>;
   }
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) p-5 sm:grid-cols-3">
-      {statItems(stats.value).map(([term, value]) => (
-        <div key={term} className="flex flex-col gap-1">
-          <dt className={label}>{term}</dt>
-          <dd className="font-display text-3xl font-bold tabular-nums">{value}</dd>
+    <dl className="grid grid-cols-1 gap-x-6 gap-y-3 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) p-5 max-sm:gap-y-0 sm:grid-cols-3">
+      {statItems(stats.value).map(({ term, value, detail }) => (
+        <div
+          key={term}
+          className="flex flex-col gap-1 max-sm:flex-row max-sm:items-baseline max-sm:justify-between max-sm:gap-4 max-sm:border-b max-sm:border-(--color-border) max-sm:py-2.5 max-sm:last:border-b-0"
+        >
+          <dt className={`min-w-0 ${label}`}>{term}</dt>
+          <dd className="font-display text-3xl font-bold whitespace-nowrap tabular-nums max-sm:shrink-0 max-sm:text-right max-sm:text-2xl">
+            {value}
+            {detail && <span className="max-sm:block max-sm:text-base max-sm:font-normal max-sm:text-(--color-text-muted)"> {detail}</span>}
+          </dd>
         </div>
       ))}
     </dl>
