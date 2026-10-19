@@ -122,10 +122,10 @@ function Ranking() {
   }, [filter]);
 
   return (
-    <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-12 pt-7 pb-8 lg:overflow-hidden">
-      <div className="flex flex-wrap items-end justify-between gap-8">
+    <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 pt-4 pb-6 sm:px-8 lg:px-12 lg:pt-7 lg:pb-8 xl:overflow-hidden">
+      <div className="flex flex-wrap items-end justify-between gap-4 sm:gap-8">
         <div className="flex flex-col gap-1.5">
-          <h1 className="font-display text-[56px] leading-none font-bold uppercase">{pl.stats}</h1>
+          <h1 className="font-display text-[length:clamp(2.5rem,10vw,3.5rem)] leading-none font-bold uppercase">{pl.stats}</h1>
           {rankings.status === 'ready' && <p className="text-[17px] text-(--color-text-muted)">{pl.rankingSubtitle(rankings.value.games, rankings.value.legs)}</p>}
         </div>
         <section aria-labelledby="ranking-filter" className="flex flex-col gap-2.5">
@@ -178,9 +178,9 @@ function PlayerCard({ playerId }: { playerId: string }) {
   }, [playerId, filter]);
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 overflow-auto p-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="font-display text-5xl font-bold uppercase">{pl.stats}</h1>
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-5 overflow-auto p-4 sm:gap-6 sm:p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <h1 className="font-display text-[length:clamp(2.25rem,9vw,3rem)] leading-none font-bold uppercase">{pl.stats}</h1>
         <a href={RANKING_HREF} className="font-display text-xl font-semibold uppercase text-(--color-text) underline">
           {pl.ranking}
         </a>
@@ -203,10 +203,10 @@ function PlayerCard({ playerId }: { playerId: string }) {
                 onClick={() => {
                   window.location.hash = statsHref(player.id);
                 }}
-                className={`${choiceStyle(player.id === playerId)} flex items-center gap-2`}
+                className={`${choiceStyle(player.id === playerId)} flex max-w-full items-center gap-2`}
               >
                 {player.avatar && <span aria-hidden="true">{player.avatar}</span>}
-                {player.name}
+                <span className="min-w-0 truncate">{player.name}</span>
                 {player.archivedAt !== null && <span className="text-base text-(--color-text-muted) uppercase">{pl.archived}</span>}
               </button>
             ))}
