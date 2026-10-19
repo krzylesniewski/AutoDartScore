@@ -347,6 +347,65 @@ describe('HomeScreen: new game form', () => {
   });
 });
 
+// jsdom nie stosuje media ani container queries, więc testy sprawdzają klasy układu, a nie wymiary.
+describe('HomeScreen: responsive layout', () => {
+  function classes(element: Element | null | undefined): string[] {
+    return [...(element?.classList ?? [])];
+  }
+
+  it('describes the starting score and legs groups', async () => {
+    render(<HomeScreen />);
+    await chips();
+    expect(screen.getByRole('group', { name: 'Punkty startowe', description: '301, 501 lub 701' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Liczba legów', description: 'ile legów do wygranej' })).toBeTruthy();
+  });
+
+  it('describes the practice mode group', async () => {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('Trening'));
+    expect(screen.getByRole('group', { name: 'Tryb treningu', description: 'swobodne rzucanie albo zejście z 501' })).toBeTruthy();
+  });
+
+  it('offers no exit or entry rule groups in any game type', async () => {
+    render(<HomeScreen />);
+    await chips();
+    for (const type of ['Mecz 1v1', 'Zabawa', 'Trening']) {
+      fireEvent.click(button(type));
+      expect(screen.queryByRole('group', { name: 'Zasada wyjścia' })).toBeNull();
+      expect(screen.queryByRole('group', { name: 'Wejście do gry' })).toBeNull();
+    }
+  });
+
+  it('narrows the right column on a tablet and keeps it on a monitor', async () => {
+    render(<HomeScreen />);
+    await chips();
+    expect(classes(summary().parentElement)).toEqual(expect.arrayContaining(['lg:w-85', 'xl:w-110']));
+  });
+
+  it('stretches Start gry on a phone and sizes it per width', async () => {
+    render(<HomeScreen />);
+    await chips();
+    expect(classes(button('Start gry'))).toEqual(expect.arrayContaining(['w-full', 'lg:w-auto', 'lg:h-17', 'xl:h-15']));
+  });
+
+  it('lays out the players in 2, 3 or 4 columns', async () => {
+    render(<HomeScreen />);
+    await chips();
+    expect(classes(button('+ Nowy gracz').parentElement)).toEqual(expect.arrayContaining(['grid-cols-2', 'lg:grid-cols-3', 'xl:grid-cols-4']));
+  });
+
+  it('wraps the navigation and keeps the link names', async () => {
+    render(<HomeScreen />);
+    const nav = screen.getByRole('navigation', { name: 'Główna nawigacja' });
+    expect(classes(nav)).toContain('flex-wrap');
+    for (const name of ['Nowa gra', 'Statystyki', 'Historia']) {
+      expect(within(nav).getByRole('link', { name })).toBeTruthy();
+    }
+    await chips();
+  });
+});
+
 describe('HomeScreen: new player dialog', () => {
   function dialog(): HTMLElement {
     return screen.getByRole('dialog', { name: 'Nowy gracz' });

@@ -156,7 +156,7 @@ export function HomeScreen() {
   return (
     <div className="flex h-full flex-col">
       <AppNav current="new-game" />
-      <main className="flex min-h-0 flex-1 flex-col gap-8 overflow-auto px-10 pt-5.5 pb-4.5 lg:flex-row lg:overflow-hidden">
+      <main className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pt-4 pb-4 sm:gap-8 sm:px-8 lg:flex-row lg:overflow-hidden xl:px-10 xl:pt-5.5 xl:pb-4.5">
         <NewGameForm
           setup={setup}
           players={players}
@@ -167,7 +167,7 @@ export function HomeScreen() {
           onPracticeModeChange={(practiceMode) => setSetup((current) => ({ ...current, practiceMode }))}
           onNewPlayer={() => setCreatingPlayer(true)}
         />
-        <div className="flex min-h-0 flex-col gap-4 lg:w-110 lg:shrink-0">
+        <div className="flex shrink-0 flex-col gap-4 lg:min-h-0 lg:w-85 xl:w-110">
           <GameSetupSummary setup={setup} players={selected} />
           <UnfinishedGames
             games={games}

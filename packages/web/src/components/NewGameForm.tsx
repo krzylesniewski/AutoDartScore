@@ -51,12 +51,13 @@ export function NewGameForm(props: NewGameFormProps) {
   const full = max > 1 && count >= max;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5.5">
+    <div className="flex shrink-0 flex-col gap-5.5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
       <h1 className="sr-only">{pl.newGame}</h1>
 
-      <fieldset className="flex flex-col">
+      {/* fieldset ma domyślnie min-inline-size: min-content, więc bez min-w-0 kafle nie zwężają się na tablecie. */}
+      <fieldset className="flex min-w-0 flex-col">
         <legend className={`mb-2.5 ${label}`}>{pl.gameType}</legend>
-        <div className="flex gap-3.5">
+        <div className="flex flex-col gap-3.5 sm:flex-row">
           {TYPES.map((option) => (
             <TypeTile
               key={option.value}
@@ -70,13 +71,13 @@ export function NewGameForm(props: NewGameFormProps) {
         </div>
       </fieldset>
 
-      <fieldset className="flex min-h-0 shrink flex-col gap-2.5">
+      <fieldset className="flex shrink-0 flex-col gap-2.5 xl:min-h-0 xl:shrink">
         <legend className={`mb-2.5 ${label}`}>{players.status === 'ready' ? pl.playersCount(players.players.length) : pl.players}</legend>
         {players.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
         {players.status === 'error' && <ErrorText text={pl.loadPlayersFailed} />}
         {players.status === 'ready' && players.players.length === 0 && <p className="text-(--color-text-muted)">{pl.noPlayers}</p>}
         {/* Po trzech rzędach lista przewija się w środku, żeby nie spychała punktów i legów pod pasek ze Startem. */}
-        <div className="grid max-h-61 min-h-18 grid-cols-4 content-start gap-3.5 overflow-y-auto">
+        <div className="grid max-h-61 min-h-18 grid-cols-2 content-start gap-3.5 overflow-y-auto lg:grid-cols-3 xl:grid-cols-4">
           {players.status === 'ready' &&
             players.players.map((player, index) => {
               const selected = setup.playerIds.includes(player.id);
@@ -107,9 +108,9 @@ export function NewGameForm(props: NewGameFormProps) {
         </p>
       </fieldset>
 
-      <div className="flex flex-wrap gap-x-8 gap-y-5">
+      <div className="flex flex-col gap-5 lg:max-xl:rounded-(--radius-card) lg:max-xl:border-(length:--border-width) lg:max-xl:border-(--color-border) lg:max-xl:bg-(--color-surface) lg:max-xl:p-7 xl:flex-row xl:flex-wrap xl:gap-x-8 xl:gap-y-5">
         {setup.type !== 'practice' && (
-          <Segmented legend={pl.startingScore}>
+          <Segmented legend={pl.startingScore} description={pl.startingScoreHint}>
             {STARTING_SCORES.map((value) => (
               <Segment key={value} selected={setup.startingScore === value} onSelect={() => props.onStartingScoreChange(value)}>
                 {value}
@@ -118,7 +119,7 @@ export function NewGameForm(props: NewGameFormProps) {
           </Segmented>
         )}
         {setup.type === 'match' && (
-          <Segmented legend={pl.bestOf}>
+          <Segmented legend={pl.bestOf} description={pl.bestOfHint}>
             {BEST_OF.map((value) => (
               <Segment key={value} selected={setup.bestOf === value} onSelect={() => props.onBestOfChange(value)}>
                 {pl.bestOfOption(value)}
@@ -127,7 +128,7 @@ export function NewGameForm(props: NewGameFormProps) {
           </Segmented>
         )}
         {setup.type === 'practice' && (
-          <Segmented legend={pl.practiceMode}>
+          <Segmented legend={pl.practiceMode} description={pl.practiceModeHint}>
             {PRACTICE_MODES.map((option) => (
               <Segment key={option.value} selected={setup.practiceMode === option.value} onSelect={() => props.onPracticeModeChange(option.value)}>
                 {option.label}
@@ -158,7 +159,7 @@ function TypeTile({ name, description, icon, selected, onSelect }: TypeTileProps
       aria-labelledby={`${id}-name`}
       aria-describedby={`${id}-description`}
       onClick={onSelect}
-      className={`${tile} h-23 flex-1 gap-4 px-4.5 text-left ${selected ? 'border-(--color-text) bg-(--color-text) text-(--color-text-inverse)' : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text)'}`}
+      className={`${tile} h-16 flex-1 gap-4 px-4.5 text-left sm:h-23 ${selected ? 'border-(--color-text) bg-(--color-text) text-(--color-text-inverse)' : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text)'}`}
     >
       {icon}
       <span className="flex min-w-0 flex-col gap-0.5">
@@ -173,10 +174,17 @@ function TypeTile({ name, description, icon, selected, onSelect }: TypeTileProps
   );
 }
 
-function Segmented({ legend, children }: { legend: string; children: ReactNode }) {
+// Opis stoi poza legend, żeby nazwą grupy została sama legenda.
+function Segmented({ legend, description, children }: { legend: string; description?: string; children: ReactNode }) {
+  const id = useId();
   return (
-    <fieldset className="flex w-82.5 max-w-full flex-col">
+    <fieldset aria-describedby={description ? id : undefined} className="flex w-full max-w-full flex-col xl:w-82.5">
       <legend className={`mb-2.5 ${label}`}>{legend}</legend>
+      {description && (
+        <p id={id} className="mb-2.5 text-[15px] text-(--color-text-muted) xl:hidden">
+          {description}
+        </p>
+      )}
       <div className="flex overflow-hidden rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface)">{children}</div>
     </fieldset>
   );
@@ -188,7 +196,7 @@ function Segment({ selected, onSelect, children }: { selected: boolean; onSelect
       type="button"
       aria-pressed={selected}
       onClick={onSelect}
-      className={`h-12 flex-1 border-(--color-border) px-4 font-display text-[21px] font-semibold whitespace-nowrap not-first:border-l-(length:--border-width) ${selected ? 'bg-(--color-text) text-(--color-text-inverse)' : 'text-(--color-text)'}`}
+      className={`h-12 flex-1 border-(--color-border) lg:h-15 xl:h-12 px-4 font-display text-[21px] font-semibold whitespace-nowrap not-first:border-l-(length:--border-width) ${selected ? 'bg-(--color-text) text-(--color-text-inverse)' : 'text-(--color-text)'}`}
     >
       {children}
     </button>
