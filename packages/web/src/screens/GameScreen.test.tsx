@@ -232,6 +232,15 @@ describe('GameScreen', () => {
     expect(FakeWebSocket.instances).toHaveLength(2);
   });
 
+  it('pins the connection notice and the keypad in one bottom dock', () => {
+    vi.useFakeTimers();
+    const ws = connect();
+    ws.serverClose(1006);
+    const dock = screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement;
+    expect(dock?.contains(screen.getByText('Brak połączenia z serwerem. Łączę ponownie…'))).toBe(true);
+    expect(dock?.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'lg:contents']));
+  });
+
   it('closes the socket on unmount and never reconnects', () => {
     vi.useFakeTimers();
     const { unmount } = render(<GameScreen matchId={MATCH_ID} />);
@@ -277,6 +286,7 @@ describe('GameScreen', () => {
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+    expect(screen.getByText('Koniec meczu').closest('.sticky')).toBeNull();
   });
 });
 

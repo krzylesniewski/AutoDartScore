@@ -85,4 +85,34 @@ describe('Scoreboard', () => {
     expect(screen.getByText('6')).toBeTruthy();
     expect(screen.getByText('122.5')).toBeTruthy();
   });
+
+  it('stacks the row only from lg in a narrow container', () => {
+    render(<Scoreboard state={snapshot()} size="large" />);
+    const section = screen.getByRole('region', { name: 'Wyniki' });
+    expect(section.className.split(' ')).toContain('@container');
+    const card = screen.getByText('Anna').closest('li')?.firstElementChild;
+    expect(card?.className.split(' ')).toEqual(expect.arrayContaining(['lg:@max-md:grid', 'lg:@max-md:content-center']));
+  });
+
+  it('moves the rows by a multiple of the CSS row height', () => {
+    render(<Scoreboard state={casual(['Anna', 'Bartek', 'Celina'])} size="large" />);
+    const rows = screen.getAllByRole('listitem');
+    expect(rows[1]?.style.transform).toBe('translateY(calc(var(--row-height) * 1))');
+    expect(rows[3]?.style.transform).toBe('translateY(calc(var(--row-height) * 3 + var(--slot-height) * 0))');
+  });
+
+  it('names the leg dots in a 1v1 match', () => {
+    render(<Scoreboard state={snapshot({ players: [player('p1', 'Anna', { legsWon: 1 }), player('p2', 'Bartek', { legsWon: 0 })] })} size="large" />);
+    expect(screen.getByRole('img', { name: 'Legi: 1 z 2' }).children).toHaveLength(2);
+    expect(screen.getByRole('img', { name: 'Legi: 0 z 2' })).toBeTruthy();
+  });
+
+  it('shows no leg dots in a casual game or in compact size', () => {
+    const { unmount } = render(<Scoreboard state={casual(['Anna', 'Bartek', 'Celina'])} size="large" />);
+    expect(screen.queryByRole('img')).toBeNull();
+    unmount();
+
+    render(<Scoreboard state={snapshot({ players: [player('p1', 'Anna', { legsWon: 1 }), player('p2', 'Bartek', { legsWon: 0 })] })} size="compact" />);
+    expect(screen.queryByRole('img')).toBeNull();
+  });
 });

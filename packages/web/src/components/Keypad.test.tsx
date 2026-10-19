@@ -3,6 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Keypad } from './Keypad';
 
+const SEGMENTS = Array.from({ length: 20 }, (_, index) => String(index + 1));
+
 function setup() {
   const onHit = vi.fn<(hit: Hit) => void>();
   render(<Keypad onHit={onHit} disabled={false} />);
@@ -40,5 +42,23 @@ describe('Keypad', () => {
     const { onHit, button } = setup();
     fireEvent.click(button('Miss'));
     expect(onHit).toHaveBeenCalledWith({ segment: 0, multiplier: 0 });
+  });
+
+  it('renders each of the 25 keys once', () => {
+    setup();
+    expect(screen.getAllByRole('button')).toHaveLength(25);
+    for (const name of ['S', 'D', 'T', '25', 'Miss', ...SEGMENTS]) {
+      expect(screen.getAllByRole('button', { name })).toHaveLength(1);
+    }
+  });
+
+  it('lays out 1-20 five per row below lg and ten per row from lg', () => {
+    const { button } = setup();
+    for (const name of SEGMENTS) {
+      expect(button(name).className.split(' ')).toEqual(expect.arrayContaining(['col-span-2', 'lg:col-span-1', 'h-14', 'xl:h-(--button-height)']));
+    }
+    for (const name of ['25', 'Miss']) {
+      expect(button(name).className.split(' ')).toEqual(expect.arrayContaining(['order-last', 'col-span-5', 'xl:order-none', 'xl:col-span-2']));
+    }
   });
 });

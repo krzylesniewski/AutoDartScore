@@ -2,14 +2,15 @@ import type { Banner } from '../api/use-match';
 import { pl } from '../i18n/pl';
 import { BustIcon, TrophyIcon } from './icons';
 
-// Nakładka nad kolumną tury, żeby nie przesuwała układu i nie łapała dotyku.
+// Nakładka, żeby nie przesuwała układu i nie łapała dotyku. Poniżej lg wisi tuż nad przypiętą klawiaturą,
+// bo góra kolumny tury jest wtedy zwykle przewinięta. Od lg leży na górze kolumny tury.
 // Region role="status" istnieje stale, żeby czytnik ekranu odczytał zmianę.
 export function EventBanner({ banner }: { banner: Banner | null }) {
   return (
-    <div role="status" className="pointer-events-none absolute inset-x-0 top-0 z-10">
+    <div role="status" className="pointer-events-none absolute inset-x-0 bottom-full z-10 lg:top-0 lg:bottom-auto">
       {banner && (
         <p
-          className={`flex animate-banner-in items-center gap-3 rounded-(--radius-card) px-5 py-3 font-display text-4xl font-bold uppercase motion-reduce:animate-none ${
+          className={`flex animate-banner-in flex-wrap items-center gap-x-3 gap-y-1 rounded-(--radius-card) px-5 py-3 font-display text-3xl font-bold uppercase motion-reduce:animate-none lg:text-4xl ${
             banner.kind === 'bust' ? 'bg-(--color-accent) text-(--color-on-accent)' : 'bg-(--color-text) text-(--color-text-inverse)'
           }`}
         >
