@@ -1,9 +1,10 @@
 import type { DomainEvent, LiveMessage } from '@autoscore/schema';
-import { announcementFor } from './announcement.js';
+import { announcementFor, type Announcement } from './announcement.js';
 import { soundEffectFor, type SoundEffect } from './sound-effect.js';
 
+// Speaker sam wybiera między nagraniem a odczytem tekstu.
 export interface Speaker {
-  speak(text: string): void;
+  speak(announcement: Announcement): void;
   cancel(): void;
 }
 
@@ -21,7 +22,7 @@ export interface Announcer {
 // Serwer wysyła jedną paczkę na rzutkę: throw_registered, zdarzenia domenowe i state_updated z tym samym eventSeq.
 // Czytamy dopiero po state_updated, żeby cała paczka dała jeden komunikat. Snapshot po połączeniu ma inny eventSeq
 // niż bufor i nigdy nie jest czytany.
-export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer): Announcer {
+export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer, random: () => number = Math.random): Announcer {
   let buffer: DomainEvent[] = [];
   let bufferSeq: number | null = null;
   let speechTimer: ReturnType<typeof setTimeout> | undefined;
@@ -50,7 +51,7 @@ export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer): Annou
     const events = bufferSeq === eventSeq ? buffer : [];
     clear();
     const effect = soundEffectFor(events);
-    const announcement = announcementFor(events);
+    const announcement = announcementFor(events, random);
     if (!effect && !announcement) {
       return;
     }
@@ -61,13 +62,13 @@ export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer): Annou
       return;
     }
     if (delay === 0) {
-      speaker.speak(announcement.text);
+      speaker.speak(announcement);
       return;
     }
     // Głos czeka na koniec efektu, żeby się nie nakładały.
     speechTimer = setTimeout(() => {
       speechTimer = undefined;
-      speaker.speak(announcement.text);
+      speaker.speak(announcement);
     }, delay);
   }
 

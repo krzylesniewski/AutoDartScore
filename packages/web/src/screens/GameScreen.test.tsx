@@ -40,6 +40,35 @@ class FakeWebSocket extends EventTarget {
   }
 }
 
+// jsdom nie implementuje play(), pause() ani load(), więc każdy test dostaje atrapę Audio.
+class FakeAudio {
+  static created: string[] = [];
+  static played: string[] = [];
+  static loaded: string[] = [];
+  static playResult: () => Promise<void> = () => Promise.resolve();
+  readonly src: string;
+  currentTime = 0;
+  preload = '';
+
+  constructor(src: string) {
+    this.src = src;
+    FakeAudio.created.push(src);
+  }
+
+  play(): Promise<void> {
+    FakeAudio.played.push(this.src);
+    return FakeAudio.playResult();
+  }
+
+  pause(): void {}
+
+  load(): void {
+    FakeAudio.loaded.push(this.src);
+  }
+
+  addEventListener(): void {}
+}
+
 interface Call {
   readonly url: string;
   readonly body: unknown;
@@ -83,6 +112,10 @@ function connect(state: MatchSnapshot = initial): FakeWebSocket {
   return ws;
 }
 
+function flush(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 function tap(name: string): void {
   fireEvent.click(screen.getByRole('button', { name }));
 }
@@ -93,7 +126,12 @@ beforeEach(() => {
   summaryCalls = [];
   respond = async (call) => json(201, throwResult(call, initial));
   respondSummary = async () => json(200, summary({ matchId: MATCH_ID, eventSeq: initial.eventSeq }));
+  FakeAudio.created = [];
+  FakeAudio.played = [];
+  FakeAudio.loaded = [];
+  FakeAudio.playResult = () => Promise.resolve();
   vi.stubGlobal('WebSocket', FakeWebSocket);
+  vi.stubGlobal('Audio', FakeAudio);
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
@@ -618,27 +656,58 @@ describe('voice', () => {
     return speak.mock.calls.map(([utterance]) => (utterance as FakeUtterance).text);
   }
 
-  it('is on by default and reads the turn total', () => {
+  it('is on by default and plays the turn total clip', async () => {
     const ws = connect();
     expect(toggle().getAttribute('aria-pressed')).toBe('true');
     sendTurn(ws);
-    expect(spokenTexts()).toEqual(['sto']);
+    expect(FakeAudio.played).toEqual(['/audio/pl/scores/100.mp3']);
+    await flush();
+    expect(speak).not.toHaveBeenCalled();
   });
 
-  it('stays silent after the toggle is off', () => {
+  it('stays silent after the toggle is off', async () => {
     const ws = connect();
     fireEvent.click(toggle());
     expect(toggle().getAttribute('aria-pressed')).toBe('false');
     sendTurn(ws);
+    await flush();
+    expect(FakeAudio.played).toEqual([]);
     expect(speak).not.toHaveBeenCalled();
   });
 
-  it('reads Bust and Zwycięzca', () => {
+  it('plays a bust clip and a winner clip', () => {
     const ws = connect();
     sendBatch(ws, { type: 'bust', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], remaining: 40 });
-    expect(spokenTexts()).toEqual(['Bust']);
+    expect(FakeAudio.played).toEqual([expect.stringMatching(/^\/audio\/pl\/events\/bust_[123]\.mp3$/)]);
     sendBatch(ws, { type: 'match_won', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legsWon: { p1: 0, p2: 2 } });
-    expect(spokenTexts()).toEqual(['Bust', 'Zwycięzca']);
+    expect(FakeAudio.played).toEqual([expect.stringMatching(/bust_[123]\.mp3$/), expect.stringMatching(/^\/audio\/pl\/events\/winner_[12]\.mp3$/)]);
+  });
+
+  it('plays Game shot on a leg win that does not end the match', () => {
+    const ws = connect();
+    sendBatch(ws, { type: 'leg_won', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, checkout: 40, dartsThrown: 15 });
+    expect(FakeAudio.played).toEqual(['/audio/pl/events/game_shot.mp3']);
+  });
+
+  it('speaks the total when the clip cannot play', async () => {
+    FakeAudio.playResult = () => Promise.reject(new DOMException('blocked', 'NotAllowedError'));
+    const ws = connect();
+    sendTurn(ws);
+    expect(FakeAudio.played).toEqual(['/audio/pl/scores/100.mp3']);
+    await vi.waitFor(() => expect(spokenTexts()).toEqual(['sto']));
+  });
+
+  it('loads the six event clips on mount', () => {
+    connect();
+    expect(FakeAudio.loaded).toEqual([
+      '/audio/pl/events/bust_1.mp3',
+      '/audio/pl/events/bust_2.mp3',
+      '/audio/pl/events/bust_3.mp3',
+      '/audio/pl/events/game_shot.mp3',
+      '/audio/pl/events/winner_1.mp3',
+      '/audio/pl/events/winner_2.mp3',
+    ]);
+    expect(FakeAudio.played).toEqual([]);
   });
 
   it('shows the voice state as text and keeps the name Głos', () => {
@@ -658,10 +727,11 @@ describe('voice', () => {
     expect(toggle().getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('never speaks on a keypad tap', async () => {
+  it('never plays or speaks on a keypad tap', async () => {
     connect();
     tap('20');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(FakeAudio.played).toEqual([]);
     expect(speak).not.toHaveBeenCalled();
   });
 });
@@ -737,9 +807,7 @@ describe('effects', () => {
     return screen.getByRole('button', { name: 'Efekty dźwiękowe' });
   }
 
-  function spokenTexts(): string[] {
-    return speak.mock.calls.map(([utterance]) => (utterance as FakeUtterance).text);
-  }
+  const BUST_CLIP = /^\/audio\/pl\/events\/bust_[123]\.mp3$/;
 
   function voiceOff(): void {
     localStorage.setItem('autoscore.voice', 'off');
@@ -755,6 +823,7 @@ describe('effects', () => {
     const ws = connect();
     sendBust(ws);
     expect(FakeAudioContext.oscillators).toBeGreaterThan(0);
+    expect(FakeAudio.played).toEqual([]);
     expect(speak).not.toHaveBeenCalled();
   });
 
@@ -785,21 +854,22 @@ describe('effects', () => {
     const ws = connect();
     sendBust(ws);
     expect(FakeAudioContext.oscillators).toBeGreaterThan(0);
-    expect(speak).not.toHaveBeenCalled();
+    expect(FakeAudio.played).toEqual([]);
     act(() => {
       vi.advanceTimersByTime(499);
     });
-    expect(speak).not.toHaveBeenCalled();
+    expect(FakeAudio.played).toEqual([]);
     act(() => {
       vi.advanceTimersByTime(1);
     });
-    expect(spokenTexts()).toEqual(['Bust']);
+    expect(FakeAudio.played).toEqual([expect.stringMatching(BUST_CLIP)]);
+    expect(speak).not.toHaveBeenCalled();
   });
 
   it('reads Bust at once with the effects off', () => {
     localStorage.setItem('autoscore.effects', 'off');
     const ws = connect();
     sendBust(ws);
-    expect(spokenTexts()).toEqual(['Bust']);
+    expect(FakeAudio.played).toEqual([expect.stringMatching(BUST_CLIP)]);
   });
 });

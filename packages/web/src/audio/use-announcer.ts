@@ -1,6 +1,7 @@
-import { createAnnouncer, type Announcer, type Speaker } from '@autoscore/audio';
+import { createAnnouncer, type Announcer } from '@autoscore/audio';
 import type { LiveMessage } from '@autoscore/schema';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createRecordedSpeaker, type RecordedSpeaker } from './recorded-speaker';
 import { createWebAudioEffectPlayer, type WebAudioEffectPlayer } from './web-audio-effect-player';
 import { createWebSpeechSpeaker } from './web-speech-speaker';
 
@@ -38,7 +39,7 @@ function writeEnabled(key: string, enabled: boolean): void {
 
 interface AudioOutput {
   readonly announcer: Announcer;
-  readonly speech: Speaker;
+  readonly speech: RecordedSpeaker;
   readonly player: WebAudioEffectPlayer;
 }
 
@@ -51,14 +52,14 @@ export function useAnnouncer(): UseAnnouncer {
   const audio = useRef<AudioOutput | null>(null);
 
   if (!audio.current) {
-    const speech = createWebSpeechSpeaker();
+    const speech = createRecordedSpeaker(createWebSpeechSpeaker());
     const player = createWebAudioEffectPlayer();
     // Przełączniki sprawdzamy w chwili wywołania, więc announcer powstaje raz. Wyłączone efekty zwracają 0, żeby głos nie czekał.
     const announcer = createAnnouncer(
       {
-        speak(text) {
+        speak(announcement) {
           if (voiceRef.current) {
-            speech.speak(text);
+            speech.speak(announcement);
           }
         },
         cancel() {
@@ -77,14 +78,15 @@ export function useAnnouncer(): UseAnnouncer {
     audio.current = { announcer, speech, player };
   }
 
+  // Nagrania zdarzeń ładujemy niezależnie od przełączników, bo głos można włączyć w trakcie gry.
   // close() pozwala na późniejsze play(), więc podwójne montowanie w StrictMode nie psuje efektów.
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    audio.current?.speech.preload();
+    return () => {
       audio.current?.announcer.stop();
       audio.current?.player.close();
-    },
-    [],
-  );
+    };
+  }, []);
 
   // Gdy oba są wyłączone, announcer porzuca też bufor i zaplanowany odczyt.
   const stopWhenSilent = useCallback(() => {
