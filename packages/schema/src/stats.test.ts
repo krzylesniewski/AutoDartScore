@@ -119,7 +119,7 @@ describe('StatsRankings', () => {
         { ...bartek, position: 1, value: 40 },
       ],
       shortestLeg: [{ ...anna, position: 1, value: 15 }],
-      scores180: [],
+      highestTurn: [],
     };
     expect(StatsRankings.parse(rankings)).toEqual(rankings);
   });

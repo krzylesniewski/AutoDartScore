@@ -13,6 +13,7 @@ export interface PlayerTotals {
   readonly scores100: number;
   readonly scores60: number;
   readonly highestCheckout: number | null;
+  readonly highestTurn: number | null;
   readonly doubleAttempts: number;
   readonly doublesHit: number;
   readonly bestLegDarts: number | null;
@@ -37,6 +38,7 @@ export const EMPTY_TOTALS: PlayerTotals = {
   scores100: 0,
   scores60: 0,
   highestCheckout: null,
+  highestTurn: null,
   doubleAttempts: 0,
   doublesHit: 0,
   bestLegDarts: null,
@@ -88,7 +90,7 @@ function maxOrNull(a: number | null, b: number | null): number | null {
 }
 
 export function mergeTotals(a: PlayerTotals, b: Partial<PlayerTotals>): PlayerTotals {
-  const add = (key: Exclude<keyof PlayerTotals, 'highestCheckout' | 'bestLegDarts'>) => a[key] + (b[key] ?? 0);
+  const add = (key: Exclude<keyof PlayerTotals, 'highestCheckout' | 'highestTurn' | 'bestLegDarts'>) => a[key] + (b[key] ?? 0);
   return {
     points: add('points'),
     darts: add('darts'),
@@ -99,6 +101,7 @@ export function mergeTotals(a: PlayerTotals, b: Partial<PlayerTotals>): PlayerTo
     scores100: add('scores100'),
     scores60: add('scores60'),
     highestCheckout: maxOrNull(a.highestCheckout, b.highestCheckout ?? null),
+    highestTurn: maxOrNull(a.highestTurn, b.highestTurn ?? null),
     doubleAttempts: add('doubleAttempts'),
     doublesHit: add('doublesHit'),
     bestLegDarts: minOrNull(a.bestLegDarts, b.bestLegDarts ?? null),
@@ -163,7 +166,7 @@ export function tallyGame(type: MatchType, playerIds: readonly string[], events:
     switch (event.type) {
       case 'turn_completed':
         addTurn(event.playerId, event.legIndex, event.total, event.darts, event.remaining + event.total);
-        add(event.playerId, bucket(event.total));
+        add(event.playerId, { ...bucket(event.total), highestTurn: event.total });
         break;
       case 'bust':
         addTurn(event.playerId, event.legIndex, 0, event.darts, event.remaining);

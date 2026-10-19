@@ -70,7 +70,7 @@ const rankingsFixture: StatsRankings = {
   bestLegAverage: [entry('p1', 'Anna', 1, 98.33), entry('p2', 'Bartek', 2, 86.5), entry('p3', 'Celina', 3, 74.2)],
   highestCheckout: [entry('p2', 'Bartek', 1, 121), entry('p3', 'Celina', 1, 121), entry('p1', 'Anna', 3, 80), entry('p4', 'Darek', 3, 80)],
   shortestLeg: [entry('p1', 'Anna', 1, 15), entry('p2', 'Bartek', 2, 18)],
-  scores180: [entry('p2', 'Bartek', 1, 3)],
+  highestTurn: [entry('p2', 'Bartek', 1, 180)],
 };
 
 let urls: string[];
@@ -180,7 +180,7 @@ describe('StatsScreen: ranking', () => {
   it('shows exactly 4 top 3 tiles and no doubles tile', async () => {
     render(<StatsScreen playerId={null} />);
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
-    const tiles = ['Rekordowy leg (średnia)', 'Najwyższe zamknięcie', 'Najkrótszy leg', 'Liczba 180'];
+    const tiles = ['Rekordowy leg (średnia)', 'Najwyższe zamknięcie', 'Najkrótszy leg', 'Najwyższa tura'];
     expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label')).filter(Boolean)).toEqual(tiles);
     expect(screen.queryByText('% doubli')).toBeNull();
     expect(within(tile('Rekordowy leg (średnia)')).getByText('3 rzutki')).toBeTruthy();
@@ -188,7 +188,7 @@ describe('StatsScreen: ranking', () => {
     expect(within(tile('Najwyższe zamknięcie')).getByText('checkout')).toBeTruthy();
     expect(rows(tile('Najwyższe zamknięcie'))).toEqual(['1.🎯Bartek121', '1.CCelina121', '3.AAnna80', '3.DDarek80']);
     expect(within(tile('Najkrótszy leg')).getByText('liczba rzutek')).toBeTruthy();
-    expect(within(tile('Liczba 180')).getByText('wszystkie gry')).toBeTruthy();
+    expect(within(tile('Najwyższa tura')).getByText('3 lotki, mecze 1v1')).toBeTruthy();
   });
 
   it('marks the leaders in the list and in the tiles', async () => {
@@ -203,16 +203,31 @@ describe('StatsScreen: ranking', () => {
     render(<StatsScreen playerId={null} />);
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
     expect(within(tile('Najkrótszy leg')).getByText('Za mało graczy w tej kategorii.')).toBeTruthy();
-    expect(within(tile('Liczba 180')).getByText('Za mało graczy w tej kategorii.')).toBeTruthy();
+    expect(within(tile('Najwyższa tura')).getByText('Za mało graczy w tej kategorii.')).toBeTruthy();
     expect(within(tile('Najwyższe zamknięcie')).queryByText('Za mało graczy w tej kategorii.')).toBeNull();
   });
 
+  it('says the highest turn counts only 1v1 matches under the casual and practice filters', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    for (const [label, filter] of [
+      ['Zabawa', 'casual'],
+      ['Trening', 'practice'],
+    ] as const) {
+      rankings = { ...rankingsFixture, filter, highestTurn: [] };
+      fireEvent.click(screen.getByRole('button', { name: label }));
+      await vi.waitFor(() => expect(within(tile('Najwyższa tura')).getByText('Tylko mecze 1v1')).toBeTruthy());
+      expect(within(tile('Najwyższa tura')).queryByText('Za mało graczy w tej kategorii.')).toBeNull();
+      expect(within(tile('Najkrótszy leg')).getByText('Za mało graczy w tej kategorii.')).toBeTruthy();
+    }
+  });
+
   it('shows one message instead of the list and tiles without games', async () => {
-    rankings = { ...rankingsFixture, games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], scores180: [] };
+    rankings = { ...rankingsFixture, games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [] };
     render(<StatsScreen playerId={null} />);
     expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
     expect(screen.getByText('Ranking graczy z całej historii · 0 gier, 0 legów')).toBeTruthy();
-    expect(screen.queryByRole('region', { name: 'Liczba 180' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Najwyższa tura' })).toBeNull();
     expect(screen.queryByText('Średnia (3 rzutki)')).toBeNull();
   });
 

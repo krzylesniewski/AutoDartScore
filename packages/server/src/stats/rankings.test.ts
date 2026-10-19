@@ -1,4 +1,4 @@
-import type { Player } from '@autoscore/schema';
+import type { MatchType, Player } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import type { PlayerLeg } from './completed-legs.js';
 import { buildRankings, type RankedGame } from './rankings.js';
@@ -20,8 +20,9 @@ function leg(playerId: string, legIndex: number, average: number): PlayerLeg {
   return { playerId, legIndex, points: average, darts: 3 };
 }
 
-function game(legs: PlayerLeg[], totals: Record<string, Partial<PlayerTotals>> = {}): RankedGame {
+function game(legs: PlayerLeg[], totals: Record<string, Partial<PlayerTotals>> = {}, type: MatchType = 'match'): RankedGame {
   return {
+    type,
     legs,
     tally: {
       players: new Map(Object.entries(totals).map(([id, own]) => [id, { ...EMPTY_TOTALS, ...own }])),
@@ -45,7 +46,7 @@ describe('buildRankings', () => {
       bestLegAverage: [],
       highestCheckout: [],
       shortestLeg: [],
-      scores180: [],
+      highestTurn: [],
     });
   });
 
@@ -116,29 +117,52 @@ describe('buildRankings', () => {
     ]);
   });
 
-  it('leaves a player without a 180 out of the 180 tile', () => {
+  it('takes the highest 1v1 turn across games, descending with shared positions', () => {
+    const rankings = buildRankings({
+      players: [anna, bartek, celina, darek],
+      games: [
+        game([], { anna: { highestTurn: 100 }, bartek: { highestTurn: 140 }, celina: { highestTurn: 60 }, darek: { highestTurn: 45 } }),
+        game([], { anna: { highestTurn: 140 }, bartek: { highestTurn: 81 } }),
+      ],
+    });
+    expect(rankings.highestTurn.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
+      ['Anna', 1, 140],
+      ['Bartek', 1, 140],
+      ['Celina', 3, 60],
+    ]);
+  });
+
+  it('ignores the highest turn of casual and practice games', () => {
     const rankings = buildRankings({
       players: [anna, bartek],
-      games: [game([], { anna: { scores180: 0 }, bartek: { scores180: 2 } }), game([], { bartek: { scores180: 1 } })],
+      games: [game([], { anna: { highestTurn: 60 } }), game([], { anna: { highestTurn: 180 } }, 'casual'), game([], { bartek: { highestTurn: 180 } }, 'practice')],
     });
-    expect(rankings.scores180).toEqual([{ playerId: 'bartek', name: 'Bartek', avatar: null, position: 1, value: 3 }]);
+    expect(rankings.highestTurn).toEqual([{ playerId: 'anna', name: 'Anna', avatar: null, position: 1, value: 60 }]);
+  });
+
+  it('ranks a highest turn of 0 and leaves out a player without a closed turn', () => {
+    const rankings = buildRankings({
+      players: [anna, bartek],
+      games: [game([], { anna: { highestTurn: 0 }, bartek: { highestTurn: null } })],
+    });
+    expect(rankings.highestTurn).toEqual([{ playerId: 'anna', name: 'Anna', avatar: null, position: 1, value: 0 }]);
   });
 
   it('counts a guest game and its legs without listing the guest', () => {
     const rankings = buildRankings({
       players: [anna],
-      games: [game([...threeLegs('anna', 40), ...threeLegs('guest', 99)], { anna: { highestCheckout: 40 }, guest: { highestCheckout: 170, scores180: 1, bestLegDarts: 9 } })],
+      games: [game([...threeLegs('anna', 40), ...threeLegs('guest', 99)], { anna: { highestCheckout: 40 }, guest: { highestCheckout: 170, highestTurn: 180, bestLegDarts: 9 } })],
     });
     expect(rankings.games).toBe(1);
     expect(rankings.legs).toBe(3);
     expect(rankings.players.map((entry) => entry.playerId)).toEqual(['anna']);
     expect(rankings.bestLegAverage.map((entry) => entry.playerId)).toEqual(['anna']);
     expect(rankings.highestCheckout.map((entry) => entry.playerId)).toEqual(['anna']);
-    expect(rankings.scores180).toEqual([]);
+    expect(rankings.highestTurn).toEqual([]);
     expect(rankings.shortestLeg).toEqual([]);
   });
 
   it('does not count a game without a completed leg', () => {
-    expect(buildRankings({ players: [anna], games: [game([], { anna: { scores180: 1 } })] })).toMatchObject({ games: 0, legs: 0, players: [] });
+    expect(buildRankings({ players: [anna], games: [game([], { anna: { highestTurn: 180 } })] })).toMatchObject({ games: 0, legs: 0, players: [] });
   });
 });

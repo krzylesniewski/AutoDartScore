@@ -1,10 +1,11 @@
-import { MIN_LEGS_FOR_AVERAGE, type Player, type RankedPlayer, type RankingEntry, type StatsRankings } from '@autoscore/schema';
+import { MIN_LEGS_FOR_AVERAGE, type MatchType, type Player, type RankedPlayer, type RankingEntry, type StatsRankings } from '@autoscore/schema';
 import type { PlayerLeg } from './completed-legs.js';
 import { EMPTY_TOTALS, mergeTotals, threeDartAverage, type GameTally, type PlayerTotals } from './tally.js';
 
 // Czysta logika rankingu graczy, bez I/O. Średnie liczą tylko ukończone legi, rekordy biorą wynik z tallyGame.
 
 export interface RankedGame {
+  readonly type: MatchType;
   readonly legs: readonly PlayerLeg[];
   readonly tally: GameTally;
 }
@@ -48,6 +49,7 @@ function top(candidates: readonly Candidate[], order: 'asc' | 'desc'): RankingEn
 export function buildRankings({ players, games }: RankingsInput): Omit<StatsRankings, 'filter'> {
   const legs = new Map<string, { points: number; darts: number; legs: number; bestLeg: number }>();
   const totals = new Map<string, PlayerTotals>();
+  const highestTurns = new Map<string, number>();
   let gameCount = 0;
   let legCount = 0;
 
@@ -67,6 +69,10 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
     }
     for (const [playerId, playerTotals] of game.tally.players) {
       totals.set(playerId, mergeTotals(totals.get(playerId) ?? EMPTY_TOTALS, playerTotals));
+      // Najwyższa tura liczy tylko mecze 1v1, choć filtr "Wszystkie" obejmuje też zabawę i trening.
+      if (game.type === 'match' && playerTotals.highestTurn !== null) {
+        highestTurns.set(playerId, Math.max(highestTurns.get(playerId) ?? 0, playerTotals.highestTurn));
+      }
     }
   }
 
@@ -106,6 +112,12 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
     ),
     highestCheckout: top(fromTotals((own) => own.highestCheckout), 'desc'),
     shortestLeg: top(fromTotals((own) => own.bestLegDarts), 'asc'),
-    scores180: top(fromTotals((own) => (own.scores180 >= 1 ? own.scores180 : null)), 'desc'),
+    highestTurn: top(
+      players.flatMap((player) => {
+        const value = highestTurns.get(player.id);
+        return value === undefined ? [] : [{ player, value }];
+      }),
+      'desc',
+    ),
   };
 }
