@@ -68,36 +68,42 @@ export function GameScreen({ matchId }: { matchId: string }) {
         onResume={sendResume}
         onEndPractice={() => setEnding(true)}
       />
-      <main className="grid min-h-0 flex-1 grid-cols-1 content-start gap-(--space-page) overflow-auto p-(--space-page) landscape:grid-cols-[var(--scoreboard-width)_1fr]">
+      {/* Poniżej lg main jest kolumną flex, a prawa kolumna ma display: contents. Dok jest wtedy dzieckiem main,
+          więc sticky trzyma go na dole przez całe przewijanie, także gdy długi pasek wyników spycha turę pod ekran. */}
+      <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:pb-(--space-page) xl:grid-cols-[var(--scoreboard-width)_1fr]">
         <div className="flex flex-col gap-4">
           {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
           {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
         </div>
-        <div className="relative flex flex-col gap-3">
-          {connection === 'closed' && <Notice text={pl.connectionLost} />}
-          {error && <Notice text={error} />}
-          {abandoned && (
-            <Notice text={pl.abandonedReadOnly}>
-              <a href={HOME_HREF} className="ml-auto underline">
-                {pl.home}
-              </a>
-            </Notice>
-          )}
-          {ended && (
-            <Notice text={pl.practiceEndedReadOnly}>
-              <a href={HOME_HREF} className="ml-auto underline">
-                {pl.home}
-              </a>
-            </Notice>
-          )}
+        <div className="contents lg:relative lg:flex lg:flex-col lg:gap-3">
           {state && <TurnPanel state={state} lastTurn={lastTurn} busy={busy} undoDisabled={abandoned || ended} onUndo={sendUndo} />}
           {/* TurnPanel zostaje po końcu gry, żeby Cofnij poprawiło źle wpisaną zwycięską rzutkę. */}
-          {state?.finished ? (
-            <MatchSummaryPanel state={state} summary={stats.summary} error={stats.error} />
-          ) : (
-            <Keypad onHit={sendHit} disabled={keypadDisabled} />
-          )}
-          <EventBanner banner={banner} />
+          {state?.finished && <MatchSummaryPanel state={state} summary={stats.summary} error={stats.error} />}
+          {/* Od lg dok znika z układu: komunikaty wracają nad turę, a baner pozycjonuje się względem prawej kolumny. */}
+          <div
+            className="sticky bottom-0 z-10 flex flex-col gap-3 bg-(--color-bg) pt-3 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:pb-[calc(var(--space-page)_+_env(safe-area-inset-bottom))] lg:contents"
+          >
+            <div className="flex flex-col gap-3 empty:hidden lg:order-first">
+              {connection === 'closed' && <Notice text={pl.connectionLost} />}
+              {error && <Notice text={error} />}
+              {abandoned && (
+                <Notice text={pl.abandonedReadOnly}>
+                  <a href={HOME_HREF} className="ml-auto underline">
+                    {pl.home}
+                  </a>
+                </Notice>
+              )}
+              {ended && (
+                <Notice text={pl.practiceEndedReadOnly}>
+                  <a href={HOME_HREF} className="ml-auto underline">
+                    {pl.home}
+                  </a>
+                </Notice>
+              )}
+            </div>
+            {!state?.finished && <Keypad onHit={sendHit} disabled={keypadDisabled} />}
+            <EventBanner banner={banner} />
+          </div>
         </div>
       </main>
       {abandoning && state && (

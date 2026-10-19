@@ -18,6 +18,7 @@ export interface MatchStatsPanelProps {
 }
 
 // Mieści się w około 120 px pod paskiem wyników 1v1 przy 1440×810, więc jeden wiersz na gracza i jedna kolumna na statystykę.
+// W wąskiej kolumnie (telefon, tablet) czcionka maleje, a gdyby to nie wystarczyło, przewija się tylko tabela, nie strona.
 export function MatchStatsPanel({ state, summary }: MatchStatsPanelProps) {
   if (state.type !== 'match') {
     return null;
@@ -26,37 +27,39 @@ export function MatchStatsPanel({ state, summary }: MatchStatsPanelProps) {
   const lastLeg = summary?.legs.at(-1);
 
   return (
-    <section className="flex flex-col rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) px-4 py-1.5">
-      <table className="w-full font-display">
-        <caption className="sr-only">{pl.matchStats}</caption>
-        <thead>
-          <tr>
-            <td />
-            {COLUMNS.map((column) => (
-              <th key={column.header} scope="col" className={`${label} px-1 text-right whitespace-nowrap`}>
-                {column.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {state.players.map((player) => {
-            const line = summary?.players.find((candidate) => candidate.playerId === player.id);
-            return (
-              <tr key={player.id} className="text-lg leading-7">
-                <th scope="row" className="w-full max-w-0 truncate text-left font-semibold">
-                  {player.name}
+    <section className="@container flex flex-col rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) px-4 py-1.5">
+      <div className="overflow-x-auto">
+        <table className="w-full font-display">
+          <caption className="sr-only">{pl.matchStats}</caption>
+          <thead>
+            <tr>
+              <td />
+              {COLUMNS.map((column) => (
+                <th key={column.header} scope="col" className={`${label} px-1 text-right whitespace-nowrap @max-md:text-xs @max-md:tracking-normal`}>
+                  {column.header}
                 </th>
-                {COLUMNS.map((column) => (
-                  <td key={column.header} className="px-1 text-right whitespace-nowrap tabular-nums">
-                    {line ? column.value(line) : NO_VALUE}
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {state.players.map((player) => {
+              const line = summary?.players.find((candidate) => candidate.playerId === player.id);
+              return (
+                <tr key={player.id} className="text-lg leading-7 @max-md:text-base">
+                  <th scope="row" className="w-full max-w-0 truncate text-left font-semibold">
+                    {player.name}
+                  </th>
+                  {COLUMNS.map((column) => (
+                    <td key={column.header} className="px-1 text-right whitespace-nowrap tabular-nums">
+                      {line ? column.value(line) : NO_VALUE}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {lastLeg && (
         <p className="truncate leading-6 text-(--color-text-muted)">{pl.lastLeg(pl.legResult(name(lastLeg.winnerId), lastLeg.dartsThrown, lastLeg.checkout))}</p>
       )}

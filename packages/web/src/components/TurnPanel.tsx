@@ -10,9 +10,13 @@ import { BustIcon, FlagIcon, UndoIcon } from './icons';
 const DARTS_PER_TURN = 3;
 
 const card = 'rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface)';
+// Poniżej lg suma i zamknięcie dzielą jedną kartę, od lg każde ma własną.
+const sharedCard =
+  'max-lg:rounded-(--radius-card) max-lg:border-(length:--border-width) max-lg:border-(--color-border) max-lg:bg-(--color-surface) max-lg:px-4 max-lg:py-2';
+const ownCard = 'lg:rounded-(--radius-card) lg:border-(length:--border-width) lg:border-(--color-border) lg:bg-(--color-surface)';
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 const button =
-  'flex h-(--button-height) items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-5 font-display text-(length:--text-button) font-semibold';
+  'flex min-h-12 flex-wrap items-center justify-center gap-x-2 rounded-(--radius-card) border-(length:--border-width) px-2 py-1 text-center font-display text-(length:--text-button) leading-tight font-semibold lg:px-3 xl:h-(--button-height) xl:px-5';
 
 export interface TurnPanelProps {
   state: MatchSnapshot;
@@ -31,9 +35,9 @@ export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo 
   const waitingIndex = thrower && !shown ? darts.length : -1;
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="@container flex flex-col gap-3">
       {thrower && (
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
           <h2 className="font-display text-(length:--text-heading) leading-tight font-bold">{pl.playerThrows(thrower.name)}</h2>
           <span className="text-(--color-text-muted)">{pl.dartOfTurn(state.currentDarts.length + 1)}</span>
         </div>
@@ -44,8 +48,10 @@ export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo 
         ))}
       </ol>
       {shownName && <p className="font-display text-lg text-(--color-text-muted)">{shownName}</p>}
-      <div className="flex gap-3">
-        <div className={`flex flex-1 items-center justify-between gap-4 px-5 py-3 ${card}`}>
+      <div className={`flex gap-3 ${sharedCard}`}>
+        <div
+          className={`flex flex-1 flex-col items-start justify-center gap-1 lg:h-20 lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-5 xl:h-auto xl:py-3 ${ownCard}`}
+        >
           <span className={label}>{pl.turnTotal}</span>
           <TurnTotal darts={darts} shown={shown} />
         </div>
@@ -72,17 +78,21 @@ function DartSlot({ index, dart, waiting }: { index: number; dart: Hit | undefin
   return (
     <li
       aria-label={pl.dartSlot(index + 1)}
-      className={`flex flex-col items-center gap-1 py-3 ${
+      className={`flex h-[78px] flex-col items-center justify-center lg:h-28 lg:gap-1 xl:h-auto xl:py-3 ${
         waiting
           ? 'rounded-(--radius-card) border-(length:--border-width) border-dashed border-(--color-accent) bg-(--color-bg)'
           : card
       }`}
     >
-      <span className={label}>{pl.dartSlot(index + 1)}</span>
-      <span className={`font-display text-(length:--text-dart-fit) leading-none font-bold ${dart ? '' : 'text-(--color-text-muted)'}`}>
+      <span className={`${label} leading-tight xl:leading-normal`}>{pl.dartSlot(index + 1)}</span>
+      <span
+        className={`font-display text-[clamp(30px,8cqi,36px)] leading-none font-bold lg:text-[clamp(40px,7cqi,48px)] xl:text-(length:--text-dart-fit) ${dart ? '' : 'text-(--color-text-muted)'}`}
+      >
         {dart ? hitLabel(dart) : waiting ? '?' : ' '}
       </span>
-      <span className="text-lg text-(--color-text-muted)">{dart ? hitPoints(dart) : waiting ? pl.waitingForDart : ' '}</span>
+      <span className="text-sm leading-tight text-(--color-text-muted) lg:text-lg lg:leading-tight xl:leading-7">
+        {dart ? hitPoints(dart) : waiting ? pl.waitingForDart : ' '}
+      </span>
     </li>
   );
 }
@@ -90,7 +100,7 @@ function DartSlot({ index, dart, waiting }: { index: number; dart: Hit | undefin
 function TurnTotal({ darts, shown }: { darts: readonly Hit[]; shown: LastTurn | null }) {
   if (shown?.bust) {
     return (
-      <span className="flex items-center gap-2 font-display text-(length:--text-turn-total-fit) leading-none font-bold">
+      <span className="flex items-center gap-2 font-display text-[clamp(32px,10cqi,44px)] leading-none font-bold xl:text-(length:--text-turn-total-fit)">
         <BustIcon className="text-(--color-accent)" />
         {pl.bust}
       </span>
@@ -98,9 +108,9 @@ function TurnTotal({ darts, shown }: { darts: readonly Hit[]; shown: LastTurn | 
   }
   const total = shown?.total ?? darts.reduce((sum, dart) => sum + hitPoints(dart), 0);
   return (
-    <span className="flex items-baseline gap-4 font-display">
-      {darts.length >= 2 && <span className="text-3xl text-(--color-text-muted)">{darts.map(hitPoints).join(' + ')}</span>}
-      <span className="text-(length:--text-turn-total-fit) leading-none font-bold tabular-nums">{total}</span>
+    <span className="flex items-baseline gap-2 font-display lg:gap-4">
+      {darts.length >= 2 && <span className="text-lg text-(--color-text-muted) xl:text-3xl">{darts.map(hitPoints).join(' + ')}</span>}
+      <span className="text-[clamp(32px,10cqi,44px)] leading-none font-bold tabular-nums xl:text-(length:--text-turn-total-fit)">{total}</span>
     </span>
   );
 }
@@ -115,13 +125,16 @@ function CheckoutHint({ state }: { state: MatchSnapshot }) {
   if (!route) {
     return null;
   }
+  // Od lg siatka: etykieta i opis po lewej, chip po prawej. Na xl wraca kolumna jak na monitorze.
   return (
-    <div className={`flex flex-1 flex-col items-center gap-2 px-5 py-3 ${card}`}>
-      <span className={label}>{pl.checkout}</span>
-      <span className="rounded-(--radius-chip) bg-(--color-accent) px-6 py-1 font-display text-(length:--text-checkout-fit) leading-none font-bold text-(--color-on-accent)">
+    <div
+      className={`flex flex-1 flex-col items-end justify-center gap-1 lg:grid lg:h-20 lg:grid-cols-[minmax(0,1fr)_auto] lg:content-center lg:items-center lg:gap-x-4 lg:gap-y-0 lg:px-5 xl:flex xl:h-auto xl:flex-col xl:items-center xl:gap-2 xl:py-3 ${ownCard}`}
+    >
+      <span className={`${label} lg:col-start-1 lg:row-start-1`}>{pl.checkout}</span>
+      <span className="rounded-(--radius-chip) bg-(--color-accent) px-3 py-1 font-display text-[clamp(28px,8cqi,44px)] leading-none font-bold text-(--color-on-accent) lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:px-5 xl:px-6 xl:text-(length:--text-checkout-fit)">
         {route.map(hitLabel).join(' ')}
       </span>
-      <span className="text-(--color-text-muted)">{`${pl.darts(route.length)} ${pl.toWinLeg}`}</span>
+      <span className="text-right text-sm text-(--color-text-muted) lg:col-start-1 lg:row-start-2 lg:text-left lg:text-base">{`${pl.darts(route.length)} ${pl.toWinLeg}`}</span>
     </div>
   );
 }

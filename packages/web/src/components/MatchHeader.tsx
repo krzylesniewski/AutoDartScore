@@ -1,4 +1,5 @@
 import type { MatchSnapshot } from '@autoscore/schema';
+import { useEffect, useId, useRef, useState } from 'react';
 import { canAbandon } from '../game/can-abandon';
 import { canEndPractice } from '../game/can-end-practice';
 import { pl } from '../i18n/pl';
@@ -17,60 +18,111 @@ export interface MatchHeaderProps {
   onEndPractice?: () => void;
 }
 
-const chip = 'rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 text-(length:--text-button)';
-const button = 'flex min-h-12 items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-(length:--text-button) font-semibold';
+const chip = 'rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 text-(length:--text-button) lg:px-2 xl:px-3';
+const statusChip = `${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold whitespace-nowrap max-sm:gap-1 max-sm:px-2 max-sm:text-base`;
+const button = 'flex min-h-12 items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-(length:--text-button) font-semibold lg:px-3 xl:px-4';
 
+// Poniżej lg chipy i akcje są w rozwijanym panelu. Panel zostaje w DOM i chowa go tylko klasa, więc każdy przycisk istnieje raz.
 export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange, onAbandon, onResume, onEndPractice }: MatchHeaderProps) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  function closeAfter(action: (() => void) | undefined): () => void {
+    return () => {
+      action?.();
+      setOpen(false);
+    };
+  }
+
   return (
-    <header className="flex items-center gap-4 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-(--space-page) py-2">
-      <a href="#/" aria-label={pl.home} className="flex items-center gap-2 font-display text-(length:--text-heading) font-bold text-(--color-text)">
+    <header className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-3 py-2 sm:gap-x-3 sm:px-(--space-page) lg:flex-nowrap lg:gap-3 lg:px-4 xl:gap-4 xl:px-(--space-page)">
+      <a href="#/" aria-label={pl.home} className="flex items-center gap-2 font-display text-[24px] font-bold whitespace-nowrap text-(--color-text) xl:text-(length:--text-heading)">
         <TargetIcon className="text-(--color-accent)" />
         {pl.appName}
       </a>
-      {state && (
-        <ul className="flex flex-wrap items-center gap-2">
-          {chips(state).map((label) => (
-            <li key={label} className={`${chip} border-(--color-border-strong) text-(--color-text-muted)`}>
-              {label}
-            </li>
-          ))}
-          {state.type === 'match' && (
-            <li className={`${chip} border-(--color-text) bg-(--color-text) font-semibold text-(--color-text-inverse)`}>{pl.legNumber(state.legIndex + 1)}</li>
-          )}
-        </ul>
+      {state?.status === 'ended' && (
+        <span className={statusChip}>
+          <StopIcon className="text-(--color-accent)" />
+          {pl.statusEnded}
+        </span>
       )}
-      <div className="ml-auto flex gap-2">
-        {state && canAbandon(state) && (
-          <button type="button" onClick={onAbandon} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
-            {pl.abandonMatch}
-          </button>
+      {state?.status === 'abandoned' && (
+        <span className={statusChip}>
+          <PauseIcon className="text-(--color-accent)" />
+          {pl.statusAbandoned}
+        </span>
+      )}
+      <button
+        ref={toggleRef}
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(!open)}
+        className={`${button} ml-auto border-(--color-border-strong) bg-(--color-surface-button) max-sm:px-3 lg:hidden`}
+      >
+        <MenuIcon />
+        {pl.gameMenu}
+      </button>
+      <div
+        id={panelId}
+        className={`${open ? 'flex' : 'hidden'} basis-full flex-col gap-3 pb-1 lg:flex lg:min-w-0 lg:flex-1 lg:basis-auto lg:flex-row lg:items-center lg:gap-3 lg:pb-0 xl:gap-4`}
+      >
+        {state && (
+          <ul className="flex flex-wrap items-center gap-2">
+            {chips(state).map((label) => (
+              <li key={label} className={`${chip} border-(--color-border-strong) text-(--color-text-muted)`}>
+                {label}
+              </li>
+            ))}
+            {state.type === 'match' && (
+              <li className={`${chip} border-(--color-text) bg-(--color-text) font-semibold text-(--color-text-inverse)`}>{pl.legNumber(state.legIndex + 1)}</li>
+            )}
+          </ul>
         )}
-        {state && canEndPractice(state) && (
-          <button type="button" onClick={onEndPractice} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
-            {pl.endPractice}
-          </button>
-        )}
-        {state?.status === 'ended' && (
-          <span className={`${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold`}>
-            <StopIcon className="text-(--color-accent)" />
-            {pl.statusEnded}
-          </span>
-        )}
-        {state?.status === 'abandoned' && (
-          <>
-            <span className={`${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold`}>
-              <PauseIcon className="text-(--color-accent)" />
-              {pl.statusAbandoned}
-            </span>
-            <button type="button" onClick={onResume} className={`${button} border-(--color-text) bg-(--color-text) text-(--color-text-inverse)`}>
+        <div className="flex flex-wrap gap-2 lg:ml-auto lg:flex-nowrap lg:whitespace-nowrap">
+          {state && canAbandon(state) && (
+            <button type="button" onClick={closeAfter(onAbandon)} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
+              {pl.abandonMatch}
+            </button>
+          )}
+          {state && canEndPractice(state) && (
+            <button type="button" onClick={closeAfter(onEndPractice)} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
+              {pl.endPractice}
+            </button>
+          )}
+          {state?.status === 'abandoned' && (
+            <button type="button" onClick={closeAfter(onResume)} className={`${button} border-(--color-text) bg-(--color-text) text-(--color-text-inverse)`}>
               {pl.resumeMatch}
             </button>
-          </>
-        )}
-        <VoiceToggle enabled={voiceEnabled} onChange={onVoiceChange} />
-        <EffectsToggle enabled={effectsEnabled} onChange={onEffectsChange} />
+          )}
+          <VoiceToggle enabled={voiceEnabled} onChange={onVoiceChange} />
+          <EffectsToggle enabled={effectsEnabled} onChange={onEffectsChange} />
+        </div>
       </div>
     </header>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="inline-block h-[1em] w-[1em] shrink-0">
+      <path d="M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z" />
+    </svg>
   );
 }
 
