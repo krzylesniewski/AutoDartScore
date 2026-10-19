@@ -28,7 +28,7 @@ export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon,
   return (
     <section
       aria-labelledby="games-to-finish"
-      className="flex min-h-0 flex-1 flex-col gap-1.5 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) pt-6 pr-3 pb-3 pl-7"
+      className="@container flex flex-col gap-1.5 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) pt-4 pr-3 pb-3 pl-4 sm:pt-6 sm:pl-7 lg:min-h-0 lg:flex-1"
     >
       <div className="flex items-baseline justify-between gap-3 pr-4">
         <h2 id="games-to-finish" className={label}>
@@ -41,11 +41,11 @@ export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon,
       {games.status === 'error' && <Notice text={pl.loadMatchesFailed} />}
       {games.status === 'ready' && games.games.length === 0 && <p className="py-3 text-(--color-text-muted)">{pl.noGamesToFinish}</p>}
       {games.status === 'ready' && games.games.length > 0 && (
-        <ul className="min-h-0 flex-1 overflow-y-scroll pr-4 [scrollbar-color:var(--color-border-strong)_var(--color-surface-header)]">
+        <ul className="max-h-80 overflow-y-scroll pr-4 lg:max-h-none lg:min-h-0 lg:flex-1 [scrollbar-color:var(--color-border-strong)_var(--color-surface-header)]">
           {games.games.map((game) => {
             const row = unfinishedRow(game);
             return (
-              <li key={game.id} className="flex items-center gap-3.5 border-b border-(--color-border) py-2.5 last:border-b-0">
+              <li key={game.id} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 border-b border-(--color-border) py-2.5 last:border-b-0">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[19px] font-semibold">{row.title}</div>
                   <div className="flex items-center gap-2 text-[15px] text-(--color-text-muted)">
@@ -64,19 +64,22 @@ export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon,
                     {formatActivity(game.updatedAt, now)}
                   </time>
                 </div>
-                <button type="button" aria-label={pl.finishGame(row.title)} disabled={busy} onClick={() => onFinish(game)} className={button}>
-                  {pl.finish}
-                </button>
-                {canAbandon(game) && (
-                  <button type="button" aria-label={pl.abandonGame(row.title)} disabled={busy} onClick={() => onAbandon(game)} className={iconButton}>
-                    <BustIcon />
+                {/* W wąskiej karcie przyciski schodzą do drugiej linii, bo wiersz treningu nie mieści się w jednej. */}
+                <div className="flex w-full justify-end gap-3.5 @sm:w-auto">
+                  <button type="button" aria-label={pl.finishGame(row.title)} disabled={busy} onClick={() => onFinish(game)} className={button}>
+                    {pl.finish}
                   </button>
-                )}
-                {canEndPractice(game) && (
-                  <button type="button" aria-label={pl.endPracticeGame(row.title)} disabled={busy} onClick={() => onEndPractice(game)} className={button}>
-                    {pl.endPractice}
-                  </button>
-                )}
+                  {canAbandon(game) && (
+                    <button type="button" aria-label={pl.abandonGame(row.title)} disabled={busy} onClick={() => onAbandon(game)} className={iconButton}>
+                      <BustIcon />
+                    </button>
+                  )}
+                  {canEndPractice(game) && (
+                    <button type="button" aria-label={pl.endPracticeGame(row.title)} disabled={busy} onClick={() => onEndPractice(game)} className={button}>
+                      {pl.endPractice}
+                    </button>
+                  )}
+                </div>
               </li>
             );
           })}

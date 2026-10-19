@@ -251,4 +251,7 @@ export const pl = {
   headToHeadMatches: 'Mecze',
   headToHeadLegs: 'Legi',
   headToHeadAverage: (name: string) => `Średnia: ${name}`,
+  startingScoreHint: '301, 501 lub 701',
+  bestOfHint: 'ile legów do wygranej',
+  practiceModeHint: 'swobodne rzucanie albo zejście z 501',
 } as const;
