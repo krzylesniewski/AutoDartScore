@@ -7,7 +7,7 @@ import { EMPTY_TOTALS, type PlayerTotals } from './tally.js';
 const createdAt = '2026-10-15T18:30:00.000Z';
 
 function profile(id: string, name: string): Player {
-  return { id, name, avatar: null, guest: false, createdAt };
+  return { id, name, avatar: null, guest: false, archivedAt: null, createdAt };
 }
 
 const anna = profile('anna', 'Anna');

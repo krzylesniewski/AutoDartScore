@@ -8,7 +8,7 @@ describe('migrateToLatest', () => {
     await migrateToLatest(db);
     await migrateToLatest(db);
     const tables = await db.introspection.getTables();
-    expect(tables.map((table) => table.name).sort()).toEqual(['match_events', 'match_players', 'matches', 'players', 'throws']);
+    expect(tables.map((table) => table.name).sort()).toEqual(['match_events', 'match_players', 'matches', 'player_changes', 'players', 'throws']);
     await db.destroy();
   });
 
@@ -65,6 +65,33 @@ describe('migrateToLatest', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({ eventSeq: 3, status: 'in_progress', currentDarts: [{ segment: 20, multiplier: 3 }] });
       expect(response.json().players.map((player: { remaining: number }) => player.remaining)).toEqual([241, 301]);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('keeps the players created under 0002_match_lifecycle', async () => {
+    const db = openDatabase(':memory:');
+    await migrateTo(db, '0002_match_lifecycle');
+    const createdAt = '2026-10-15T18:30:00.000Z';
+    await db
+      .insertInto('players')
+      .values([
+        { id: 'p1', name: 'Anna', avatar: '🎯', guest: 0, created_at: createdAt },
+        { id: 'p2', name: 'Bartek', avatar: null, guest: 0, created_at: createdAt },
+      ])
+      .execute();
+
+    await migrateToLatest(db);
+    const app = await buildApp({ db });
+    try {
+      const response = await app.inject({ method: 'GET', url: '/players' });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual([
+        { id: 'p1', name: 'Anna', avatar: '🎯', guest: false, archivedAt: null, createdAt },
+        { id: 'p2', name: 'Bartek', avatar: null, guest: false, archivedAt: null, createdAt },
+      ]);
     } finally {
       await app.close();
       await db.destroy();

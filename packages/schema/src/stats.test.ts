@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MIN_LEGS_FOR_AVERAGE, MatchSummary, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsRankings, type PlayerStatLine } from './index.js';
+import { FORM_GAMES, HeadToHead, MIN_LEGS_FOR_AVERAGE, MatchSummary, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsRankings, type PlayerStatLine } from './index.js';
 
 const line: PlayerStatLine = {
   dartsThrown: 6,
@@ -145,5 +145,58 @@ describe('RankingsQuery', () => {
 
   it('rejects an unknown filter', () => {
     expect(RankingsQuery.safeParse({ type: 'bogus' }).success).toBe(false);
+  });
+});
+
+describe('HeadToHead', () => {
+  const headToHead = {
+    playerId: 'p1',
+    opponentId: 'p2',
+    matchesPlayed: 4,
+    matchesWon: 3,
+    opponentMatchesWon: 1,
+    legsWon: 7,
+    opponentLegsWon: 4,
+    average: 61.5,
+    opponentAverage: 55.25,
+    lastPlayedAt: '2026-10-15T18:30:00.000Z',
+  };
+
+  it('parses a head-to-head record', () => {
+    expect(HeadToHead.parse(headToHead)).toEqual(headToHead);
+  });
+
+  it('accepts a record without games', () => {
+    const empty = { ...headToHead, matchesPlayed: 0, matchesWon: 0, opponentMatchesWon: 0, legsWon: 0, opponentLegsWon: 0, average: null, opponentAverage: null, lastPlayedAt: null };
+    expect(HeadToHead.parse(empty)).toEqual(empty);
+  });
+
+  it('rejects a negative count', () => {
+    expect(HeadToHead.safeParse({ ...headToHead, legsWon: -1 }).success).toBe(false);
+  });
+});
+
+describe('PlayerForm', () => {
+  const point = (index: number) => ({ matchId: `m${index}`, type: 'match', createdAt: '2026-10-15T18:30:00.000Z', average: 50 + index, legs: 1 });
+
+  it('parses the form points', () => {
+    const form = { playerId: 'p1', filter: 'all', points: [point(1), { ...point(2), type: 'practice', legs: 1 }] };
+    expect(PlayerForm.parse(form)).toEqual(form);
+  });
+
+  it(`rejects more than ${FORM_GAMES} points`, () => {
+    const points = Array.from({ length: FORM_GAMES + 1 }, (_, index) => point(index));
+    expect(PlayerForm.safeParse({ playerId: 'p1', filter: 'all', points }).success).toBe(false);
+    expect(PlayerForm.safeParse({ playerId: 'p1', filter: 'all', points: points.slice(1) }).success).toBe(true);
+  });
+
+  it('rejects a point without a completed leg', () => {
+    expect(PlayerForm.safeParse({ playerId: 'p1', filter: 'all', points: [{ ...point(1), legs: 0 }] }).success).toBe(false);
+  });
+
+  it('keeps the last 20 games and defaults the filter to all', () => {
+    expect(FORM_GAMES).toBe(20);
+    expect(PlayerFormQuery.parse({})).toEqual({ type: 'all' });
+    expect(PlayerFormQuery.safeParse({ type: 'bogus' }).success).toBe(false);
   });
 });

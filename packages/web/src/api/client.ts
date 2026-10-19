@@ -1,5 +1,14 @@
-import { ApiError, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerStats, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
-import type { AbandonMatchRequest, CreateMatchRequest, CreatePlayerRequest, HitEvent, StatsFilter } from '@autoscore/schema';
+import { ApiError, HeadToHead, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
+import type {
+  AbandonMatchRequest,
+  CreateMatchRequest,
+  CreatePlayerRequest,
+  HitEvent,
+  ListPlayersQuery,
+  MatchListQuery,
+  StatsFilter,
+  UpdatePlayerRequest,
+} from '@autoscore/schema';
 
 // Vite przekierowuje /api do serwera, więc front i API mają jeden adres.
 export const API_BASE = '/api';
@@ -37,8 +46,24 @@ function postJson(body: unknown): RequestInit {
   return { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
 }
 
-export function listPlayers(): Promise<Player[]> {
-  return request('/players', Player.array());
+// Tylko podane klucze, bez pustego "?", gdy nie ma żadnego.
+function withQuery(path: string, query: Readonly<Record<string, string | undefined>>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) {
+      params.set(key, value);
+    }
+  }
+  const search = params.toString();
+  return search ? `${path}?${search}` : path;
+}
+
+export function listPlayers(query: ListPlayersQuery = {}): Promise<Player[]> {
+  return request(withQuery('/players', query), Player.array());
+}
+
+export function updatePlayer(id: string, body: UpdatePlayerRequest): Promise<Player> {
+  return request(`/players/${encodeURIComponent(id)}`, Player, { ...postJson(body), method: 'PATCH' });
 }
 
 export function createPlayer(body: CreatePlayerRequest): Promise<Player> {
@@ -49,8 +74,8 @@ export function createMatch(body: CreateMatchRequest): Promise<MatchSnapshot> {
   return request('/matches', MatchSnapshot, postJson(body));
 }
 
-export function listMatches(status?: 'unfinished'): Promise<MatchListItem[]> {
-  return request(status ? `/matches?status=${status}` : '/matches', MatchListItem.array());
+export function listMatches(query: MatchListQuery = {}): Promise<MatchListItem[]> {
+  return request(withQuery('/matches', query), MatchListItem.array());
 }
 
 export function getMatch(id: string): Promise<MatchSnapshot> {
@@ -67,6 +92,14 @@ export function undo(matchId: string): Promise<UndoResult> {
 
 export function getPlayerStats(playerId: string, filter: StatsFilter): Promise<PlayerStats> {
   return request(`/players/${encodeURIComponent(playerId)}/stats?type=${filter}`, PlayerStats);
+}
+
+export function getHeadToHead(playerId: string, opponentId: string): Promise<HeadToHead> {
+  return request(`/players/${encodeURIComponent(playerId)}/head-to-head/${encodeURIComponent(opponentId)}`, HeadToHead);
+}
+
+export function getPlayerForm(playerId: string, filter: StatsFilter): Promise<PlayerForm> {
+  return request(`/players/${encodeURIComponent(playerId)}/form?type=${filter}`, PlayerForm);
 }
 
 export function getRankings(filter: StatsFilter): Promise<StatsRankings> {

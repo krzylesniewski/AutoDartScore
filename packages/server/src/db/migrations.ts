@@ -100,6 +100,22 @@ const migrations: Record<string, Migration> = {
       await typed.transaction().execute(rebuildMatchEvents);
     },
   },
+  // Wiersz players zostaje taki, jak przy utworzeniu gracza. Zmiany profilu są dopisywane tutaj.
+  '0003_player_changes': {
+    async up(db: Kysely<unknown>) {
+      await db.schema
+        .createTable('player_changes')
+        .addColumn('player_id', 'text', (col) => col.notNull().references('players.id'))
+        .addColumn('seq', 'integer', (col) => col.notNull())
+        .addColumn('name', 'text', (col) => col.notNull())
+        .addColumn('avatar', 'text')
+        .addColumn('guest', 'integer', (col) => col.notNull())
+        .addColumn('archived_at', 'text')
+        .addColumn('created_at', 'text', (col) => col.notNull())
+        .addPrimaryKeyConstraint('player_changes_pk', ['player_id', 'seq'])
+        .execute();
+    },
+  },
 };
 
 const provider: MigrationProvider = {

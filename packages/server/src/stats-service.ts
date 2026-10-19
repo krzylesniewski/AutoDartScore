@@ -1,16 +1,20 @@
 import { isGameFinished } from '@autoscore/engine';
-import type { MatchSummary, MatchType, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
-import { notFound } from './errors.js';
-import { effectiveThrows, lastSeq, replayMatch } from './replay.js';
+import type { HeadToHead, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
+import { HttpError, notFound } from './errors.js';
+import { effectiveThrows, lastActivityAt, lastSeq, replayMatch } from './replay.js';
 import { completedPlayerLegs } from './stats/completed-legs.js';
+import { buildForm, type FormGame } from './stats/form.js';
+import { buildHeadToHead, type HeadToHeadGame } from './stats/head-to-head.js';
 import { buildRankings } from './stats/rankings.js';
-import { EMPTY_TOTALS, mergeTotals, tallyGame, toStatLine } from './stats/tally.js';
+import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine } from './stats/tally.js';
 import type { Store, StoredMatch } from './store/store.js';
 
 export interface StatsService {
   playerStats(playerId: string, filter: StatsFilter): Promise<PlayerStats>;
   matchSummary(matchId: string): Promise<MatchSummary>;
   rankings(filter: StatsFilter): Promise<StatsRankings>;
+  headToHead(playerId: string, opponentId: string): Promise<HeadToHead>;
+  playerForm(playerId: string, filter: StatsFilter): Promise<PlayerForm>;
 }
 
 interface Dependencies {
@@ -30,32 +34,60 @@ export function createStatsService({ store }: Dependencies): StatsService {
     const log = await store.loadLog(match.id);
     const { state, events } = replayMatch(match, effectiveThrows(log));
     const playerIds = match.players.map((player) => player.id);
-    return { seq: lastSeq(log), finished: isGameFinished(state), playerIds, events, tally: tallyGame(match.type, playerIds, events) };
+    return {
+      seq: lastSeq(log),
+      finished: isGameFinished(state),
+      lastActivityAt: lastActivityAt(log, match),
+      playerIds,
+      events,
+      tally: tallyGame(match.type, playerIds, events),
+    };
+  }
+
+  async function requirePlayer(playerId: string): Promise<void> {
+    const [player] = await store.findPlayers([playerId]);
+    if (!player) {
+      throw notFound(`Player ${playerId}`);
+    }
+  }
+
+  // Gry gracza, które wchodzą do statystyk, w kolejności utworzenia.
+  async function statsGames(playerId: string, filter: StatsFilter): Promise<StoredMatch[]> {
+    const matches = [];
+    for (const matchId of await store.findMatchIdsForPlayer(playerId, FILTER_TYPES[filter])) {
+      const match = await store.findMatch(matchId);
+      if (match) {
+        matches.push(match);
+      }
+    }
+    return matches;
   }
 
   return {
     async playerStats(playerId, filter) {
-      const [player] = await store.findPlayers([playerId]);
-      if (!player) {
-        throw notFound(`Player ${playerId}`);
-      }
+      await requirePlayer(playerId);
       let totals = EMPTY_TOTALS;
+      let legPoints = 0;
+      let legDarts = 0;
       let matchesPlayed = 0;
       let matchesWon = 0;
-      for (const matchId of await store.findMatchIdsForPlayer(playerId, FILTER_TYPES[filter])) {
-        const match = await store.findMatch(matchId);
-        if (!match) {
-          continue;
-        }
-        const { finished, tally } = await replayed(match);
+      for (const match of await statsGames(playerId, filter)) {
+        const { finished, playerIds, events, tally } = await replayed(match);
         totals = mergeTotals(totals, tally.players.get(playerId) ?? EMPTY_TOTALS);
-        // Solo 501 nie jest rozegranym meczem, a niedokończona gra wnosi tylko zamknięte tury.
+        for (const leg of completedPlayerLegs(match.type, playerIds, events)) {
+          if (leg.playerId === playerId) {
+            legPoints += leg.points;
+            legDarts += leg.darts;
+          }
+        }
+        // Solo 501 nie jest rozegranym meczem. Niedokończona gra wnosi zamknięte tury do rzutek i rekordów,
+        // a do średniej tylko ukończone legi, jak w rankingu.
         if (finished && match.type !== 'practice') {
           matchesPlayed += 1;
           matchesWon += tally.winnerId === playerId ? 1 : 0;
         }
       }
-      return { ...toStatLine(totals), playerId, filter, matchesPlayed, matchesWon };
+      return { ...toStatLine(totals), average: threeDartAverage(legPoints, legDarts), playerId, filter, matchesPlayed, matchesWon };
     },
 
     async matchSummary(matchId) {
@@ -84,7 +116,43 @@ export function createStatsService({ store }: Dependencies): StatsService {
         const { playerIds, events, tally } = await replayed(match);
         games.push({ legs: completedPlayerLegs(match.type, playerIds, events), tally });
       }
-      return { filter, ...buildRankings({ players: await store.listPlayers(), games }) };
+      // Zarchiwizowany gracz zostaje w rankingu. Ukrywa go tylko wybór graczy do nowej gry.
+      return { filter, ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games }) };
+    },
+
+    async headToHead(playerId, opponentId) {
+      if (playerId === opponentId) {
+        throw new HttpError(400, 'invalid_request', 'Head-to-head needs two different players');
+      }
+      await requirePlayer(playerId);
+      await requirePlayer(opponentId);
+      const games: HeadToHeadGame[] = [];
+      const playedAt: string[] = [];
+      for (const match of await statsGames(playerId, 'match')) {
+        if (!match.players.some((player) => player.id === opponentId)) {
+          continue;
+        }
+        const { finished, events, tally, lastActivityAt } = await replayed(match);
+        // Porzucona albo trwająca gra nie ma zwycięzcy, więc nie wchodzi do bilansu.
+        if (!finished) {
+          continue;
+        }
+        games.push({ winnerId: tally.winnerId, events });
+        playedAt.push(lastActivityAt);
+      }
+      // Daty ISO w UTC porównują się jak tekst.
+      return { ...buildHeadToHead({ playerId, opponentId, games }), lastPlayedAt: playedAt.sort().at(-1) ?? null };
+    },
+
+    async playerForm(playerId, filter) {
+      await requirePlayer(playerId);
+      const games: FormGame[] = [];
+      for (const match of await statsGames(playerId, filter)) {
+        const { playerIds, events } = await replayed(match);
+        const legs = completedPlayerLegs(match.type, playerIds, events).filter((leg) => leg.playerId === playerId);
+        games.push({ matchId: match.id, type: match.type, createdAt: match.createdAt, legs });
+      }
+      return { playerId, filter, points: buildForm(games) };
     },
   };
 }

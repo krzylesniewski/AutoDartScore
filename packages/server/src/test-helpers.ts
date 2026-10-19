@@ -103,6 +103,10 @@ export function endPractice(app: FastifyInstance, matchId: string) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/end` });
 }
 
+export function patchPlayer(app: FastifyInstance, playerId: string, payload: object) {
+  return app.inject({ method: 'PATCH', url: `/players/${playerId}`, payload });
+}
+
 export function listMatches(app: FastifyInstance, query = '') {
   return app.inject({ method: 'GET', url: `/matches${query}` });
 }
@@ -113,7 +117,7 @@ export async function getMatch(app: FastifyInstance, matchId: string): Promise<M
   return response.json();
 }
 
-export async function countRows(db: Kysely<Database>, table: 'throws' | 'match_events'): Promise<number> {
+export async function countRows(db: Kysely<Database>, table: 'throws' | 'match_events' | 'player_changes'): Promise<number> {
   const row = await db.selectFrom(table).select((eb) => eb.fn.countAll<number>().as('count')).executeTakeFirstOrThrow();
   return Number(row.count);
 }

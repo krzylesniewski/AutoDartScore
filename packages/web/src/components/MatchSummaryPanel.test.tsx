@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { casual, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
 import { MatchSummaryPanel } from './MatchSummaryPanel';
 
@@ -139,5 +139,56 @@ describe('MatchSummaryPanel', () => {
   it('shows an error text when the summary fails', () => {
     render(<MatchSummaryPanel state={match} summary={null} error />);
     expect(screen.getByText('Nie udało się pobrać podsumowania')).toBeTruthy();
+  });
+});
+
+describe('MatchSummaryPanel: saving a guest', () => {
+  let requests: { url: string; method: string; body: unknown }[];
+  let status: number;
+
+  beforeEach(() => {
+    requests = [];
+    status = 200;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        const body: unknown = typeof init.body === 'string' ? JSON.parse(init.body) : undefined;
+        requests.push({ url, method: init.method ?? 'GET', body });
+        const response =
+          status === 200
+            ? { id: 'p2', name: 'Bartek', avatar: null, guest: false, archivedAt: null, createdAt: '2026-10-15T18:30:00.000Z' }
+            : { error: 'internal_error', message: 'Internal server error' };
+        return new Response(JSON.stringify(response), { status, headers: { 'content-type': 'application/json' } });
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const withGuest = snapshot({ ...match, players: [player('p1', 'Anna', { legsWon: 1 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, guest: true })] });
+
+  it('saves a guest with PATCH guest false and then says Zapisano', async () => {
+    render(<MatchSummaryPanel state={withGuest} summary={matchSummary} error={false} />);
+    expect(screen.queryByRole('button', { name: 'Zapisz gracza: Anna' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz gracza: Bartek' }));
+    expect(await screen.findByText('Zapisano')).toBeTruthy();
+    expect(requests).toEqual([{ url: '/api/players/p2', method: 'PATCH', body: { guest: false } }]);
+    expect(screen.queryByRole('button', { name: /Zapisz gracza/ })).toBeNull();
+  });
+
+  it('shows a warning when saving fails', async () => {
+    status = 500;
+    render(<MatchSummaryPanel state={withGuest} summary={matchSummary} error={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz gracza: Bartek' }));
+    expect(await screen.findByText('Nie udało się zapisać gracza')).toBeTruthy();
+    expect(screen.queryByText('Zapisano')).toBeNull();
+  });
+
+  it('has no save button without guests', () => {
+    render(<MatchSummaryPanel state={match} summary={matchSummary} error={false} />);
+    expect(screen.queryByRole('button', { name: /Zapisz gracza/ })).toBeNull();
+    expect(screen.queryByText('Zapisz gracza')).toBeNull();
   });
 });

@@ -201,16 +201,47 @@ describe('AbandonMatchRequest', () => {
 
 describe('MatchListItem and MatchListQuery', () => {
   it('parses a list item', () => {
-    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun } = snapshot;
-    const item = { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, updatedAt: '2026-10-15T18:31:00.000Z' };
+    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, winnerId, placements, endedAt } = snapshot;
+    const item = {
+      id,
+      type,
+      practiceMode,
+      startingScore,
+      legsToWin,
+      createdAt,
+      status,
+      abandonment,
+      currentPlayerId,
+      legIndex,
+      players,
+      freeRun,
+      winnerId,
+      placements,
+      endedAt,
+      updatedAt: '2026-10-15T18:31:00.000Z',
+    };
     expect(MatchListItem.parse(item)).toEqual(item);
     expect(MatchListItem.safeParse({ ...item, updatedAt: undefined }).success).toBe(false);
   });
 
-  it('accepts only the unfinished filter', () => {
+  it('requires the result fields', () => {
+    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, winnerId, placements, endedAt } = snapshot;
+    const item = { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, winnerId, placements, endedAt, updatedAt: '2026-10-15T18:31:00.000Z' };
+    expect(MatchListItem.safeParse({ ...item, winnerId: undefined }).success).toBe(false);
+    expect(MatchListItem.safeParse({ ...item, placements: undefined }).success).toBe(false);
+    expect(MatchListItem.safeParse({ ...item, endedAt: undefined }).success).toBe(false);
+  });
+
+  it('accepts only the unfinished status filter', () => {
     expect(MatchListQuery.parse({})).toEqual({});
     expect(MatchListQuery.parse({ status: 'unfinished' })).toEqual({ status: 'unfinished' });
     expect(MatchListQuery.safeParse({ status: 'finished' }).success).toBe(false);
+  });
+
+  it('filters by player and type together with the status', () => {
+    expect(MatchListQuery.parse({ status: 'unfinished', playerId: 'p1', type: 'casual' })).toEqual({ status: 'unfinished', playerId: 'p1', type: 'casual' });
+    expect(MatchListQuery.safeParse({ type: 'bogus' }).success).toBe(false);
+    expect(MatchListQuery.safeParse({ playerId: '' }).success).toBe(false);
   });
 });
 

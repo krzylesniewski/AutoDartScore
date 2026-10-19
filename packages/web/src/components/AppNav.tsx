@@ -3,11 +3,12 @@ import { readVoiceEnabled } from '../audio/use-announcer';
 import { pl } from '../i18n/pl';
 import { TargetIcon } from './icons';
 
-export type AppPage = 'new-game' | 'stats';
+export type AppPage = 'new-game' | 'stats' | 'history';
 
 const LINKS: readonly { page: AppPage; href: string; label: string }[] = [
   { page: 'new-game', href: '#/', label: pl.newGame },
   { page: 'stats', href: '#/stats', label: pl.stats },
+  { page: 'history', href: '#/history', label: pl.history },
 ];
 
 const item = 'flex min-h-11 items-center rounded-(--radius-chip) px-4';

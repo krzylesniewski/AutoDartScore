@@ -132,3 +132,19 @@ export function PlusIcon({ className }: IconProps) {
     </Svg>
   );
 }
+
+export function ArchiveIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M3 3h18v5H3zm1 6h16v12H4zm5 3v2h6v-2z" />
+    </Svg>
+  );
+}
+
+export function CheckIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
+    </Svg>
+  );
+}

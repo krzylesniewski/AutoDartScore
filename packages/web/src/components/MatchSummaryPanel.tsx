@@ -1,7 +1,9 @@
-import type { MatchSnapshot, MatchSummary, MatchSummaryPlayer } from '@autoscore/schema';
+import type { MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer } from '@autoscore/schema';
+import { useState } from 'react';
+import { updatePlayer } from '../api/client';
 import { formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../game/format-stat';
 import { pl } from '../i18n/pl';
-import { TrophyIcon } from './icons';
+import { CheckIcon, TrophyIcon, WarningIcon } from './icons';
 
 const NEW_GAME_HREF = '#/';
 
@@ -45,6 +47,11 @@ export function MatchSummaryPanel({ state, summary, error }: MatchSummaryPanelPr
         {pl.matchOver}
       </h2>
       <MatchResult state={state} name={name} />
+      {state.players
+        .filter((player) => player.guest)
+        .map((player) => (
+          <SaveGuest key={player.id} player={player} />
+        ))}
       {current ? <SummaryTable state={state} summary={current} /> : <p className="text-(--color-text-muted)">{error ? pl.summaryFailed : pl.loading}</p>}
       {current && current.legs.length > 0 && <LegList summary={current} name={name} />}
       <a href={NEW_GAME_HREF} className={link}>
@@ -139,4 +146,47 @@ function MatchResult({ state, name }: { state: MatchSnapshot; name: (playerId: s
     );
   }
   return <p className="text-2xl">{state.players[0]?.name}</p>;
+}
+
+// Zapisany gość trafia na listę graczy, a jego wcześniejsze rzutki zaczynają się liczyć do statystyk.
+function SaveGuest({ player }: { player: MatchSnapshotPlayer }) {
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  async function save(): Promise<void> {
+    setStatus('saving');
+    try {
+      await updatePlayer(player.id, { guest: false });
+      setStatus('saved');
+    } catch {
+      setStatus('error');
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-xl">
+      <span>{player.name}</span>
+      {status === 'saved' ? (
+        <span className="flex items-center gap-2 font-semibold">
+          <CheckIcon className="text-(--color-status-ok)" />
+          {pl.playerSaved}
+        </span>
+      ) : (
+        <button
+          type="button"
+          aria-label={pl.savePlayerOf(player.name)}
+          disabled={status === 'saving'}
+          onClick={() => void save()}
+          className="flex min-h-11 items-center rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-4 font-semibold disabled:opacity-40"
+        >
+          {pl.savePlayer}
+        </button>
+      )}
+      {status === 'error' && (
+        <span className="flex items-center gap-2 text-(--color-accent)">
+          <WarningIcon />
+          {pl.savePlayerFailed}
+        </span>
+      )}
+    </div>
+  );
 }

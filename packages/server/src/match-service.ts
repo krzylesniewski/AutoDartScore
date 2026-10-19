@@ -287,13 +287,36 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
     async list(query) {
       const items: MatchListItem[] = [];
       for (const match of await store.listMatches()) {
+        if (query.type !== undefined && match.type !== query.type) {
+          continue;
+        }
+        if (query.playerId !== undefined && !match.players.some((player) => player.id === query.playerId)) {
+          continue;
+        }
         const { game, seq, abandonment, endedAt, updatedAt } = await load(match);
         const state = toSnapshot(match, game, seq, abandonment, endedAt);
         if (query.status === 'unfinished' && (state.status === 'finished' || state.status === 'ended')) {
           continue;
         }
-        const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, currentPlayerId, legIndex, players, freeRun } = state;
-        items.push({ id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, updatedAt });
+        const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, currentPlayerId, legIndex, players, freeRun, winnerId, placements } = state;
+        items.push({
+          id,
+          type,
+          practiceMode,
+          startingScore,
+          legsToWin,
+          createdAt,
+          status,
+          abandonment,
+          currentPlayerId,
+          legIndex,
+          players,
+          freeRun,
+          winnerId,
+          placements,
+          endedAt,
+          updatedAt,
+        });
       }
       return items.sort((a, b) => (a.updatedAt === b.updatedAt ? a.id.localeCompare(b.id) : b.updatedAt.localeCompare(a.updatedAt)));
     },
