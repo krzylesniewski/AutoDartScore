@@ -54,7 +54,7 @@ briefing:
       kind: markdown
       tag: highest-turn
     # Tylko dla PR-ów z briefTags: [rwd].
-    - title: RWD trzech ekranów, zakres i podział plików (wiążący dla P15-P17; tylko układ, bez nowych funkcji poza Rewanżem)
+    - title: RWD ekranów, zakres i podział plików (wiążący dla P15-P17, P19 i P20; tylko układ, bez nowych funkcji poza Rewanżem)
       path: ~/Documents/00_Nauka/AutoScoreDart/design/rwd.md
       kind: markdown
       tag: rwd
@@ -255,3 +255,27 @@ prs:
     changeset: none
     scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**']
     briefTags: [highest-turn]
+
+  # RWD statystyk: ranking i karta gracza (design/rwd.md, sekcja P19). Bez makiety RWD, według zasad wspólnych.
+  - id: P19
+    branch: feat/web-rwd-stats
+    title: 'feat(web): responsive statistics screens'
+    brief: briefs/P19.md
+    deps: [P17]
+    priority: 6
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  # Uzupełnienie po P17: zamknięcie i średnie w kartach legów, role="alert" przy błędzie Rewanżu (design/rwd.md, sekcja P20).
+  - id: P20
+    branch: fix/web-match-end-legs
+    title: 'fix(web): leg checkout and averages on the match end view'
+    brief: briefs/P20.md
+    deps: [P17]
+    priority: 6
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
