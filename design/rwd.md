@@ -1,6 +1,6 @@
-# RWD: trzy ekrany na telefon, tablet i monitor
+# RWD: ekrany na telefon, tablet i monitor
 
-Zastępuje `plan-wdrozenia-p15-p17.md`. Trzy niezależne zadania (P15, P16, P17). Każde dotyczy jednego ekranu i ma własne pliki, więc mogą iść równolegle, w dowolnej kolejności.
+Zastępuje `plan-wdrozenia-p15-p17.md`. Niezależne zadania: P15, P16 i P17 (zrobione), potem P19 (statystyki) i P20 (uzupełnienie widoku końca meczu). Każde dotyczy jednego ekranu i ma własne pliki, więc mogą iść równolegle, w dowolnej kolejności.
 
 - Makiety: `design/mockups/RWD/` (wersja tablet 1180×820). **To wskazówka układu, a nie lista funkcji.** Element makiety, którego aplikacja dziś nie ma, nie jest wdrażany. Jedyny wyjątek to przyciski „Rewanż” i „Nowy mecz” w P17.
 - Kolory, fonty i promienie tylko z tokenów `design/theme.css`, bez kolorów wpisanych na sztywno. Liczby i imiona na makietach są przykładowe.
@@ -38,9 +38,11 @@ Każde zadanie sprawdza swój ekran na czterech szerokościach: 390×844, 768×1
 | `HomeScreen`, `AppNav`, `NewGameForm`, `GameSetupSummary`, `UnfinishedGames`, `StartBar` | P15 |
 | `GameScreen` (poza jednym warunkiem z P17), `MatchHeader`, `Scoreboard`, `TurnPanel`, `Keypad`, `MatchStatsPanel`, `EventBanner` | P16 |
 | nowy `MatchEndView` (i jego testy), warunek w `GameScreen`, który go pokazuje, nowe funkcje w `api/client.ts` (tylko dopisane) | P17 |
+| `StatsScreen`, `RankingBoard`, `PlayerProfile`, `HeadToHeadPanel`, `FormChart`, `MatchHistoryList` | P19 |
+| `MatchEndView` (i jego testy) | P20 |
 | `i18n/pl.ts` | wszyscy, tylko dopisywanie nowych kluczy, bez zmiany istniejących |
 
-Zadanie nie zmienia plików innego właściciela. Ekrany statystyk i historii (`StatsScreen`, `HistoryScreen`) nie wchodzą w zakres. Używają `AppNav`, więc P15 nie może ich zepsuć.
+Zadanie nie zmienia plików innego właściciela. P15-P17 nie obejmowały ekranów statystyk i historii (`StatsScreen`, `HistoryScreen`). Statystyki robi P19. `HistoryScreen` zostaje poza zakresem, ale używa `MatchHistoryList` z P19, więc P19 nie może go zepsuć. `AppNav` należy do P15 (zrobione) i P19 go nie zmienia.
 
 ---
 
@@ -139,3 +141,54 @@ Zadanie nie zmienia plików innego właściciela. Ekrany statystyk i historii (`
 - [ ] `pnpm test`, `pnpm typecheck` i `pnpm lint` przechodzą.
 
 **Poza zakresem:** czas trwania meczu, rewanż z zamianą rozpoczynającego, rewanż dla zabawy i treningu, nowy widok podsumowania zabawy.
+
+---
+
+## P19: statystyki na wszystkich szerokościach
+
+**Cel:** oba widoki zakładki statystyk działają na telefonie i tablecie: ranking (`#/stats`) i karta gracza (`#/stats/:playerId`). Makiet RWD dla statystyk nie ma. Wzorcem monitora jest `design/mockups/theme-a-stats.html` (+ `.png`), a układ na mniejsze szerokości wynika z zasad wspólnych powyżej. Nic nie dochodzi i nic nie znika.
+
+**Ranking (`StatsScreen`, `RankingBoard`):**
+- **Monitor (≥ 1280 px):** bez zmian.
+- **Tablet (1024-1279 px):** dwie kolumny jak dziś (ranking i kafle 2 × 2), ale bez ucinania treści przy 820 px wysokości. Jeśli całość się nie mieści, przewija się `main` (bez `overflow-hidden` poniżej `xl`), a kafle i lista rankingu nie są przycinane.
+- **Telefon i pośredni (< 1024 px):** jedna kolumna: tytuł z podtytułem, filtr typu gier, ranking, kafle (jedna kolumna poniżej 640 px, 2 × 2 od 640 px). Mniejszy padding strony (np. `px-4`, od `sm:` większy) i tytuł skalowany przez `clamp()` zamiast stałych 56 px. Filtr zawija się w kilka rzędów bez poziomego przewijania.
+- Wiersz rankingu (pozycja, awatar, imię, wartość) przez container query: w wąskim kontenerze długie imię się skraca albo łamie, a wartość zostaje widoczna i nie nachodzi na imię.
+
+**Karta gracza (`StatsScreen` w widoku gracza, `PlayerProfile`, `HeadToHeadPanel`, `FormChart`, `MatchHistoryList`):**
+- **Monitor:** bez zmian (kolumna `max-w-4xl`).
+- **Tablet:** jak monitor, z odstępami dopasowanymi do szerokości.
+- **Telefon i pośredni:** jedna kolumna z mniejszym paddingiem. Lista graczy zawija się w rzędy przycisków ≥ 44 px. Statystyki gracza, head-to-head i historia gier mieszczą się bez poziomego przewijania strony: tabele i listy zmieniają układ przez container queries (np. wiersz historii w dwóch liniach) albo przewijają się w swoim kontenerze. `FormChart` skaluje się do szerokości kontenera, a etykiety osi pozostają czytelne.
+- Akcje profilu („Edytuj profil”, „Archiwizuj”, „Przywróć”) i ich okna dialogowe mieszczą się na 390 px.
+
+**Ekran historii (`#/history`):** poza zakresem, ale korzysta z `MatchHistoryList`. Zmiany w tym komponencie nie mogą zepsuć historii: ta sama treść wierszy i ten sam link „Szczegóły”, a na monitorze ten sam wygląd.
+
+**Kryteria akceptacji:**
+- [ ] Na 1440×810 ranking i karta gracza wyglądają jak dziś.
+- [ ] Na 1180×820 ranking ma dwie kolumny i nic nie jest ucięte (da się przewinąć do ostatniego kafla).
+- [ ] Na 390×844 i 768×1024 oba widoki mają jedną kolumnę i brak poziomego przewijania, a wszystkie filtry, przyciski i linki są dostępne.
+- [ ] Ekran historii na 1440×810 wygląda i działa jak dziś.
+- [ ] `api/**`, `game/**` i dane ze statystyk bez zmian.
+- [ ] Istniejące testy `StatsScreen` i `HistoryScreen` przechodzą bez zmiany znaczenia. Nowe testy sprawdzają klasy układu: jedna kolumna bez prefiksu, `@container` w wierszu rankingu, brak `overflow-hidden` poniżej `xl`.
+- [ ] `pnpm test`, `pnpm typecheck` i `pnpm lint` przechodzą.
+
+**Poza zakresem:** nowe statystyki, kafle i filtry, zmiany w API, ekran historii (poza tym, że nie może się zepsuć), `AppNav`.
+
+---
+
+## P20: widok końca meczu, przywrócenie danych legów i dostępność
+
+**Cel:** widok końca meczu 1v1 (`MatchEndView`, P17) pokazuje wszystko, co przed P17 pokazywało podsumowanie meczu. Karty legów zgubiły dwie informacje. Bez zmian w układzie i bez nowych funkcji.
+
+**Zmiany (tylko `components/MatchEndView.tsx`, jego testy i nowe klucze w `i18n/pl.ts`):**
+1. **Zamknięcie w karcie lega:** obok zwycięzcy i liczby rzutek pokazujemy zamknięcie z `leg.checkout` (np. „zamknięcie 121”), tak jak dawne `pl.legResult`.
+2. **Średnie w legu:** pod tą linią średnie obu graczy w tym legu z `leg.averages` (np. „Marek 74,2 · Ola 58,0”), przygaszonym tekstem i w formacie `formatAverage`, jak dawna lista legów w `MatchSummaryPanel`.
+3. **Błąd Rewanżu:** komunikat o nieudanym utworzeniu meczu (`pl.rematchFailed`) dostaje `role="alert"`, żeby czytnik ekranu go ogłosił.
+4. Karty legów nadal mieszczą się na każdej szerokości: na telefonie dłuższy tekst łamie się w karcie, bez poziomego przewijania.
+
+**Kryteria akceptacji:**
+- [ ] Test: karta lega pokazuje zwycięzcę, liczbę rzutek, zamknięcie i średnie obu graczy z danych podsumowania.
+- [ ] Test: po nieudanym Rewanżu komunikat ma `role="alert"`.
+- [ ] `MatchSummaryPanel`, `GameScreen` i `api/**` bez zmian.
+- [ ] `pnpm test`, `pnpm typecheck` i `pnpm lint` przechodzą.
+
+**Poza zakresem:** usuwanie nieosiągalnych gałęzi 1v1 w `MatchSummaryPanel` (osobne sprzątanie), czas trwania meczu, zmiany w API.
