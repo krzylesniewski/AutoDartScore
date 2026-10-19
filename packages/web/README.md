@@ -24,7 +24,7 @@ Routing przez hash w `src/App.tsx`:
 ## Struktura
 
 - `src/api/`: klient REST, generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook podsumowania meczu.
-- `src/audio/`: głos przez Web Speech API, efekty przez Web Audio API, hook `useAnnouncer`.
+- `src/audio/`: głos z nagrań (`recorded-speaker.ts`) z Web Speech API jako zapasem, efekty przez Web Audio API, hook `useAnnouncer`.
 - `src/components/`: górna nawigacja, avatar, formularz nowej gry z podsumowaniem, okno nowego gracza, lista gier do dokończenia, historia gier (`MatchHistoryList`), ranking, profil gracza (`PlayerProfile`) z oknami edycji i archiwizacji, wykres formy (`FormChart`), bilans 1v1 (`HeadToHeadPanel`), pasek wyników, panel tury, klawiatura, nagłówek gry, okna porzucenia meczu i zakończenia treningu, panele statystyk i podsumowania meczu, przełączniki, ikony.
 - `src/game/`: podpowiedź zamknięcia, etykiety trafień, kolejność paska wyników, formatowanie statystyk, stan formularza nowej gry, teksty i data aktywności na liście gier do dokończenia, teksty wiersza historii (`history-row.ts`), współrzędne wykresu formy (`form-chart.ts`), reguły porzucenia i zakończenia treningu.
 - `src/screens/`: `HomeScreen`, `GameScreen`, `StatsScreen` i `HistoryScreen`.
@@ -32,7 +32,7 @@ Routing przez hash w `src/App.tsx`:
 
 ## Dźwięk
 
-Głos i efekty są domyślnie włączone na każdym urządzeniu. Wybór z przełączników zostaje w `localStorage` pod kluczami `autoscore.voice` i `autoscore.effects`. Na drugim ekranie wyłącz je ręcznie, żeby wynik nie był czytany dwa razy. Nic nie wyłącza ich automatycznie. Logikę komunikatów dostarcza [@autoscore/audio](../audio/README.md).
+Głos i efekty są domyślnie włączone na każdym urządzeniu. Wybór z przełączników zostaje w `localStorage` pod kluczami `autoscore.voice` i `autoscore.effects`. Na drugim ekranie wyłącz je ręcznie, żeby wynik nie był czytany dwa razy. Nic nie wyłącza ich automatycznie. Głos gra nagrania z `public/audio/pl/`. Gdy nagrania brak albo nie da się go odtworzyć (błąd sieci, blokada autoodtwarzania), ten sam komunikat czyta Web Speech API. Ekran gry wczytuje nagrania zdarzeń od razu, a nagrania sum przy pierwszym użyciu. Logikę komunikatów dostarcza [@autoscore/audio](../audio/README.md).
 
 ## Testy
 

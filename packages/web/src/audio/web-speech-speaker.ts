@@ -1,5 +1,3 @@
-import type { Speaker } from '@autoscore/audio';
-
 const LANG = 'pl-PL';
 
 // jsdom i starsze przeglądarki nie mają Web Speech API. Wtedy głos milczy zamiast rzucać błąd.
@@ -7,7 +5,12 @@ function synthesis(): SpeechSynthesis | null {
   return typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined' ? null : speechSynthesis;
 }
 
-export function createWebSpeechSpeaker(): Speaker {
+export interface TextSpeaker {
+  speak(text: string): void;
+  cancel(): void;
+}
+
+export function createWebSpeechSpeaker(): TextSpeaker {
   return {
     speak(text) {
       const speech = synthesis();

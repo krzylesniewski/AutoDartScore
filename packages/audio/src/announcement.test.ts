@@ -1,6 +1,6 @@
 import type { Bust, CasualFinished, DomainEvent, Hit, LegWon, MatchWon, PlayerFinished, TurnCompleted } from '@autoscore/schema';
-import { describe, expect, it } from 'vitest';
-import { announcementFor } from './index.js';
+import { describe, expect, it, vi } from 'vitest';
+import { announcementFor, spokenNumber } from './index.js';
 
 const T20: Hit = { segment: 20, multiplier: 3 };
 const D20: Hit = { segment: 20, multiplier: 2 };
@@ -28,37 +28,65 @@ const casualFinished: CasualFinished = {
   ],
 };
 
+const first = () => 0;
+const last = () => 0.999;
+
 describe('announcementFor', () => {
-  it('reads only the winner on the deciding 1v1 checkout', () => {
+  it('plays the first winner clip on the deciding 1v1 checkout for random 0', () => {
     const events: DomainEvent[] = [turn(40, [D20]), legWon, matchWon];
-    expect(announcementFor(events)).toEqual({ kind: 'winner', text: 'Zwycięzca' });
+    expect(announcementFor(events, first)).toEqual({ kind: 'winner', text: 'Zwycięzca', clip: 'events/winner_1.mp3' });
   });
 
-  it('reads the total on a leg checkout that does not end the match', () => {
-    expect(announcementFor([turn(40, [D20]), legWon])).toEqual({ kind: 'score', text: 'czterdzieści' });
+  it('plays the second winner clip on the deciding 1v1 checkout for random 0.999', () => {
+    const events: DomainEvent[] = [turn(40, [D20]), legWon, matchWon];
+    expect(announcementFor(events, last)).toEqual({ kind: 'winner', text: 'Zwycięzca', clip: 'events/winner_2.mp3' });
   });
 
-  it('reads the winner for the first casual place', () => {
-    expect(announcementFor([turn(40, [D20]), finished(1)])).toEqual({ kind: 'winner', text: 'Zwycięzca' });
+  it('plays a winner clip for the first casual place', () => {
+    expect(announcementFor([turn(40, [D20]), finished(1)], first)).toEqual({ kind: 'winner', text: 'Zwycięzca', clip: 'events/winner_1.mp3' });
   });
 
-  it('reads the total for the second casual place that ends the game', () => {
-    expect(announcementFor([turn(40, [D20]), finished(2), casualFinished])).toEqual({ kind: 'score', text: 'czterdzieści' });
+  it.each([
+    [0, 'events/bust_1.mp3'],
+    [0.5, 'events/bust_2.mp3'],
+    [0.999, 'events/bust_3.mp3'],
+  ])('plays a bust clip for random %s', (value, clip) => {
+    expect(announcementFor([bust], () => value)).toEqual({ kind: 'bust', text: 'Bust', clip });
   });
 
-  it('reads the total on a Solo 501 checkout', () => {
-    expect(announcementFor([turn(100, [T20, D20]), legWon])).toEqual({ kind: 'score', text: 'sto' });
+  it.each<[string, DomainEvent[]]>([
+    ['a leg checkout that does not end the match', [turn(40, [D20]), legWon]],
+    ['a Solo 501 checkout', [turn(100, [T20, D20]), legWon]],
+    ['the second casual place alone', [turn(40, [D20]), finished(2)]],
+    ['the second casual place that ends the game', [turn(40, [D20]), finished(2), casualFinished]],
+  ])('plays Game shot instead of the total on %s', (_name, events) => {
+    expect(announcementFor(events, first)).toEqual({ kind: 'game_shot', text: 'Game shot', clip: 'events/game_shot.mp3' });
   });
 
-  it('reads Bust on a bust', () => {
-    expect(announcementFor([bust])).toEqual({ kind: 'bust', text: 'Bust' });
+  it('plays the score clip and reads the total on a plain turn', () => {
+    expect(announcementFor([turn(100)], first)).toEqual({ kind: 'score', text: 'sto', clip: 'scores/100.mp3' });
   });
 
-  it('reads zero after three misses', () => {
-    expect(announcementFor([turn(0, [MISS, MISS, MISS])])).toEqual({ kind: 'score', text: 'zero' });
+  it('plays zero after three misses', () => {
+    expect(announcementFor([turn(0, [MISS, MISS, MISS])], first)).toEqual({ kind: 'score', text: 'zero', clip: 'scores/0.mp3' });
+  });
+
+  it('plays the 180 clip', () => {
+    expect(announcementFor([turn(180)], first)).toEqual({ kind: 'score', text: 'sto osiemdziesiąt', clip: 'scores/180.mp3' });
+  });
+
+  it.each([163, 166, 169, 172, 173, 175, 176, 178, 179])('has no clip for the unreachable total %i and reads it', (total) => {
+    expect(announcementFor([turn(total)], first)).toEqual({ kind: 'score', text: spokenNumber(total), clip: null });
   });
 
   it('returns null without domain events', () => {
-    expect(announcementFor([])).toBeNull();
+    expect(announcementFor([], first)).toBeNull();
+  });
+
+  it('does not call random for a plain turn or a game shot', () => {
+    const random = vi.fn(() => 0);
+    announcementFor([turn(100)], random);
+    announcementFor([turn(40, [D20]), legWon], random);
+    expect(random).not.toHaveBeenCalled();
   });
 });
