@@ -1,6 +1,7 @@
 import type { CreateMatchRequest, MatchSnapshot, MatchSnapshotPlayer, MatchSummary } from '@autoscore/schema';
 import { useRef, useState } from 'react';
 import { createMatch } from '../api/client';
+import { formatAverage } from '../game/format-stat';
 import { rematchRequest } from '../game/rematch-request';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
@@ -138,9 +139,16 @@ function LegCards({ state, summary }: { state: MatchSnapshot; summary: MatchSumm
         return (
           <li key={leg.legIndex} className={`flex items-center gap-3 px-5 py-4 lg:flex-1 ${card}`}>
             <Avatar name={name} avatar={legWinner?.avatar ?? null} colorIndex={colorIndex(state, leg.winnerId)} size="small" />
-            <div className="flex flex-col">
+            <div className="flex min-w-0 flex-col">
               <span className={label}>{pl.legNumber(leg.legIndex + 1)}</span>
-              <span className="text-xl font-semibold">{pl.legWinner(name, leg.dartsThrown)}</span>
+              <span className="text-xl font-semibold break-words">{pl.legResult(name, leg.dartsThrown, leg.checkout)}</span>
+              {leg.averages.length > 0 && (
+                <span className="break-words text-(--color-text-muted)">
+                  {leg.averages
+                    .map((entry) => `${state.players.find((player) => player.id === entry.playerId)?.name ?? ''} ${formatAverage(entry.average)}`)
+                    .join(' · ')}
+                </span>
+              )}
             </div>
           </li>
         );
@@ -237,7 +245,7 @@ function ActionBar({ state, busy, onUndo }: { state: MatchSnapshot; busy: boolea
       </div>
       <div className="flex flex-col gap-2 lg:items-end">
         {status === 'failed' && (
-          <p className="flex items-center gap-2 font-display text-xl text-(--color-text)">
+          <p role="alert" className="flex items-center gap-2 font-display text-xl text-(--color-text)">
             <WarningIcon className="text-(--color-accent)" />
             {pl.rematchFailed}
           </p>

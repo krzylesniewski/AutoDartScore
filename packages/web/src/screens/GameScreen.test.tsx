@@ -452,7 +452,7 @@ describe('abandon and resume', () => {
     const table = await screen.findByRole('table', { name: 'Podsumowanie meczu' });
     expect(within(table).getByText('150.50')).toBeTruthy();
     expect(screen.getByText('Leg 1')).toBeTruthy();
-    expect(screen.getByText('Anna · 6 rzutek')).toBeTruthy();
+    expect(screen.getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
   });

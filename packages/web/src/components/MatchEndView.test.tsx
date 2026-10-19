@@ -79,13 +79,27 @@ describe('MatchEndView', () => {
     expect(screen.getByText('2 : 1')).toBeTruthy();
     expect(screen.getByText('501 · Double-out · Best of 3')).toBeTruthy();
     expect(screen.getByText('Leg 1')).toBeTruthy();
-    expect(screen.getByText('Anna · 6 rzutek')).toBeTruthy();
+    expect(screen.getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
     const table = screen.getByRole('table', { name: 'Podsumowanie meczu' });
     const rowHeaders = within(table).getAllByRole('rowheader');
     expect(rowHeaders).toHaveLength(10);
     expect(rowHeaders.map((header) => header.textContent)).toContain('Wygrane legi');
     const columns = within(table).getAllByRole('columnheader');
     expect(columns).toEqual([within(table).getByRole('columnheader', { name: 'Bartek' }), within(table).getByRole('columnheader', { name: 'Anna' })]);
+  });
+
+  it('shows the checkout and the averages of each player in a leg card', () => {
+    view({ summary: { ...current, legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [{ playerId: 'p1', average: 74.2 }, { playerId: 'p2', average: null }] }] } });
+    const legList = screen.getByRole('list', { name: 'Legi' });
+    expect(within(legList).getByText('Leg 1')).toBeTruthy();
+    expect(within(legList).getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
+    expect(within(legList).getByText('Anna 74.20 · Bartek —')).toBeTruthy();
+  });
+
+  it('shows no averages in a leg card without them', () => {
+    view();
+    const legList = screen.getByRole('list', { name: 'Legi' });
+    expect(within(legList).queryByText(/\d\.\d{2}|—/)).toBeNull();
   });
 
   it('waits for a summary as new as the state and keeps the winner card', () => {
@@ -146,6 +160,7 @@ describe('MatchEndView', () => {
     view();
     fireEvent.click(rematchButton());
     expect(await screen.findByText('Nie udało się utworzyć rewanżu')).toBeTruthy();
+    expect((await screen.findByRole('alert')).textContent).toContain('Nie udało się utworzyć rewanżu');
     expect(window.location.hash).toBe('#/matches/m1');
     expect(rematchButton().disabled).toBe(false);
   });
