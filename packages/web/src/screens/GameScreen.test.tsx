@@ -280,13 +280,68 @@ describe('GameScreen', () => {
       winnerId: 'p2',
       players: [player('p1', 'Anna', { remaining: 501, legsWon: 1 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2 })],
     });
-    expect(screen.getByText('Koniec meczu')).toBeTruthy();
-    expect(screen.getByText('Bartek 2:1 w legach')).toBeTruthy();
+    expect(screen.getByText('Mecz zakończony')).toBeTruthy();
+    expect(screen.getByText('Bartek wygrywa')).toBeTruthy();
+    expect(screen.getByText('2 : 1')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '20' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+    expect(screen.getByText('Mecz zakończony').closest('.sticky')).toBeNull();
+  });
+
+  it('brings the game screen back after Cofnij on the match end view', async () => {
+    respond = async () => json(200, { undoneThrowId: 't9', state: { ...initial, eventSeq: 5 } });
+    connect({
+      ...initial,
+      finished: true,
+      status: 'finished',
+      currentPlayerId: null,
+      winnerId: 'p2',
+      players: [player('p1', 'Anna', { remaining: 501, legsWon: 1 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2 })],
+    });
+    tap('Cofnij');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+    expect(await screen.findByRole('region', { name: 'Klawiatura rzutek' })).toBeTruthy();
+    expect(screen.queryByText('Mecz zakończony')).toBeNull();
+  });
+
+  it('keeps the summary panel without Rewanż in a finished casual game', () => {
+    connect(
+      casual(['Anna', 'Bartek', 'Celina'], {
+        id: MATCH_ID,
+        eventSeq: 4,
+        finished: true,
+        currentPlayerId: null,
+        placements: [
+          { playerId: 'p2', place: 1 },
+          { playerId: 'p1', place: 2 },
+          { playerId: 'p3', place: 3 },
+        ],
+      }),
+    );
+    expect(screen.getByText('Koniec meczu')).toBeTruthy();
     expect(screen.getByText('Koniec meczu').closest('.sticky')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Rewanż' })).toBeNull();
+  });
+
+  it('keeps the summary panel without Rewanż in a finished Solo 501', () => {
+    connect(
+      snapshot({
+        id: MATCH_ID,
+        type: 'practice',
+        practiceMode: 'solo_501',
+        legsToWin: null,
+        eventSeq: 4,
+        finished: true,
+        currentPlayerId: null,
+        winnerId: 'p1',
+        players: [player('p1', 'Anna', { remaining: 0 })],
+      }),
+    );
+    expect(screen.getByText('Koniec meczu')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Rewanż' })).toBeNull();
   });
 });
 
@@ -396,7 +451,8 @@ describe('abandon and resume', () => {
     connect(finished);
     const table = await screen.findByRole('table', { name: 'Podsumowanie meczu' });
     expect(within(table).getByText('150.50')).toBeTruthy();
-    expect(screen.getByText('Leg 1: Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
+    expect(screen.getByText('Leg 1')).toBeTruthy();
+    expect(screen.getByText('Anna · 6 rzutek')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
   });

@@ -16,7 +16,7 @@ interface Row {
   readonly matchOnly?: boolean;
 }
 
-const ROWS: readonly Row[] = [
+export const SUMMARY_ROWS: readonly Row[] = [
   { label: pl.statAverage, value: (line) => formatAverage(line.average) },
   { label: pl.statFirst9, value: (line) => formatAverage(line.first9Average) },
   { label: pl.stat180, value: (line) => String(line.scores180) },
@@ -71,7 +71,7 @@ function columns(state: MatchSnapshot, summary: MatchSummary): MatchSummaryPlaye
 
 function SummaryTable({ state, summary }: { state: MatchSnapshot; summary: MatchSummary }) {
   const players = columns(state, summary);
-  const rows = ROWS.filter((row) => !row.matchOnly || state.type === 'match');
+  const rows = SUMMARY_ROWS.filter((row) => !row.matchOnly || state.type === 'match');
   const name = (playerId: string) => state.players.find((player) => player.id === playerId)?.name ?? '';
   return (
     <table className="w-full text-xl">
@@ -149,7 +149,7 @@ function MatchResult({ state, name }: { state: MatchSnapshot; name: (playerId: s
 }
 
 // Zapisany gość trafia na listę graczy, a jego wcześniejsze rzutki zaczynają się liczyć do statystyk.
-function SaveGuest({ player }: { player: MatchSnapshotPlayer }) {
+export function SaveGuest({ player }: { player: MatchSnapshotPlayer }) {
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   async function save(): Promise<void> {
