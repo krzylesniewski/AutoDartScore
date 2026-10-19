@@ -7,6 +7,7 @@ import { EndPracticeDialog } from '../components/EndPracticeDialog';
 import { GameSetupSummary } from '../components/GameSetupSummary';
 import { NewGameForm, type PlayerList } from '../components/NewGameForm';
 import { NewPlayerDialog } from '../components/NewPlayerDialog';
+import { StartBar } from '../components/StartBar';
 import { UnfinishedGames, type GameList } from '../components/UnfinishedGames';
 import { INITIAL_SETUP, changeType, createRequest, pickPlayer, type GameSetup } from '../game/game-setup';
 import { pl } from '../i18n/pl';
@@ -155,21 +156,18 @@ export function HomeScreen() {
   return (
     <div className="flex h-full flex-col">
       <AppNav current="new-game" />
-      <main className="flex min-h-0 flex-1 flex-col gap-12 overflow-auto px-12 py-8 lg:flex-row lg:overflow-hidden">
+      <main className="flex min-h-0 flex-1 flex-col gap-8 overflow-auto px-10 pt-5.5 pb-4.5 lg:flex-row lg:overflow-hidden">
         <NewGameForm
           setup={setup}
           players={players}
-          canStart={request.success && !submitting}
-          error={startError}
           onTypeChange={(type) => setSetup((current) => changeType(current, type))}
           onPlayerToggle={(playerId) => setSetup((current) => pickPlayer(current, playerId))}
           onStartingScoreChange={(startingScore) => setSetup((current) => ({ ...current, startingScore }))}
           onBestOfChange={(bestOf) => setSetup((current) => ({ ...current, bestOf }))}
           onPracticeModeChange={(practiceMode) => setSetup((current) => ({ ...current, practiceMode }))}
           onNewPlayer={() => setCreatingPlayer(true)}
-          onStart={() => void start()}
         />
-        <div className="flex min-h-0 flex-col gap-5 lg:w-110 lg:shrink-0">
+        <div className="flex min-h-0 flex-col gap-4 lg:w-110 lg:shrink-0">
           <GameSetupSummary setup={setup} players={selected} />
           <UnfinishedGames
             games={games}
@@ -182,6 +180,7 @@ export function HomeScreen() {
           />
         </div>
       </main>
+      <StartBar setup={setup} players={selected} canStart={request.success && !submitting} error={startError} onStart={() => void start()} />
       {creatingPlayer && <NewPlayerDialog onCreated={onPlayerCreated} onCancel={closeNewPlayer} />}
       {abandoning && <AbandonDialog state={abandoning} onCancel={closeAbandon} onConfirm={(playerId, reason) => void abandon(abandoning, playerId, reason)} />}
       {ending && <EndPracticeDialog onCancel={closeEnd} onConfirm={() => void end(ending)} />}

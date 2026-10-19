@@ -114,9 +114,13 @@ function unfinished(): HTMLElement {
   return screen.getByRole('region', { name: /^Gry do dokończenia/ });
 }
 
-// Imiona na chipach graczy w kolejności na ekranie. Avatar jest pierwszym dzieckiem chipa.
+function startBar(): HTMLElement {
+  return screen.getByRole('region', { name: 'Rozpoczęcie gry' });
+}
+
+// Imiona na kaflach graczy w kolejności na ekranie. Avatar jest pierwszym dzieckiem kafla.
 function chipNames(selected?: boolean): (string | null | undefined)[] {
-  return screen
+  return within(screen.getByRole('group', { name: /^Gracze/ }))
     .getAllByRole('button', { name: /^[A-ZŁŻ][a-ząćęłńóśźż]+$/, ...(selected === undefined ? {} : { pressed: selected }) })
     .filter((chip) => chip.hasAttribute('aria-pressed') && chip.firstElementChild?.getAttribute('aria-hidden') === 'true')
     .map((chip) => chip.lastChild?.textContent);
@@ -162,6 +166,23 @@ describe('HomeScreen: new game form', () => {
     expect(pressed('Free run')).toBe('true');
     fireEvent.click(button('Solo 501'));
     expect(pressed('Solo 501')).toBe('true');
+  });
+
+  it('describes each game type on its tile', async () => {
+    render(<HomeScreen />);
+    await chips();
+    expect(screen.getByRole('button', { name: 'Mecz 1v1', description: 'Dwóch graczy, best of N legów' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Zabawa', description: '3-4 graczy, walka o miejsca' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Trening', description: 'Solo: Free run lub 501' })).toBeTruthy();
+  });
+
+  it('groups the options as named segmented controls', async () => {
+    render(<HomeScreen />);
+    await chips();
+    expect(within(screen.getByRole('group', { name: 'Punkty startowe' })).getAllByRole('button')).toHaveLength(3);
+    expect(within(screen.getByRole('group', { name: 'Liczba legów' })).getAllByRole('button')).toHaveLength(3);
+    fireEvent.click(button('Trening'));
+    expect(within(screen.getByRole('group', { name: 'Tryb treningu' })).getAllByRole('button')).toHaveLength(2);
   });
 
   it('limits a 1v1 to 2 players and disables the other chips', async () => {
@@ -268,6 +289,36 @@ describe('HomeScreen: new game form', () => {
     ]);
   });
 
+  it('shows the vs header for 2 players in Zabawa', async () => {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('Zabawa'));
+    fireEvent.click(button('Anna'));
+    fireEvent.click(button('Bartek'));
+    expect(summary().textContent).toMatch(/Anna.*vs.*Bartek/);
+  });
+
+  it('keeps the only Start button in the bar with the setup line', async () => {
+    render(<HomeScreen />);
+    await chips();
+    expect(within(startBar()).getByRole('button', { name: 'Start gry' })).toBeTruthy();
+    expect(within(startBar()).getByText('Nie wybrano graczy')).toBeTruthy();
+    fireEvent.click(button('Anna'));
+    fireEvent.click(button('Bartek'));
+    expect(within(startBar()).getByText('501 · Best of 3 · Straight-in, double-out · Losowanie przy starcie')).toBeTruthy();
+    expect(startBar().textContent).toMatch(/Anna.*vs.*Bartek/);
+  });
+
+  it('counts 3 players in the bar for Zabawa', async () => {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('Zabawa'));
+    for (const name of ['Anna', 'Bartek', 'Celina']) {
+      fireEvent.click(button(name));
+    }
+    expect(within(startBar()).getByText('3 graczy')).toBeTruthy();
+  });
+
   it('posts a valid request in pick order and opens the game', async () => {
     render(<HomeScreen />);
     await chips();
@@ -291,6 +342,7 @@ describe('HomeScreen: new game form', () => {
     fireEvent.click(button('Bartek'));
     fireEvent.click(button('Start gry'));
     expect(await screen.findByText('Unknown player p2')).toBeTruthy();
+    expect(within(startBar()).getByText('Unknown player p2')).toBeTruthy();
     expect(window.location.hash).toBe('#/');
   });
 });
@@ -390,6 +442,7 @@ describe('HomeScreen: games to finish', () => {
     render(<HomeScreen />);
     expect(within(await row('Anna vs Bartek')).queryByRole('button', { name: /^Porzuć/ })).toBeNull();
     expect(within(await row('Celina vs Darek')).getByRole('button', { name: 'Porzuć: Celina vs Darek' })).toBeTruthy();
+    expect(button('Porzuć: Celina vs Darek').textContent).toBe('');
     expect(within(await row('Zabawa, 3 graczy')).queryByRole('button', { name: /^Porzuć/ })).toBeNull();
   });
 

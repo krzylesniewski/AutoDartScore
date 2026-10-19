@@ -5,6 +5,8 @@ const SIZES = {
   small: 'size-9 text-xl',
   medium: 'size-10 text-2xl',
   large: 'size-13 text-3xl',
+  tile: 'size-11.5 text-2xl',
+  preview: 'size-18 text-[38px]',
 } as const;
 
 export interface AvatarProps {
