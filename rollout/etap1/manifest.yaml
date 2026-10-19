@@ -48,6 +48,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/new-game-a2.md
       kind: markdown
       tag: a2
+    # Tylko dla PR-ów z briefTags: [rwd].
+    - title: RWD trzech ekranów, zakres i podział plików (wiążący dla P15-P17; tylko układ, bez nowych funkcji poza Rewanżem)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/rwd.md
+      kind: markdown
+      tag: rwd
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -200,3 +205,37 @@ prs:
     changeset: none
     scope: ['packages/web/**']
     briefTags: [a2]
+
+  # RWD trzech ekranów (design/rwd.md, makiety design/mockups/RWD). Niezależne: osobne pliki, bez zależności między sobą.
+  - id: P15
+    branch: feat/web-rwd-home
+    title: 'feat(web): responsive start screen'
+    brief: briefs/P15.md
+    deps: [P14]
+    priority: 6
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: P16
+    branch: feat/web-rwd-game
+    title: 'feat(web): responsive game screen'
+    brief: briefs/P16.md
+    deps: [P14]
+    priority: 6
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: P17
+    branch: feat/web-match-end
+    title: 'feat(web): match end view with rematch'
+    brief: briefs/P17.md
+    deps: [P14]
+    priority: 6
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
