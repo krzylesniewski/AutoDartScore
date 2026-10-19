@@ -18,11 +18,11 @@ export interface MatchHeaderProps {
   onEndPractice?: () => void;
 }
 
-const chip = 'rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 text-(length:--text-button) lg:px-2 xl:px-3';
+const chip = 'rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 text-(length:--text-button) lg:px-2 lg:text-[16px] xl:px-3 xl:text-(length:--text-button)';
 // Od lg panel ma display: contents, a order stawia chip stanu tuż przed akcjami, jak na monitorze. Chip jest tylko w grze
-// porzuconej lub zakończonej, gdzie Porzuć mecz i Zakończ trening są ukryte. Ujemny margines zmniejsza odstęp do gap-2 z grupy akcji.
-const statusChip = `${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold whitespace-nowrap max-sm:gap-1 max-sm:px-2 max-sm:text-base lg:order-2 lg:-mr-1 lg:ml-auto xl:-mr-2`;
-const button = 'flex min-h-12 items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-(length:--text-button) font-semibold lg:px-3 xl:px-4';
+// porzuconej lub zakończonej, gdzie Porzuć mecz i Zakończ trening są ukryte. Na xl ujemny margines zmniejsza odstęp do gap-2 z grupy akcji.
+const statusChip = `${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold whitespace-nowrap max-sm:gap-1 max-sm:px-2 max-sm:text-base lg:order-2 lg:ml-auto lg:gap-1 xl:-mr-2 xl:gap-2`;
+const button = 'flex min-h-12 items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-(length:--text-button) font-semibold lg:px-2.5 xl:px-4';
 
 // Poniżej lg chipy i akcje są w rozwijanym panelu. Panel zostaje w DOM i chowa go tylko klasa, więc każdy przycisk istnieje raz.
 export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange, onAbandon, onResume, onEndPractice }: MatchHeaderProps) {
@@ -53,7 +53,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
   }
 
   return (
-    <header className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-3 py-2 sm:gap-x-3 sm:px-(--space-page) lg:flex-nowrap lg:gap-3 lg:px-4 xl:gap-4 xl:px-(--space-page)">
+    <header className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-3 py-2 sm:gap-x-3 sm:px-(--space-page) lg:flex-nowrap lg:gap-2 lg:px-3 xl:gap-4 xl:px-(--space-page)">
       <a href="#/" aria-label={pl.home} className="flex items-center gap-2 font-display text-[24px] font-bold whitespace-nowrap text-(--color-text) xl:text-(length:--text-heading)">
         <TargetIcon className="text-(--color-accent)" />
         {pl.appName}
@@ -83,7 +83,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
       </button>
       <div id={panelId} className={`${open ? 'flex' : 'hidden'} basis-full flex-col gap-3 pb-1 lg:contents`}>
         {state && (
-          <ul className="flex flex-wrap items-center gap-2 lg:order-1">
+          <ul className="flex flex-wrap items-center gap-2 lg:order-1 lg:gap-1.5 xl:gap-2">
             {chips(state).map((label) => (
               <li key={label} className={`${chip} border-(--color-border-strong) text-(--color-text-muted)`}>
                 {label}
