@@ -54,7 +54,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
 
   return (
     <header className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-3 py-2 sm:gap-x-3 sm:px-(--space-page) lg:flex-nowrap lg:gap-2 lg:px-3 xl:gap-4 xl:px-(--space-page)">
-      <a href="#/" aria-label={pl.home} className="flex items-center gap-2 font-display text-[24px] font-bold whitespace-nowrap text-(--color-text) xl:text-(length:--text-heading)">
+      <a href="#/" aria-label={pl.home} className="flex items-center gap-2 font-display text-[24px] font-bold whitespace-nowrap text-(--color-text) xl:text-(length:--text-heading) xl:whitespace-normal">
         <TargetIcon className="text-(--color-accent)" />
         {pl.appName}
       </a>
@@ -94,7 +94,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
             )}
           </ul>
         )}
-        <div className={`flex flex-wrap gap-2 lg:order-3 lg:flex-nowrap lg:whitespace-nowrap ${statusShown ? '' : 'lg:ml-auto'}`}>
+        <div className={`flex flex-wrap gap-2 lg:order-3 lg:flex-nowrap lg:whitespace-nowrap xl:whitespace-normal ${statusShown ? '' : 'lg:ml-auto'}`}>
           {state && canAbandon(state) && (
             <button type="button" onClick={closeAfter(onAbandon)} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
               {pl.abandonMatch}
