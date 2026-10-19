@@ -19,7 +19,9 @@ export interface MatchHeaderProps {
 }
 
 const chip = 'rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 text-(length:--text-button) lg:px-2 xl:px-3';
-const statusChip = `${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold whitespace-nowrap max-sm:gap-1 max-sm:px-2 max-sm:text-base`;
+// Od lg panel ma display: contents, a order stawia chip stanu tuż przed akcjami, jak na monitorze. Chip jest tylko w grze
+// porzuconej lub zakończonej, gdzie Porzuć mecz i Zakończ trening są ukryte. Ujemny margines zmniejsza odstęp do gap-2 z grupy akcji.
+const statusChip = `${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold whitespace-nowrap max-sm:gap-1 max-sm:px-2 max-sm:text-base lg:order-2 lg:-mr-1 lg:ml-auto xl:-mr-2`;
 const button = 'flex min-h-12 items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-(length:--text-button) font-semibold lg:px-3 xl:px-4';
 
 // Poniżej lg chipy i akcje są w rozwijanym panelu. Panel zostaje w DOM i chowa go tylko klasa, więc każdy przycisk istnieje raz.
@@ -27,6 +29,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const statusShown = state?.status === 'ended' || state?.status === 'abandoned';
 
   useEffect(() => {
     if (!open) {
@@ -78,12 +81,9 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
         <MenuIcon />
         {pl.gameMenu}
       </button>
-      <div
-        id={panelId}
-        className={`${open ? 'flex' : 'hidden'} basis-full flex-col gap-3 pb-1 lg:flex lg:min-w-0 lg:flex-1 lg:basis-auto lg:flex-row lg:items-center lg:gap-3 lg:pb-0 xl:gap-4`}
-      >
+      <div id={panelId} className={`${open ? 'flex' : 'hidden'} basis-full flex-col gap-3 pb-1 lg:contents`}>
         {state && (
-          <ul className="flex flex-wrap items-center gap-2">
+          <ul className="flex flex-wrap items-center gap-2 lg:order-1">
             {chips(state).map((label) => (
               <li key={label} className={`${chip} border-(--color-border-strong) text-(--color-text-muted)`}>
                 {label}
@@ -94,7 +94,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
             )}
           </ul>
         )}
-        <div className="flex flex-wrap gap-2 lg:ml-auto lg:flex-nowrap lg:whitespace-nowrap">
+        <div className={`flex flex-wrap gap-2 lg:order-3 lg:flex-nowrap lg:whitespace-nowrap ${statusShown ? '' : 'lg:ml-auto'}`}>
           {state && canAbandon(state) && (
             <button type="button" onClick={closeAfter(onAbandon)} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
               {pl.abandonMatch}

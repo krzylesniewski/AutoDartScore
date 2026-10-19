@@ -144,7 +144,7 @@ describe('MatchHeader', () => {
       expect(toggle().classList.contains('lg:hidden')).toBe(true);
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
       expect(panel().classList.contains('hidden')).toBe(true);
-      expect(panel().classList.contains('lg:flex')).toBe(true);
+      expect(panel().classList.contains('lg:contents')).toBe(true);
       expect(panel().contains(screen.getByText('Best of 3'))).toBe(true);
 
       fireEvent.click(toggle());
@@ -183,11 +183,15 @@ describe('MatchHeader', () => {
       expect(toggle().getAttribute('aria-expanded')).toBe('true');
     });
 
-    it('keeps the status chip in the bar and renders each action once', () => {
+    it('keeps the status chip in the bar, orders it before the actions and renders each action once', () => {
       const onResume = vi.fn();
       const state = snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T19:00:00.000Z' } });
       render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onResume={onResume} />);
       expect(panel().contains(screen.getByText('Porzucony'))).toBe(false);
+      const order = (element: Element | null | undefined) => element?.className.split(' ').find((name) => name.startsWith('lg:order-'));
+      expect(order(screen.getByText('501').closest('ul'))).toBe('lg:order-1');
+      expect(order(screen.getByText('Porzucony').closest('span'))).toBe('lg:order-2');
+      expect(order(screen.getByRole('button', { name: 'Wznów mecz' }).parentElement)).toBe('lg:order-3');
       for (const name of ['Wznów mecz', 'Głos', 'Efekty dźwiękowe', 'Menu gry']) {
         expect(screen.getAllByRole('button', { name })).toHaveLength(1);
       }
