@@ -6,6 +6,7 @@ import { AbandonDialog } from '../components/AbandonDialog';
 import { EndPracticeDialog } from '../components/EndPracticeDialog';
 import { EventBanner } from '../components/EventBanner';
 import { Keypad } from '../components/Keypad';
+import { MatchEndView } from '../components/MatchEndView';
 import { MatchHeader } from '../components/MatchHeader';
 import { MatchStatsPanel } from '../components/MatchStatsPanel';
 import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
@@ -55,6 +56,24 @@ export function GameScreen({ matchId }: { matchId: string }) {
     setEnding(false);
   }
   const keypadDisabled = !state || abandoned || ended || connection !== 'open';
+
+  if (state?.type === 'match' && state.finished) {
+    return (
+      <MatchEndView
+        state={state}
+        summary={stats.summary}
+        summaryError={stats.error}
+        error={error}
+        connectionLost={connection === 'closed'}
+        busy={busy}
+        onUndo={sendUndo}
+        voiceEnabled={audio.voiceEnabled}
+        onVoiceChange={audio.setVoiceEnabled}
+        effectsEnabled={audio.effectsEnabled}
+        onEffectsChange={audio.setEffectsEnabled}
+      />
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
