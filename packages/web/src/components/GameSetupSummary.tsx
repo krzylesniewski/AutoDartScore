@@ -32,22 +32,16 @@ function rows(setup: GameSetup): readonly [string, string][] {
 export function GameSetupSummary({ setup, players }: GameSetupSummaryProps) {
   const [first, second] = players;
   return (
-    <section aria-labelledby="setup-summary" className="flex flex-col gap-4 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) px-7 py-6">
+    <section aria-labelledby="setup-summary" className="flex flex-col gap-3 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) px-5.5 py-4.5">
       <h2 id="setup-summary" className={label}>
         {pl.setupSummary}
       </h2>
       {players.length === 0 && <p className="text-xl text-(--color-text-muted)">{pl.noPlayersSelected}</p>}
-      {setup.type === 'match' && first && second ? (
+      {players.length === 2 && first && second ? (
         <div className="flex items-center justify-between gap-3">
-          <span className="flex min-w-0 items-center gap-3">
-            <Avatar name={first.player.name} avatar={first.player.avatar} colorIndex={first.colorIndex} size="large" />
-            <span className="truncate text-[26px] font-semibold">{first.player.name}</span>
-          </span>
-          <span className="font-display text-[22px] font-semibold text-(--color-text-muted)">{pl.versus}</span>
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="truncate text-[26px] font-semibold">{second.player.name}</span>
-            <Avatar name={second.player.name} avatar={second.player.avatar} colorIndex={second.colorIndex} size="large" />
-          </span>
+          <PreviewPlayer entry={first} />
+          <span className="font-display text-[40px] font-bold text-(--color-accent) uppercase">{pl.versus}</span>
+          <PreviewPlayer entry={second} />
         </div>
       ) : (
         players.length > 0 && (
@@ -61,7 +55,7 @@ export function GameSetupSummary({ setup, players }: GameSetupSummaryProps) {
           </ul>
         )
       )}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 border-t border-(--color-border) pt-4 text-[19px]">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 border-t border-(--color-border) pt-3 text-[17px]">
         {rows(setup).map(([term, value]) => (
           <div key={term} className="contents">
             <dt className="text-(--color-text-muted)">{term}</dt>
@@ -70,5 +64,14 @@ export function GameSetupSummary({ setup, players }: GameSetupSummaryProps) {
         ))}
       </dl>
     </section>
+  );
+}
+
+function PreviewPlayer({ entry: { player, colorIndex } }: { entry: GameSetupSummaryProps['players'][number] }) {
+  return (
+    <span className="flex w-35 min-w-0 flex-col items-center gap-1.5">
+      <Avatar name={player.name} avatar={player.avatar} colorIndex={colorIndex} size="preview" />
+      <span className="max-w-full truncate text-[21px] font-semibold">{player.name}</span>
+    </span>
   );
 }

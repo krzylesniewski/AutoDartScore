@@ -148,3 +148,19 @@ export function CheckIcon({ className }: IconProps) {
     </Svg>
   );
 }
+
+export function PlayersIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M8 4.5a3.5 3.5 0 110 7 3.5 3.5 0 010-7zm8 0a3.5 3.5 0 110 7 3.5 3.5 0 010-7zM1.5 21c.7-4 3.2-6.5 6.5-6.5s5.8 2.5 6.5 6.5zm8 0c.7-4 3.2-6.5 6.5-6.5s5.8 2.5 6.5 6.5z" />
+    </Svg>
+  );
+}
+
+export function StarIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M12 2.5l2.2 4.5 5 .7-3.6 3.6.8 5-4.4-2.2-4.4 2.2.8-5-3.6-3.6 5-.7zM5 20h14v2H5z" />
+    </Svg>
+  );
+}

@@ -4,7 +4,7 @@ import { canAbandon } from '../game/can-abandon';
 import { canEndPractice } from '../game/can-end-practice';
 import { unfinishedRow } from '../game/unfinished-row';
 import { pl } from '../i18n/pl';
-import { PauseIcon, WarningIcon } from './icons';
+import { BustIcon, PauseIcon, WarningIcon } from './icons';
 
 export type GameList = { status: 'loading' } | { status: 'error' } | { status: 'ready'; games: readonly MatchListItem[] };
 
@@ -21,6 +21,8 @@ export interface UnfinishedGamesProps {
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 const button =
   'flex h-11 shrink-0 items-center rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-4 font-display text-[19px] font-semibold disabled:opacity-40';
+const iconButton =
+  'flex size-11 shrink-0 items-center justify-center rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-transparent text-base text-(--color-text-muted) disabled:opacity-40';
 
 export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon, onEndPractice }: UnfinishedGamesProps) {
   return (
@@ -43,7 +45,7 @@ export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon,
           {games.games.map((game) => {
             const row = unfinishedRow(game);
             return (
-              <li key={game.id} className="flex items-center gap-3.5 border-b border-(--color-border) py-3 last:border-b-0">
+              <li key={game.id} className="flex items-center gap-3.5 border-b border-(--color-border) py-2.5 last:border-b-0">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[19px] font-semibold">{row.title}</div>
                   <div className="flex items-center gap-2 text-[15px] text-(--color-text-muted)">
@@ -66,8 +68,8 @@ export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon,
                   {pl.finish}
                 </button>
                 {canAbandon(game) && (
-                  <button type="button" aria-label={pl.abandonGame(row.title)} disabled={busy} onClick={() => onAbandon(game)} className={button}>
-                    {pl.abandon}
+                  <button type="button" aria-label={pl.abandonGame(row.title)} disabled={busy} onClick={() => onAbandon(game)} className={iconButton}>
+                    <BustIcon />
                   </button>
                 )}
                 {canEndPractice(game) && (

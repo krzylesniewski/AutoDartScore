@@ -18,7 +18,7 @@ export function AppNav({ current }: { current: AppPage }) {
   const [voiceEnabled] = useState(readVoiceEnabled);
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-x-9 gap-y-2 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-7 py-2">
+    <header className="flex flex-wrap items-center justify-between gap-x-9 gap-y-2 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-7 min-h-16">
       <div className="flex flex-wrap items-center gap-x-9 gap-y-2">
         <span className="flex items-center gap-3 font-display text-(length:--text-heading) font-bold tracking-wide">
           <TargetIcon className="text-(--color-accent)" />
