@@ -1,6 +1,7 @@
 import { BULL_SEGMENT, MISS_SEGMENT, type Hit } from '@autoscore/schema';
 import { useState } from 'react';
 import { pl } from '../i18n/pl';
+import { KeypadKey, type KeypadKeyTone } from './KeypadKey';
 
 type Multiplier = 1 | 2 | 3;
 
@@ -12,9 +13,12 @@ const MULTIPLIERS: readonly { value: Multiplier; label: string }[] = [
 
 const SEGMENTS = Array.from({ length: 20 }, (_, index) => index + 1);
 
-const key =
-  'rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) font-display text-(length:--text-heading) font-bold disabled:opacity-40';
-const segmentKey = `${key} bg-(--color-surface-button) text-(--color-text)`;
+const key = 'rounded-(--radius-card) border-(length:--border-width) font-display text-(length:--text-heading) font-bold disabled:opacity-40';
+const idleBorder = 'border-(--color-border-strong)';
+const segmentTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text)', border: idleBorder };
+const missTone: KeypadKeyTone = { fill: 'bg-(--color-surface) text-(--color-text-muted)', border: idleBorder };
+const multiplierTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text-muted)', border: idleBorder };
+const selectedMultiplierTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse)', border: 'border-(--color-text)' };
 // Jedna siatka na 10 kolumn. Poniżej xl 25 i Miss schodzą pod 1-20, a mnożnik zajmuje cały wiersz.
 const multiplierRow = 'col-span-10 grid grid-cols-3 gap-2 xl:col-span-6';
 const multiplierHeight = 'h-13 lg:h-[58px] xl:h-(--button-height)';
@@ -38,40 +42,43 @@ export function Keypad({ onHit, disabled }: KeypadProps) {
     <section aria-label={pl.keypad} className="grid grid-cols-10 gap-2">
       <div role="group" aria-label={pl.multiplier} className={multiplierRow}>
         {MULTIPLIERS.map(({ value, label }) => (
-          <button
+          <KeypadKey
             key={value}
-            type="button"
-            aria-pressed={multiplier === value}
+            ariaPressed={multiplier === value}
             disabled={disabled}
-            onClick={() => setMultiplier(value)}
-            className={`${multiplierHeight} ${key} ${
-              multiplier === value ? 'border-(--color-text) bg-(--color-text) text-(--color-text-inverse)' : 'bg-(--color-surface-button) text-(--color-text-muted)'
-            }`}
+            onPress={() => setMultiplier(value)}
+            className={`${multiplierHeight} ${key}`}
+            idleTone={multiplier === value ? selectedMultiplierTone : multiplierTone}
+            // Ciemne tło wciśnięcia na kremowym klawiszu wyglądałoby jak odznaczenie, więc wybrany klawisz tylko się zmniejsza.
+            pressedTone={multiplier === value ? selectedMultiplierTone : undefined}
           >
             {label}
-          </button>
+          </KeypadKey>
         ))}
       </div>
-      <button
-        type="button"
+      <KeypadKey
         disabled={disabled || multiplier === 3}
-        onClick={() => hit(BULL_SEGMENT, multiplier === 2 ? 2 : 1)}
-        className={`${lastRowCell} ${segmentKey}`}
+        flashOnPress
+        onPress={() => hit(BULL_SEGMENT, multiplier === 2 ? 2 : 1)}
+        className={`${lastRowCell} ${key}`}
+        idleTone={segmentTone}
       >
         {multiplier === 2 ? pl.bull : BULL_SEGMENT}
-      </button>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => hit(MISS_SEGMENT, 0)}
-        className={`${lastRowCell} ${key} bg-(--color-surface) text-(--color-text-muted)`}
-      >
+      </KeypadKey>
+      <KeypadKey disabled={disabled} flashOnPress onPress={() => hit(MISS_SEGMENT, 0)} className={`${lastRowCell} ${key}`} idleTone={missTone}>
         {pl.miss}
-      </button>
+      </KeypadKey>
       {SEGMENTS.map((segment) => (
-        <button key={segment} type="button" disabled={disabled} onClick={() => hit(segment, multiplier)} className={`${segmentCell} ${segmentKey}`}>
+        <KeypadKey
+          key={segment}
+          disabled={disabled}
+          flashOnPress
+          onPress={() => hit(segment, multiplier)}
+          className={`${segmentCell} ${key}`}
+          idleTone={segmentTone}
+        >
           {segment}
-        </button>
+        </KeypadKey>
       ))}
     </section>
   );
