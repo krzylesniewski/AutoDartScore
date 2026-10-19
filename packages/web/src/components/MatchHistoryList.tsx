@@ -34,16 +34,22 @@ export function MatchHistoryList({ games, now }: MatchHistoryListProps) {
         return (
           <li
             key={game.id}
-            className="flex items-center gap-4 border-b border-(--color-border) py-3 last:border-b-0 @max-xl:grid @max-xl:grid-cols-[6rem_minmax(0,1fr)_auto] @max-xl:gap-x-3 @max-xl:gap-y-2"
+            className="flex items-center gap-4 border-b border-(--color-border) py-3 last:border-b-0 @max-xl:grid @max-xl:grid-cols-[minmax(0,1fr)_auto] @max-xl:gap-x-3 @max-xl:gap-y-2"
           >
-            <time dateTime={game.updatedAt} className="w-24 shrink-0 text-[15px] whitespace-nowrap text-(--color-text-muted)">
+            <time dateTime={game.updatedAt} className="w-24 shrink-0 text-[15px] whitespace-nowrap text-(--color-text-muted) @max-xl:hidden">
               {row.date}
             </time>
             <div className="min-w-0 flex-1 @max-xl:col-span-2">
               <div className="truncate text-[19px] font-semibold">{row.result}</div>
-              <div className="truncate text-[15px] text-(--color-text-muted)">{row.type}</div>
+              <div className="truncate text-[15px] text-(--color-text-muted)">
+                {row.type}
+                <span className="hidden @max-xl:inline">
+                  {' · '}
+                  <time dateTime={game.updatedAt}>{row.date}</time>
+                </span>
+              </div>
             </div>
-            <span className="flex shrink-0 items-center gap-1.5 rounded-(--radius-chip) border border-(--color-border-strong) px-2 py-0.5 font-display text-base font-semibold text-(--color-text) uppercase @max-xl:col-span-2 @max-xl:min-w-0 @max-xl:justify-self-start @max-xl:wrap-anywhere">
+            <span className="flex shrink-0 items-center gap-1.5 rounded-(--radius-chip) border border-(--color-border-strong) px-2 py-0.5 font-display text-base font-semibold text-(--color-text) uppercase @max-xl:min-w-0 @max-xl:justify-self-start @max-xl:wrap-anywhere">
               {STATUS_ICONS[row.status]}
               {row.statusLabel}
             </span>

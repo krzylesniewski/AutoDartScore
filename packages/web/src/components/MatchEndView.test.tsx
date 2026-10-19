@@ -93,7 +93,7 @@ describe('MatchEndView', () => {
     const legList = screen.getByRole('list', { name: 'Legi' });
     expect(within(legList).getByText('Leg 1')).toBeTruthy();
     expect(within(legList).getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
-    expect(within(legList).getByText('Anna 74.20 · Bartek —')).toBeTruthy();
+    expect(within(legList).getByText('Anna 74,20 · Bartek —')).toBeTruthy();
   });
 
   it('shows no averages in a leg card without them', () => {

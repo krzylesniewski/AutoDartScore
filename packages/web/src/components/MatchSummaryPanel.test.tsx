@@ -66,12 +66,12 @@ describe('MatchSummaryPanel', () => {
       'Najlepszy leg',
       'Wygrane legi',
     ]);
-    expect(row('Średnia (3 rzutki)')).toEqual(['60.20', '62.50']);
-    expect(row('% doubli')).toEqual(['25.0% (1/4)', '66.7% (2/3)']);
+    expect(row('Średnia (3 rzutki)')).toEqual(['60,20', '62,50']);
+    expect(row('% doubli')).toEqual(['25,0% (1/4)', '66,7% (2/3)']);
     expect(row('Najlepszy leg')).toEqual(['15 rzutek', '12 rzutek']);
     expect(row('Wygrane legi')).toEqual(['1', '2']);
     expect(screen.getByText('Leg 1: Bartek · 12 rzutek · zamknięcie 121')).toBeTruthy();
-    expect(screen.getByText('Anna 55.00 · Bartek 75.25')).toBeTruthy();
+    expect(screen.getByText('Anna 55,00 · Bartek 75,25')).toBeTruthy();
     expect(screen.getByText('Leg 3: Bartek · 21 rzutek · zamknięcie 32')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/');
   });
@@ -96,7 +96,7 @@ describe('MatchSummaryPanel', () => {
     render(<MatchSummaryPanel state={state} summary={casualSummary} error={false} />);
     expect(screen.getByText('1. miejsce Celina')).toBeTruthy();
     expect(columnNames()).toEqual(['Celina', 'Anna', 'Bartek']);
-    expect(row('Średnia (3 rzutki)')).toEqual(['50.00', '40.00', '30.00']);
+    expect(row('Średnia (3 rzutki)')).toEqual(['50,00', '40,00', '30,00']);
     expect(rowLabels()).not.toContain('Wygrane legi');
     expect(screen.queryByText(/^Leg 1:/)).toBeNull();
   });
@@ -124,7 +124,7 @@ describe('MatchSummaryPanel', () => {
     expect(rowLabels()).not.toContain('Wygrane legi');
     expect(row('Najwyższe zamknięcie')).toEqual(['141']);
     expect(screen.getByText('Leg 1: Anna · 9 rzutek · zamknięcie 141')).toBeTruthy();
-    expect(screen.getByText('Anna 167.00')).toBeTruthy();
+    expect(screen.getByText('Anna 167,00')).toBeTruthy();
   });
 
   it('shows the result and Ładowanie… until the summary of the final state arrives', () => {

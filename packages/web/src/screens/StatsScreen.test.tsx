@@ -172,7 +172,7 @@ describe('StatsScreen: ranking', () => {
     expect(urls).toContain('/api/stats/rankings?type=all');
 
     const list = tile('Średnia (3 rzutki)');
-    expect(rows(list)).toEqual(['1.AAnna25 legów61.50', '2.🎯Bartek21 legów55.25', '3.CCelina3 legi40.00', 'DDarek2 legi70.00']);
+    expect(rows(list)).toEqual(['1.AAnna25 legów61,50', '2.🎯Bartek21 legów55,25', '3.CCelina3 legi40,00', 'DDarek2 legi70,00']);
     expect(within(list).getByRole('link', { name: /Bartek/ }).getAttribute('href')).toBe('#/stats/p2');
     expect(within(list).getByText('Średnia od 3 ukończonych legów.')).toBeTruthy();
   });
@@ -184,7 +184,7 @@ describe('StatsScreen: ranking', () => {
     expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label')).filter(Boolean)).toEqual(tiles);
     expect(screen.queryByText('% doubli')).toBeNull();
     expect(within(tile('Rekordowy leg (średnia)')).getByText('3 rzutki')).toBeTruthy();
-    expect(rows(tile('Rekordowy leg (średnia)'))).toEqual(['1.AAnna98.33', '2.🎯Bartek86.50', '3.CCelina74.20']);
+    expect(rows(tile('Rekordowy leg (średnia)'))).toEqual(['1.AAnna98,33', '2.🎯Bartek86,50', '3.CCelina74,20']);
     expect(within(tile('Najwyższe zamknięcie')).getByText('checkout')).toBeTruthy();
     expect(rows(tile('Najwyższe zamknięcie'))).toEqual(['1.🎯Bartek121', '1.CCelina121', '3.AAnna80', '3.DDarek80']);
     expect(within(tile('Najkrótszy leg')).getByText('liczba rzutek')).toBeTruthy();
@@ -195,7 +195,7 @@ describe('StatsScreen: ranking', () => {
     render(<StatsScreen playerId={null} />);
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
     const leaders = (container: HTMLElement) => [...container.querySelectorAll('[data-leader]')].map((row) => row.textContent);
-    expect(leaders(tile('Średnia (3 rzutki)'))).toEqual(['1.AAnna25 legów61.50']);
+    expect(leaders(tile('Średnia (3 rzutki)'))).toEqual(['1.AAnna25 legów61,50']);
     expect(leaders(tile('Najwyższe zamknięcie'))).toEqual(['1.🎯Bartek121', '1.CCelina121']);
   });
 
@@ -266,14 +266,14 @@ describe('StatsScreen: player card', () => {
     expect(screen.getByRole('button', { name: 'Anna' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Wszystkie' }).getAttribute('aria-pressed')).toBe('true');
     expect(value('Rzutki')).toBe('15');
-    expect(value('Średnia (3 rzutki)')).toBe('88.40');
-    expect(value('First 9')).toBe('100.33');
+    expect(value('Średnia (3 rzutki)')).toBe('88,40');
+    expect(value('First 9')).toBe('100,33');
     expect(value('180')).toBe('1');
     expect(value('140+')).toBe('1');
     expect(value('100+')).toBe('1');
     expect(value('60+')).toBe('0');
     expect(value('Najwyższe zamknięcie')).toBe('141');
-    expect(value('% doubli')).toBe('66.7% (2/3)');
+    expect(value('% doubli')).toBe('66,7% (2/3)');
     expect(value('Najlepszy leg')).toBe('6 rzutek');
     expect(value('Wygrane legi')).toBe('1');
     expect(value('Wygrane mecze')).toBe('1/2');
@@ -434,18 +434,18 @@ describe('StatsScreen: form chart', () => {
       { matchId: 'm2', type: 'practice', createdAt: '2026-10-16T18:30:00.000Z', average: 60.25, legs: 1 },
     ];
     render(<StatsScreen playerId="p1" />);
-    const chart = await screen.findByRole('img', { name: 'Wykres formy: 2 gry, ostatnia średnia 60.25' });
+    const chart = await screen.findByRole('img', { name: 'Wykres formy: 2 gry, ostatnia średnia 60,25' });
     expect(chart.querySelectorAll('circle')).toHaveLength(2);
     expect(chart.querySelector('path')).not.toBeNull();
     const values = chart.parentElement?.querySelector('ol.sr-only');
-    expect([...(values?.querySelectorAll('li') ?? [])].map((item) => item.textContent)).toEqual(['Gra 1: 45.50', 'Gra 2: 60.25']);
-    expect(chart.parentElement?.textContent).toContain('60.25');
+    expect([...(values?.querySelectorAll('li') ?? [])].map((item) => item.textContent)).toEqual(['Gra 1: 45,50', 'Gra 2: 60,25']);
+    expect(chart.parentElement?.textContent).toContain('60,25');
   });
 
   it('draws one dot for a single game and follows the filter', async () => {
     form = [{ matchId: 'm1', type: 'match', createdAt: '2026-10-15T18:30:00.000Z', average: 45.5, legs: 1 }];
     render(<StatsScreen playerId="p1" />);
-    const chart = await screen.findByRole('img', { name: 'Wykres formy: 1 gra, ostatnia średnia 45.50' });
+    const chart = await screen.findByRole('img', { name: 'Wykres formy: 1 gra, ostatnia średnia 45,50' });
     expect(chart.querySelectorAll('circle')).toHaveLength(1);
     expect(chart.querySelector('path')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Mecze 1v1' }));
@@ -470,7 +470,7 @@ describe('StatsScreen: head-to-head', () => {
     expect(await within(panel()).findByText('3 : 1')).toBeTruthy();
     expect(urls).toContain('/api/players/p1/head-to-head/p2');
     const values = [...panel().querySelectorAll('dt')].map((term) => `${term.textContent}=${term.nextElementSibling?.textContent}`);
-    expect(values).toEqual(['Mecze=3 : 1', 'Legi=7 : 4', 'Średnia: Anna=61.50', 'Średnia: Bartek=55.25']);
+    expect(values).toEqual(['Mecze=3 : 1', 'Legi=7 : 4', 'Średnia: Anna=61,50', 'Średnia: Bartek=55,25']);
   });
 
   it('says when there is no finished 1v1 match', async () => {
@@ -538,7 +538,7 @@ describe('StatsScreen: responsive layout', () => {
     expect(variants.some((name) => name.startsWith('@max-'))).toBe(true);
     const name = within(list).getByText('Anna');
     expect(classes(name)).toEqual(expect.arrayContaining(['min-w-0', 'truncate']));
-    expect(classes(within(list).getByText('61.50'))).toContain('shrink-0');
+    expect(classes(within(list).getByText('61,50'))).toContain('shrink-0');
   });
 
   it('scales the player card and keeps long names inside the chips', async () => {
@@ -563,5 +563,77 @@ describe('StatsScreen: responsive layout', () => {
     const [row] = within(section).getAllByRole('listitem');
     expect(classes(row).some((name) => name.startsWith('@max-xl:'))).toBe(true);
     expect(classes(row)).toEqual(expect.arrayContaining(['flex', 'items-center', 'gap-4']));
+  });
+
+  it('scrolls the player card inside its own area', async () => {
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    expect(classes(screen.getByRole('main'))).toEqual(expect.arrayContaining(['min-h-0', 'flex-1']));
+  });
+
+  it('puts the ranking link above the title on phones', async () => {
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    const link = screen.getByRole('link', { name: 'Ranking' });
+    const title = screen.getByRole('heading', { level: 1 });
+    expect(link.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(link.getAttribute('href')).toBe('#/stats');
+    expect(classes(link)).toContain('sm:order-last');
+    const arrow = within(link).getByText('←');
+    expect(arrow.getAttribute('aria-hidden')).toBe('true');
+    expect(classes(arrow)).toContain('sm:hidden');
+    expect(classes(title.parentElement)).toEqual(expect.arrayContaining(['max-sm:flex-col', 'flex-wrap']));
+  });
+
+  it('shows the game type filter as one row on phones in both views', async () => {
+    const { unmount } = render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const section = screen.getByRole('region', { name: 'Typ gry' });
+    expect(classes(section)).toContain('max-sm:w-full');
+    expectSegmented(screen.getByRole('button', { name: 'Wszystkie' }));
+    unmount();
+
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    expectSegmented(screen.getByRole('button', { name: 'Wszystkie' }));
+  });
+
+  function expectSegmented(first: HTMLElement): void {
+    expect(classes(first.parentElement)).toContain('max-sm:flex-nowrap');
+    for (const button of within(first.parentElement as HTMLElement).getAllByRole('button')) {
+      expect(classes(button)).toEqual(expect.arrayContaining(['max-sm:flex-1', 'min-h-12']));
+      expect(button.hasAttribute('aria-pressed')).toBe(true);
+    }
+  }
+
+  it('scrolls the player chips sideways on phones', async () => {
+    render(<StatsScreen playerId="p1" />);
+    const chip = await screen.findByRole('button', { name: 'Anna' });
+    expect(classes(chip)).toContain('max-sm:shrink-0');
+    expect(classes(chip.parentElement)).toContain('max-sm:overflow-x-auto');
+  });
+
+  it('lists the stats in one column on phones and keeps values on one line', async () => {
+    render(<StatsScreen playerId="p1" />);
+    await vi.waitFor(() => expect(document.querySelector('dl')).not.toBeNull());
+    expect(classes(card())).toEqual(expect.arrayContaining(['grid-cols-1', 'sm:grid-cols-3']));
+    expect(classes(card())).not.toContain('grid-cols-2');
+    const doubles = within(card()).getByText('% doubli', { selector: 'dt' }).nextElementSibling;
+    expect(doubles?.textContent).toBe('66,7% (2/3)');
+    expect(classes(doubles)).toContain('whitespace-nowrap');
+    expect(classes(within(doubles as HTMLElement).getByText('(2/3)'))).toContain('max-sm:block');
+  });
+
+  it('moves the history date into the type line in a narrow container', async () => {
+    history = [listItem({ id: 'm9', status: 'finished', winnerId: 'p1', players: [player('p1', 'Anna', { legsWon: 2 }), player('p2', 'Bartek', { legsWon: 1 })] })];
+    render(<StatsScreen playerId="p1" />);
+    const section = await screen.findByRole('region', { name: 'Historia gier' });
+    await within(section).findByText('Anna 2 : 1 Bartek');
+    const [row] = within(section).getAllByRole('listitem');
+    expect(classes(row)).toContain('@max-xl:grid-cols-[minmax(0,1fr)_auto]');
+    const [standalone, inline] = [...(row?.querySelectorAll('time') ?? [])];
+    expect(classes(standalone)).toContain('@max-xl:hidden');
+    expect(inline?.closest('div')?.textContent).toMatch(/^Mecz 1v1 · /);
+    expect(inline?.getAttribute('datetime')).toBe(standalone?.getAttribute('datetime'));
   });
 });

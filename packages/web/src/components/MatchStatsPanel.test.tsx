@@ -26,9 +26,9 @@ describe('MatchStatsPanel', () => {
     expect(table.getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Średnia', 'First 9', 'Max zamk.', '% doubli', 'Legi']);
     const [anna, bartek] = table.getAllByRole('row').slice(1);
     expect(within(anna as HTMLElement).getByRole('rowheader').textContent).toBe('Anna');
-    expect(within(anna as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['150.50', '150.50', '121', '100.0% (1/1)', '1']);
+    expect(within(anna as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['150,50', '150,50', '121', '100,0% (1/1)', '1']);
     expect(within(bartek as HTMLElement).getByRole('rowheader').textContent).toBe('Bartek');
-    expect(within(bartek as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.00', '0.00', '—', '—', '0']);
+    expect(within(bartek as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0,00', '0,00', '—', '—', '0']);
   });
 
   it('shows dashes before the first summary arrives', () => {

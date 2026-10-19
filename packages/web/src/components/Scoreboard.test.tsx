@@ -83,7 +83,7 @@ describe('Scoreboard', () => {
     render(<Scoreboard state={state} size="large" />);
     expect(screen.getByText('245')).toBeTruthy();
     expect(screen.getByText('6')).toBeTruthy();
-    expect(screen.getByText('122.5')).toBeTruthy();
+    expect(screen.getByText('122,5')).toBeTruthy();
   });
 
   it('stacks the row only from lg in a narrow container', () => {

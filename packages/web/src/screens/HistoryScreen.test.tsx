@@ -86,7 +86,7 @@ describe('HistoryScreen', () => {
     expect(rows()).toHaveLength(6);
     expect(within(row('Anna 2 : 1 Bartek')).getByText('Mecz 1v1 · 301')).toBeTruthy();
     expect(within(row('1. Celina')).getByText('1. Celina · 2. Anna · 3. Bartek')).toBeTruthy();
-    expect(within(row('Free run')).getByText('Anna · 6 rzutek · średnia 60.00')).toBeTruthy();
+    expect(within(row('Free run')).getByText('Anna · 6 rzutek · średnia 60,00')).toBeTruthy();
     expect(within(row('Anna 2 : 1 Bartek')).getByRole('link', { name: 'Szczegóły: Anna 2 : 1 Bartek' }).getAttribute('href')).toBe('#/matches/m_match');
     expect(screen.getAllByRole('link', { name: /^Szczegóły/ }).map((link) => link.getAttribute('href'))).toEqual([
       '#/matches/m_match',

@@ -45,6 +45,6 @@ describe('unfinishedRow', () => {
       players: [player('p1', 'Anna', { remaining: null })],
       freeRun: { dartsThrown: 22, totalPoints: 500, average: 68.18 },
     });
-    expect(unfinishedRow(game)).toEqual({ title: 'Trening: Free run', detail: 'Anna · 22 rzutki', state: '68.18' });
+    expect(unfinishedRow(game)).toEqual({ title: 'Trening: Free run', detail: 'Anna · 22 rzutki', state: '68,18' });
   });
 });

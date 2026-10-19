@@ -61,7 +61,7 @@ describe('historyRow', () => {
       endedAt: '2026-10-17T19:00:00.000Z',
       updatedAt: new Date(2026, 9, 17, 19, 0).toISOString(),
     });
-    expect(historyRow(game, now)).toEqual({ type: 'Trening · Free run', result: 'Anna · 12 rzutek · średnia 45.00', status: 'ended', statusLabel: 'Zakończony', date: 'wczoraj' });
+    expect(historyRow(game, now)).toEqual({ type: 'Trening · Free run', result: 'Anna · 12 rzutek · średnia 45,00', status: 'ended', statusLabel: 'Zakończony', date: 'wczoraj' });
   });
 
   it('marks a game in progress', () => {
