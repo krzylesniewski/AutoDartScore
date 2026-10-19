@@ -58,6 +58,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/rwd.md
       kind: markdown
       tag: rwd
+    # Tylko dla PR-ów z briefTags: [p21-p23].
+    - title: P21-P23, nagrane wyniki, efekt kliknięcia klawiatury, statystyki na telefonie (wiążące dla P21-P23, każdy PR tylko swoja sekcja)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p21-p23.md
+      kind: markdown
+      tag: p21-p23
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -279,3 +284,37 @@ prs:
     changeset: none
     scope: ['packages/web/**']
     briefTags: [rwd]
+
+  # Decyzja 2026-10-20 (design/plan-p21-p23.md). Trzy niezależne zadania, mogą iść równolegle.
+  # Nagrane wyniki i zdarzenia zamiast Web Speech, z Web Speech jako zapasem (sekcja P21).
+  - id: P21
+    branch: feat/audio-recorded-scores
+    title: 'feat(audio): recorded score and event clips with speech fallback'
+    brief: briefs/P21.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/audio/**', 'packages/web/**']
+    briefTags: [p21-p23]
+
+  # Stan wciśnięcia i mignięcie po trafieniu na klawiaturze wyników, także na dotyku (sekcja P22).
+  - id: P22
+    branch: feat/web-keypad-press
+    title: 'feat(web): pressed state and hit flash on the keypad'
+    brief: briefs/P22.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p21-p23]
+
+  # Statystyki czytelne na telefonie: kompaktowy pasek, filtry w rzędzie, lista statystyk, przecinek w liczbach (sekcja P23).
+  - id: P23
+    branch: fix/web-stats-phone
+    title: 'fix(web): readable statistics on phones'
+    brief: briefs/P23.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p21-p23, rwd]
