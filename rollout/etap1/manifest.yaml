@@ -48,6 +48,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/new-game-a2.md
       kind: markdown
       tag: a2
+    # Tylko dla PR-ów z briefTags: [highest-turn].
+    - title: Statystyki, najwyższa tura zamiast liczby 180 (wiążące dla P18)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/stats-highest-turn.md
+      kind: markdown
+      tag: highest-turn
     # Tylko dla PR-ów z briefTags: [rwd].
     - title: RWD trzech ekranów, zakres i podział plików (wiążący dla P15-P17; tylko układ, bez nowych funkcji poza Rewanżem)
       path: ~/Documents/00_Nauka/AutoScoreDart/design/rwd.md
@@ -239,3 +244,14 @@ prs:
     changeset: none
     scope: ['packages/web/**']
     briefTags: [rwd]
+
+  # Najwyższy priorytet (decyzja 2026-10-19): kafel "Najwyższa tura" (mecze 1v1) zamiast "Liczba 180" (design/stats-highest-turn.md).
+  - id: P18
+    branch: feat/stats-highest-turn
+    title: 'feat(stats): highest turn ranking from 1v1 matches instead of 180 count'
+    brief: briefs/P18.md
+    priority: 100
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**']
+    briefTags: [highest-turn]
