@@ -14,6 +14,7 @@ interface Tile {
   readonly unit: string;
   readonly entries: readonly RankingEntry[];
   readonly format: (value: number) => string;
+  readonly empty?: string | undefined;
 }
 
 function tiles(rankings: StatsRankings): readonly Tile[] {
@@ -21,7 +22,13 @@ function tiles(rankings: StatsRankings): readonly Tile[] {
     { title: pl.tileBestLeg, unit: pl.tileBestLegUnit, entries: rankings.bestLegAverage, format: formatAverage },
     { title: pl.statHighestCheckout, unit: pl.tileCheckoutUnit, entries: rankings.highestCheckout, format: String },
     { title: pl.tileShortestLeg, unit: pl.tileShortestLegUnit, entries: rankings.shortestLeg, format: String },
-    { title: pl.tile180, unit: pl.tile180Unit, entries: rankings.scores180, format: String },
+    {
+      title: pl.tileHighestTurn,
+      unit: pl.tileHighestTurnUnit,
+      entries: rankings.highestTurn,
+      format: String,
+      empty: rankings.filter === 'casual' || rankings.filter === 'practice' ? pl.tileOnlyMatches : undefined,
+    },
   ];
 }
 
@@ -70,7 +77,7 @@ export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
                 </li>
               ))}
             </ol>
-            {tile.entries.length < 3 && <p className="py-2 text-(--color-text-muted)">{pl.tooFewPlayers}</p>}
+            {tile.entries.length < 3 && <p className="py-2 text-(--color-text-muted)">{tile.empty ?? pl.tooFewPlayers}</p>}
           </section>
         ))}
       </div>

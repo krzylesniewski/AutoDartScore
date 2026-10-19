@@ -67,6 +67,8 @@ describe('tallyGame', () => {
       bestLegDarts: null,
       legsWon: 0,
     });
+    expect(tally.players.get('anna')?.highestTurn).toBe(180);
+    expect(tally.players.get('bartek')?.highestTurn).toBe(0);
     expect(tally.winnerId).toBe('anna');
     expect(tally.legs).toEqual([
       {
@@ -152,6 +154,21 @@ describe('tallyGame', () => {
     ]);
   });
 
+  it('counts the leg-closing turn with its full total as the highest turn', () => {
+    const events: DomainEvent[] = [
+      turn('anna', 0, [S(20), S(20), S(20)], 60, 241),
+      turn('anna', 0, [T(20), S(20), S(20)], 100, 141),
+      turn('anna', 0, [T(20), T(19), D(12)], 141, 0),
+      legWon('anna', 0, 141, 9),
+    ];
+    expect(tallyGame('match', ['anna'], events).players.get('anna')?.highestTurn).toBe(141);
+  });
+
+  it('leaves a bust out of the highest turn', () => {
+    const events: DomainEvent[] = [turn('anna', 0, [S(20), S(20), S(5)], 45, 56), bust('anna', 0, [T(20)], 56)];
+    expect(tallyGame('match', ['anna'], events).players.get('anna')?.highestTurn).toBe(45);
+  });
+
   it('ignores darts of an open turn because it has no event yet', () => {
     expect(line('match', ['anna', 'bartek'], [], 'anna')).toMatchObject({ dartsThrown: 0, average: null, first9Average: null });
   });
@@ -190,5 +207,14 @@ describe('mergeTotals', () => {
     expect(mergeTotals(a, b)).toMatchObject({ points: 160, darts: 9, highestCheckout: 121, bestLegDarts: 15, legsWon: 3 });
     expect(mergeTotals(EMPTY_TOTALS, a)).toEqual(a);
     expect(mergeTotals(a, EMPTY_TOTALS)).toEqual(a);
+  });
+
+  it('keeps the higher highest turn and treats null as no value', () => {
+    const a = { ...EMPTY_TOTALS, highestTurn: 100 };
+    expect(mergeTotals(a, { ...EMPTY_TOTALS, highestTurn: 140 }).highestTurn).toBe(140);
+    expect(mergeTotals(a, { ...EMPTY_TOTALS, highestTurn: 0 }).highestTurn).toBe(100);
+    expect(mergeTotals(a, EMPTY_TOTALS).highestTurn).toBe(100);
+    expect(mergeTotals(EMPTY_TOTALS, { highestTurn: 0 }).highestTurn).toBe(0);
+    expect(mergeTotals(EMPTY_TOTALS, EMPTY_TOTALS).highestTurn).toBeNull();
   });
 });

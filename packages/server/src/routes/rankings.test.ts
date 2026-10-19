@@ -1,6 +1,6 @@
 import { ApiError, StatsRankings } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { D, LEG_301, S, T, abandon, createGame, createPlayer, createPlayers, setup, throwDarts, type TestApp } from '../test-helpers.js';
+import { D, LEG_301, MISS, S, T, abandon, createGame, createPlayer, createPlayers, setup, throwDarts, type TestApp } from '../test-helpers.js';
 
 let t: TestApp;
 let anna: string;
@@ -38,7 +38,7 @@ describe('GET /stats/rankings', () => {
       bestLegAverage: [],
       highestCheckout: [],
       shortestLeg: [],
-      scores180: [],
+      highestTurn: [],
     });
   });
 
@@ -56,10 +56,10 @@ describe('GET /stats/rankings', () => {
       { playerId: anna, name: 'Anna', avatar: null, position: null, average: 150.5, legs: 2 },
       { playerId: bartek, name: 'Bartek', avatar: null, position: null, average: 0, legs: 2 },
     ]);
-    // 180 liczy każdą zamkniętą turę, jak karta gracza.
-    expect(result.scores180.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
-      ['Anna', 1, 2],
-      ['Bartek', 2, 1],
+    // Najwyższa tura liczy każdą zamkniętą turę, także z porzuconej gry.
+    expect(result.highestTurn.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
+      ['Anna', 1, 180],
+      ['Bartek', 1, 180],
     ]);
     expect(result.highestCheckout).toEqual([{ playerId: anna, name: 'Anna', avatar: null, position: 1, value: 121 }]);
     expect(result.shortestLeg).toEqual([{ playerId: anna, name: 'Anna', avatar: null, position: 1, value: 6 }]);
@@ -94,11 +94,35 @@ describe('GET /stats/rankings', () => {
     expect(await rankings()).toMatchObject({ games: 2, legs: 2 });
   });
 
+  it('takes the highest turn only from 1v1 matches', async () => {
+    await playLeg301();
+    const casual = await createGame(t.app, { type: 'casual', playerIds: [bartek, anna], startingScore: 301 });
+    await throwDarts(t.app, casual.id, LEG_301);
+    const solo = await createGame(t.app, { type: 'practice', practiceMode: 'solo_501', playerIds: [bartek] });
+    await throwDarts(t.app, solo.id, SOLO_501);
+
+    expect((await rankings()).highestTurn.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
+      ['Anna', 1, 180],
+      ['Bartek', 2, 0],
+    ]);
+    expect((await rankings('casual')).highestTurn).toEqual([]);
+    expect((await rankings('practice')).highestTurn).toEqual([]);
+  });
+
+  it('counts a checkout turn with its full score as the highest turn', async () => {
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 1 });
+    await throwDarts(t.app, id, [S(20), S(20), S(20), MISS, MISS, MISS, T(20), S(20), S(20), MISS, MISS, MISS, T(20), T(19), D(12)]);
+    expect((await rankings()).highestTurn.map((entry) => [entry.name, entry.value])).toEqual([
+      ['Anna', 141],
+      ['Bartek', 0],
+    ]);
+  });
+
   it('never counts a Free run', async () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     await throwDarts(t.app, id, [T(20), T(20), T(20), T(20), T(20), T(20)]);
-    expect(await rankings()).toMatchObject({ games: 0, legs: 0, players: [], scores180: [] });
-    expect(await rankings('practice')).toMatchObject({ games: 0, legs: 0, players: [], scores180: [] });
+    expect(await rankings()).toMatchObject({ games: 0, legs: 0, players: [], highestTurn: [] });
+    expect(await rankings('practice')).toMatchObject({ games: 0, legs: 0, players: [], highestTurn: [] });
   });
 
   it('counts a game with a guest without listing the guest', async () => {
@@ -107,7 +131,7 @@ describe('GET /stats/rankings', () => {
     const result = await rankings();
     expect(result).toMatchObject({ games: 1, legs: 1 });
     expect(result.players.map((entry) => entry.name)).toEqual(['Anna']);
-    for (const tile of [result.bestLegAverage, result.highestCheckout, result.shortestLeg, result.scores180]) {
+    for (const tile of [result.bestLegAverage, result.highestCheckout, result.shortestLeg, result.highestTurn]) {
       expect(tile.map((entry) => entry.playerId)).not.toContain(guest.id);
     }
   });

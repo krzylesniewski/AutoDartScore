@@ -100,7 +100,7 @@ export const StatsRankings = z.object({
   bestLegAverage: z.array(RankingEntry),
   highestCheckout: z.array(RankingEntry),
   shortestLeg: z.array(RankingEntry),
-  scores180: z.array(RankingEntry),
+  highestTurn: z.array(RankingEntry), // tylko mecze 1v1
 });
 export type StatsRankings = z.infer<typeof StatsRankings>;
 

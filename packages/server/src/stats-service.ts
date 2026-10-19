@@ -114,7 +114,7 @@ export function createStatsService({ store }: Dependencies): StatsService {
           continue;
         }
         const { playerIds, events, tally } = await replayed(match);
-        games.push({ legs: completedPlayerLegs(match.type, playerIds, events), tally });
+        games.push({ type: match.type, legs: completedPlayerLegs(match.type, playerIds, events), tally });
       }
       // Zarchiwizowany gracz zostaje w rankingu. Ukrywa go tylko wybór graczy do nowej gry.
       return { filter, ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games }) };
