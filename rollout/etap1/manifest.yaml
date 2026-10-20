@@ -63,6 +63,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p21-p23.md
       kind: markdown
       tag: p21-p23
+    # Tylko dla PR-ów z briefTags: [online].
+    - title: P24-P29, aplikacja online (front na GitHub Pages, API na Mikr.us; wiążące dla P24-P29, każdy PR tylko swoja sekcja)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-online.md
+      kind: markdown
+      tag: online
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -318,3 +323,75 @@ prs:
     changeset: none
     scope: ['packages/web/**']
     briefTags: [p21-p23, rwd]
+
+  # Decyzja 2026-10-20 (design/plan-online.md, P24-P29): front na GitHub Pages, API na Mikr.us, bez własnej domeny.
+  # Adres API z konfiguracji, WebSocket z tego samego adresu, ścieżka bazowa builda (sekcja P24).
+  - id: P24
+    branch: feat/web-api-url
+    title: 'feat(web): configurable API address and base path'
+    brief: briefs/P24.md
+    priority: 70
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [online]
+
+  # Wspólne hasło, token w nagłówku, auth na WebSockecie, CORS i /health (sekcja P25).
+  - id: P25
+    branch: feat/server-password-cors
+    title: 'feat(server): shared password, token auth and CORS'
+    brief: briefs/P25.md
+    priority: 70
+    effort: { brief: xhigh, implement: xhigh, verify: xhigh }
+    changeset: none
+    scope: ['packages/server/**', 'packages/schema/**']
+    briefTags: [online]
+
+  # Ekran logowania i token w żądaniach (sekcja P26).
+  - id: P26
+    branch: feat/web-login
+    title: 'feat(web): login screen and token in requests'
+    brief: briefs/P26.md
+    deps: [P24, P25]
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [online]
+
+  # Każdy merge z zielonym CI: API na Mikr.us przez SSH, potem front na GitHub Pages (sekcja P27).
+  - id: P27
+    branch: ci/deploy-on-merge
+    title: 'ci: deploy API and web app after each merge'
+    brief: briefs/P27.md
+    deps: [P24, P28]
+    priority: 60
+    effort: { brief: xhigh, implement: high, verify: xhigh }
+    changeset: none
+    scope: ['.github/workflows/deploy.yml', 'deploy/README.md']
+    allowWorkflows: true
+    briefTags: [online]
+
+  # Usługa, wdrożenie z rollbackiem, kopie zapasowe i przeniesienie obecnej bazy na Mikr.us (sekcja P28).
+  - id: P28
+    branch: chore/deploy-mikrus
+    title: 'chore(deploy): Mikrus service, deploy, backup and data migration'
+    brief: briefs/P28.md
+    deps: [P25]
+    priority: 60
+    effort: { brief: xhigh, implement: high, verify: xhigh }
+    changeset: none
+    scope: ['deploy/**']
+    briefTags: [online]
+
+  # Build frontu i test startu serwera w CI, przed wszystkimi zmianami online (sekcja P29).
+  - id: P29
+    branch: ci/build-smoke
+    title: 'ci: build the web app and smoke-test the server'
+    brief: briefs/P29.md
+    priority: 80
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['.github/workflows/ci.yml']
+    allowWorkflows: true
+    briefTags: [online]
