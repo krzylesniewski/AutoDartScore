@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from '
 
 export const HIT_FLASH_MS = 200;
 
-const PRESSED_TONE: KeypadKeyTone = { fill: 'bg-(--color-surface-active)', border: 'border-(--color-text)' };
+const PRESSED_TONE: KeypadKeyTone = { fill: 'bg-(--color-surface-active) text-(--color-text)', border: 'border-(--color-text)' };
 const FLASH_BORDER = 'border-(--color-accent)';
 const feedback = 'touch-manipulation transition-[background-color,border-color,scale] duration-80';
 
@@ -42,6 +42,13 @@ export function KeypadKey({
     setPressed(false);
     setFlashing(false);
   }
+
+  // Zablokowanie w trakcie błysku kasuje też jego zegar.
+  useEffect(() => {
+    if (disabled) {
+      clearTimeout(flashTimer.current);
+    }
+  }, [disabled]);
 
   useEffect(() => () => clearTimeout(flashTimer.current), []);
 

@@ -141,7 +141,7 @@ Rzutka może mieć pole `review`:
 - Każda zmiana w `engine` wymaga testów (bust, double-out, checkouty, przypadki brzegowe: tura krótsza niż 3 rzutki, rzutka po końcu meczu, 4. rzutka w turze).
 - Statystyki liczone z tabeli rzutek, a nie z osobno utrzymywanych liczników.
 - Zdarzenia audio wyzwalane przez zdarzenia domenowe silnika, nie przez kliknięcia w UI.
-- Wynik odczytywany tylko na jednym urządzeniu (audio host), żeby nie czytać dwa razy.
+- Głos i efekty są domyślnie włączone na każdym urządzeniu (decyzja 2026-10-20: z odczytem wyniku gra się lepiej). Bez wyznaczonego „audio hosta”: na drugim ekranie gracz wyłącza głos ręcznie przełącznikiem.
 
 ## Komendy
 

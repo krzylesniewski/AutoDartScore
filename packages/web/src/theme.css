@@ -1,7 +1,7 @@
 @import "tailwindcss";
 /*
- * Motyw z design/theme.css musi być po tailwindcss. Wtedy jego zmienne w :root wygrywają z @layer theme,
- * a zdalny @import fontów ląduje w środku pliku i build go odrzuca. Fonty idą lokalnie z @fontsource.
+ * Motyw z design/theme.css musi być po tailwindcss. Wtedy jego zmienne w :root wygrywają z @layer theme.
+ * Fonty idą lokalnie z @fontsource.
  */
 @import "../../../design/theme.css";
 

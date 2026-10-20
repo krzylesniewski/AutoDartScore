@@ -849,7 +849,7 @@ describe('effects', () => {
     expect(FakeAudioContext.oscillators).toBe(0);
   });
 
-  it('reads Bust after the effect ends', () => {
+  it('plays the bust clip after the effect ends', () => {
     vi.useFakeTimers();
     const ws = connect();
     sendBust(ws);
@@ -866,7 +866,7 @@ describe('effects', () => {
     expect(speak).not.toHaveBeenCalled();
   });
 
-  it('reads Bust at once with the effects off', () => {
+  it('plays the bust clip at once with the effects off', () => {
     localStorage.setItem('autoscore.effects', 'off');
     const ws = connect();
     sendBust(ws);

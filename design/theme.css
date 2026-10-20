@@ -5,7 +5,7 @@
  * Jedno źródło prawdy dla kolorów, typografii i promieni. Front (P5) podpina to pod Tailwinda.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap');
+/* Fonty nie są importowane tutaj: makiety HTML ładują je przez <link> w <head>, a front lokalnie z @fontsource. */
 
 :root {
   /* Tła i powierzchnie, od najciemniejszej */

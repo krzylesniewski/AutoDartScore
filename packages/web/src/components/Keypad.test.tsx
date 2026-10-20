@@ -79,6 +79,7 @@ describe('Keypad', () => {
     function expectOneColorPerGroup(element: HTMLElement): void {
       expect(classes(element).filter((name) => /^bg-/.test(name))).toHaveLength(1);
       expect(classes(element).filter((name) => /^border-\(--color-/.test(name))).toHaveLength(1);
+      expect(classes(element).filter((name) => /^text-\(--color-/.test(name))).toHaveLength(1);
     }
 
     afterEach(() => {
@@ -115,7 +116,7 @@ describe('Keypad', () => {
       const { button } = renderKeypad(false);
       fireEvent.pointerDown(button('20'));
       expect(classes(button('20'))).toEqual(
-        expect.arrayContaining(['bg-(--color-surface-active)', 'border-(--color-text)', 'motion-safe:scale-96']),
+        expect.arrayContaining(['bg-(--color-surface-active)', 'text-(--color-text)', 'border-(--color-text)', 'motion-safe:scale-96']),
       );
       expect(classes(button('20'))).not.toContain('scale-96');
     });
@@ -208,6 +209,16 @@ describe('Keypad', () => {
       expect(button('20').hasAttribute('data-pressed')).toBe(false);
       rerender(false);
       expect(button('20').hasAttribute('data-pressed')).toBe(false);
+    });
+
+    it('cancels the flash timer when the keypad is disabled during the flash', () => {
+      vi.useFakeTimers();
+      const { button, rerender } = renderKeypad(false);
+      fireEvent.click(button('20'));
+      expect(vi.getTimerCount()).toBe(1);
+      rerender(true);
+      expect(button('20').hasAttribute('data-flash')).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
     });
 
     it.each(['20', 'Miss', 'D', 'S'])('gives %s one background and one border color in every state', (name) => {
