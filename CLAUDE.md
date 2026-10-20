@@ -48,11 +48,11 @@ Szczegółowe pomysły i decyzje: `auto-score-dart-pomysly.md`.
 ## Reguły X01 (ustalone)
 
 - Wyjście: double-out (domyślnie).
-- Mecz 1v1: best of 3 legów (wygrywa pierwszy, kto weźmie 2 legi). Zabawa 3-4 graczy: jeden leg z rankingiem miejsc (patrz "Typy gier").
+- Mecz 1v1: best of 1, 3 lub 5 legów, domyślnie best of 1 (decyzja 2026-10-20 z feedbacku graczy; wcześniej best of 3). Zabawa 3-4 graczy: jeden leg z rankingiem miejsc (patrz "Typy gier").
 - Bust: wynik tury się anuluje, gracz wraca do wyniku sprzed tury, tura się kończy. Bust gdy wynik spadłby poniżej zera, zostałaby dokładnie 1, albo wynik doszedłby do zera rzutką, która nie jest double (ani Bull).
 - Rzutka poza tarczą lub odbita: wykonana rzutka za 0 (miss).
 - Wejście: straight-in (punkty liczone od pierwszej rzutki).
-- Punkty startowe: 301, 501 lub 701 do wyboru w ustawieniach.
+- Punkty startowe: 301, 501 lub 701 do wyboru w kreatorze, domyślnie 301 (decyzja 2026-10-20; Solo 501 zawsze 501).
 - Kto zaczyna: pierwszy leg meczu wyłoniony losowaniem, kolejne legi na przemian.
 
 ## Front
@@ -77,7 +77,7 @@ Szczegółowe pomysły i decyzje: `auto-score-dart-pomysly.md`.
 
 ## Zakres MVP
 
-- Tryb: tylko X01 (301/501/701 do wyboru w ustawieniach, double-out, straight-in, best of 3 legów). Drugi tryb (Cricket lub Around the Clock) dopiero po ukończeniu X01, nie implementuj go wcześniej.
+- Tryb: tylko X01 (301/501/701, domyślnie 301; double-out, straight-in; best of 1/3/5, domyślnie 1). Drugi tryb (Cricket lub Around the Clock) dopiero po ukończeniu X01, nie implementuj go wcześniej.
 - Gracze: 1-4, profile lub goście.
 - Statystyki klasyczne: średnia na 3 rzutki, first 9, 180/140+/100+/60+, najwyższy checkout, % doubli, najlepszy leg, wygrane legi i mecze (sety dopiero po ich wprowadzeniu).
 - Głos po każdej turze ("sto", "czterdzieści pięć") oraz osobne komunikaty `bust` i `winner`.

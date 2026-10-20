@@ -68,6 +68,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-online.md
       kind: markdown
       tag: online
+    # Tylko dla PR-ów z briefTags: [p31-p32].
+    - title: P31-P32, stała klawiatura na ekranie gry, domyślnie 301 i best of 1 (wiążące dla P31-P32, każdy PR tylko swoja sekcja)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p31-p32.md
+      kind: markdown
+      tag: p31-p32
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -407,3 +412,26 @@ prs:
     changeset: none
     scope: ['packages/server/**', 'deploy/**']
     briefTags: [online]
+
+  # Feedback graczy 2026-10-20 (feedback-graczy.md, design/plan-p31-p32.md). Dwa niezależne zadania.
+  # Klawiatura nie zmienia położenia w trakcie gry na żadnej szerokości (sekcja P31).
+  - id: P31
+    branch: fix/web-keypad-stable
+    title: 'fix(web): keep the keypad in place during a game'
+    brief: briefs/P31.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p31-p32, rwd]
+
+  # Domyślnie 301 i best of 1 w kreatorze i w API (sekcja P32).
+  - id: P32
+    branch: feat/default-301-bo1
+    title: 'feat: default to 301 and best of 1 for a new game'
+    brief: briefs/P32.md
+    priority: 60
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**', 'packages/schema/**', 'README.md']
+    briefTags: [p31-p32]
