@@ -37,9 +37,9 @@ export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo 
   return (
     <section className="@container flex flex-col gap-3">
       {thrower && (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-          <h2 className="font-display text-(length:--text-heading) leading-tight font-bold">{pl.playerThrows(thrower.name)}</h2>
-          <span className="text-(--color-text-muted)">{pl.dartOfTurn(state.currentDarts.length + 1)}</span>
+        <div className="flex flex-nowrap items-baseline justify-between gap-x-4">
+          <h2 className="min-w-0 truncate font-display text-(length:--text-heading) leading-tight font-bold">{pl.playerThrows(thrower.name)}</h2>
+          <span className="shrink-0 whitespace-nowrap text-(--color-text-muted)">{pl.dartOfTurn(state.currentDarts.length + 1)}</span>
         </div>
       )}
       <ol className={`grid grid-cols-3 gap-3 ${shown ? 'opacity-50' : ''}`}>
@@ -47,7 +47,10 @@ export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo 
           <DartSlot key={index} index={index} dart={darts[index]} waiting={index === waitingIndex} />
         ))}
       </ol>
-      {shownName && <p className="font-display text-lg text-(--color-text-muted)">{shownName}</p>}
+      {/* Od lg pusta linia trzyma miejsce na imię, żeby klawiatura nie skakała przy pokazaniu zamkniętej tury. */}
+      <p aria-hidden={shownName ? undefined : 'true'} className={`font-display text-lg text-(--color-text-muted) ${shownName ? '' : 'max-lg:hidden'}`}>
+        {shownName ?? ' '}
+      </p>
       <div className={`flex gap-3 ${sharedCard}`}>
         <div
           className={`flex flex-1 flex-col items-start justify-center gap-1 lg:h-20 lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-5 xl:h-auto xl:py-3 ${ownCard}`}
@@ -122,19 +125,20 @@ function CheckoutHint({ state }: { state: MatchSnapshot }) {
   }
   const dartsLeft = (DARTS_PER_TURN - state.currentDarts.length) as 1 | 2 | 3;
   const route = suggestCheckout(player.remaining, dartsLeft);
-  if (!route) {
-    return null;
-  }
+  // Bez trasy zostaje niewidoczna karta tej samej wysokości, żeby od lg klawiatura nie skakała przy pojawieniu się podpowiedzi.
   // Od lg siatka: etykieta i opis po lewej, chip po prawej. Na xl wraca kolumna jak na monitorze.
   return (
     <div
-      className={`flex flex-1 flex-col items-end justify-center gap-1 lg:grid lg:h-20 lg:grid-cols-[minmax(0,1fr)_auto] lg:content-center lg:items-center lg:gap-x-4 lg:gap-y-0 lg:px-5 xl:flex xl:h-auto xl:flex-col xl:items-center xl:gap-2 xl:py-3 ${ownCard}`}
+      aria-hidden={route ? undefined : 'true'}
+      className={`flex flex-1 flex-col items-end justify-center gap-1 lg:grid lg:h-20 lg:grid-cols-[minmax(0,1fr)_auto] lg:content-center lg:items-center lg:gap-x-4 lg:gap-y-0 lg:px-5 xl:flex xl:h-auto xl:flex-col xl:items-center xl:gap-2 xl:py-3 ${ownCard} ${route ? '' : 'invisible max-lg:hidden'}`}
     >
-      <span className={`${label} lg:col-start-1 lg:row-start-1`}>{pl.checkout}</span>
-      <span className="rounded-(--radius-chip) bg-(--color-accent) px-3 py-1 font-display text-[clamp(28px,8cqi,44px)] leading-none font-bold text-(--color-on-accent) lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:px-5 xl:px-6 xl:text-(length:--text-checkout-fit)">
-        {route.map(hitLabel).join(' ')}
+      <span className={`${label} lg:col-start-1 lg:row-start-1`}>{route ? pl.checkout : ' '}</span>
+      <span className="rounded-(--radius-chip) bg-(--color-accent) px-3 py-1 font-display text-[clamp(28px,8cqi,44px)] leading-none font-bold whitespace-nowrap text-(--color-on-accent) lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:px-5 xl:px-6 xl:text-[min(var(--text-checkout-fit),8.5cqi)]">
+        {route ? route.map(hitLabel).join(' ') : ' '}
       </span>
-      <span className="text-right text-sm text-(--color-text-muted) lg:col-start-1 lg:row-start-2 lg:text-left lg:text-base">{`${pl.darts(route.length)} ${pl.toWinLeg}`}</span>
+      <span className="text-right text-sm text-(--color-text-muted) lg:col-start-1 lg:row-start-2 lg:text-left lg:text-base">
+        {route ? `${pl.darts(route.length)} ${pl.toWinLeg}` : ' '}
+      </span>
     </div>
   );
 }

@@ -39,4 +39,26 @@ describe('TurnPanel', () => {
     expect(screen.queryByText(/rzuca/)).toBeNull();
     expect(screen.queryByText('czeka na rzutkę')).toBeNull();
   });
+
+  it('keeps an invisible checkout placeholder without a route', () => {
+    const state = snapshot({ currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: 301, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] });
+    const { container } = render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} />);
+    expect(container.querySelector('[aria-hidden="true"].invisible.max-lg\\:hidden')).not.toBeNull();
+    expect(screen.queryByText('Zamknięcie')).toBeNull();
+    expect(screen.queryByText(/do wygrania lega/)).toBeNull();
+  });
+
+  it('has no checkout placeholder in Free run', () => {
+    const state = snapshot({ startingScore: null, currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: null, legsWon: 0 })] });
+    const { container } = render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} />);
+    expect(container.querySelector('.invisible')).toBeNull();
+  });
+
+  it('keeps an empty name line without a closed turn', () => {
+    const state = snapshot({ currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: 301, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] });
+    const { container } = render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} />);
+    const line = container.querySelector('p[aria-hidden="true"]');
+    expect(line?.className.split(' ')).toContain('max-lg:hidden');
+    expect(line?.textContent).toBe('\u00a0');
+  });
 });
