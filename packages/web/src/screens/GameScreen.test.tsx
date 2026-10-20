@@ -285,6 +285,31 @@ describe('GameScreen', () => {
     expect(dock?.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'lg:contents']));
   });
 
+  it('shows the bust banner outside the dock at the top of the screen', () => {
+    vi.useFakeTimers();
+    const ws = connect();
+    ws.serverSend({ type: 'bust', matchId: MATCH_ID, eventSeq: 5, playerId: 'p2', legIndex: 0, turnIndex: 3, darts: [{ segment: 20, multiplier: 3 }], remaining: 40 });
+    const status = screen.getByRole('status');
+    const dock = screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement;
+    expect(dock?.contains(status)).toBe(false);
+    expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'top-0']));
+  });
+
+  it('pushes the dock to the bottom when the content is short', () => {
+    connect();
+    const dock = screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement;
+    expect(dock?.className.split(' ')).toEqual(expect.arrayContaining(['mt-auto', 'sticky', 'bottom-0', 'lg:contents']));
+  });
+
+  it('overlays the notices from lg instead of moving them above the turn', () => {
+    vi.useFakeTimers();
+    const ws = connect();
+    ws.serverClose(1006);
+    const notices = screen.getByText('Brak połączenia z serwerem. Łączę ponownie…').parentElement;
+    expect(notices?.className.split(' ')).toContain('lg:absolute');
+    expect(notices?.className.split(' ')).not.toContain('lg:order-first');
+  });
+
   it('closes the socket on unmount and never reconnects', () => {
     vi.useFakeTimers();
     const { unmount } = render(<GameScreen matchId={MATCH_ID} />);
