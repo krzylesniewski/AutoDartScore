@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Deploys one commit from origin/main as the autoscore user and rolls back the
-# commit and the database when any step fails.
+# Deploys one commit from origin/main as the autoscore user, builds the front
+# when AUTOSCORE_WEB_DIR is set, and rolls back the commit, the front and the
+# database when any step fails.
 #
 #   deploy.sh <40-character sha>
 #
@@ -22,6 +23,8 @@ db=""
 health_url=""
 backup_file=""
 db_absent=0
+web_dir=""
+public_url=""
 
 log() {
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"
@@ -56,12 +59,23 @@ install_deps() {
   (cd "$app_dir" && pnpm install --frozen-lockfile)
 }
 
+# AUTOSCORE_WEB_DIR only switches the build on. The build always writes
+# packages/web/dist. The server has 1 GB of RAM, hence the heap limit.
+build_web() {
+  if [ -z "$web_dir" ]; then
+    return 0
+  fi
+  log "building the front for $public_url"
+  (cd "$app_dir" && VITE_API_URL="$public_url" VITE_BASE=/ NODE_OPTIONS=--max-old-space-size=512 pnpm --filter @autoscore/web build)
+}
+
 # Called as an if condition, where set -e is off, so every step checks its own
 # status.
 deploy_target() {
   log "checking out $target"
   git -C "$app_dir" checkout --quiet --detach "$target" || return 1
   install_deps || return 1
+  build_web || return 1
 
   log "stopping $service"
   sudo -n systemctl stop "$service" || return 1
@@ -111,6 +125,7 @@ rollback() {
   # half-done checkout left behind.
   git -C "$app_dir" checkout --quiet --force --detach "$previous" || return 1
   install_deps || return 1
+  build_web || return 1
   sudo -n systemctl start "$service" || return 1
   wait_for_health || return 1
 }
@@ -163,6 +178,12 @@ main() {
       finish rejected 1
       ;;
   esac
+  web_dir=$(env_file_value "$env_file" AUTOSCORE_WEB_DIR)
+  public_url=$(env_file_value "$env_file" AUTOSCORE_PUBLIC_URL)
+  if [ -n "$web_dir" ] && [[ ! "$public_url" =~ ^https?:// ]]; then
+    echo "AUTOSCORE_PUBLIC_URL in $env_file must start with http:// or https:// when AUTOSCORE_WEB_DIR is set"
+    finish rejected 1
+  fi
   if [ -n "${AUTOSCORE_HEALTH_URL:-}" ]; then
     health_url="$AUTOSCORE_HEALTH_URL"
   elif [[ "$host" == *:* ]]; then

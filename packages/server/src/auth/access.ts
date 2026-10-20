@@ -8,6 +8,7 @@ export interface AccessControlOptions {
   readonly auth: AuthConfig | null;
   readonly corsOrigins: readonly string[] | null;
   readonly now: () => number;
+  readonly webRoutes: ReadonlySet<string>; // trasy plików frontu, otwarte dla GET i HEAD
 }
 
 const PUBLIC_ROUTES = new Set(['/health', '/auth/login']);
@@ -17,7 +18,7 @@ function bearerToken(request: FastifyRequest): string | null {
   return match?.[1] ?? null;
 }
 
-export async function registerAccessControl(app: FastifyInstance, { auth, corsOrigins, now }: AccessControlOptions): Promise<void> {
+export async function registerAccessControl(app: FastifyInstance, { auth, corsOrigins, now, webRoutes }: AccessControlOptions): Promise<void> {
   // CORS przed hakiem autoryzacji, żeby odpowiedź 401 też miała nagłówki CORS i front mógł odczytać status.
   if (corsOrigins !== null) {
     await app.register(cors, {
@@ -37,7 +38,12 @@ export async function registerAccessControl(app: FastifyInstance, { auth, corsOr
       }
       return;
     }
-    if (auth === null || request.method === 'OPTIONS' || PUBLIC_ROUTES.has(request.routeOptions.url ?? '')) {
+    const route = request.routeOptions.url ?? '';
+    if (auth === null || request.method === 'OPTIONS' || PUBLIC_ROUTES.has(route)) {
+      return;
+    }
+    // Przeglądarka pobiera front bez tokenu, bo ekran logowania jest jego częścią. Decyduje dopasowana trasa, nie surowy adres.
+    if ((request.method === 'GET' || request.method === 'HEAD') && webRoutes.has(route)) {
       return;
     }
     const token = bearerToken(request);
