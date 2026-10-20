@@ -1,0 +1,21 @@
+[Unit]
+Description=AUTO Score API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=autoscore
+Group=autoscore
+WorkingDirectory=/home/autoscore/app/packages/server
+EnvironmentFile=/etc/autoscore/autoscore.env
+# node runs directly, not through pnpm, so SIGTERM reaches the server.
+# systemd looks up a bare node in /usr/local/bin and /usr/bin only.
+ExecStart=node --import jiti/register src/main.ts
+Restart=on-failure
+RestartSec=5
+# Sandbox options often fail on container VPSes, and ProtectHome would hide the app.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
