@@ -1,15 +1,17 @@
-import { ApiError, HeadToHead, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
+import { ApiError, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
 import type {
   AbandonMatchRequest,
   CreateMatchRequest,
   CreatePlayerRequest,
   HitEvent,
   ListPlayersQuery,
+  LoginRequest,
   MatchListQuery,
   StatsFilter,
   UpdatePlayerRequest,
 } from '@autoscore/schema';
 import { resolveApiBase } from './api-url';
+import { handleUnauthorized, readToken } from './session';
 
 // Domyślnie /api przez proxy Vite, więc front i API mają jeden adres.
 // VITE_API_URL wskazuje osobny serwer API.
@@ -31,12 +33,22 @@ interface Parser<T> {
   parse(value: unknown): T;
 }
 
+function withToken(init: RequestInit, token: string): RequestInit {
+  const headers = new Headers(init.headers);
+  headers.set('authorization', `Bearer ${token}`);
+  return { ...init, headers };
+}
+
 async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, init);
+  const sentToken = readToken();
+  const response = await fetch(`${API_BASE}${path}`, sentToken === null ? init : withToken(init, sentToken));
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const error = ApiError.safeParse(body);
     if (error.success) {
+      if (response.status === 401 && error.data.error === 'unauthorized') {
+        handleUnauthorized(sentToken);
+      }
       throw new ApiRequestError(response.status, error.data.error, error.data.message);
     }
     throw new ApiRequestError(response.status, 'http_error', `HTTP ${response.status}`);
@@ -58,6 +70,10 @@ function withQuery(path: string, query: Readonly<Record<string, string | undefin
   }
   const search = params.toString();
   return search ? `${path}?${search}` : path;
+}
+
+export function login(body: LoginRequest): Promise<LoginResponse> {
+  return request('/auth/login', LoginResponse, postJson(body));
 }
 
 export function listPlayers(query: ListPlayersQuery = {}): Promise<Player[]> {

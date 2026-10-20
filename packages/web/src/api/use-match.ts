@@ -1,12 +1,14 @@
 import { LiveMessage } from '@autoscore/schema';
-import type { Hit, HitEvent, MatchSnapshot } from '@autoscore/schema';
+import type { Hit, HitEvent, LiveAuthMessage, MatchSnapshot } from '@autoscore/schema';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
 import { liveSocketUrl } from './api-url';
 import { API_BASE, ApiRequestError, abandonMatch, endPractice, postThrow, resumeMatch, undo } from './client';
 import { newEventId } from './event-id';
+import { handleUnauthorized, readToken } from './session';
 
 export const MATCH_NOT_FOUND_CLOSE_CODE = 4404;
+export const UNAUTHORIZED_CLOSE_CODE = 4401;
 export const RECONNECT_DELAY_MS = 1000;
 export const BANNER_DURATION_MS = 2500;
 export const KEYPAD_SOURCE = 'keypad';
@@ -131,8 +133,16 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     function connect(): void {
       setConnection('connecting');
       const ws = new WebSocket(liveUrl(matchId));
+      const token = readToken();
       socket = ws;
-      ws.addEventListener('open', () => setConnection('open'));
+      // Przeglądarka rzuca wyjątek przy send() przed open.
+      ws.addEventListener('open', () => {
+        if (token !== null) {
+          const message: LiveAuthMessage = { type: 'auth', token };
+          ws.send(JSON.stringify(message));
+        }
+        setConnection('open');
+      });
       ws.addEventListener('message', (event: MessageEvent) => {
         const message = parseMessage(event.data);
         if (message) {
@@ -147,6 +157,10 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
         setConnection('closed');
         if (event.code === MATCH_NOT_FOUND_CLOSE_CODE) {
           setNotFound(true);
+          return;
+        }
+        if (event.code === UNAUTHORIZED_CLOSE_CODE) {
+          handleUnauthorized(token);
           return;
         }
         reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);

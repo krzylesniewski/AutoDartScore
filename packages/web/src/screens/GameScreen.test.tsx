@@ -1,4 +1,5 @@
 import { HitEvent, type LiveMessage, type MatchSnapshot } from '@autoscore/schema';
+import { LiveAuthMessage } from '@autoscore/schema';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { casual, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
@@ -10,6 +11,7 @@ class FakeWebSocket extends EventTarget {
   static instances: FakeWebSocket[] = [];
   readonly url: string;
   closed = false;
+  sent: string[] = [];
 
   constructor(url: string) {
     super();
@@ -19,6 +21,10 @@ class FakeWebSocket extends EventTarget {
 
   close(): void {
     this.closed = true;
+  }
+
+  send(data: string): void {
+    this.sent.push(data);
   }
 
   serverOpen(): void {
@@ -871,5 +877,39 @@ describe('effects', () => {
     const ws = connect();
     sendBust(ws);
     expect(FakeAudio.played).toEqual([expect.stringMatching(BUST_CLIP)]);
+  });
+});
+
+describe('live auth', () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('sends the stored token as the first message after open', () => {
+    localStorage.setItem('autoscore.token', 't1');
+    render(<GameScreen matchId={MATCH_ID} />);
+    const ws = socket();
+    expect(ws.sent).toEqual([]);
+    ws.serverOpen();
+    expect(LiveAuthMessage.parse(JSON.parse(ws.sent[0] ?? 'null'))).toEqual({ type: 'auth', token: 't1' });
+  });
+
+  it('sends nothing without a token', () => {
+    render(<GameScreen matchId={MATCH_ID} />);
+    const ws = socket();
+    ws.serverOpen();
+    expect(ws.sent).toEqual([]);
+  });
+
+  it('removes the token on close code 4401 and stops', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('autoscore.token', 't1');
+    const ws = connect();
+    ws.serverClose(4401);
+    expect(localStorage.getItem('autoscore.token')).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(FakeWebSocket.instances).toHaveLength(1);
   });
 });

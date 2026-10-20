@@ -34,13 +34,17 @@ Routing przez hash w `src/App.tsx`:
 - `#/history`: historia wszystkich gier, od ostatnio aktywnej, z filtrem typu (trening obejmuje też Free run). Każdy wiersz ma datę, typ, graczy z wynikiem, status z ikoną i tekstem oraz link „Szczegóły” do `#/matches/:id`.
 - Każdy inny adres przekierowuje na `#/`.
 
+## Logowanie
+
+Ekran logowania pojawia się tylko wtedy, gdy serwer ma ustawione hasło i odpowiada `401` z kodem `unauthorized`. Zastępuje bieżący ekran, a po zalogowaniu ten sam ekran wraca. Bez hasła na serwerze front działa jak wcześniej, bez logowania. Token zostaje w `localStorage` pod kluczem `autoscore.token`. Każde żądanie REST wysyła go w nagłówku `Authorization: Bearer <token>`, a połączenie na żywo wysyła najpierw wiadomość `{ "type": "auth", "token": "…" }`. Wygasły token albo zmieniony klucz serwera kończy się odrzuceniem tokenu (`401` albo zamknięcie WebSocketa kodem `4401`), więc front usuwa token i znów pokazuje ekran logowania.
+
 ## Struktura
 
-- `src/api/`: klient REST, generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook podsumowania meczu.
+- `src/api/`: klient REST, token i sygnał logowania (`session.ts`), generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook podsumowania meczu.
 - `src/audio/`: głos z nagrań (`recorded-speaker.ts`) z Web Speech API jako zapasem, efekty przez Web Audio API, hook `useAnnouncer`.
 - `src/components/`: górna nawigacja, avatar, formularz nowej gry z podsumowaniem, okno nowego gracza, lista gier do dokończenia, historia gier (`MatchHistoryList`), ranking, profil gracza (`PlayerProfile`) z oknami edycji i archiwizacji, wykres formy (`FormChart`), bilans 1v1 (`HeadToHeadPanel`), pasek wyników, panel tury, klawiatura, nagłówek gry, okna porzucenia meczu i zakończenia treningu, panele statystyk i podsumowania meczu, przełączniki, ikony.
 - `src/game/`: podpowiedź zamknięcia, etykiety trafień, kolejność paska wyników, formatowanie statystyk, stan formularza nowej gry, teksty i data aktywności na liście gier do dokończenia, teksty wiersza historii (`history-row.ts`), współrzędne wykresu formy (`form-chart.ts`), reguły porzucenia i zakończenia treningu.
-- `src/screens/`: `HomeScreen`, `GameScreen`, `StatsScreen` i `HistoryScreen`.
+- `src/screens/`: `HomeScreen`, `GameScreen`, `StatsScreen`, `HistoryScreen` i `LoginScreen`.
 - `src/i18n/`: teksty po polsku.
 
 ## Dźwięk
