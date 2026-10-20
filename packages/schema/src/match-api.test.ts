@@ -4,6 +4,7 @@ import {
   ApiError,
   BestOf,
   CreateMatchRequest,
+  HealthResponse,
   MatchListItem,
   MatchListQuery,
   MatchSnapshot,
@@ -260,5 +261,15 @@ describe('ApiError', () => {
 
   it('rejects an empty error code', () => {
     expect(ApiError.safeParse({ error: '', message: 'x' }).success).toBe(false);
+  });
+});
+
+describe('HealthResponse', () => {
+  it('accepts the ok status', () => {
+    expect(HealthResponse.parse({ status: 'ok' })).toEqual({ status: 'ok' });
+  });
+
+  it.each([{ status: 'down' }, {}])('rejects %j', (value) => {
+    expect(HealthResponse.safeParse(value).success).toBe(false);
   });
 });
