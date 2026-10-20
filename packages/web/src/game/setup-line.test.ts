@@ -4,7 +4,7 @@ import { setupLine } from './setup-line';
 
 describe('setupLine', () => {
   it('describes a 1v1', () => {
-    expect(setupLine(INITIAL_SETUP)).toBe('501 · Best of 3 · Straight-in, double-out · Losowanie przy starcie');
+    expect(setupLine(INITIAL_SETUP)).toBe('301 · Best of 1 · Straight-in, double-out · Losowanie przy starcie');
   });
 
   it('describes Zabawa', () => {

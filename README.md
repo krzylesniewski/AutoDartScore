@@ -81,8 +81,8 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 
 Rodzaje gry w `POST /matches`:
 
-- `match`: dokładnie 2 różnych graczy w `playerIds`, `startingScore` 301, 501 lub 701 (domyślnie 501), `bestOf` 1, 3 lub 5 (domyślnie 3),
-- `casual`: 2-4 różnych graczy i `startingScore`,
+- `match`: dokładnie 2 różnych graczy w `playerIds`, `startingScore` 301, 501 lub 701 (domyślnie 301), `bestOf` 1, 3 lub 5 (domyślnie 1),
+- `casual`: 2-4 różnych graczy i `startingScore` (domyślnie 301),
 - `practice`: `practiceMode` `free_run` albo `solo_501` i jeden gracz.
 
 ### Zdarzenie trafienia (`HitEvent`)
@@ -208,8 +208,8 @@ CI uruchamia te same trzy checki: `test`, `typecheck` i `lint`.
 - Bust, gdy wynik spadłby poniżej zera, zostałaby dokładnie 1 albo zero padłoby bez doubla. Gracz wraca do wyniku sprzed tury, a tura się kończy.
 - Rzutka poza tarczą lub odbita to miss za 0 pkt.
 - Wejście straight-in: punkty liczą się od pierwszej rzutki.
-- Punkty startowe: 301, 501 lub 701.
-- Mecz 1v1: best of 1, 3 lub 5 legów (domyślnie 3). Pierwszego rzucającego losuje serwer, kolejne legi zaczynają gracze na przemian.
+- Punkty startowe: 301, 501 lub 701 (domyślnie 301).
+- Mecz 1v1: best of 1, 3 lub 5 legów (domyślnie 1). Pierwszego rzucającego losuje serwer, kolejne legi zaczynają gracze na przemian.
 - Zabawa dla 2-4 graczy: kto zamknie leg, zajmuje kolejne miejsce i wypada z kolejki. Ostatni grający dostaje ostatnie miejsce.
 - Trening: Free run to swobodne rzucanie bez końca, które nie liczy się do statystyk. Solo 501 to zejście z 501 do zera na zasadach X01.
 

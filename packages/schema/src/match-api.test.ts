@@ -35,8 +35,17 @@ describe('BestOf', () => {
 });
 
 describe('CreateMatchRequest', () => {
-  it('defaults a 1v1 match to 501 and best of 3', () => {
+  it('defaults a 1v1 match to 301 and best of 1', () => {
     expect(CreateMatchRequest.parse({ type: 'match', playerIds: ['p1', 'p2'] })).toEqual({
+      type: 'match',
+      playerIds: ['p1', 'p2'],
+      startingScore: 301,
+      bestOf: 1,
+    });
+  });
+
+  it('keeps an explicit starting score and best of', () => {
+    expect(CreateMatchRequest.parse({ type: 'match', playerIds: ['p1', 'p2'], startingScore: 501, bestOf: 3 })).toEqual({
       type: 'match',
       playerIds: ['p1', 'p2'],
       startingScore: 501,
@@ -44,11 +53,11 @@ describe('CreateMatchRequest', () => {
     });
   });
 
-  it('defaults a casual game to 501', () => {
+  it('defaults a casual game to 301', () => {
     expect(CreateMatchRequest.parse({ type: 'casual', playerIds: ['p1', 'p2', 'p3'] })).toEqual({
       type: 'casual',
       playerIds: ['p1', 'p2', 'p3'],
-      startingScore: 501,
+      startingScore: 301,
     });
   });
 

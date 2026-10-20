@@ -9,7 +9,7 @@ export interface GameSetup {
   readonly practiceMode: PracticeMode;
 }
 
-export const INITIAL_SETUP: GameSetup = { type: 'match', playerIds: [], startingScore: 501, bestOf: 3, practiceMode: 'free_run' };
+export const INITIAL_SETUP: GameSetup = { type: 'match', playerIds: [], startingScore: 301, bestOf: 1, practiceMode: 'free_run' };
 
 export const PLAYER_COUNT: Record<MatchType, { readonly min: number; readonly max: number }> = {
   match: { min: 2, max: 2 },

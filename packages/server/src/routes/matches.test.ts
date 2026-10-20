@@ -35,8 +35,8 @@ describe('POST /matches', () => {
     expect(state).toMatchObject({
       type: 'match',
       practiceMode: null,
-      startingScore: 501,
-      legsToWin: 2,
+      startingScore: 301,
+      legsToWin: 1,
       countsToStats: true,
       finished: false,
       eventSeq: 0,
@@ -49,8 +49,8 @@ describe('POST /matches', () => {
       freeRun: null,
     });
     expect(state.players.map((player) => [player.id, player.remaining, player.legsWon, player.place])).toEqual([
-      [anna, 501, 0, null],
-      [bartek, 501, 0, null],
+      [anna, 301, 0, null],
+      [bartek, 301, 0, null],
     ]);
   });
 

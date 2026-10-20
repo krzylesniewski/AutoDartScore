@@ -32,7 +32,7 @@ describe('GET /matches', () => {
     await throwDarts(t.app, finished.id, LEG_301);
 
     at('10:02:00');
-    const inProgress = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 501 });
+    const inProgress = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 501, bestOf: 3 });
     at('10:03:00');
     const abandoned = await createGame(t.app, { type: 'casual', playerIds: [anna, bartek], startingScore: 301 });
     at('10:04:00');
