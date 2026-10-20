@@ -48,3 +48,71 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @autoscore/web build
+        env:
+          VITE_BASE: /AutoDartScore/
+
+  smoke:
+    name: smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - shell: bash
+        env:
+          HOST: 127.0.0.1
+          PORT: 3100
+        run: |
+          set -euo pipefail
+          dir=$(mktemp -d "$RUNNER_TEMP/smoke.XXXXXX")
+          export DATABASE_PATH="$dir/autoscore.sqlite"
+          log="$dir/server.log"
+
+          # pnpm starts node through a shell. A job of its own process group
+          # lets cleanup stop node too, not only the pnpm wrapper.
+          set -m
+          pnpm --filter @autoscore/server start > "$log" 2>&1 &
+          pid=$!
+          set +m
+
+          cleanup() {
+            kill -TERM -- -"$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for i in $(seq 1 30); do
+            sleep 1
+            # curl exits 7 until the server listens, which set -e would treat as a failure.
+            code=$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$PORT/players" || true)
+            if [ "$code" = "200" ]; then
+              echo "GET /players returned 200 after $i s"
+              exit 0
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat "$log"
+              echo "Server exited before GET /players returned 200"
+              exit 1
+            fi
+          done
+
+          cat "$log"
+          echo "Server did not answer GET /players with 200 within 30 s"
+          exit 1
