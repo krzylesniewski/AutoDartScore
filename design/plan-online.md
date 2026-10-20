@@ -1,19 +1,19 @@
-# P24-P29: aplikacja online (front na GitHub Pages, API na Mikr.us)
+# P24-P30: aplikacja online (front i API na Mikr.us)
 
 Decyzja 2026-10-20, tło i odrzucone warianty: `design/online-dyskusja.md`. Bez własnej domeny.
 
+**Zmiana planu 2026-10-20 (po merge'u P24, P25 i P29):** front też na Mikr.usie, pod tym samym adresem co API, zamiast GitHub Pages. Jeden adres, jedno wdrożenie z jednym rollbackiem, bez CORS i bez ustawień Pages. P24 i P25 zostają bez zmian (adres API ze zmiennej i CORS jako opcja się przydają). P27 traci job Pages, dochodzi P30 (serwer podaje front).
+
 **Cel:** cała aplikacja działa w internecie, bez komputera autora. Mecze dalej twarzą w twarz, przy jednej tarczy. Bez kont graczy, bez gry na odległość.
 
-**Adresy:**
-- Front: `https://krzylesniewski.github.io/AutoDartScore/` (GitHub Pages, repo publiczne).
-- API: `https://lee110-3000.mikrus.cloud` (darmowa subdomena Mikr.usa dla portu 3000, bez konfiguracji w panelu; HTTPS i proxy daje Cloudflare, aplikacja słucha po HTTP na IPv6, `HOST=::`). W kodzie adres jest tylko w zmiennych.
+**Adres:** `https://lee110-3000.mikrus.cloud` dla frontu i API (darmowa subdomena Mikr.usa dla portu 3000, bez konfiguracji w panelu; HTTPS i proxy daje Cloudflare, aplikacja słucha po HTTP na IPv6, `HOST=::`). Front pod `/`, API pod swoimi ścieżkami (`/players`, `/matches`, …). W kodzie adres jest tylko w zmiennych.
 - Serwer: VPS `lee110` (Mikr.us 2.1, Ubuntu 24.04, systemd, 1 GB RAM). Dane SSH tylko w zmiennych GitHuba i lokalnie, nie w repo. Przygotowane 2026-10-20: Node 24.22, pnpm 12.10.1, sqlite3, użytkownik `autoscore`, repo w `/home/autoscore/app`.
 
-Front i API są na różnych witrynach, więc **bez ciasteczek**: logowanie daje token wysyłany w nagłówku `Authorization`. Safari blokuje ciasteczka między witrynami.
+Logowanie daje token wysyłany w nagłówku `Authorization` (P25, P26). Przy jednym adresie CORS nie jest potrzebny: `AUTOSCORE_CORS_ORIGIN` zostaje pusta.
 
 **Lokalnie bez zmian:** bez ustawionego hasła serwer działa jak dziś (brak logowania), a front bez `VITE_API_URL` woła `/api` przez proxy Vite. `pnpm dev` na Macu i gra w sieci lokalnej działają dalej.
 
-**Wspólne zasady dla P24-P29:**
+**Wspólne zasady dla P24-P30:**
 - Konfiguracja tylko przez zmienne środowiskowe, nazwy z prefiksem `AUTOSCORE_` (serwer) i `VITE_` (front). Żadnych adresów ani sekretów w repo.
 - Typy żądań i wiadomości tylko z `packages/schema`.
 - Komunikaty dla użytkownika po polsku, kolory tylko z `design/theme.css`.
@@ -23,7 +23,7 @@ Front i API są na różnych witrynach, więc **bez ciasteczek**: logowanie daje
 **Zmiana:**
 1. `API_BASE` w `packages/web/src/api/client.ts` bierze adres z `import.meta.env.VITE_API_URL`; bez zmiennej zostaje `/api` (proxy Vite, jak dziś).
 2. Adres WebSocketa (`liveUrl` w `packages/web/src/api/use-match.ts`) powstaje z `API_BASE`: adres bezwzględny `https://…` zamienia się na `wss://…`, `http://…` na `ws://…`; względny `/api` składa się z `location` jak dziś.
-3. Ścieżka bazowa builda z `VITE_BASE` (dla Pages `/AutoDartScore/`), domyślnie `/`. Nagrania już używają `import.meta.env.BASE_URL` (`recorded-speaker.ts`); sprawdzić, że nic innego nie zakłada ścieżki `/` (ikony, fonty, linki).
+3. Ścieżka bazowa builda z `VITE_BASE` (dla Pages `/AutoDartScore/`; po zmianie planu na Mikr.usie `/`), domyślnie `/`. Nagrania już używają `import.meta.env.BASE_URL` (`recorded-speaker.ts`); sprawdzić, że nic innego nie zakłada ścieżki `/` (ikony, fonty, linki).
 4. Opis zmiennych w `packages/web/README.md`.
 
 **Testy:** budowa adresu REST i WebSocketa dla `/api`, `https://…`, `http://…`, z ukośnikiem na końcu i bez.
@@ -63,19 +63,18 @@ Front i API są na różnych witrynach, więc **bez ciasteczek**: logowanie daje
 
 ## P27: automatyczne wdrożenie po merge'u (CI)
 
-**Zależy od:** P24, P28.
+**Zależy od:** P28, P30.
 
-**Zmiana:** nowy workflow `.github/workflows/deploy.yml`. Każdy merge do `main` z zielonym CI wdraża najpierw API, potem front.
+**Zmiana:** nowy workflow `.github/workflows/deploy.yml`. Każdy merge do `main` z zielonym CI wdraża aplikację (API i front razem) na Mikr.usa.
 1. **Wyzwalacz:** `workflow_run` po zakończeniu workflow CI na `main`, tylko z wynikiem sukces, oraz ręcznie (`workflow_dispatch`). Wdrażany jest dokładnie commit, który przeszedł CI (`workflow_run.head_sha`).
 2. **`concurrency: deploy`** bez przerywania trwającego wdrożenia.
-3. **Job `api`** (środowisko `production`): łączy się przez SSH z Mikr.usem i przekazuje tylko SHA. Klucz z sekretu `MIKRUS_SSH_KEY`, odcisk serwera z sekretu `MIKRUS_KNOWN_HOSTS` (bez `StrictHostKeyChecking=no`), host i port ze zmiennych `MIKRUS_HOST` i `MIKRUS_SSH_PORT`. Logika wdrożenia jest na serwerze (P28), workflow niczego innego nie wykonuje.
-4. **Job `web`** (`needs: api`, więc nieudane API zatrzymuje front): build `packages/web` z `VITE_API_URL` ze zmiennej `AUTOSCORE_API_URL` i `VITE_BASE=/AutoDartScore/`, publikacja przez `actions/upload-pages-artifact` i `actions/deploy-pages`. Uprawnienia tylko `pages: write`, `id-token: write`, `contents: read`.
-5. Brak którejś zmiennej lub sekretu przerywa job z czytelnym błędem.
-6. Opis w `deploy/README.md` (sekcja „Automatyczne wdrożenie”): jakie sekrety i zmienne ustawić w repozytorium.
+3. **Jeden job `deploy`** (środowisko `production`): łączy się przez SSH z Mikr.usem i przekazuje tylko SHA. Klucz z sekretu `MIKRUS_SSH_KEY`, odcisk serwera z sekretu `MIKRUS_KNOWN_HOSTS` (bez `StrictHostKeyChecking=no`), host i port ze zmiennych `MIKRUS_HOST` i `MIKRUS_SSH_PORT`. Całą logikę (build frontu, restart, `/health`, rollback) robi `deploy.sh` na serwerze (P28, P30); workflow niczego innego nie wykonuje.
+4. Uprawnienia tylko `contents: read`. Brak którejś zmiennej lub sekretu przerywa job z czytelnym błędem.
+5. Opis w `deploy/README.md` (sekcja „Automatyczne wdrożenie”): jakie sekrety i zmienne ustawić w repozytorium.
 
 **Bezpieczeństwo:** sekrety nie są dostępne dla workflow z PR-ów, więc PR niczego nie wdroży. Agenci rolloutu nie uruchamiają workflow; wdrożenie wyzwala tylko merge.
 
-**Poza zakresem:** zmiany w `ci.yml` (P29), wdrożenia z gałęzi innych niż `main`.
+**Poza zakresem:** GitHub Pages (wypadło ze zmianą planu), zmiany w `ci.yml`, wdrożenia z gałęzi innych niż `main`.
 
 ## P28: serwer na Mikr.usie, wdrożenie, kopie i przeniesienie bazy (deploy)
 
@@ -108,12 +107,28 @@ Front i API są na różnych witrynach, więc **bez ciasteczek**: logowanie daje
 
 **Poza zakresem:** wdrożenia (P27), zmiany w kodzie aplikacji.
 
+## P30: serwer podaje front, build frontu przy wdrożeniu (server, deploy)
+
+**Zależy od:** P28.
+
+**Zmiana:**
+1. **Pliki frontu z serwera:** zmienna `AUTOSCORE_WEB_DIR` (katalog ze zbudowanym frontem, `packages/web/dist`). Z nią Fastify (`@fastify/static`) podaje pliki frontu spod `/`: `/` i `/index.html` oraz pliki z katalogu (`/assets/*`, `/audio/*` i inne). Bez zmiennej serwer działa jak dziś. Katalog bez `index.html` przy ustawionej zmiennej: serwer nie startuje, z czytelnym błędem.
+2. **Bez kolizji z API:** front używa routingu `#/`, więc potrzebuje tylko plików. Trasy API mają pierwszeństwo; plik o ścieżce trasy API nie może jej zasłonić. Nieznana ścieżka, której nie ma ani w API, ani w plikach, działa jak dziś (401 bez tokena przy włączonym haśle, 404 z tokenem).
+3. **Dostęp bez tokena tylko do plików frontu:** blokada z P25 przepuszcza bez tokena żądania `GET` i `HEAD` do plików frontu (inaczej przeglądarka nie dostanie nawet ekranu logowania). Wszystkie trasy API dalej wymagają tokena jak w P25.
+4. **Nagłówki pamięci podręcznej:** `index.html` z `Cache-Control: no-cache` (nowa wersja po wdrożeniu od razu), `/assets/*` (nazwy z hashem) z `public, max-age=31536000, immutable`, nagrania `/audio/*` z `public, max-age=604800`.
+5. **`deploy/deploy.sh`:** po `pnpm install` build frontu (`pnpm --filter @autoscore/web build`) z `VITE_API_URL` z pliku env (nowa zmienna `AUTOSCORE_PUBLIC_URL`, np. adres z mikrus.cloud) i `VITE_BASE=/`. Nieudany build to nieudane wdrożenie (rollback jak przy braku `/health`). Przy braku pamięci limit `NODE_OPTIONS=--max-old-space-size=512` dla builda.
+6. **`deploy/autoscore.env.example` i `deploy/README.md`:** `AUTOSCORE_WEB_DIR`, `AUTOSCORE_PUBLIC_URL`, informacja, że `AUTOSCORE_CORS_ORIGIN` zostaje pusta przy jednym adresie. **`packages/server/README.md`:** opis `AUTOSCORE_WEB_DIR`.
+
+**Testy (server):** bez zmiennej nic się nie zmienia (istniejące testy bez zmian); z katalogiem: `/` i plik z `/assets` bez tokena przy włączonym haśle, nagłówki pamięci podręcznej, trasa API dalej 401 bez tokena, nieznana ścieżka jak w P25, `HEAD` dla pliku, brak `index.html` przy starcie. Skrypty: `bash -n` i `shellcheck` lokalnie (wynik w opisie PR-a).
+
+**Poza zakresem:** zmiany w kodzie frontu (P24 już obsługuje adres i ścieżkę), workflow GitHuba (P27), kompresja plików (robi ją Cloudflare).
+
 ## Kroki ręczne (autor, poza PR-ami)
 
 0. ~~Test WebSocketa na Mikr.usie~~ **zrobione 2026-10-20:** obecny serwer za `https://lee110-3000.mikrus.cloud` przepuszcza REST i WebSocket (`state_updated`, `throw_registered` po rzucie), połączenie bez ruchu trwało 75 s bez zerwania.
 1. ~~Kupić Mikr.us 2.1~~ zrobione (`lee110`); subdomena dedykowana niepotrzebna, wystarcza `lee110-3000.mikrus.cloud`.
 2. Po P28: przygotować serwer wg `deploy/README.md` (użytkownik `autoscore`, usługa, cron, hasło i klucz w pliku env).
 3. **Przeniesienie wyników:** zatrzymać lokalny serwer i uruchomić `deploy/migrate-db.sh` dla `packages/server/autoscore.sqlite` (stan na 2026-10-20: 20 gier, 1605 rzutek, 4 graczy). Od tej chwili źródłem prawdy jest baza na Mikr.usie; lokalnej nie używać do gier, żeby dane się nie rozjechały.
-4. Wygenerować klucz wdrożeniowy, dodać go na serwerze z wymuszoną komendą; w repozytorium: sekrety `MIKRUS_SSH_KEY` i `MIKRUS_KNOWN_HOSTS`, zmienne `MIKRUS_HOST`, `MIKRUS_SSH_PORT` i `AUTOSCORE_API_URL`; Settings → Pages → Source: GitHub Actions.
-5. Po P29: dopisać `build` i `smoke` do `requiredChecks` w manifeście.
+4. Wygenerować klucz wdrożeniowy, dodać go na serwerze z wymuszoną komendą; w repozytorium: sekrety `MIKRUS_SSH_KEY` i `MIKRUS_KNOWN_HOSTS`, zmienne `MIKRUS_HOST` i `MIKRUS_SSH_PORT`. GitHub Pages niepotrzebne.
+5. ~~Po P29: dopisać `build` i `smoke` do `requiredChecks` w manifeście~~ zrobione 2026-10-20.
 6. Zapisać w `CLAUDE.md` i `auto-score-dart-pomysly.md` zmianę zasady local-first (gra wymaga internetu; lokalny tryb zostaje do rozwoju).

@@ -16,7 +16,7 @@ repo:
   # Node 24 z nvm przed domyślnym Node 22. pnpm jest z Homebrew.
   pathPrepend: [~/.nvm/versions/node/v24.22.0/bin]
   install: pnpm install --frozen-lockfile
-  requiredChecks: ['test', 'typecheck', 'lint'] # joby z .github/workflows/ci.yml
+  requiredChecks: ['test', 'typecheck', 'lint', 'build', 'smoke'] # joby z .github/workflows/ci.yml
   # Bez konta bota: agenci, PR-y i merge idą z loginu gh (KrzysztofLesniewski, rola Write).
   maintainers: [KrzysztofLesniewski]
   merge: { method: squash, admin: false }
@@ -64,7 +64,7 @@ briefing:
       kind: markdown
       tag: p21-p23
     # Tylko dla PR-ów z briefTags: [online].
-    - title: P24-P29, aplikacja online (front na GitHub Pages, API na Mikr.us; wiążące dla P24-P29, każdy PR tylko swoja sekcja)
+    - title: P24-P30, aplikacja online (front i API na Mikr.us pod jednym adresem; wiążące dla P24-P30, każdy PR tylko swoja sekcja)
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-online.md
       kind: markdown
       tag: online
@@ -324,7 +324,7 @@ prs:
     scope: ['packages/web/**']
     briefTags: [p21-p23, rwd]
 
-  # Decyzja 2026-10-20 (design/plan-online.md, P24-P29): front na GitHub Pages, API na Mikr.us, bez własnej domeny.
+  # Decyzja 2026-10-20 (design/plan-online.md, P24-P30): aplikacja online na Mikr.usie, bez własnej domeny; front najpierw na GitHub Pages, tego samego dnia przeniesiony na Mikr.us (P30).
   # Adres API z konfiguracji, WebSocket z tego samego adresu, ścieżka bazowa builda (sekcja P24).
   - id: P24
     branch: feat/web-api-url
@@ -342,7 +342,7 @@ prs:
     title: 'feat(server): shared password, token auth and CORS'
     brief: briefs/P25.md
     priority: 70
-    effort: { brief: xhigh, implement: xhigh, verify: xhigh }
+    effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/server/**', 'packages/schema/**']
     briefTags: [online]
@@ -359,14 +359,14 @@ prs:
     scope: ['packages/web/**']
     briefTags: [online]
 
-  # Każdy merge z zielonym CI: API na Mikr.us przez SSH, potem front na GitHub Pages (sekcja P27).
+  # Każdy merge z zielonym CI: wdrożenie aplikacji (front i API) na Mikr.us przez SSH; bez GitHub Pages od zmiany planu 2026-10-20 (sekcja P27).
   - id: P27
     branch: ci/deploy-on-merge
-    title: 'ci: deploy API and web app after each merge'
+    title: 'ci: deploy the app to Mikrus after each merge'
     brief: briefs/P27.md
-    deps: [P24, P28]
+    deps: [P28, P30]
     priority: 60
-    effort: { brief: xhigh, implement: high, verify: xhigh }
+    effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['.github/workflows/deploy.yml', 'deploy/README.md']
     allowWorkflows: true
@@ -379,7 +379,7 @@ prs:
     brief: briefs/P28.md
     deps: [P25]
     priority: 60
-    effort: { brief: xhigh, implement: high, verify: xhigh }
+    effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['deploy/**']
     briefTags: [online]
@@ -394,4 +394,16 @@ prs:
     changeset: none
     scope: ['.github/workflows/ci.yml']
     allowWorkflows: true
+    briefTags: [online]
+
+  # Zmiana planu 2026-10-20: serwer podaje front pod tym samym adresem, deploy.sh buduje front (sekcja P30).
+  - id: P30
+    branch: feat/server-serve-web
+    title: 'feat(server): serve the web app and build it on deploy'
+    brief: briefs/P30.md
+    deps: [P28]
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'deploy/**']
     briefTags: [online]

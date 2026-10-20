@@ -1,6 +1,6 @@
 # Wersja online: notatki z dyskusji (2026-10-20)
 
-Status: **wybrany wariant: front na GitHub Pages, API na Mikr.us** (decyzja 2026-10-20). Bez własnej domeny (decyzja 2026-10-20), więc logowanie przez token w nagłówku. Plan PR-ów: `design/plan-online.md`.
+Status: **wybrany wariant: front i API na Mikr.us, pod jednym adresem** (decyzja 2026-10-20; najpierw wybrano front na GitHub Pages, tego samego dnia zmienione, patrz `design/plan-online.md`). Bez własnej domeny (decyzja 2026-10-20), więc logowanie przez token w nagłówku. Plan PR-ów: `design/plan-online.md`.
 
 ## Cel
 
@@ -10,7 +10,9 @@ Status: **wybrany wariant: front na GitHub Pages, API na Mikr.us** (decyzja 2026
 
 **Skutek dla zasad projektu:** bez internetu nie da się grać. To zmienia zasadę local-first z `CLAUDE.md` i przesuwa część etapu 5 przed kamerę (etapy 2-4). Przy planowaniu trzeba to zapisać jako decyzję w `CLAUDE.md` i `auto-score-dart-pomysly.md`.
 
-## Rekomendowany wariant: front na GitHub Pages, API na Mikr.us
+## Pierwszy wybór (zmieniony 2026-10-20): front na GitHub Pages, API na Mikr.us
+
+Zastąpiony wariantem „wszystko na Mikr.us pod jednym adresem”: jedno wdrożenie z jednym rollbackiem, front i API zawsze w tej samej wersji, bez CORS i bez ustawień Pages. Szczegóły w `design/plan-online.md` (P27, P30).
 
 **API (Fastify + SQLite + WebSocket) na VPS Mikr.us 2.1:**
 - Około 75 zł/rok, 1 GB RAM, 10 GB dysku, serwer w Polsce (krótkie opóźnienia). Ceny z serwisów porównawczych, przed zakupem sprawdzić na mikr.us.
@@ -36,7 +38,7 @@ Status: **wybrany wariant: front na GitHub Pages, API na Mikr.us** (decyzja 2026
 
 | Wariant | Dlaczego nie |
 |---|---|
-| Wszystko na Mikr.us (front i API pod jednym adresem) | Działa i jest najprostsze (bez CORS, z ciasteczkami), ale front i nagrania obciążają mały VPS, a wdrożenie frontu jest ręczne. Zostaje jako zapas, jeśli Pages sprawi kłopot. |
+| Front na GitHub Pages, API na Mikr.us (pierwszy wybór) | Działa (repo publiczne, routing `#/`), ale to dwa adresy i dwa wdrożenia, które mogą się na chwilę rozjechać, do tego CORS, zmienne i ustawienia Pages. Zmienione na wszystko na Mikr.usie, gdy okazało się, że darmowa subdomena mikrus.cloud z Cloudflare wystarcza. |
 | Fly.io | Około $2 miesięcznie za maszynę plus dysk na bazę, w praktyce ok. 100-120 zł/rok. Na granicy budżetu. |
 | Render, Supabase i inne darmowe warstwy | Usypiają aplikację albo nie mają trwałego dysku. Supabase wymaga przepisania bazy na Postgres. |
 | Front na Netlify Free | 300 kredytów, a wdrożenie produkcyjne kosztuje 15, więc ok. 20 wdrożeń. W ostatnim tygodniu na `main` trafiło 71 commitów. Przekierowanie `/api/*` przez Netlify dałoby REST pod jednym adresem, ale dokumentacja nic nie mówi o WebSocketach przez nie, a żądania mają limit 26 s. |
