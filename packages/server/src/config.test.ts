@@ -1,9 +1,10 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadConfig } from './config.js';
 
 describe('loadConfig', () => {
   it('uses the defaults', () => {
-    expect(loadConfig({})).toEqual({ host: '0.0.0.0', port: 3000, databasePath: 'autoscore.sqlite', auth: null, corsOrigins: null });
+    expect(loadConfig({})).toEqual({ host: '0.0.0.0', port: 3000, databasePath: 'autoscore.sqlite', auth: null, corsOrigins: null, webDir: null });
   });
 
   it('reads the overrides', () => {
@@ -13,6 +14,7 @@ describe('loadConfig', () => {
       databasePath: 'data/games.sqlite',
       auth: null,
       corsOrigins: null,
+      webDir: null,
     });
   });
 
@@ -64,4 +66,18 @@ describe('loadConfig CORS', () => {
       expect(() => loadConfig({ AUTOSCORE_CORS_ORIGIN: `https://ok.example,${entry}` })).toThrow(`Invalid AUTOSCORE_CORS_ORIGIN: ${entry}`);
     },
   );
+});
+
+describe('loadConfig web dir', () => {
+  it.each([{}, { AUTOSCORE_WEB_DIR: '' }, { AUTOSCORE_WEB_DIR: '  ' }])('turns serving the front off for %j', (env) => {
+    expect(loadConfig(env).webDir).toBeNull();
+  });
+
+  it('keeps an absolute path', () => {
+    expect(loadConfig({ AUTOSCORE_WEB_DIR: ' /srv/autoscore/web/dist ' }).webDir).toBe(path.resolve('/srv/autoscore/web/dist'));
+  });
+
+  it('resolves a relative path against the working directory', () => {
+    expect(loadConfig({ AUTOSCORE_WEB_DIR: 'rel/dist' }).webDir).toBe(path.resolve('rel/dist'));
+  });
 });

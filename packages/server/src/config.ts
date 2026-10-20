@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 export interface AuthConfig {
   readonly password: string;
   readonly tokenSecret: string;
@@ -9,6 +11,7 @@ export interface ServerConfig {
   readonly databasePath: string;
   readonly auth: AuthConfig | null;
   readonly corsOrigins: readonly string[] | null;
+  readonly webDir: string | null;
 }
 
 const MIN_TOKEN_SECRET_LENGTH = 32;
@@ -21,6 +24,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     databasePath: env.DATABASE_PATH || 'autoscore.sqlite',
     auth: parseAuth(env.AUTOSCORE_PASSWORD, env.AUTOSCORE_TOKEN_SECRET),
     corsOrigins: parseCorsOrigins(env.AUTOSCORE_CORS_ORIGIN),
+    webDir: parseWebDir(env.AUTOSCORE_WEB_DIR),
   };
 }
 
@@ -33,6 +37,12 @@ function parsePort(value: string | undefined): number {
     throw new Error(`Invalid PORT: ${value}`);
   }
   return port;
+}
+
+// Ścieżka względna liczy się od katalogu roboczego, pod systemd to packages/server.
+function parseWebDir(value: string | undefined): string | null {
+  const trimmed = (value ?? '').trim();
+  return trimmed === '' ? null : path.resolve(trimmed);
 }
 
 // Komunikaty błędów nie zawierają hasła ani sekretu, bo trafiają do logów.

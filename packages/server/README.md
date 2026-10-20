@@ -34,7 +34,7 @@ Każdy wpis w `AUTOSCORE_CORS_ORIGIN` musi być samym originem: schemat, host i 
 - `GET /health` zwraca `{ "status": "ok" }` i nigdy nie wymaga tokenu.
 - `POST /auth/login` z `{ "password": "…" }` zwraca `{ "token": "…", "expiresAt": "…" }`. Trasa istnieje tylko z ustawionym hasłem, inaczej odpowiada 404. Złe hasło daje 401 `invalid_password`, a niepoprawne body 400.
 - Po 10 nieudanych logowaniach w ciągu minuty serwer odpowiada 429 `too_many_attempts` z nagłówkiem `Retry-After` w sekundach, nawet na poprawne hasło. Limit jest wspólny dla całego serwera i trzymany w pamięci.
-- Z ustawionym hasłem każde inne żądanie HTTP, także do nieznanej trasy, wymaga nagłówka `Authorization: Bearer <token>`. Bez niego albo z nieważnym tokenem odpowiedź to 401 `unauthorized`. `OPTIONS` nie wymaga tokenu, a WebSocket uwierzytelnia się pierwszą wiadomością (niżej).
+- Z ustawionym hasłem każde inne żądanie HTTP, także do nieznanej trasy, wymaga nagłówka `Authorization: Bearer <token>`. Bez niego albo z nieważnym tokenem odpowiedź to 401 `unauthorized`. `OPTIONS` oraz `GET` i `HEAD` do plików frontu (niżej) nie wymagają tokenu, a WebSocket uwierzytelnia się pierwszą wiadomością (niżej).
 - Z ustawionym `AUTOSCORE_CORS_ORIGIN` tylko wymienione originy dostają `Access-Control-Allow-Origin`, także na odpowiedzi 401. Preflight dopuszcza metody `GET`, `HEAD`, `POST` i `PATCH` oraz nagłówki `Authorization` i `Content-Type`.
 
 ```sh
@@ -49,6 +49,25 @@ curl -s https://api.example/players -H "authorization: Bearer $TOKEN"
 - Z ustawionym `AUTOSCORE_CORS_ORIGIN` połączenie z nagłówkiem `Origin` spoza listy dostaje 403 przed zmianą protokołu. Brak nagłówka `Origin` (curl, skrypty) jest dopuszczony.
 - Serwer wysyła ramkę ping co 30 s na każdym połączeniu, z hasłem i bez, żeby reverse proxy nie zamknął bezczynnego połączenia.
 
+## Front z serwera
+
+| Zmienna | Domyślnie | Znaczenie |
+|---|---|---|
+| `AUTOSCORE_WEB_DIR` | brak (wyłączone) | Katalog zbudowanego frontu, zwykle `packages/web/dist`. Ścieżka względna liczy się od katalogu roboczego serwera. Pusta wartość wyłącza serwowanie plików. |
+
+Z ustawioną zmienną serwer podaje pliki z tego katalogu obok API, więc cała aplikacja działa pod jednym adresem. `GET /` zwraca `index.html`, a każdy inny plik ma własną trasę `GET` (i `HEAD`) pod swoją ścieżką. Listę plików serwer czyta raz przy starcie. Pomija pliki i katalogi z kropką na początku oraz ścieżki ze znakami spoza `A-Z`, `a-z`, `0-9` i `._~/-`. Nie ma listowania katalogów ani przekierowania nieznanych ścieżek na `index.html`, bo front używa routingu po `#`.
+
+Nagłówek `Cache-Control`:
+
+- `/` i `/index.html`: `no-cache`,
+- `/assets/*`: `public, max-age=31536000, immutable` (nazwy plików zawierają hash),
+- `/audio/*`: `public, max-age=604800`,
+- pozostałe pliki: `no-cache`.
+
+Trasy API mają pierwszeństwo. Plik, którego pierwszy segment ścieżki pokrywa się z trasą API (`health`, `auth`, `players`, `matches`, `stats`), jest pomijany z ostrzeżeniem w logu. Pliki frontu ładują się bez tokenu, żeby przeglądarka dostała ekran logowania. API dalej wymaga tokenu, a brakujący plik daje bez tokenu 401, z tokenem 404.
+
+Gdy w katalogu nie ma czytelnego `index.html`, także gdy katalog nie istnieje, serwer nie wstaje z błędem `Missing index.html in AUTOSCORE_WEB_DIR: <katalog>`.
+
 ## Struktura
 
 - `src/main.ts`: start procesu (konfiguracja, baza, migracje, nasłuch).
@@ -56,7 +75,7 @@ curl -s https://api.example/players -H "authorization: Bearer $TOKEN"
 - `src/config.ts`: `loadConfig`, czyli odczyt zmiennych środowiskowych.
 - `src/errors.ts`: mapowanie błędów na `ApiError` i kody HTTP.
 - `src/auth/`: `credentials.ts` (tokeny HMAC i porównanie hasła), `login-limiter.ts` (limit nieudanych logowań), `access.ts` (CORS i sprawdzanie tokenu przed trasami).
-- `src/routes/`: `health.ts` (`GET /health`), `auth.ts` (`POST /auth/login`), `players.ts` (utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu), `matches.ts` (gry, lista gier z filtrami `status`, `playerId` i `type`, rzutki, cofnięcie, porzucenie, wznowienie i zakończenie treningu), `live.ts` (WebSocket z wiadomością `auth` i pingiem), `stats.ts` (statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, podsumowanie meczu i ranking graczy).
+- `src/routes/`: `health.ts` (`GET /health`), `web-app.ts` (pliki frontu z `AUTOSCORE_WEB_DIR`), `auth.ts` (`POST /auth/login`), `players.ts` (utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu), `matches.ts` (gry, lista gier z filtrami `status`, `playerId` i `type`, rzutki, cofnięcie, porzucenie, wznowienie i zakończenie treningu), `live.ts` (WebSocket z wiadomością `auth` i pingiem), `stats.ts` (statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, podsumowanie meczu i ranking graczy).
 - `src/match-service.ts`: komendy gry (utworzenie, rzutka, cofnięcie, porzucenie, wznowienie, zakończenie treningu, lista, subskrypcja).
 - `src/replay.ts`: wybór rzutek, które się liczą, stan porzucenia, czas zakończenia treningu i odtworzenie stanu w silniku.
 - `src/snapshot.ts`: budowa `MatchSnapshot` ze stanu silnika.
