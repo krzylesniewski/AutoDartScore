@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { INITIAL_SETUP, changeType, createRequest, pickPlayer } from './game-setup';
 
 describe('game setup', () => {
+  it('starts a new game at 301 and best of 1', () => {
+    expect(INITIAL_SETUP).toMatchObject({ startingScore: 301, bestOf: 1 });
+  });
+
   it('toggles players up to the limit', () => {
     const two = pickPlayer(pickPlayer(INITIAL_SETUP, 'p1'), 'p2');
     expect(two.playerIds).toEqual(['p1', 'p2']);
@@ -26,8 +30,8 @@ describe('game setup', () => {
 
   it('builds a request only with the fields of the type', () => {
     const match = { ...INITIAL_SETUP, playerIds: ['p1', 'p2'] };
-    expect(createRequest(match)).toEqual({ type: 'match', playerIds: ['p1', 'p2'], startingScore: 501, bestOf: 3 });
-    expect(createRequest({ ...match, type: 'casual' })).toEqual({ type: 'casual', playerIds: ['p1', 'p2'], startingScore: 501 });
+    expect(createRequest(match)).toEqual({ type: 'match', playerIds: ['p1', 'p2'], startingScore: 301, bestOf: 1 });
+    expect(createRequest({ ...match, type: 'casual' })).toEqual({ type: 'casual', playerIds: ['p1', 'p2'], startingScore: 301 });
     expect(createRequest({ ...match, type: 'practice', playerIds: ['p1'] })).toEqual({ type: 'practice', playerIds: ['p1'], practiceMode: 'free_run' });
     expect(CreateMatchRequest.safeParse(createRequest({ ...match, playerIds: ['p1'] })).success).toBe(false);
   });

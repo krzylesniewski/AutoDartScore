@@ -153,12 +153,14 @@ describe('HomeScreen: new game form', () => {
     render(<HomeScreen />);
     await chips();
     expect(pressed('Mecz 1v1')).toBe('true');
-    expect(pressed('501')).toBe('true');
-    expect(pressed('Best of 3')).toBe('true');
+    expect(pressed('301')).toBe('true');
+    expect(pressed('Best of 1')).toBe('true');
+    expect(pressed('501')).toBe('false');
+    expect(pressed('Best of 3')).toBe('false');
     expect(screen.queryByRole('button', { name: 'Free run' })).toBeNull();
 
     fireEvent.click(button('Zabawa'));
-    expect(button('301')).toBeTruthy();
+    expect(pressed('301')).toBe('true');
     expect(screen.queryByRole('button', { name: 'Best of 3' })).toBeNull();
 
     fireEvent.click(button('Trening'));
@@ -252,13 +254,13 @@ describe('HomeScreen: new game form', () => {
     expect(summary().textContent).toMatch(/Bartek.*vs.*Anna/);
     expect(summaryRows()).toEqual([
       ['Typ', 'Mecz 1v1'],
-      ['Punkty', '501'],
-      ['Format', 'Best of 3 (do 2 wygranych legów)'],
+      ['Punkty', '301'],
+      ['Format', 'Best of 1 (do 1 wygranego lega)'],
       ['Zasady', 'Straight-in, double-out'],
       ['Zaczyna', 'Losowanie przy starcie'],
     ]);
-    fireEvent.click(button('Best of 1'));
-    expect(summaryRows()[2]).toEqual(['Format', 'Best of 1 (do 1 wygranego lega)']);
+    fireEvent.click(button('Best of 3'));
+    expect(summaryRows()[2]).toEqual(['Format', 'Best of 3 (do 2 wygranych legów)']);
     fireEvent.click(button('Best of 5'));
     expect(summaryRows()[2]).toEqual(['Format', 'Best of 5 (do 3 wygranych legów)']);
   });
@@ -305,7 +307,7 @@ describe('HomeScreen: new game form', () => {
     expect(within(startBar()).getByText('Nie wybrano graczy')).toBeTruthy();
     fireEvent.click(button('Anna'));
     fireEvent.click(button('Bartek'));
-    expect(within(startBar()).getByText('501 · Best of 3 · Straight-in, double-out · Losowanie przy starcie')).toBeTruthy();
+    expect(within(startBar()).getByText('301 · Best of 1 · Straight-in, double-out · Losowanie przy starcie')).toBeTruthy();
     expect(startBar().textContent).toMatch(/Anna.*vs.*Bartek/);
   });
 
@@ -331,7 +333,7 @@ describe('HomeScreen: new game form', () => {
     const request = calls.find((call) => call.url === '/api/matches');
     expect(request?.method).toBe('POST');
     expect(CreateMatchRequest.safeParse(request?.body).success).toBe(true);
-    expect(request?.body).toEqual({ type: 'match', playerIds: ['p2', 'p1'], startingScore: 701, bestOf: 3 });
+    expect(request?.body).toEqual({ type: 'match', playerIds: ['p2', 'p1'], startingScore: 701, bestOf: 1 });
   });
 
   it('shows the server message when the game cannot start', async () => {

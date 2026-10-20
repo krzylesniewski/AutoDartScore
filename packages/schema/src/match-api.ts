@@ -15,13 +15,13 @@ export const CreateMatchRequest = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('match'),
     playerIds: z.tuple([PlayerId, PlayerId]).refine(distinct, distinctPlayers),
-    startingScore: StartingScore.default(501),
-    bestOf: BestOf.default(3),
+    startingScore: StartingScore.default(301),
+    bestOf: BestOf.default(1),
   }),
   z.object({
     type: z.literal('casual'),
     playerIds: z.array(PlayerId).min(2).max(4).refine(distinct, distinctPlayers),
-    startingScore: StartingScore.default(501),
+    startingScore: StartingScore.default(301),
   }),
   z.object({
     type: z.literal('practice'),
