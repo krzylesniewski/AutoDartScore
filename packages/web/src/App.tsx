@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { onUnauthorized } from './api/session';
 import { GameScreen } from './screens/GameScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { HomeScreen } from './screens/HomeScreen';
+import { LoginScreen } from './screens/LoginScreen';
 import { StatsScreen } from './screens/StatsScreen';
 
 const HOME = '#/';
@@ -33,6 +35,7 @@ export function App() {
   const [hash, setHash] = useState(() => window.location.hash);
   const route = parseRoute(hash);
   const unknown = route === null;
+  const [loginRequired, setLoginRequired] = useState(false);
 
   useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
@@ -45,6 +48,13 @@ export function App() {
       window.location.replace(HOME);
     }
   }, [unknown]);
+
+  useEffect(() => onUnauthorized(() => setLoginRequired(true)), []);
+
+  // Po zalogowaniu ekran z adresu montuje się od nowa i pobiera dane już z tokenem.
+  if (loginRequired) {
+    return <LoginScreen onLoggedIn={() => setLoginRequired(false)} />;
+  }
 
   if (route?.screen === 'game') {
     return <GameScreen key={route.matchId} matchId={route.matchId} />;
