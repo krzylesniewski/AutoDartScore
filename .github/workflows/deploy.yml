@@ -1,0 +1,122 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    # The branches filter matches only the head branch name, so a fork PR from
+    # a branch called main passes it. workflow_run gets this repository's
+    # secrets, hence the checks on the triggering event and head repository.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    environment: production
+    # Install and front build run on a server with 1 GB of RAM.
+    timeout-minutes: 30
+    steps:
+      - name: check configuration
+        shell: bash
+        env:
+          MIKRUS_SSH_KEY: ${{ secrets.MIKRUS_SSH_KEY }}
+          MIKRUS_KNOWN_HOSTS: ${{ secrets.MIKRUS_KNOWN_HOSTS }}
+          MIKRUS_HOST: ${{ vars.MIKRUS_HOST }}
+          MIKRUS_SSH_PORT: ${{ vars.MIKRUS_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in MIKRUS_SSH_KEY MIKRUS_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing secret $name in the production environment"
+              missing=1
+            fi
+          done
+          for name in MIKRUS_HOST MIKRUS_SSH_PORT; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing variable $name in the production environment"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          if [[ ! "$MIKRUS_SSH_PORT" =~ ^[0-9]+$ ]]; then
+            echo "::error::Variable MIKRUS_SSH_PORT in the production environment must contain digits only"
+            exit 1
+          fi
+
+      - name: resolve commit
+        id: commit
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+          DISPATCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$DISPATCH_REF" != "refs/heads/main" ]; then
+              echo "::error::Manual deploys run only from main, not from $DISPATCH_REF"
+              exit 1
+            fi
+            sha="$DISPATCH_SHA"
+          else
+            sha="$RUN_SHA"
+          fi
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Expected a full 40-character lowercase commit SHA, got '$sha'"
+            exit 1
+          fi
+          echo "Deploying $sha (trigger: $EVENT_NAME)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: deploy
+        shell: bash
+        env:
+          MIKRUS_SSH_KEY: ${{ secrets.MIKRUS_SSH_KEY }}
+          MIKRUS_KNOWN_HOSTS: ${{ secrets.MIKRUS_KNOWN_HOSTS }}
+          MIKRUS_HOST: ${{ vars.MIKRUS_HOST }}
+          MIKRUS_SSH_PORT: ${{ vars.MIKRUS_SSH_PORT }}
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          set -euo pipefail
+          umask 077
+          key="$RUNNER_TEMP/deploy_key"
+          known_hosts="$RUNNER_TEMP/known_hosts"
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "$MIKRUS_SSH_KEY" > "$key"
+          printf '%s\n' "$MIKRUS_KNOWN_HOSTS" > "$known_hosts"
+
+          # The forced command on the server reads the SHA from
+          # SSH_ORIGINAL_COMMAND, so it is the only remote command.
+          code=0
+          ssh -F /dev/null -i "$key" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$known_hosts" \
+            -o ConnectTimeout=30 -o ServerAliveInterval=30 \
+            -p "$MIKRUS_SSH_PORT" "autoscore@$MIKRUS_HOST" "$SHA" || code=$?
+
+          case "$code" in
+            0) echo "Deployed $SHA" ;;
+            1) echo "::error::deploy.sh exited 1: rejected or failed before any change" ;;
+            2) echo "::error::deploy.sh exited 2: deploy failed and was rolled back" ;;
+            3) echo "::error::deploy.sh exited 3: rollback failed, the service may be down" ;;
+            255) echo "::error::ssh exited 255: SSH connection or host key failure" ;;
+            *) echo "::error::ssh exited $code: unexpected failure" ;;
+          esac
+          exit "$code"

@@ -106,12 +106,35 @@ command="/home/autoscore/app/deploy/deploy.sh",no-pty,no-port-forwarding,no-agen
 
 Ten klucz uruchamia tylko `deploy.sh`. Tekst polecenia z `ssh -p <port> autoscore@<host> <sha>` trafia do skryptu w `SSH_ORIGINAL_COMMAND`, a skrypt przyjmuje wyłącznie pełny SHA.
 
-W GitHubie potrzebne są:
+Sekrety i zmienne GitHuba dla tego klucza opisuje sekcja [Automatyczne wdrożenie](#automatyczne-wdrożenie).
+
+## Automatyczne wdrożenie
+
+Każdy merge do `main` z zielonym CI wdraża dokładnie ten commit, który sprawdziło CI (`.github/workflows/deploy.yml`). Log joba pokazuje wynik `deploy.sh`.
+
+W GitHubie utwórz środowisko `production` (Settings → Environments) i w „Deployment branches and tags” ogranicz je do `main`. Zapisz w nim jako sekrety i zmienne środowiska, nie repozytorium:
 
 - sekret `MIKRUS_SSH_KEY`: klucz prywatny `autoscore-deploy`,
 - sekret `MIKRUS_KNOWN_HOSTS`: wynik `ssh-keyscan -p <port> <host>`,
 - zmienna `MIKRUS_HOST`: `<host>`,
 - zmienna `MIKRUS_SSH_PORT`: `<port>`.
+
+Sekrety repozytorium dostają też workflowy pull requestów z gałęzi tego repozytorium, dlatego wartości leżą tylko w `production`.
+
+`MIKRUS_HOST` musi być adresem SSH osiągalnym po IPv4, bo runnery GitHuba nie mają IPv6. `ssh-keyscan` uruchom z tym samym hostem i portem co w `MIKRUS_HOST` i `MIKRUS_SSH_PORT`. Przed zapisaniem sekretu porównaj odciski. Na Macu:
+
+```sh
+ssh-keyscan -p <port> <host> > known_hosts
+ssh-keygen -lf known_hosts
+```
+
+Na serwerze `ssh-keygen -lf` dla każdego pliku `/etc/ssh/ssh_host_*_key.pub` musi pokazać te same odciski.
+
+Ręczne uruchomienie: Actions → Deploy → Run workflow, tylko z `main`. Wdraża najnowszy commit `main` i nie czeka na CI. Ponowne uruchomienie starszego przebiegu Deploy wdraża ten starszy commit.
+
+Przy błędzie job wypisuje kod wyjścia `deploy.sh` i jego znaczenie (patrz [kody wyjścia](#kody-wyjścia-deploysh)). Szczegóły są w `/home/autoscore/logs/deploy.log`.
+
+Trwający deploy nigdy nie jest przerywany. GitHub trzyma jeden czekający przebieg, a nowszy merge go zastępuje. Ręczny `deploy.sh` w toku kończy job kodem 1 („another deploy is running”). Uruchom wtedy workflow ponownie.
 
 ## Przeniesienie bazy
 
