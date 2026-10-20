@@ -17,11 +17,13 @@ Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (
 
 `player.ts`: `Player`, `CreatePlayerRequest`.
 
-`match-api.ts`: `CreateMatchRequest`, `ThrowRecord`, `MatchSnapshot`, `MatchSnapshotPlayer`, `Abandonment`, `AbandonMatchRequest`, `MatchListQuery`, `MatchListItem`, `ThrowResult`, `UndoResult`, `ApiError`.
+`match-api.ts`: `CreateMatchRequest`, `ThrowRecord`, `MatchSnapshot`, `MatchSnapshotPlayer`, `Abandonment`, `AbandonMatchRequest`, `MatchListQuery`, `MatchListItem`, `ThrowResult`, `UndoResult`, `ApiError`, `HealthResponse`.
 
 `domain-events.ts`: `DomainEvent`, unia zdarzeń `TurnCompleted`, `Bust`, `LegWon`, `MatchWon`, `PlayerFinished`, `CasualFinished`.
 
 `stats.ts`: `StatsFilter`, `PlayerStatsQuery`, `PlayerStatLine`, `PlayerStats`, `MatchSummaryLeg`, `MatchSummaryPlayer`, `MatchSummary`.
+
+`auth.ts`: `LoginRequest` (hasło bez przycinania spacji), `LoginResponse` (`token`, `expiresAt`), `LiveAuthMessage` (pierwsza wiadomość klienta na WebSocket, `{ type: 'auth', token }`).
 
 `live.ts`: `LiveMessage`, unia wiadomości WebSocket. Obejmuje `StateUpdated`, `ThrowRegistered`, `ThrowUndone` i zdarzenia domenowe, każde z polami `matchId` i `eventSeq`.
 

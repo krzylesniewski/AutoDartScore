@@ -5,7 +5,7 @@ import { migrateToLatest, openDatabase } from './db/index.js';
 const config = loadConfig(process.env);
 const db = openDatabase(config.databasePath);
 await migrateToLatest(db);
-const app = await buildApp({ db, logger: true });
+const app = await buildApp({ db, logger: true, auth: config.auth, corsOrigins: config.corsOrigins });
 
 async function shutdown(): Promise<void> {
   await app.close();

@@ -22,6 +22,10 @@ export function notFound(what: string): HttpError {
   return new HttpError(404, 'not_found', `${what} not found`);
 }
 
+export function unauthorized(): HttpError {
+  return new HttpError(401, 'unauthorized', 'Missing or invalid token');
+}
+
 const engineStatus = {
   invalid_hit: [400, 'invalid_request'],
   invalid_config: [400, 'invalid_config'],

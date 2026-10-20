@@ -3,7 +3,7 @@ import type { HitEvent, MatchSnapshot, Player } from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { expect } from 'vitest';
-import { buildApp } from './app.js';
+import { buildApp, type AppOptions } from './app.js';
 import { migrateToLatest, openDatabase, type Database } from './db/index.js';
 
 export type Dart = readonly [segment: number, multiplier: number];
@@ -23,10 +23,11 @@ export interface TestApp {
 }
 
 // random 0 losuje pierwszego gracza z listy, więc skrypty rzutów są przewidywalne.
-export async function setup(options: { random?: () => number; path?: string } = {}): Promise<TestApp> {
-  const db = openDatabase(options.path ?? ':memory:');
+export async function setup(options: Partial<Omit<AppOptions, 'db'>> & { path?: string } = {}): Promise<TestApp> {
+  const { path, ...appOptions } = options;
+  const db = openDatabase(path ?? ':memory:');
   await migrateToLatest(db);
-  const app = await buildApp({ db, random: options.random ?? (() => 0) });
+  const app = await buildApp({ random: () => 0, ...appOptions, db });
   await app.ready(); // injectWS, w przeciwieństwie do inject, nie uruchamia aplikacji
   return {
     app,

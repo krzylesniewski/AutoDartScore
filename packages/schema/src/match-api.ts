@@ -151,3 +151,8 @@ export const ApiError = z.object({
   message: z.string(),
 });
 export type ApiError = z.infer<typeof ApiError>;
+
+export const HealthResponse = z.object({
+  status: z.literal('ok'),
+});
+export type HealthResponse = z.infer<typeof HealthResponse>;

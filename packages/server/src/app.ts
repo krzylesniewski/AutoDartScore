@@ -1,10 +1,15 @@
 import websocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
+import { registerAccessControl } from './auth/access.js';
+import { createLoginLimiter } from './auth/login-limiter.js';
+import type { AuthConfig } from './config.js';
 import type { Database } from './db/database.js';
 import { toApiError } from './errors.js';
 import { createLiveHub } from './live-hub.js';
 import { createMatchService } from './match-service.js';
+import { authRoutes } from './routes/auth.js';
+import { healthRoutes } from './routes/health.js';
 import { liveRoutes } from './routes/live.js';
 import { matchRoutes } from './routes/matches.js';
 import { playerRoutes } from './routes/players.js';
@@ -17,11 +22,19 @@ export interface AppOptions {
   readonly db: Kysely<Database>;
   readonly random?: () => number; // losowanie, kto zaczyna. Domyślnie Math.random
   readonly logger?: boolean;
+  readonly auth?: AuthConfig | null;
+  readonly corsOrigins?: readonly string[] | null;
+  readonly now?: () => number; // zegar dla tokenów i limitu logowań. Domyślnie Date.now
+  readonly liveAuthTimeoutMs?: number;
+  readonly livePingIntervalMs?: number;
 }
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({ logger: options.logger ?? false });
   await app.register(websocket);
+  const auth = options.auth ?? null;
+  const now = options.now ?? Date.now;
+  await registerAccessControl(app, { auth, corsOrigins: options.corsOrigins ?? null, now });
 
   app.setErrorHandler((error, request, reply) => {
     const { statusCode, body } = toApiError(error);
@@ -36,9 +49,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   const store = createStore(options.db);
   const service = createMatchService({ store, hub: createLiveHub(), queue: createSerialQueue(), random: options.random ?? Math.random });
+  healthRoutes(app);
+  if (auth !== null) {
+    authRoutes(app, { auth, limiter: createLoginLimiter(now), now });
+  }
   playerRoutes(app, store);
   await matchRoutes(app, service);
-  liveRoutes(app, service);
+  liveRoutes(app, service, { auth, now, authTimeoutMs: options.liveAuthTimeoutMs ?? 5000, pingIntervalMs: options.livePingIntervalMs ?? 30_000 });
   statsRoutes(app, createStatsService({ store }));
   return app;
 }
