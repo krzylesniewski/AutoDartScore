@@ -10,6 +10,19 @@ pnpm --filter @autoscore/web dev
 
 Front potrzebuje działającego serwera. Vite przekazuje `/api` (także WebSocket) do adresu z `AUTOSCORE_API_URL`, domyślnie `http://localhost:3000`, i obcina prefiks `/api`. Serwer Vite nasłuchuje na wszystkich interfejsach, więc tablet w sieci otwiera `http://<adres-IP-komputera>:5173`. Całość, czyli serwer i front razem, uruchamia `pnpm dev` w katalogu głównym, zobacz [README](../../README.md).
 
+## Konfiguracja
+
+| Zmienna | Domyślnie | Znaczenie | Przykład |
+|---|---|---|---|
+| `VITE_API_URL` | brak, front woła `/api` | Adres serwera API dla REST i połączenia na żywo. Wskazuje główny adres serwera, bez `/api`. | `https://api.example.com` |
+| `VITE_BASE` | `/` | Ścieżka bazowa builda, gdy aplikacja jest pod podścieżką. Musi zaczynać się i kończyć na `/`. | `/AutoDartScore/` |
+
+Obie zmienne są czytane przy starcie Vite (`build` i `dev`), więc zmiana wymaga nowego builda albo restartu serwera Vite. Bez `VITE_API_URL` front woła `/api` przez proxy Vite. Z nią front woła API bezpośrednio, a WebSocket używa `wss://` albo `ws://` zależnie od schematu tego adresu. `VITE_BASE` pochodzi ze zmiennych środowiskowych powłoki, nie z plików `.env`:
+
+```sh
+VITE_BASE=/AutoDartScore/ VITE_API_URL=https://api.example.com pnpm --filter @autoscore/web build
+```
+
 ## Ekrany
 
 Routing przez hash w `src/App.tsx`:

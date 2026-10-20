@@ -9,9 +9,11 @@ import type {
   StatsFilter,
   UpdatePlayerRequest,
 } from '@autoscore/schema';
+import { resolveApiBase } from './api-url';
 
-// Vite przekierowuje /api do serwera, więc front i API mają jeden adres.
-export const API_BASE = '/api';
+// Domyślnie /api przez proxy Vite, więc front i API mają jeden adres.
+// VITE_API_URL wskazuje osobny serwer API.
+export const API_BASE = resolveApiBase(import.meta.env.VITE_API_URL);
 
 export class ApiRequestError extends Error {
   readonly status: number;
