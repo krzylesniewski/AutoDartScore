@@ -2,6 +2,7 @@ import { LiveMessage } from '@autoscore/schema';
 import type { Hit, HitEvent, MatchSnapshot } from '@autoscore/schema';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
+import { liveSocketUrl } from './api-url';
 import { API_BASE, ApiRequestError, abandonMatch, endPractice, postThrow, resumeMatch, undo } from './client';
 import { newEventId } from './event-id';
 
@@ -42,8 +43,7 @@ export interface UseMatch {
 }
 
 function liveUrl(matchId: string): string {
-  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${protocol}://${location.host}${API_BASE}/matches/${encodeURIComponent(matchId)}/live`;
+  return liveSocketUrl(API_BASE, `/matches/${encodeURIComponent(matchId)}/live`, location);
 }
 
 function parseMessage(data: unknown): LiveMessage | null {

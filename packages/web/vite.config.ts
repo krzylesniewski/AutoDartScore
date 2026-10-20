@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // GitHub Pages serwuje aplikację pod ścieżką repozytorium. Wartość musi zaczynać się i kończyć na /.
+  base: process.env.VITE_BASE || '/',
   plugins: [react(), tailwindcss()],
   server: {
     // Tablet w sieci lokalnej otwiera stronę po adresie IP komputera.
