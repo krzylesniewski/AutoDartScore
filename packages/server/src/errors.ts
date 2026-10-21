@@ -22,6 +22,10 @@ export function notFound(what: string): HttpError {
   return new HttpError(404, 'not_found', `${what} not found`);
 }
 
+export function playerNameTaken(name: string): HttpError {
+  return new HttpError(409, 'player_name_taken', `Player name ${name} is already taken`);
+}
+
 export function unauthorized(): HttpError {
   return new HttpError(401, 'unauthorized', 'Missing or invalid token');
 }

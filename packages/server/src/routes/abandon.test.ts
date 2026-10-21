@@ -9,6 +9,7 @@ import {
   abandon,
   countRows,
   createGame,
+  createPlayer,
   createPlayers,
   getMatch,
   hitEvent,
@@ -121,7 +122,7 @@ describe('POST /matches/:id/abandon', () => {
   });
 
   it('answers 400 not_a_participant for another player', async () => {
-    const [, , celina] = await createPlayers(t.app, 3);
+    const celina = (await createPlayer(t.app, 'Celina')).id;
     const { id } = await match301();
     const response = await abandon(t.app, id, { playerId: celina });
     expect(response.statusCode).toBe(400);
@@ -212,7 +213,7 @@ describe('POST /matches/:id/resume', () => {
   });
 
   it('keeps casual places through abandon and resume', async () => {
-    const [, , celina] = await createPlayers(t.app, 3);
+    const celina = (await createPlayer(t.app, 'Celina')).id;
     const { id } = await createGame(t.app, { type: 'casual', playerIds: [anna, bartek, celina], startingScore: 301 });
     await throwDarts(t.app, id, [T(20), T(20), T(20), MISS, MISS, MISS, MISS, MISS, MISS, T(20), T(17), D(5), S(20)]);
     const before = await getMatch(t.app, id);

@@ -42,6 +42,7 @@ export const pl = {
   noPlayers: 'Brak graczy. Dodaj pierwszego.',
   newPlayer: '+ Nowy gracz',
   playerName: 'Imię',
+  playerNameTaken: (name: string) => `Gracz o imieniu „${name}” już istnieje`,
   playerAvatar: 'Avatar (emoji)',
   playerColor: 'Kolor',
   playerColorAuto: 'Bez wyboru kolor zostanie dobrany automatycznie.',

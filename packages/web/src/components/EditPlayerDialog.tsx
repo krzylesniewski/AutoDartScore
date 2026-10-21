@@ -17,11 +17,13 @@ const input = 'min-h-12 rounded-(--radius-card) border-(length:--border-width) b
 
 export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialogProps) {
   const titleId = useId();
+  const nameErrorId = useId();
   const [name, setName] = useState(player.name);
   const [avatar, setAvatar] = useState(player.avatar ?? '');
   const [color, setColor] = useState(player.color);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -42,11 +44,16 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
     event.preventDefault();
     setSaving(true);
     setError(null);
+    setNameError(null);
     try {
       // Puste pole avatara usuwa avatar.
       onSaved(await updatePlayer(player.id, { name: name.trim(), avatar: avatar.trim() || null, color }));
     } catch (caught) {
-      setError(caught instanceof ApiRequestError ? caught.message : pl.requestFailed);
+      if (caught instanceof ApiRequestError && caught.code === 'player_name_taken') {
+        setNameError(pl.playerNameTaken(name.trim()));
+      } else {
+        setError(caught instanceof ApiRequestError ? caught.message : pl.requestFailed);
+      }
       setSaving(false);
     }
   }
@@ -65,8 +72,25 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
         <form onSubmit={(event) => void save(event)} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1">
             <span className={label}>{pl.playerName}</span>
-            <input ref={nameInput} value={name} maxLength={40} onChange={(event) => setName(event.target.value)} className={input} />
+            <input
+              ref={nameInput}
+              value={name}
+              maxLength={40}
+              aria-invalid={nameError ? 'true' : undefined}
+              aria-describedby={nameError ? nameErrorId : undefined}
+              onChange={(event) => {
+                setName(event.target.value);
+                setNameError(null);
+              }}
+              className={input}
+            />
           </label>
+          {nameError && (
+            <p id={nameErrorId} className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
+              <WarningIcon />
+              {nameError}
+            </p>
+          )}
           <label className="flex flex-col gap-1">
             <span className={label}>{pl.playerAvatar}</span>
             <input value={avatar} maxLength={16} onChange={(event) => setAvatar(event.target.value)} className={`${input} w-28`} />
