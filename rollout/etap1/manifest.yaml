@@ -11,7 +11,7 @@ claudeBin: ~/.nvm/versions/node/v22.18.0/bin/claude
 repo:
   path: ~/Documents/00_Nauka/AutoScoreDart
   github: krzylesniewski/AutoDartScore
-  base: feat/keypad-ring # tymczasowo dla P33-P35 (decyzja 2026-10-21), wieczorem całość do main jednym PR-em; potem z powrotem main
+  base: main # z powrotem main od 2026-10-21 (feat/keypad-ring scalona do main, CI nie biegało po pushu na nią)
   public: true
   # Node 24 z nvm przed domyślnym Node 22. pnpm jest z Homebrew.
   pathPrepend: [~/.nvm/versions/node/v24.22.0/bin]
