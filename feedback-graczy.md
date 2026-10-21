@@ -40,7 +40,7 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 - **Rodzaj / obszar:** pomysł / ekran gry
 - **Co powiedział:** „W widoku trwającego lega trzeba by gdzieś pokazać […] może czas trwania”
 - **Kontekst:** ekran gry w trakcie lega
-- **Status:** zaplanowany (P39, `design/plan-p36-p40.md`; decyzja 2026-10-21: czas lega na żywo, czas gry w podsumowaniu)
+- **Status:** zaplanowany (P39, `design/plan-p36-p40.md`; decyzja 2026-10-21: czas lega na żywo, czas gry w podsumowaniu, bez przerw między porzuceniem a wznowieniem)
 - **Uwagi:** dziś ekran gry nie pokazuje czasu. Czas trwania meczu był już świadomie wyłączony z zakresu ekranu końca meczu („Poza zakresem” w `design/rwd.md`, makieta ma to pole). Dane są: każdy wpis w logu zdarzeń ma `created_at`, a snapshot ma `createdAt`, więc czas da się wyliczyć w serwerze lub froncie (silnik bez czasu systemowego). Do decyzji: czas lega czy całego meczu (albo oba); od czego liczyć (utworzenie meczu czy pierwsza rzutka lega); co z przerwą przy porzuceniu i wznowieniu; licznik na żywo czy tylko w podsumowaniu; gdzie na ekranie, żeby nie przesuwać klawiatury (P31). Warto połączyć z czasem na ekranie końca meczu.
 
 ### 2026-10-21: numer kolejki na ekranie gry
@@ -48,7 +48,7 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 - **Rodzaj / obszar:** pomysł / ekran gry
 - **Co powiedział:** „W widoku trwającego lega trzeba by gdzieś pokazać, która to już jest kolejka”
 - **Kontekst:** ekran gry w trakcie lega
-- **Status:** zaplanowany (P39, `design/plan-p36-p40.md`; kolejka = numer tury rzucającego w legu)
+- **Status:** zaplanowany (P39, `design/plan-p36-p40.md`; decyzja 2026-10-21: kolejka = numer tury rzucającego w legu, tura z bustem też się liczy)
 - **Uwagi:** dziś ekran gry nie pokazuje numeru kolejki (w planie, makietach i kodzie `web` brak takiego pola). „Kolejka” rozumiana jako runda: każdy grający rzucił raz po 3 rzutki (do potwierdzenia z graczami). Numer wynika z odtworzenia rzutek lega, więc nie wymaga nowego zapisu. Do decyzji: liczyć w silniku i oddawać w snapshocie (schema) czy we froncie; jak liczyć w zabawie, gdy gracze wypadają z kolejki; czy pokazywać w Free run; miejsce na ekranie bez przesuwania klawiatury (P31), np. przy etykiecie „Kolejka rzutów” lub numerze lega.
 
 ### 2026-10-21: zakończonego meczu nie powinno dać się zmienić po czasie

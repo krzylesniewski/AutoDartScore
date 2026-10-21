@@ -61,18 +61,19 @@ Kolejność: P36 → P37 (oba zmieniają profil gracza), P38 → P39 → P40 (sn
 
 **Feedback:** „W widoku trwającego lega trzeba by gdzieś pokazać, która to już jest kolejka i może czas trwania”.
 
-**Decyzja 2026-10-21:** czas lega na żywo, czas meczu w podsumowaniu.
+**Decyzja 2026-10-21:** czas lega na żywo, czas meczu w podsumowaniu; tura z bustem to też kolejka; przerwa między porzuceniem a wznowieniem gry nie wlicza się do czasu.
 
 **Zmiana:**
 1. **Kolejka:** numer tury rzucającego w bieżącym legu, od 1 (pierwsza tura gracza w legu = kolejka 1; tura z bustem też się liczy). W meczu 1v1 i w zabawie wszyscy grający mają ten sam numer w danej rundzie; gracz, który wypadł z kolejki w zabawie, nie zmienia numeru pozostałych. Silnik: licznik tur każdego gracza w legu w stanie X01, zabawy i Solo 501, zerowany na początku lega (testy w `engine`).
 2. **Snapshot:** `round` (int ≥ 1 albo `null` po końcu gry i w Free run) oraz `legStartedAt` (ISO `receivedAt` pierwszej liczącej się rzutki bieżącego lega albo `null` przed nią) i `startedAt` (pierwsza licząca się rzutka gry albo `null`). W Free run `legStartedAt` to początek sesji.
-3. **Front, ekran gry:** w nagłówku meczu obok numeru lega etykieta „Kolejka 7” i czas lega „12:34” (powyżej godziny „1:02:03”), odświeżany co sekundę z `legStartedAt` i zegara urządzenia, z ikoną zegara i `aria-label` „Czas lega 12 min 34 s”; licznik nie jest ogłaszany przez czytnik ekranu co sekundę. Przed pierwszą rzutką lega „0:00”. W porzuconej grze licznik stoi (bez odliczania przerwy po wznowieniu: liczymy czas od pierwszej rzutki lega). Free run: tylko czas sesji, bez kolejki. Stała szerokość cyfr (`tabular-nums`), żeby tekst nie przesuwał niczego obok.
-4. **Front, koniec gry:** „Czas gry” (`finishedAt` − `startedAt`) w podsumowaniu, w miejscu przewidzianym na makiecie końca meczu (`design/rwd.md`, sekcja widoku końca meczu), także dla zabawy i Solo 501.
+   - **Przerwy:** `legPausedMs` i `pausedMs` (int ≥ 0): suma przerw od porzucenia (`match_abandoned`) do wznowienia (`match_resumed`) z logu, liczona od `legStartedAt` (dla lega) i od `startedAt` (dla gry). Przerwa, która zaczęła się przed pierwszą rzutką lega, liczy się tylko od `legStartedAt`. Gra może być porzucana i wznawiana wiele razy. W porzuconej grze trwająca przerwa nie jest w sumie, a licznik stoi na czasie porzucenia (`abandonment.at`).
+3. **Front, ekran gry:** w nagłówku meczu obok numeru lega etykieta „Kolejka 7” i czas lega „12:34” (powyżej godziny „1:02:03”), odświeżany co sekundę z `legStartedAt` i zegara urządzenia, z ikoną zegara i `aria-label` „Czas lega 12 min 34 s”; licznik nie jest ogłaszany przez czytnik ekranu co sekundę. Czas lega = teraz − `legStartedAt` − `legPausedMs`. Przed pierwszą rzutką lega „0:00”. W porzuconej grze licznik stoi na `abandonment.at` − `legStartedAt` − `legPausedMs`, a po wznowieniu liczy dalej bez przerwy. Free run: tylko czas sesji, bez kolejki. Stała szerokość cyfr (`tabular-nums`), żeby tekst nie przesuwał niczego obok.
+4. **Front, koniec gry:** „Czas gry” (`finishedAt` − `startedAt` − `pausedMs`) w podsumowaniu, w miejscu przewidzianym na makiecie końca meczu (`design/rwd.md`, sekcja widoku końca meczu), także dla zabawy i Solo 501.
 5. **Stabilność:** pomiary klawiatury z P31 dają ten sam wynik (±1 px) przy zmianie kolejki i tyknięciach licznika.
 
-**Testy:** engine (numer kolejki w 1v1, zabawie z wypadającymi graczami i Solo 501; bust liczy się jako tura; nowy leg zaczyna od 1); serwer (`round`, `legStartedAt`, `startedAt` w snapshocie, także po undo pierwszej rzutki lega); front (etykieta kolejki, format czasu, licznik z fałszywym zegarem, „Czas gry” na końcu).
+**Testy:** engine (numer kolejki w 1v1, zabawie z wypadającymi graczami i Solo 501; bust liczy się jako tura; nowy leg zaczyna od 1); serwer (`round`, `legStartedAt`, `startedAt`, `legPausedMs` i `pausedMs` w snapshocie, także po undo pierwszej rzutki lega, przy kilku porzuceniach i wznowieniach oraz przy porzuceniu przed pierwszą rzutką lega; czasy z wstrzykiwanego zegara); front (etykieta kolejki, format czasu, licznik z fałszywym zegarem, zatrzymany licznik w porzuconej grze, „Czas gry” bez przerw na końcu).
 
-**Poza zakresem:** czas w statystykach (np. średni czas lega), wstrzymywanie zegara na przerwę, czas tury.
+**Poza zakresem:** czas w statystykach (np. średni czas lega), ręczna pauza bez porzucenia gry, czas tury.
 
 ## P40: ekran Ustawienia (web)
 
