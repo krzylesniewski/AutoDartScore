@@ -36,6 +36,16 @@ describe('AvatarColorPicker', () => {
     expect(radios().filter((radio) => radio.nextElementSibling?.textContent === '✓')).toHaveLength(1);
   });
 
+  it('draws keyboard focus outside the checked ring, so a focused checked swatch looks different', () => {
+    render(<AvatarColorPicker value={7} onChange={vi.fn()} name="Anna" avatar="" />);
+    const swatch = screen.getByRole('radio', { name: 'Różowy' }).nextElementSibling;
+    // Obwódka zaznaczenia sięga 2 + 3 px od pola, fokus zaczyna się 7 px od pola.
+    expect(swatch?.classList).toContain('ring-offset-2');
+    expect(swatch?.classList).toContain('peer-checked:ring-3');
+    expect(swatch?.classList).toContain('peer-focus-visible:outline-offset-7');
+    expect(swatch?.classList).toContain('peer-focus-visible:outline-2');
+  });
+
   it('previews the avatar in the chosen color', () => {
     render(<AvatarColorPicker value={7} onChange={vi.fn()} name="Anna" avatar="🦊" />);
     expect(screen.getByText('🦊').classList).toContain('bg-(--color-avatar-7)');

@@ -14,7 +14,8 @@ const label = 'font-display text-(length:--text-label) font-semibold uppercase t
 const preview = 'flex size-18 shrink-0 items-center justify-center rounded-full font-display text-[38px] font-bold';
 
 // Natywne radio daje strzałki i Tab bez własnej obsługi klawiatury. Zaznaczenie ma obwódkę i ✓, więc kolor nie jest jedyną wskazówką.
-// Kolumny zależą od szerokości pola, a nie okna: 8 kolumn tylko wtedy, gdy się mieszczą. Odstęp 10 px mieści obwódkę i fokus (5 px na stronę).
+// Fokus to druga obwódka 7-9 px od pola, poza obwódką zaznaczenia (2-5 px), więc widać go też na zaznaczonym polu.
+// Kolumny zależą od szerokości pola, a nie okna: 8 kolumn tylko wtedy, gdy się mieszczą. Odstęp 10 px mieści fokus bez nachodzenia na sąsiednie pole.
 export function AvatarColorPicker({ value, onChange, name, avatar }: AvatarColorPickerProps) {
   const group = useId();
   const shown = avatar.trim() || null;
@@ -46,7 +47,7 @@ export function AvatarColorPicker({ value, onChange, name, avatar }: AvatarColor
                 />
                 <span
                   aria-hidden="true"
-                  className={`pointer-events-none flex size-11 items-center justify-center rounded-full font-display text-2xl font-bold text-(--color-on-avatar) ring-offset-2 ring-offset-(--color-surface) peer-checked:ring-3 peer-checked:ring-(--color-text) peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-(--color-text) ${avatarColorClass(color)}`}
+                  className={`pointer-events-none flex size-11 items-center justify-center rounded-full font-display text-2xl font-bold text-(--color-on-avatar) ring-offset-2 ring-offset-(--color-surface) peer-checked:ring-3 peer-checked:ring-(--color-text) peer-focus-visible:outline-2 peer-focus-visible:outline-offset-7 peer-focus-visible:outline-(--color-text) ${avatarColorClass(color)}`}
                 >
                   {checked ? '✓' : ''}
                 </span>
