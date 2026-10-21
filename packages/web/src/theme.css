@@ -24,11 +24,12 @@
   --font-body: var(--font-body);
 }
 
-/* Rozmiary z makiety pomniejszone, żeby klawiatura zmieściła się na ekranie 1440×810 bez przewijania. */
+/*
+ * Wysokość nad kołem klawiatury i pod nim od lg: nagłówek 65 px, górny odstęp main 24 px, panel tury 351 px,
+ * odstęp w kolumnie 12 px i dolny odstęp main 12 px. Bok koła to wysokość okna minus ta rezerwa.
+ */
 :root {
-  --text-dart-fit: calc(var(--text-dart) * 0.72);
-  --text-checkout-fit: calc(var(--text-checkout) * 0.6);
-  --text-turn-total-fit: calc(var(--text-turn-total) * 0.9);
+  --keypad-ring-reserve: 464px;
 }
 
 /* dvh, bo pasek przeglądarki na telefonie zmienia wysokość okna. Bez tego pasek ze Startem chowa się pod nim. */

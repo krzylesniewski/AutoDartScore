@@ -1,4 +1,4 @@
-import { LiveMessage } from '@autoscore/schema';
+import { LiveMessage, MISS_SEGMENT } from '@autoscore/schema';
 import type { Hit, HitEvent, LiveAuthMessage, MatchSnapshot } from '@autoscore/schema';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
@@ -12,6 +12,9 @@ export const UNAUTHORIZED_CLOSE_CODE = 4401;
 export const RECONNECT_DELAY_MS = 1000;
 export const BANNER_DURATION_MS = 2500;
 export const KEYPAD_SOURCE = 'keypad';
+
+const DARTS_PER_TURN = 3;
+const MISS: Hit = { segment: MISS_SEGMENT, multiplier: 0 };
 
 export type Connection = 'connecting' | 'open' | 'closed';
 
@@ -38,6 +41,7 @@ export interface UseMatch {
   readonly connection: Connection;
   readonly notFound: boolean;
   sendHit(hit: Hit): void;
+  sendRestMiss(): void;
   sendUndo(): void;
   sendAbandon(playerId: string, reason: string | null): void;
   sendResume(): void;
@@ -58,6 +62,19 @@ function parseMessage(data: unknown): LiveMessage | null {
   } catch {
     return null;
   }
+}
+
+function keypadHit(matchId: string, sequence: number, hit: Hit): HitEvent {
+  return {
+    eventId: newEventId(),
+    matchId,
+    source: KEYPAD_SOURCE,
+    sequence,
+    segment: hit.segment,
+    multiplier: hit.multiplier,
+    confidence: 1,
+    detectedAt: new Date().toISOString(),
+  };
 }
 
 export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage) => void): UseMatch {
@@ -191,16 +208,7 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
 
   const sendHit = useCallback(
     (hit: Hit) => {
-      const event: HitEvent = {
-        eventId: newEventId(),
-        matchId,
-        source: KEYPAD_SOURCE,
-        sequence: sequence.current++,
-        segment: hit.segment,
-        multiplier: hit.multiplier,
-        confidence: 1,
-        detectedAt: new Date().toISOString(),
-      };
+      const event = keypadHit(matchId, sequence.current++, hit);
       enqueue(async () => {
         try {
           const result = await postThrow(matchId, event);
@@ -213,6 +221,42 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     },
     [matchId, enqueue, acceptState],
   );
+
+  // Stan z chwili kliknięcia. Gdy wcześniejsze stuknięcie albo Cofnij z kolejki zamknęło lub zmieniło turę, nic nie idzie.
+  const sendRestMiss = useCallback(() => {
+    const clicked = stateRef.current;
+    if (!clicked) {
+      return;
+    }
+    const playerId = clicked.currentPlayerId;
+    const dartsAtClick = clicked.currentDarts.length;
+    enqueue(async () => {
+      const start = stateRef.current;
+      if (!start || start.finished || start.status !== 'in_progress' || start.currentPlayerId !== playerId || start.currentDarts.length < dartsAtClick) {
+        return;
+      }
+      let darts = start.currentDarts.length;
+      const count = DARTS_PER_TURN - darts;
+      for (let index = 0; index < count; index += 1) {
+        // Inne urządzenie mogło zmienić turę między rzutkami.
+        if (index > 0) {
+          const latest = stateRef.current;
+          if (!latest || latest.currentPlayerId !== playerId || latest.currentDarts.length !== darts + 1) {
+            return;
+          }
+          darts = latest.currentDarts.length;
+        }
+        try {
+          const result = await postThrow(matchId, keypadHit(matchId, sequence.current++, MISS));
+          acceptState(result.state);
+          setError(null);
+        } catch {
+          setError(pl.throwFailed);
+          return;
+        }
+      }
+    });
+  }, [matchId, enqueue, acceptState]);
 
   const sendUndo = useCallback(() => {
     enqueue(async () => {
@@ -267,5 +311,5 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     });
   }, [matchId, enqueue, acceptState]);
 
-  return { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo, sendAbandon, sendResume, sendEndPractice };
+  return { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice };
 }

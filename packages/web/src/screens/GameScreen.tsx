@@ -1,3 +1,4 @@
+import type { Hit } from '@autoscore/schema';
 import { useCallback, useState, type ReactNode } from 'react';
 import { useMatch } from '../api/use-match';
 import { useMatchSummary } from '../api/use-match-summary';
@@ -14,6 +15,7 @@ import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
 import { WarningIcon } from '../components/icons';
 import { canEndPractice } from '../game/can-end-practice';
+import { checkoutRoute } from '../game/checkout-route';
 import { pl } from '../i18n/pl';
 
 const NEW_GAME_HREF = '#/';
@@ -23,7 +25,7 @@ const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
-  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo, sendAbandon, sendResume, sendEndPractice } = useMatch(matchId, audio.onLiveMessage);
+  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice } = useMatch(matchId, audio.onLiveMessage);
   // Zabawa i trening potrzebują podsumowania dopiero po końcu gry. Free run nigdy się nie kończy.
   const stats = useMatchSummary(matchId, state?.eventSeq ?? null, state !== null && (state.type === 'match' || state.finished));
   const [abandoning, setAbandoning] = useState(false);
@@ -56,6 +58,15 @@ export function GameScreen({ matchId }: { matchId: string }) {
     setEnding(false);
   }
   const keypadDisabled = !state || abandoned || ended || connection !== 'open';
+  const checkout = state ? (checkoutRoute(state)?.[0] ?? null) : null;
+
+  // W trakcie komendy trasa pochodzi ze starego stanu, więc podwójne kliknięcie albo szybki drugi Enter nie wysyła nieaktualnej rzutki.
+  function enterCheckout(hit: Hit): void {
+    if (busy || keypadDisabled) {
+      return;
+    }
+    sendHit(hit);
+  }
 
   if (state?.type === 'match' && state.finished) {
     return (
@@ -91,13 +102,23 @@ export function GameScreen({ matchId }: { matchId: string }) {
           Poniżej lg main jest kolumną flex, a prawa kolumna ma display: contents. Dok jest wtedy dzieckiem main.
           Sticky trzyma go na dole przez całe przewijanie, a mt-auto także wtedy, gdy treść jest krótsza niż ekran. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:pb-(--space-page) xl:grid-cols-[var(--scoreboard-width)_1fr]">
+        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
           <div className="flex flex-col gap-4">
             {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
             {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
           </div>
           <div className="contents lg:relative lg:flex lg:flex-col lg:gap-3">
-            {state && <TurnPanel state={state} lastTurn={lastTurn} busy={busy} undoDisabled={abandoned || ended} onUndo={sendUndo} />}
+            {state && (
+              <TurnPanel
+                state={state}
+                lastTurn={lastTurn}
+                busy={busy}
+                undoDisabled={abandoned || ended}
+                onUndo={sendUndo}
+                onCheckout={enterCheckout}
+                checkoutDisabled={keypadDisabled}
+              />
+            )}
             {/* TurnPanel zostaje po końcu gry, żeby Cofnij poprawiło źle wpisaną zwycięską rzutkę. */}
             {state?.finished && <MatchSummaryPanel state={state} summary={stats.summary} error={stats.error} />}
             {/* Od lg dok znika z układu, a komunikaty nakładają się na górę prawej kolumny, żeby nie przesuwać klawiatury. */}
@@ -122,7 +143,16 @@ export function GameScreen({ matchId }: { matchId: string }) {
                   </Notice>
                 )}
               </div>
-              {!state?.finished && <Keypad onHit={sendHit} disabled={keypadDisabled} />}
+              {!state?.finished && (
+                <Keypad
+                  onHit={sendHit}
+                  onRestMiss={sendRestMiss}
+                  onUndo={sendUndo}
+                  disabled={keypadDisabled}
+                  undoDisabled={busy || abandoned || ended}
+                  checkout={busy ? null : checkout}
+                />
+              )}
             </div>
             {/* Baner jest poza dokiem. Wiszący nad przypiętym dokiem zasłaniałby Cofnij po przewinięciu na dół. */}
             <EventBanner banner={banner} />
