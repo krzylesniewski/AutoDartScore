@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyCasualThrow,
   createCasualMatch,
+  currentRound,
   EngineError,
   replayCasualMatch,
   type CasualMatchConfig,
@@ -286,5 +287,49 @@ describe('replay', () => {
     const snapshot = structuredClone(start);
     applyCasualThrow(start, D(20));
     expect(start).toEqual(snapshot);
+  });
+});
+
+describe('round in the leg', () => {
+  const round = (state: CasualMatchState) => currentRound({ type: 'casual', state });
+  const turn = [S(1), S(1), S(1)];
+
+  it('lets a player finish in round 3 and drop out while the others share round 3 and then round 4', () => {
+    const twoRounds = throwAll(createCasualMatch(config), [...turn, ...turn, ...turn, ...turn, ...turn, ...turn]).state;
+    expect(twoRounds.turnsInLeg).toEqual([2, 2, 2]);
+    const annaReady = { ...twoRounds, remaining: [40, ...twoRounds.remaining.slice(1)], turnStartRemaining: 40 };
+    expect(thrower(annaReady)).toBe('anna');
+    expect(round(annaReady)).toBe(3);
+
+    const annaOut = applyCasualThrow(annaReady, D(20)).state;
+    expect(annaOut.placements).toEqual([{ playerId: 'anna', place: 1 }]);
+    expect(annaOut.turnsInLeg).toEqual([3, 2, 2]);
+    expect(thrower(annaOut)).toBe('bartek');
+    expect(round(annaOut)).toBe(3);
+
+    const bartekDone = throwAll(annaOut, turn).state;
+    expect(thrower(bartekDone)).toBe('celina');
+    expect(round(bartekDone)).toBe(3);
+
+    const celinaDone = throwAll(bartekDone, turn).state;
+    expect(thrower(celinaDone)).toBe('bartek');
+    expect(round(celinaDone)).toBe(4);
+    expect(celinaDone.turnsInLeg).toEqual([3, 3, 3]);
+  });
+
+  it('counts a bust while others have already finished', () => {
+    const start = midGame({ remaining: [40, 32, 100], turnStartRemaining: 40, currentPlayerIndex: 0 });
+    const bartekBust = throwAll(start, [D(20), S(20), S(10), S(1)]).state;
+    expect(bartekBust.turnsInLeg).toEqual([1, 1, 0]);
+    expect(thrower(bartekBust)).toBe('celina');
+    expect(round(bartekBust)).toBe(1);
+    expect(round(throwAll(bartekBust, turn).state)).toBe(2);
+  });
+
+  it('has no round once the game is finished', () => {
+    const twoPlayers = createCasualMatch({ ...config, playerIds: ['anna', 'bartek'] });
+    const finished = applyCasualThrow(midGame({ remaining: [40, 301], turnStartRemaining: 40, currentPlayerIndex: 0 }, twoPlayers), D(20)).state;
+    expect(finished.finished).toBe(true);
+    expect(round(finished)).toBeNull();
   });
 });

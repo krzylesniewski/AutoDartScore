@@ -5,6 +5,7 @@ import { canEndPractice } from '../game/can-end-practice';
 import { pl } from '../i18n/pl';
 import { EffectsToggle } from './EffectsToggle';
 import { PauseIcon, StopIcon, TargetIcon } from './icons';
+import { LegClock } from './LegClock';
 import { VoiceToggle } from './VoiceToggle';
 
 export interface MatchHeaderProps {
@@ -19,12 +20,13 @@ export interface MatchHeaderProps {
 }
 
 const chip = 'rounded-(--radius-chip) border-(length:--border-width) px-3 py-1 text-(length:--text-button) lg:px-2 lg:text-[16px] xl:px-3 xl:text-(length:--text-button)';
-// Od lg panel ma display: contents, a order stawia chip stanu tuż przed akcjami, jak na monitorze. Chip jest tylko w grze
+// Od lg panel ma display: contents, a order stawia kolejkę i zegar zaraz po chipach, a chip stanu tuż przed akcjami, jak na monitorze. Chip jest tylko w grze
 // porzuconej lub zakończonej, gdzie Porzuć mecz i Zakończ trening są ukryte. Na xl ujemny margines zmniejsza odstęp do gap-2 z grupy akcji.
-const statusChip = `${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold whitespace-nowrap max-sm:gap-1 max-sm:px-2 max-sm:text-base lg:order-2 lg:ml-auto lg:gap-1 xl:-mr-2 xl:gap-2`;
+const statusChip = `${chip} flex items-center gap-2 self-center border-(--color-accent) font-display font-semibold whitespace-nowrap max-sm:gap-1 max-sm:px-2 max-sm:text-base lg:order-3 lg:ml-auto lg:gap-1 xl:-mr-2 xl:gap-2`;
 const button = 'flex min-h-12 items-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-(length:--text-button) font-semibold lg:px-2.5 xl:px-4';
 
 // Poniżej lg chipy i akcje są w rozwijanym panelu. Panel zostaje w DOM i chowa go tylko klasa, więc każdy przycisk istnieje raz.
+// W porzuconej lub zakończonej grze pasek od lg może przejść do drugiego wiersza, żeby chipy nie ścisnęły się w kolumnę.
 export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange, onAbandon, onResume, onEndPractice }: MatchHeaderProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -53,7 +55,9 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
   }
 
   return (
-    <header className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-3 py-2 sm:gap-x-3 sm:px-(--space-page) lg:flex-nowrap lg:gap-2 lg:px-3 xl:gap-4 xl:px-(--space-page)">
+    <header
+      className={`flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-3 py-2 sm:gap-x-3 sm:px-(--space-page) lg:gap-2 lg:px-3 xl:gap-4 xl:px-(--space-page) ${statusShown ? '' : 'lg:flex-nowrap'}`}
+    >
       <a href="#/" aria-label={pl.home} className="flex items-center gap-2 font-display text-[24px] font-bold whitespace-nowrap text-(--color-text) xl:text-(length:--text-heading) xl:whitespace-normal">
         <TargetIcon className="text-(--color-accent)" />
         {pl.appName}
@@ -70,6 +74,13 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
           {pl.statusAbandoned}
         </span>
       )}
+      {/* Od lg kolejka stoi nad zegarem, bo w jednym wierszu pasek nie mieści się przy 1024 px. */}
+      {state && !state.finished && (
+        <div className="flex items-center gap-2 font-display text-(length:--text-button) font-semibold whitespace-nowrap tabular-nums sm:gap-3 lg:order-2 lg:flex-col lg:items-start lg:gap-0 lg:text-[16px] lg:leading-tight xl:text-(length:--text-button)">
+          {state.round !== null && <Round round={state.round} />}
+          <LegClock state={state} />
+        </div>
+      )}
       <button
         ref={toggleRef}
         type="button"
@@ -79,7 +90,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
         className={`${button} ml-auto border-(--color-border-strong) bg-(--color-surface-button) max-sm:px-3 lg:hidden`}
       >
         <MenuIcon />
-        {pl.gameMenu}
+        <span className="max-sm:sr-only">{pl.gameMenu}</span>
       </button>
       <div id={panelId} className={`${open ? 'flex' : 'hidden'} basis-full flex-col gap-3 pb-1 lg:contents`}>
         {state && (
@@ -94,7 +105,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
             )}
           </ul>
         )}
-        <div className={`flex flex-wrap gap-2 lg:order-3 lg:flex-nowrap lg:whitespace-nowrap xl:whitespace-normal ${statusShown ? '' : 'lg:ml-auto'}`}>
+        <div className={`flex flex-wrap gap-2 lg:order-4 lg:flex-nowrap lg:whitespace-nowrap xl:whitespace-normal ${statusShown ? '' : 'lg:ml-auto'}`}>
           {state && canAbandon(state) && (
             <button type="button" onClick={closeAfter(onAbandon)} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
               {pl.abandonMatch}
@@ -115,6 +126,18 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
         </div>
       </div>
     </header>
+  );
+}
+
+// Niewidoczna dwucyfrowa kopia trzyma szerokość, więc przejście z 9 na 10 niczego nie przesuwa.
+function Round({ round }: { round: number }) {
+  return (
+    <span className="inline-grid">
+      <span className="col-start-1 row-start-1">{pl.round(round)}</span>
+      <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+        {pl.round(88)}
+      </span>
+    </span>
   );
 }
 

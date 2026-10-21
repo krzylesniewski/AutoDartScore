@@ -85,6 +85,11 @@ export const MatchSnapshot = z.object({
   endedAt: z.iso.datetime().nullable(), // tylko w zakończonym treningu
   finishedAt: z.iso.datetime().nullable(), // receivedAt rzutki, która zakończyła grę
   editableUntil: z.iso.datetime().nullable(), // do tej chwili da się cofnąć rzutkę w zakończonej grze
+  round: z.int().min(1).nullable(), // kolejka rzucającego w bieżącym legu. null po końcu gry i w Free run
+  startedAt: z.iso.datetime().nullable(), // receivedAt pierwszej liczonej rzutki gry
+  legStartedAt: z.iso.datetime().nullable(), // receivedAt pierwszej liczonej rzutki bieżącego lega. W Free run równe startedAt
+  pausedMs: z.int().min(0), // zamknięte przerwy (porzucenie do wznowienia) od startedAt
+  legPausedMs: z.int().min(0), // zamknięte przerwy od legStartedAt
   eventSeq: z.int().min(0), // seq ostatniego wpisu w logu, 0 dla pustego logu
   currentPlayerId: PlayerId.nullable(),
   legIndex: z.int().min(0),

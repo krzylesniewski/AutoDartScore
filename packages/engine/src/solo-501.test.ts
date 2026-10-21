@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applySolo501Throw,
   createSolo501,
+  currentRound,
   EngineError,
   replaySolo501,
   SOLO_501_STARTING_SCORE,
@@ -164,5 +165,22 @@ describe('replay', () => {
     const snapshot = structuredClone(start);
     applySolo501Throw(start, D(20));
     expect(start).toEqual(snapshot);
+  });
+});
+
+describe('round', () => {
+  const round = (state: Solo501State) => currentRound({ type: 'practice', practiceMode: 'solo_501', state });
+
+  it('counts every turn, a bust too', () => {
+    expect(round(createSolo501(config))).toBe(1);
+    const afterTurn = throwAll(createSolo501(config), [S(1), S(1), S(1)]).state;
+    expect(round(afterTurn)).toBe(2);
+    const afterBust = throwAll(atScore(40), [T(20)]).state;
+    expect(round(afterBust)).toBe(2);
+  });
+
+  it('has no round once the checkout ends the session', () => {
+    expect(round(replaySolo501(config, nineDarter.slice(0, -1)).state)).toBe(3);
+    expect(round(replaySolo501(config, nineDarter).state)).toBeNull();
   });
 });

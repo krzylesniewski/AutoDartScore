@@ -304,4 +304,8 @@ export const pl = {
   frequentHits: (name: string) => `Najczęstsze: ${name}`,
   showKeypadAsRing: 'Pokaż klawiaturę jako koło',
   showKeypadAsGrid: 'Pokaż klawiaturę jako siatkę',
+  round: (n: number) => `Kolejka ${n}`,
+  legTime: (spoken: string) => `Czas lega ${spoken}`,
+  sessionTime: (spoken: string) => `Czas sesji ${spoken}`,
+  gameTime: (time: string) => `Czas gry ${time}`,
 } as const;

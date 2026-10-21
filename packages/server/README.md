@@ -76,6 +76,8 @@ Gdy w katalogu nie ma czytelnego `index.html`, także gdy katalog nie istnieje, 
 
 Stan gry podaje `finishedAt` (czas przyjęcia rzutki kończącej grę) i `editableUntil` (`finishedAt` plus ta liczba minut). Oba pola są `null`, dopóki gra trwa. Od chwili `editableUntil` cofnięcie dostaje 409 `match_locked`, a log się nie zmienia. Cofnięcie rzutki kończącej grę w oknie otwiera grę, a kolejne zakończenie liczy okno od nowa. Wartość spoza samych cyfr albo większa niż `525600` (rok) zatrzymuje start z błędem `Invalid AUTOSCORE_MATCH_LOCK_MINUTES: <wartość>`.
 
+Stan gry podaje też `round` (kolejka rzucającego w bieżącym legu, liczona od 1, `null` po końcu gry i w Free run), `startedAt` i `legStartedAt` (czas przyjęcia pierwszej liczonej rzutki gry i bieżącego lega, `null` przed nią) oraz `pausedMs` i `legPausedMs` (suma zamkniętych przerw od porzucenia do wznowienia, liczona od `startedAt` i od `legStartedAt`). Wszystkie czasy pochodzą z logu, więc cofnięcie rzutki przesuwa je razem ze stanem. Otwarte porzucenie nie wchodzi do sumy przerw.
+
 ## Struktura
 
 - `src/main.ts`: start procesu (konfiguracja, baza, migracje, nasłuch).

@@ -1,5 +1,6 @@
-import { freeRunAverage, isGameFinished, SOLO_501_STARTING_SCORE, type GameState } from '@autoscore/engine';
+import { currentRound, freeRunAverage, isGameFinished, SOLO_501_STARTING_SCORE, type GameState } from '@autoscore/engine';
 import type { Abandonment, MatchSnapshot, MatchSnapshotPlayer, MatchStatus, Player } from '@autoscore/schema';
+import type { GameTimes } from './replay.js';
 import type { StoredMatch } from './store/store.js';
 
 type Progress = Pick<MatchSnapshot, 'currentPlayerId' | 'legIndex' | 'turnIndex' | 'currentDarts' | 'winnerId' | 'placements' | 'freeRun'> & {
@@ -89,7 +90,7 @@ function status(finished: boolean, abandonment: Abandonment | null, endedAt: str
   return abandonment ? 'abandoned' : 'in_progress';
 }
 
-export interface SnapshotTimes {
+export interface SnapshotTimes extends GameTimes {
   readonly abandonment: Abandonment | null;
   readonly endedAt: string | null;
   readonly finishedAt: string | null;
@@ -97,7 +98,12 @@ export interface SnapshotTimes {
 }
 
 // Porzucona gra i zakończony trening zachowują rzucającego i rzutki tury, żeby podgląd pokazywał stan z chwili przerwania.
-export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number, { abandonment, endedAt, finishedAt, lockMs }: SnapshotTimes): MatchSnapshot {
+export function toSnapshot(
+  match: StoredMatch,
+  game: GameState,
+  eventSeq: number,
+  { abandonment, endedAt, finishedAt, lockMs, startedAt, legStartedAt, pausedMs, legPausedMs }: SnapshotTimes,
+): MatchSnapshot {
   const finished = isGameFinished(game);
   const { perPlayer, startingScore, ...rest } = progress(game, finished);
   return {
@@ -114,6 +120,11 @@ export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number
     endedAt,
     finishedAt,
     editableUntil: finishedAt === null ? null : new Date(Date.parse(finishedAt) + lockMs).toISOString(),
+    round: currentRound(game),
+    startedAt,
+    legStartedAt,
+    pausedMs,
+    legPausedMs,
     eventSeq,
     ...rest,
     players: match.players.map((player, index) => ({

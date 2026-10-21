@@ -138,6 +138,17 @@ describe('MatchEndView', () => {
     expect(within(leg).getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
   });
 
+  it('ends the setup line with Czas gry without the pauses', () => {
+    view({ state: { ...finished, startedAt: '2026-10-21T18:00:00.000Z', finishedAt: '2026-10-21T19:03:05.000Z', pausedMs: 60_000 } });
+    expect(screen.getByText('501 · Double-out · Best of 3 · Czas gry 1:02:05')).toBeTruthy();
+  });
+
+  it('leaves Czas gry out of the setup line without a start time', () => {
+    view({ state: { ...finished, startedAt: null, finishedAt: '2026-10-21T19:03:05.000Z' } });
+    expect(screen.getByText('501 · Double-out · Best of 3')).toBeTruthy();
+    expect(screen.queryByText(/Czas gry/)).toBeNull();
+  });
+
   it('shows the checkout and the averages of each player in a leg card', () => {
     view({ summary: { ...current, legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [{ playerId: 'p1', average: 74.2 }, { playerId: 'p2', average: null }] }] } });
     const legList = screen.getByRole('list', { name: 'Legi' });

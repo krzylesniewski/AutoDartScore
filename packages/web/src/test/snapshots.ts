@@ -28,6 +28,11 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
     endedAt: null,
     finishedAt: null,
     editableUntil: null,
+    round: 1,
+    startedAt: null,
+    legStartedAt: null,
+    pausedMs: 0,
+    legPausedMs: 0,
     ...overrides,
   };
 }

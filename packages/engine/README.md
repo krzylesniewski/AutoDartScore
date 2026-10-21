@@ -12,6 +12,8 @@ Jedno wejście dla wszystkich typów gry (`game.ts`):
 
 - `createGame(config)`, `applyGameThrow(game, hit)`, `replayGame(config, hits)` dla `GameConfig` i `GameState` z polem `type` (`match`, `casual`, `practice`) i `practiceMode`,
 - `isGameFinished(game)`,
+- `currentRound(game)`: kolejka rzucającego w bieżącym legu, liczona od 1. Bust też jest turą. `null` po końcu gry i w Free run,
+- `dartsInCurrentLeg(game)`: liczone rzutki bieżącego lega, `0` zaraz po wygranym legu,
 - `countsToStats(config)`: `false` tylko dla Free run.
 
 Mecz 1v1, best of N legów (`x01-match.ts`):
