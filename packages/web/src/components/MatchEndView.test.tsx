@@ -126,6 +126,18 @@ describe('MatchEndView', () => {
     expect(columns).toEqual([within(table).getByRole('columnheader', { name: 'Bartek' }), within(table).getByRole('columnheader', { name: 'Anna' })]);
   });
 
+  it("gives the avatars the players' own colors, not the list position", () => {
+    const players = [player('p1', 'Anna', { legsWon: 1, avatar: '🦊', color: 12 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯', color: 7 })];
+    view({ state: { ...finished, players } });
+    const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
+    expect(within(card).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
+    expect(within(card).getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
+    const table = screen.getByRole('table', { name: 'Podsumowanie meczu' });
+    expect(within(table).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
+    const leg = screen.getByText('Leg 1').closest('li') as HTMLElement;
+    expect(within(leg).getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
+  });
+
   it('shows the checkout and the averages of each player in a leg card', () => {
     view({ summary: { ...current, legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [{ playerId: 'p1', average: 74.2 }, { playerId: 'p2', average: null }] }] } });
     const legList = screen.getByRole('list', { name: 'Legi' });

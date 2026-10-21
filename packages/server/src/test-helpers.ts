@@ -39,7 +39,7 @@ export async function setup(options: Partial<Omit<AppOptions, 'db'>> & { path?: 
   };
 }
 
-export async function createPlayer(app: FastifyInstance, name: string, extra: { guest?: boolean } = {}): Promise<Player> {
+export async function createPlayer(app: FastifyInstance, name: string, extra: { guest?: boolean; color?: number } = {}): Promise<Player> {
   const response = await app.inject({ method: 'POST', url: '/players', payload: { name, ...extra } });
   expect(response.statusCode).toBe(201);
   return response.json();

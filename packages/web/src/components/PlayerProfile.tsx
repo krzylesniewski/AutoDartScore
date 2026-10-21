@@ -9,14 +9,13 @@ import { ArchiveIcon, WarningIcon } from './icons';
 
 export interface PlayerProfileProps {
   player: Player;
-  colorIndex: number;
   onChanged(player: Player): void;
 }
 
 const button =
   'flex min-h-11 items-center rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-4 font-display text-[19px] font-semibold disabled:opacity-40';
 
-export function PlayerProfile({ player, colorIndex, onChanged }: PlayerProfileProps) {
+export function PlayerProfile({ player, onChanged }: PlayerProfileProps) {
   const [dialog, setDialog] = useState<'edit' | 'archive' | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -37,7 +36,7 @@ export function PlayerProfile({ player, colorIndex, onChanged }: PlayerProfilePr
 
   return (
     <section aria-label={player.name} className="flex flex-wrap items-center gap-5 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) p-5">
-      <Avatar name={player.name} avatar={player.avatar} colorIndex={colorIndex} size="large" />
+      <Avatar name={player.name} avatar={player.avatar} color={player.color} size="large" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <h2 className="truncate font-display text-4xl font-bold">{player.name}</h2>
         {archived && <ArchivedBadge />}

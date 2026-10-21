@@ -1,13 +1,13 @@
+import type { Player } from '@autoscore/schema';
 import type { GameSetup } from '../game/game-setup';
 import { setupLine } from '../game/setup-line';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
-import type { GameSetupSummaryProps } from './GameSetupSummary';
 import { WarningIcon } from './icons';
 
 export interface StartBarProps {
   setup: GameSetup;
-  players: GameSetupSummaryProps['players'];
+  players: readonly Player[];
   canStart: boolean;
   error: string | null;
   onStart(): void;
@@ -43,7 +43,7 @@ export function StartBar({ setup, players, canStart, error, onStart }: StartBarP
   );
 }
 
-function Players({ players }: { players: GameSetupSummaryProps['players'] }) {
+function Players({ players }: { players: readonly Player[] }) {
   const [first, second] = players;
   if (!first) {
     return <span className="shrink-0 text-lg text-(--color-text-muted)">{pl.noPlayersSelected}</span>;
@@ -51,27 +51,27 @@ function Players({ players }: { players: GameSetupSummaryProps['players'] }) {
   if (!second) {
     return (
       <span className="flex min-w-0 items-center gap-3.5">
-        <Avatar name={first.player.name} avatar={first.player.avatar} colorIndex={first.colorIndex} size="medium" />
-        <span className={names}>{first.player.name}</span>
+        <Avatar name={first.name} avatar={first.avatar} color={first.color} size="medium" />
+        <span className={names}>{first.name}</span>
       </span>
     );
   }
   if (players.length === 2) {
     return (
       <span className="flex min-w-0 items-center gap-3.5">
-        <Avatar name={first.player.name} avatar={first.player.avatar} colorIndex={first.colorIndex} size="medium" />
+        <Avatar name={first.name} avatar={first.avatar} color={first.color} size="medium" />
         <span className={names}>
-          {first.player.name} {pl.versus} {second.player.name}
+          {first.name} {pl.versus} {second.name}
         </span>
-        <Avatar name={second.player.name} avatar={second.player.avatar} colorIndex={second.colorIndex} size="medium" />
+        <Avatar name={second.name} avatar={second.avatar} color={second.color} size="medium" />
       </span>
     );
   }
   return (
     <span className="flex shrink-0 items-center gap-3.5">
       <span className="flex items-center gap-1.5">
-        {players.map(({ player, colorIndex }) => (
-          <Avatar key={player.id} name={player.name} avatar={player.avatar} colorIndex={colorIndex} size="medium" />
+        {players.map((player) => (
+          <Avatar key={player.id} name={player.name} avatar={player.avatar} color={player.color} size="medium" />
         ))}
       </span>
       <span className={names}>{pl.startBarPlayers(players.length)}</span>

@@ -79,7 +79,7 @@ export function NewGameForm(props: NewGameFormProps) {
         {/* Po trzech rzędach lista przewija się w środku, żeby nie spychała punktów i legów pod pasek ze Startem. */}
         <div className="grid max-h-61 min-h-18 grid-cols-2 content-start gap-3.5 overflow-y-auto lg:grid-cols-3 xl:grid-cols-4">
           {players.status === 'ready' &&
-            players.players.map((player, index) => {
+            players.players.map((player) => {
               const selected = setup.playerIds.includes(player.id);
               return (
                 <button
@@ -90,7 +90,7 @@ export function NewGameForm(props: NewGameFormProps) {
                   onClick={() => props.onPlayerToggle(player.id)}
                   className={`${tile} h-18 gap-3 px-3.5 ${selected ? 'border-(--color-text) bg-(--color-surface-active)' : 'border-(--color-border-strong) bg-(--color-surface)'}`}
                 >
-                  <Avatar name={player.name} avatar={player.avatar} colorIndex={index} size="tile" />
+                  <Avatar name={player.name} avatar={player.avatar} color={player.color} size="tile" />
                   <span className="truncate font-display text-[22px] font-semibold">{player.name}</span>
                 </button>
               );

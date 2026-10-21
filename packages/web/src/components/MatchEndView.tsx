@@ -85,7 +85,7 @@ export function MatchEndView({
         </div>
         <div className="min-w-0">
           {current ? (
-            <ComparisonTable state={state} summary={current} players={ranked} />
+            <ComparisonTable summary={current} players={ranked} />
           ) : (
             <p className="font-display text-xl text-(--color-text-muted)">{summaryError ? pl.summaryFailed : pl.loading}</p>
           )}
@@ -107,10 +107,6 @@ function setupLine(state: MatchSnapshot): string {
   return parts.join(' · ');
 }
 
-function colorIndex(state: MatchSnapshot, playerId: string): number {
-  return state.players.findIndex((player) => player.id === playerId);
-}
-
 interface WinnerCardProps {
   state: MatchSnapshot;
   winner: MatchSnapshotPlayer | undefined;
@@ -124,11 +120,11 @@ function WinnerCard({ state, winner, loser }: WinnerCardProps) {
       <p className={label}>{pl.matchFinished}</p>
       <p className="font-display text-[length:clamp(2.25rem,6vw,3.75rem)] leading-tight font-bold break-words">{pl.playerWins(winner?.name ?? '')}</p>
       <div className="flex items-center gap-3 lg:gap-7">
-        {winner && <Avatar name={winner.name} avatar={winner.avatar} colorIndex={colorIndex(state, winner.id)} size="preview" />}
+        {winner && <Avatar name={winner.name} avatar={winner.avatar} color={winner.color} size="preview" />}
         <p className="font-display text-[length:clamp(4rem,12vw,7.5rem)] leading-none font-bold tabular-nums">
           {pl.matchScore(winner?.legsWon ?? 0, loser?.legsWon ?? 0)}
         </p>
-        {loser && <Avatar name={loser.name} avatar={loser.avatar} colorIndex={colorIndex(state, loser.id)} size="preview" />}
+        {loser && <Avatar name={loser.name} avatar={loser.avatar} color={loser.color} size="preview" />}
       </div>
       <p className="text-lg text-(--color-text-muted)">{setupLine(state)}</p>
     </section>
@@ -143,7 +139,7 @@ function LegCards({ state, summary }: { state: MatchSnapshot; summary: MatchSumm
         const name = legWinner?.name ?? '';
         return (
           <li key={leg.legIndex} className={`flex items-center gap-3 px-5 py-4 lg:flex-1 ${card}`}>
-            <Avatar name={name} avatar={legWinner?.avatar ?? null} colorIndex={colorIndex(state, leg.winnerId)} size="small" />
+            <Avatar name={name} avatar={legWinner?.avatar ?? null} color={legWinner?.color ?? 1} size="small" />
             <div className="flex min-w-0 flex-col">
               <span className={label}>{pl.legNumber(leg.legIndex + 1)}</span>
               <span className="text-xl font-semibold break-words">{pl.legResult(name, leg.dartsThrown, leg.checkout)}</span>
@@ -163,12 +159,11 @@ function LegCards({ state, summary }: { state: MatchSnapshot; summary: MatchSumm
 }
 
 interface ComparisonTableProps {
-  state: MatchSnapshot;
   summary: MatchSummary;
   players: readonly MatchSnapshotPlayer[];
 }
 
-function ComparisonTable({ state, summary, players }: ComparisonTableProps) {
+function ComparisonTable({ summary, players }: ComparisonTableProps) {
   const lines = players.map((player) => summary.players.find((line) => line.playerId === player.id));
   return (
     <div className={card}>
@@ -180,7 +175,7 @@ function ComparisonTable({ state, summary, players }: ComparisonTableProps) {
             {players.map((player) => (
               <th key={player.id} scope="col" className="px-2 py-3 text-left text-lg font-semibold lg:px-4 lg:text-xl">
                 <span className="flex items-center gap-2">
-                  <Avatar name={player.name} avatar={player.avatar} colorIndex={colorIndex(state, player.id)} size="small" />
+                  <Avatar name={player.name} avatar={player.avatar} color={player.color} size="small" />
                   <span className="min-w-0 break-words">{player.name}</span>
                 </span>
               </th>

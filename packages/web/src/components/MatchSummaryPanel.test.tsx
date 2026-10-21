@@ -156,7 +156,7 @@ describe('MatchSummaryPanel: saving a guest', () => {
         requests.push({ url, method: init.method ?? 'GET', body });
         const response =
           status === 200
-            ? { id: 'p2', name: 'Bartek', avatar: null, guest: false, archivedAt: null, createdAt: '2026-10-15T18:30:00.000Z' }
+            ? { id: 'p2', name: 'Bartek', avatar: null, color: 7, guest: false, archivedAt: null, createdAt: '2026-10-15T18:30:00.000Z' }
             : { error: 'internal_error', message: 'Internal server error' };
         return new Response(JSON.stringify(response), { status, headers: { 'content-type': 'application/json' } });
       }),

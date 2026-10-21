@@ -7,7 +7,7 @@ AUTO Score automatycznie liczy wynik w darcie. Dziś trafienia wpisuje się ręc
 Działa na `main`:
 
 - typy gier: mecz 1v1 (X01), zabawa dla 2-4 graczy z rankingiem miejsc, trening (Free run i Solo 501),
-- kreator nowej gry: typ gry, lista graczy, dodawanie gracza (imię, avatar emoji, gość), punkty startowe, liczba legów w meczu 1v1 i tryb treningu,
+- kreator nowej gry: typ gry, lista graczy, dodawanie gracza (imię, avatar emoji, kolor, gość), punkty startowe, liczba legów w meczu 1v1 i tryb treningu,
 - ekran gry: pasek wyników, trzy sloty rzutek, suma tury, podpowiedź zamknięcia, klawiatura (1-20, 25, Miss, S/D/T) i przycisk „Cofnij”,
 - stan na żywo przez WebSocket, z ponownym połączeniem po zerwaniu,
 - głosowy odczyt wyniku tury, komunikaty „Bust” i „Zwycięzca” oraz efekty dźwiękowe, każde z przełącznikiem na ekranie gry.
@@ -73,7 +73,7 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 | Metoda | Ścieżka | Opis |
 |---|---|---|
 | `GET` | `/players` | Lista graczy bez gości, posortowana po imieniu. |
-| `POST` | `/players` | Nowy gracz (`CreatePlayerRequest`: `name` 1-40 znaków po obcięciu spacji, opcjonalny `avatar` 1-16 znaków, `guest` domyślnie `false`). Odpowiedź 201 z `Player`. |
+| `POST` | `/players` | Nowy gracz (`CreatePlayerRequest`: `name` 1-40 znaków po obcięciu spacji, opcjonalny `avatar` 1-16 znaków, opcjonalny `color` 1-16, `guest` domyślnie `false`). Bez `color` gracz dostaje stały kolor wyliczony z `id`. Odpowiedź 201 z `Player`. |
 | `POST` | `/matches` | Nowa gra (`CreateMatchRequest`, rodzaj w polu `type`). Odpowiedź 201 z `MatchSnapshot`. |
 | `GET` | `/matches/:id` | Bieżący stan gry (`MatchSnapshot`). |
 | `POST` | `/matches/:id/throws` | Rzutka (`HitEvent`). Odpowiedź 201 z `{ throw, events, state }`. |

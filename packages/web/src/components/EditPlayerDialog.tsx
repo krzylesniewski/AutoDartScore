@@ -2,6 +2,7 @@ import type { Player } from '@autoscore/schema';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ApiRequestError, updatePlayer } from '../api/client';
 import { pl } from '../i18n/pl';
+import { AvatarColorPicker } from './AvatarColorPicker';
 import { WarningIcon } from './icons';
 
 export interface EditPlayerDialogProps {
@@ -18,6 +19,7 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
   const titleId = useId();
   const [name, setName] = useState(player.name);
   const [avatar, setAvatar] = useState(player.avatar ?? '');
+  const [color, setColor] = useState(player.color);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
@@ -42,7 +44,7 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
     setError(null);
     try {
       // Puste pole avatara usuwa avatar.
-      onSaved(await updatePlayer(player.id, { name: name.trim(), avatar: avatar.trim() || null }));
+      onSaved(await updatePlayer(player.id, { name: name.trim(), avatar: avatar.trim() || null, color }));
     } catch (caught) {
       setError(caught instanceof ApiRequestError ? caught.message : pl.requestFailed);
       setSaving(false);
@@ -55,7 +57,7 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex w-full max-w-md flex-col gap-4 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-6"
+        className="flex max-h-full w-full max-w-xl flex-col gap-4 overflow-y-auto rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-6"
       >
         <h2 id={titleId} className="font-display text-(length:--text-heading) font-bold uppercase">
           {pl.editProfile}
@@ -69,6 +71,7 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
             <span className={label}>{pl.playerAvatar}</span>
             <input value={avatar} maxLength={16} onChange={(event) => setAvatar(event.target.value)} className={`${input} w-28`} />
           </label>
+          <AvatarColorPicker value={color} onChange={setColor} name={name} avatar={avatar} />
           {error && (
             <p className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
               <WarningIcon />

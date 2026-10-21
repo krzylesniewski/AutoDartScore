@@ -24,8 +24,8 @@ const state = {
   turnIndex: 1,
   currentDarts: [],
   players: [
-    { id: 'p1', name: 'Anna', avatar: null, guest: false, remaining: 0, legsWon: null, place: 1, dartsThrownInLeg: 3 },
-    { id: 'p2', name: 'Bartek', avatar: null, guest: false, remaining: 301, legsWon: null, place: null, dartsThrownInLeg: 0 },
+    { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: 0, legsWon: null, place: 1, dartsThrownInLeg: 3 },
+    { id: 'p2', name: 'Bartek', avatar: null, color: 7, guest: false, remaining: 301, legsWon: null, place: null, dartsThrownInLeg: 0 },
   ],
   winnerId: null,
   placements: [],
@@ -77,6 +77,11 @@ describe('LiveMessage', () => {
 
   it('rejects a domain event without eventSeq', () => {
     expect(LiveMessage.safeParse({ type: 'match_won', matchId: 'm1', playerId: 'p1', legsWon: { p1: 1, p2: 0 } }).success).toBe(false);
+  });
+
+  it('rejects a state whose player has no color', () => {
+    const players = state.players.map((player) => ({ ...player, color: undefined }));
+    expect(LiveMessage.safeParse({ type: 'state_updated', ...meta, state: { ...state, players } }).success).toBe(false);
   });
 
   it('rejects an unknown type', () => {

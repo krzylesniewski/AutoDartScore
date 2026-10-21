@@ -128,8 +128,8 @@ const snapshot = {
   turnIndex: 0,
   currentDarts: [{ segment: 20, multiplier: 3 }],
   players: [
-    { id: 'p1', name: 'Anna', avatar: '🎯', guest: false, remaining: 241, legsWon: 0, place: null, dartsThrownInLeg: 1 },
-    { id: 'p2', name: 'Bartek', avatar: null, guest: true, remaining: 301, legsWon: 0, place: null, dartsThrownInLeg: 0 },
+    { id: 'p1', name: 'Anna', avatar: '🎯', color: 1, guest: false, remaining: 241, legsWon: 0, place: null, dartsThrownInLeg: 1 },
+    { id: 'p2', name: 'Bartek', avatar: null, color: 7, guest: true, remaining: 301, legsWon: 0, place: null, dartsThrownInLeg: 0 },
   ],
   winnerId: null,
   placements: [],
@@ -160,7 +160,7 @@ describe('MatchSnapshot', () => {
       legsToWin: null,
       countsToStats: false,
       currentDarts: [],
-      players: [{ id: 'p1', name: 'Anna', avatar: null, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 3 }],
+      players: [{ id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 3 }],
       freeRun: { dartsThrown: 3, totalPoints: 100, average: 100 },
     };
     expect(MatchSnapshot.parse(freeRun)).toEqual(freeRun);
@@ -168,6 +168,16 @@ describe('MatchSnapshot', () => {
 
   it('rejects a negative eventSeq', () => {
     expect(MatchSnapshot.safeParse({ ...snapshot, eventSeq: -1 }).success).toBe(false);
+  });
+
+  it.each([
+    ['a missing color', undefined],
+    ['color 0', 0],
+    ['color 17', 17],
+    ['a fractional color', 1.5],
+  ])('rejects a player with %s', (_name, color) => {
+    const [anna, bartek] = snapshot.players;
+    expect(MatchSnapshot.safeParse({ ...snapshot, players: [{ ...anna, color }, bartek] }).success).toBe(false);
   });
 
   it('requires status', () => {

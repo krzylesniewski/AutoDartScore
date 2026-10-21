@@ -1,13 +1,14 @@
 import { ApiError, StatsRankings } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { D, LEG_301, MISS, S, T, abandon, createGame, createPlayer, createPlayers, setup, throwDarts, type TestApp } from '../test-helpers.js';
+import { D, LEG_301, MISS, S, T, abandon, createGame, createPlayer, setup, throwDarts, type TestApp } from '../test-helpers.js';
 
 let t: TestApp;
 let anna: string;
 let bartek: string;
 beforeEach(async () => {
   t = await setup();
-  [anna, bartek] = (await createPlayers(t.app, 2)) as [string, string];
+  anna = (await createPlayer(t.app, 'Anna', { color: 4 })).id;
+  bartek = (await createPlayer(t.app, 'Bartek', { color: 7 })).id;
 });
 afterEach(async () => {
   await t.close();
@@ -53,16 +54,16 @@ describe('GET /stats/rankings', () => {
     const result = await rankings();
     expect(result).toMatchObject({ filter: 'all', games: 2, legs: 2 });
     expect(result.players).toEqual([
-      { playerId: anna, name: 'Anna', avatar: null, position: null, average: 150.5, legs: 2 },
-      { playerId: bartek, name: 'Bartek', avatar: null, position: null, average: 0, legs: 2 },
+      { playerId: anna, name: 'Anna', avatar: null, color: 4, position: null, average: 150.5, legs: 2 },
+      { playerId: bartek, name: 'Bartek', avatar: null, color: 7, position: null, average: 0, legs: 2 },
     ]);
     // Najwyższa tura liczy każdą zamkniętą turę, także z porzuconej gry.
     expect(result.highestTurn.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
       ['Anna', 1, 180],
       ['Bartek', 1, 180],
     ]);
-    expect(result.highestCheckout).toEqual([{ playerId: anna, name: 'Anna', avatar: null, position: 1, value: 121 }]);
-    expect(result.shortestLeg).toEqual([{ playerId: anna, name: 'Anna', avatar: null, position: 1, value: 6 }]);
+    expect(result.highestCheckout).toEqual([{ playerId: anna, name: 'Anna', avatar: null, color: 4, position: 1, value: 121 }]);
+    expect(result.shortestLeg).toEqual([{ playerId: anna, name: 'Anna', avatar: null, color: 4, position: 1, value: 6 }]);
     expect(result.bestLegAverage).toEqual([]);
   });
 
@@ -81,6 +82,24 @@ describe('GET /stats/rankings', () => {
     ]);
   });
 
+  it('gives every player and tile entry the player color', async () => {
+    const celina = await createPlayer(t.app, 'Celina');
+    await playLeg301([anna, bartek]);
+    await playLeg301([celina.id, anna]);
+    const colors = new Map([
+      [anna, 4],
+      [bartek, 7],
+      [celina.id, celina.color],
+    ]);
+    const result = await rankings();
+    expect(result.players).toHaveLength(3);
+    const entries = [...result.players, ...result.bestLegAverage, ...result.highestCheckout, ...result.shortestLeg, ...result.highestTurn];
+    for (const entry of entries) {
+      expect(entry.color).toBe(colors.get(entry.playerId));
+    }
+    expect(result.highestTurn.map((entry) => entry.playerId)).toContain(celina.id);
+  });
+
   it('filters by game type', async () => {
     await playLeg301();
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'solo_501', playerIds: [anna] });
@@ -89,7 +108,7 @@ describe('GET /stats/rankings', () => {
     expect(await rankings('match')).toMatchObject({ filter: 'match', games: 1, legs: 1, highestCheckout: [{ name: 'Anna', value: 121 }] });
     const practice = await rankings('practice');
     expect(practice).toMatchObject({ filter: 'practice', games: 1, legs: 1, highestCheckout: [{ name: 'Anna', value: 141 }] });
-    expect(practice.players).toEqual([{ playerId: anna, name: 'Anna', avatar: null, position: null, average: 167, legs: 1 }]);
+    expect(practice.players).toEqual([{ playerId: anna, name: 'Anna', avatar: null, color: 4, position: null, average: 167, legs: 1 }]);
     expect(await rankings('casual')).toMatchObject({ filter: 'casual', games: 0, legs: 0, players: [] });
     expect(await rankings()).toMatchObject({ games: 2, legs: 2 });
   });

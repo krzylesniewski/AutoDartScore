@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
+import { defaultPlayerColor } from '../store/player-color.js';
 import { migrateTo, migrateToLatest, openDatabase } from './index.js';
 
 describe('migrateToLatest', () => {
@@ -89,9 +90,44 @@ describe('migrateToLatest', () => {
       const response = await app.inject({ method: 'GET', url: '/players' });
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual([
-        { id: 'p1', name: 'Anna', avatar: '🎯', guest: false, archivedAt: null, createdAt },
-        { id: 'p2', name: 'Bartek', avatar: null, guest: false, archivedAt: null, createdAt },
+        { id: 'p1', name: 'Anna', avatar: '🎯', color: 2, guest: false, archivedAt: null, createdAt },
+        { id: 'p2', name: 'Bartek', avatar: null, color: 3, guest: false, archivedAt: null, createdAt },
       ]);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('gives the players and profile changes from before 0004_player_color the default color', async () => {
+    const db = openDatabase(':memory:');
+    await migrateTo(db, '0003_player_changes');
+    const createdAt = '2026-10-15T18:30:00.000Z';
+    await db
+      .insertInto('players')
+      .values([
+        { id: 'anna', name: 'Anna', avatar: null, guest: 0, created_at: createdAt },
+        { id: 'p2', name: 'Bartek', avatar: null, guest: 0, created_at: createdAt },
+      ])
+      .execute();
+    await db
+      .insertInto('player_changes')
+      .values({ player_id: 'p2', seq: 1, name: 'Bartosz', avatar: '🎯', guest: 0, archived_at: null, created_at: createdAt })
+      .execute();
+
+    await migrateToLatest(db);
+    const app = await buildApp({ db });
+    try {
+      const response = await app.inject({ method: 'GET', url: '/players' });
+      expect(response.statusCode).toBe(200);
+      const players: { id: string; name: string; color: number }[] = response.json();
+      expect(players.map(({ id, name }) => [id, name])).toEqual([
+        ['anna', 'Anna'],
+        ['p2', 'Bartosz'],
+      ]);
+      for (const player of players) {
+        expect(player.color).toBe(defaultPlayerColor(player.id));
+      }
     } finally {
       await app.close();
       await db.destroy();

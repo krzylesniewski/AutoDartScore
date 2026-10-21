@@ -157,8 +157,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
   const form = useLoaded<PlayerForm>(() => getPlayerForm(playerId, filter), pl.formFailed, [playerId, filter]);
   const history = useLoaded<MatchListItem[]>(() => listMatches({ playerId }), pl.loadMatchesFailed, [playerId, version]);
   const known = players.status === 'ready' ? players.value : [];
-  const colorIndex = known.findIndex((player) => player.id === playerId);
-  const current = known[colorIndex];
+  const current = known.find((player) => player.id === playerId);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,7 +190,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
         <h1 className="font-display text-[length:clamp(2.25rem,9vw,3rem)] leading-none font-bold uppercase">{pl.stats}</h1>
       </div>
 
-      {current && <PlayerProfile player={current} colorIndex={colorIndex} onChanged={() => setVersion((value) => value + 1)} />}
+      {current && <PlayerProfile player={current} onChanged={() => setVersion((value) => value + 1)} />}
 
       <section className="flex flex-col gap-2">
         <h2 className={label}>{pl.players}</h2>

@@ -77,11 +77,7 @@ export function HomeScreen() {
 
   const request = CreateMatchRequest.safeParse(createRequest(setup));
   const known = players.status === 'ready' ? players.players : [];
-  const selected = setup.playerIds.flatMap((id) => {
-    const colorIndex = known.findIndex((player) => player.id === id);
-    const player = known[colorIndex];
-    return player ? [{ player, colorIndex }] : [];
-  });
+  const selected: Player[] = setup.playerIds.flatMap((id) => known.find((player) => player.id === id) ?? []);
 
   function onPlayerCreated(player: Player): void {
     setCreatingPlayer(false);

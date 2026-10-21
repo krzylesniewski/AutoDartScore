@@ -1,5 +1,4 @@
-// Pełne nazwy klas, bo Tailwind generuje CSS tylko dla klas zapisanych dosłownie.
-const AVATAR_COLORS = ['bg-(--color-avatar-1)', 'bg-(--color-avatar-2)', 'bg-(--color-avatar-3)', 'bg-(--color-avatar-4)'] as const;
+import { avatarColorClass } from '../game/avatar-color';
 
 const SIZES = {
   small: 'size-9 text-xl',
@@ -12,15 +11,14 @@ const SIZES = {
 export interface AvatarProps {
   name: string;
   avatar: string | null;
-  colorIndex: number;
+  color: number; // stały kolor gracza 1-16
   size?: keyof typeof SIZES;
 }
 
 // Imię stoi zawsze obok, więc avatar jest ukryty przed czytnikami ekranu.
-export function Avatar({ name, avatar, colorIndex, size = 'small' }: AvatarProps) {
-  const color = AVATAR_COLORS[((colorIndex % AVATAR_COLORS.length) + AVATAR_COLORS.length) % AVATAR_COLORS.length];
+export function Avatar({ name, avatar, color, size = 'small' }: AvatarProps) {
   return (
-    <span aria-hidden="true" className={`flex shrink-0 items-center justify-center rounded-full font-display font-bold text-(--color-on-avatar) ${color} ${SIZES[size]}`}>
+    <span aria-hidden="true" className={`flex shrink-0 items-center justify-center rounded-full font-display font-bold text-(--color-on-avatar) ${avatarColorClass(color)} ${SIZES[size]}`}>
       {avatar ?? name.charAt(0).toUpperCase()}
     </span>
   );

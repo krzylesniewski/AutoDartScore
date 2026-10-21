@@ -32,11 +32,23 @@
   /* Stan (kropki w górnym pasku: kamera, głos). Zawsze z tekstem obok, kolor nie niesie znaczenia sam. */
   --color-status-ok: #3ddc84;
 
-  /* Kolory awatarów graczy 1-4 (tekst na nich: #111111) */
+  /* Kolory awatarów graczy 1-16 (tekst na nich: --color-on-avatar) */
   --color-avatar-1: #f2b134;
   --color-avatar-2: #5aa9ff;
   --color-avatar-3: #b28cff;
   --color-avatar-4: #ff7f6e;
+  --color-avatar-5: #4cc38a;
+  --color-avatar-6: #2fc6c6;
+  --color-avatar-7: #ff70b8;
+  --color-avatar-8: #e3d84a;
+  --color-avatar-9: #8fd14f;
+  --color-avatar-10: #ff8a1c;
+  --color-avatar-11: #f0a6e6;
+  --color-avatar-12: #86d8f5;
+  --color-avatar-13: #d6b98c;
+  --color-avatar-14: #d4d4d4;
+  --color-avatar-15: #b9c46a;
+  --color-avatar-16: #f2a3a3;
   --color-on-avatar: #111111;
 
   /* Typografia */

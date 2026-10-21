@@ -1,7 +1,7 @@
 import type { MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
 
 export function player(id: string, name: string, overrides: Partial<MatchSnapshotPlayer> = {}): MatchSnapshotPlayer {
-  return { id, name, avatar: null, guest: false, remaining: 501, legsWon: null, place: null, dartsThrownInLeg: 0, ...overrides };
+  return { id, name, avatar: null, color: 1, guest: false, remaining: 501, legsWon: null, place: null, dartsThrownInLeg: 0, ...overrides };
 }
 
 export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {
@@ -100,5 +100,5 @@ export function listItem(overrides: Partial<MatchListItem> = {}): MatchListItem 
 }
 
 export function profile(id: string, name: string, overrides: Partial<Player> = {}): Player {
-  return { id, name, avatar: null, guest: false, archivedAt: null, createdAt: '2026-10-15T18:30:00.000Z', ...overrides };
+  return { id, name, avatar: null, color: 1, guest: false, archivedAt: null, createdAt: '2026-10-15T18:30:00.000Z', ...overrides };
 }

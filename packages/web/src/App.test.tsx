@@ -19,8 +19,8 @@ beforeEach(() => {
       urls.push(url);
       if (url === '/api/players' || url === '/api/players?archived=include') {
         return json(200, [
-          { id: 'p1', name: 'Anna', avatar: null, guest: false, archivedAt: null, createdAt },
-          { id: 'p 2', name: 'Bartek', avatar: null, guest: false, archivedAt: null, createdAt },
+          { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, archivedAt: null, createdAt },
+          { id: 'p 2', name: 'Bartek', avatar: null, color: 7, guest: false, archivedAt: null, createdAt },
         ]);
       }
       if (url === '/api/matches?status=unfinished' || url === '/api/matches') {

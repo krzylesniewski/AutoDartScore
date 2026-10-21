@@ -19,7 +19,17 @@ function json(status: number, body: unknown): Response {
 }
 
 const createdAt = '2026-10-15T18:30:00.000Z';
-const players = ['Anna', 'Bartek', 'Celina', 'Darek', 'Ela'].map((name, index) => ({ id: `p${index + 1}`, name, avatar: index === 1 ? '🎯' : null, guest: false, archivedAt: null, createdAt }));
+// Bartek nie jest pierwszy na liście, a jego kolor 7 różni się od numeru pozycji.
+const colors = [1, 7, 3, 4, 5];
+const players = ['Anna', 'Bartek', 'Celina', 'Darek', 'Ela'].map((name, index) => ({
+  id: `p${index + 1}`,
+  name,
+  avatar: index === 1 ? '🎯' : null,
+  color: colors[index],
+  guest: false,
+  archivedAt: null,
+  createdAt,
+}));
 
 function item(overrides: Partial<MatchListItem>): MatchListItem {
   return {
@@ -79,8 +89,8 @@ beforeEach(() => {
         return json(200, players);
       }
       if (url === '/api/players') {
-        const body = call.body as { name: string; avatar?: string; guest: boolean };
-        return json(201, { id: 'p_new', name: body.name, avatar: body.avatar ?? null, guest: body.guest, archivedAt: null, createdAt });
+        const body = call.body as { name: string; avatar?: string; color?: number; guest: boolean };
+        return json(201, { id: 'p_new', name: body.name, avatar: body.avatar ?? null, color: body.color ?? 2, guest: body.guest, archivedAt: null, createdAt });
       }
       if (url === '/api/matches?status=unfinished') {
         return json(200, games);
@@ -311,6 +321,17 @@ describe('HomeScreen: new game form', () => {
     expect(startBar().textContent).toMatch(/Anna.*vs.*Bartek/);
   });
 
+  it("shows each player's own avatar color on the tiles, in the summary and in the start bar", async () => {
+    render(<HomeScreen />);
+    await chips();
+    expect(button('Anna').firstElementChild?.classList).toContain('bg-(--color-avatar-1)');
+    expect(button('Bartek').firstElementChild?.classList).toContain('bg-(--color-avatar-7)');
+    fireEvent.click(button('Anna'));
+    fireEvent.click(button('Bartek'));
+    expect(within(summary()).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
+    expect(within(startBar()).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
+  });
+
   it('counts 3 players in the bar for Zabawa', async () => {
     render(<HomeScreen />);
     await chips();
@@ -413,13 +434,14 @@ describe('HomeScreen: new player dialog', () => {
     return screen.getByRole('dialog', { name: 'Nowy gracz' });
   }
 
-  it('has only a name and an emoji, and closes on Escape', async () => {
+  it('has a name, an emoji and a color, and closes on Escape', async () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('+ Nowy gracz'));
     expect(dialog().getAttribute('aria-modal')).toBe('true');
     expect(within(dialog()).getByLabelText('Imię')).toBeTruthy();
     expect(within(dialog()).getByLabelText('Avatar (emoji)')).toBeTruthy();
+    expect(within(dialog()).getByRole('group', { name: 'Kolor' })).toBeTruthy();
     expect(within(dialog()).queryByRole('checkbox')).toBeNull();
     expect(screen.queryByText('Gość')).toBeNull();
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -443,6 +465,60 @@ describe('HomeScreen: new player dialog', () => {
     expect(chipNames(true)).toEqual(['Gosia', 'Anna']);
     expect(within(summary()).getByText('🦊')).toBeTruthy();
     expect(button('Start gry').disabled).toBe(false);
+  });
+
+  it('offers 16 colors by Polish name with none checked', async () => {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('+ Nowy gracz'));
+    const radios = within(dialog()).getAllByRole('radio') as HTMLInputElement[];
+    expect(radios.map((radio) => radio.getAttribute('aria-label'))).toEqual([
+      'Bursztynowy',
+      'Niebieski',
+      'Fioletowy',
+      'Koralowy',
+      'Zielony',
+      'Turkusowy',
+      'Różowy',
+      'Żółty',
+      'Limonkowy',
+      'Pomarańczowy',
+      'Liliowy',
+      'Błękitny',
+      'Piaskowy',
+      'Srebrny',
+      'Oliwkowy',
+      'Łososiowy',
+    ]);
+    expect(new Set(radios.map((radio) => radio.name)).size).toBe(1);
+    expect(radios.filter((radio) => radio.checked)).toEqual([]);
+    expect(within(dialog()).getByText('Bez wyboru kolor zostanie dobrany automatycznie.')).toBeTruthy();
+  });
+
+  it('sends the chosen color', async () => {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('+ Nowy gracz'));
+    fireEvent.change(within(dialog()).getByLabelText('Imię'), { target: { value: 'Gosia' } });
+    fireEvent.click(within(dialog()).getByRole('radio', { name: 'Turkusowy' }));
+    expect((within(dialog()).getByRole('radio', { name: 'Turkusowy' }) as HTMLInputElement).checked).toBe(true);
+    expect(within(dialog()).queryByText('Bez wyboru kolor zostanie dobrany automatycznie.')).toBeNull();
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Dodaj' }));
+
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({ name: 'Gosia', guest: false, color: 6 });
+    expect(button('Gosia').firstElementChild?.classList).toContain('bg-(--color-avatar-6)');
+  });
+
+  it('sends no color when none is chosen', async () => {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('+ Nowy gracz'));
+    fireEvent.change(within(dialog()).getByLabelText('Imię'), { target: { value: 'Gosia' } });
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Dodaj' }));
+
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).not.toHaveProperty('color');
   });
 
   it('replaces the selection in Trening', async () => {

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LegWon } from './domain-events.js';
 import { MatchType } from './match.js';
+import { PlayerColor } from './player.js';
 
 // Statystyki liczone na żądanie z logu rzutek. Liczą się tylko zamknięte tury.
 
@@ -76,6 +77,7 @@ export const RankedPlayer = z.object({
   playerId: PlayerId,
   name: z.string().min(1),
   avatar: z.string().nullable(),
+  color: PlayerColor,
   position: z.int().min(1).nullable(), // null poniżej MIN_LEGS_FOR_AVERAGE ukończonych legów
   average: Average, // tylko ukończone legi
   legs: Count, // ukończone legi
@@ -87,6 +89,7 @@ export const RankingEntry = z.object({
   playerId: PlayerId,
   name: z.string().min(1),
   avatar: z.string().nullable(),
+  color: PlayerColor,
   position: z.int().min(1),
   value: z.number().min(0),
 });
