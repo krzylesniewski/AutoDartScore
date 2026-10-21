@@ -4,11 +4,12 @@ import { GameScreen } from './screens/GameScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LoginScreen } from './screens/LoginScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 import { StatsScreen } from './screens/StatsScreen';
 
 const HOME = '#/';
 
-type Route = { screen: 'home' } | { screen: 'game'; matchId: string } | { screen: 'stats'; playerId: string | null } | { screen: 'history' } | null;
+type Route = { screen: 'home' } | { screen: 'game'; matchId: string } | { screen: 'stats'; playerId: string | null } | { screen: 'history' } | { screen: 'settings' } | null;
 
 function parseRoute(hash: string): Route {
   if (hash === '' || hash === '#' || hash === HOME) {
@@ -20,6 +21,9 @@ function parseRoute(hash: string): Route {
   }
   if (hash === '#/history') {
     return { screen: 'history' };
+  }
+  if (hash === '#/settings') {
+    return { screen: 'settings' };
   }
   if (hash === '#/stats') {
     return { screen: 'stats', playerId: null };
@@ -61,6 +65,9 @@ export function App() {
   }
   if (route?.screen === 'history') {
     return <HistoryScreen />;
+  }
+  if (route?.screen === 'settings') {
+    return <SettingsScreen />;
   }
   if (route?.screen === 'stats') {
     return <StatsScreen playerId={route.playerId} />;
