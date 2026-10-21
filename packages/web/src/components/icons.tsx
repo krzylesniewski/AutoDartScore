@@ -164,3 +164,19 @@ export function StarIcon({ className }: IconProps) {
     </Svg>
   );
 }
+
+export function RingIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M12 2.5a2 2 0 110 4 2 2 0 010-4zm0 15a2 2 0 110 4 2 2 0 010-4zM4.5 10a2 2 0 110 4 2 2 0 010-4zm15 0a2 2 0 110 4 2 2 0 010-4zM6.7 4.7a2 2 0 110 4 2 2 0 010-4zm10.6 0a2 2 0 110 4 2 2 0 010-4zM6.7 15.3a2 2 0 110 4 2 2 0 010-4zm10.6 0a2 2 0 110 4 2 2 0 010-4z" />
+    </Svg>
+  );
+}
+
+export function GridIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M3 3h5v5H3zm6.5 0h5v5h-5zM16 3h5v5h-5zM3 9.5h5v5H3zm6.5 0h5v5h-5zm6.5 0h5v5h-5zM3 16h5v5H3zm6.5 0h5v5h-5zm6.5 0h5v5h-5z" />
+    </Svg>
+  );
+}

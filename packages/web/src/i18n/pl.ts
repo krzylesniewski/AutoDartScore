@@ -268,4 +268,9 @@ export const pl = {
   newMatch: 'Nowy mecz',
   rematch: 'Rewanż',
   rematchFailed: 'Nie udało się utworzyć rewanżu',
+  restMiss: 'Reszta Miss',
+  keypadLayoutRing: 'Koło',
+  keypadLayoutGrid: 'Siatka',
+  showKeypadAsRing: 'Pokaż klawiaturę jako koło',
+  showKeypadAsGrid: 'Pokaż klawiaturę jako siatkę',
 } as const;

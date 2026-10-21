@@ -1,6 +1,10 @@
 import { BULL_SEGMENT, MISS_SEGMENT, type Hit } from '@autoscore/schema';
-import { useState } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import { DARTBOARD_ORDER } from '../game/dartboard-order';
+import { readKeypadLayout, writeKeypadLayout, type KeypadLayout } from '../game/keypad-layout';
+import { MIN_KEY_PX, RING_CENTER_HEIGHT_PERCENT, RING_CENTER_WIDTH_PERCENT, RING_KEY_PERCENT, ringKeyPosition } from '../game/keypad-ring';
 import { pl } from '../i18n/pl';
+import { GridIcon, RingIcon } from './icons';
 import { KeypadKey, type KeypadKeyTone } from './KeypadKey';
 
 type Multiplier = 1 | 2 | 3;
@@ -11,43 +15,73 @@ const MULTIPLIERS: readonly { value: Multiplier; label: string }[] = [
   { value: 3, label: pl.multiplierTreble },
 ];
 
-const SEGMENTS = Array.from({ length: 20 }, (_, index) => index + 1);
-
-const key = 'rounded-(--radius-card) border-(length:--border-width) font-display text-(length:--text-heading) font-bold disabled:opacity-40';
+const keyBase = 'border-(length:--border-width) font-display font-bold disabled:opacity-40';
+const key = `rounded-(--radius-card) text-(length:--text-heading) ${keyBase}`;
 const idleBorder = 'border-(--color-border-strong)';
-const segmentTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text)', border: idleBorder };
+const segmentFill = 'bg-(--color-surface-button) text-(--color-text)';
+const segmentTone: KeypadKeyTone = { fill: segmentFill, border: idleBorder };
+// Jaśniejsza ramka pokazuje górę koła.
+const topSegmentTone: KeypadKeyTone = { fill: segmentFill, border: 'border-(--color-text-muted)' };
 const missTone: KeypadKeyTone = { fill: 'bg-(--color-surface) text-(--color-text-muted)', border: idleBorder };
 const multiplierTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text-muted)', border: idleBorder };
 const selectedMultiplierTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse)', border: 'border-(--color-text)' };
-// Jedna siatka na 10 kolumn. Poniżej xl 25 i Miss schodzą pod 1-20, a mnożnik zajmuje cały wiersz.
-const multiplierRow = 'col-span-10 grid grid-cols-3 gap-2 xl:col-span-6';
-const multiplierHeight = 'h-13 lg:h-[58px] xl:h-(--button-height)';
-const segmentCell = 'col-span-2 h-14 lg:col-span-1 lg:h-[78px] xl:h-(--button-height)';
-const lastRowCell = 'order-last col-span-5 h-14 lg:h-[62px] xl:order-none xl:col-span-2 xl:h-(--button-height)';
+const restMissText = 'text-lg leading-none';
+const layoutSwitch =
+  'flex min-h-11 min-w-11 shrink-0 touch-manipulation items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-3 font-display text-lg font-semibold text-(--color-text-muted)';
+
+// Bok koła od lg: wysokość okna minus wszystko nad klawiaturą i pod nią (--keypad-ring-reserve w theme.css).
+// Przy kole mniejszym niż około 327 px sąsiednie okrągłe klawisze 44 px nachodziłyby na siebie, stąd dolna granica 330 px.
+const ringSide = 'aspect-square w-full max-w-[400px] mx-auto lg:mx-0 lg:w-[clamp(330px,100dvh_-_var(--keypad-ring-reserve),450px)] lg:max-w-none';
+const ringKeySize = `max(${MIN_KEY_PX}px, ${RING_KEY_PERCENT}cqi)`;
+const ringText = 'text-[clamp(20px,6.5cqi,30px)] leading-none';
 
 export interface KeypadProps {
   onHit(hit: Hit): void;
+  onRestMiss(): void;
   disabled: boolean;
 }
 
-export function Keypad({ onHit, disabled }: KeypadProps) {
+// Wspólne klawisze obu układów. Układ podaje tylko klasy rozmiaru i położenia.
+interface Keys {
+  multipliers(groupClassName: string, keyClassName: string): ReactNode;
+  layoutSwitch(className: string): ReactNode;
+  segment(segment: number, className: string, style?: CSSProperties): ReactNode;
+  outerBull(className: string, style?: CSSProperties): ReactNode;
+  bull(className: string, style?: CSSProperties): ReactNode;
+  miss(className: string): ReactNode;
+  restMiss(className: string): ReactNode;
+}
+
+export function Keypad({ onHit, onRestMiss, disabled }: KeypadProps) {
   const [multiplier, setMultiplier] = useState<Multiplier>(1);
+  const [layout, setLayout] = useState<KeypadLayout>(readKeypadLayout);
 
   function hit(segment: number, value: Hit['multiplier']): void {
     onHit({ segment, multiplier: value });
     setMultiplier(1);
   }
 
-  return (
-    <section aria-label={pl.keypad} className="grid grid-cols-10 gap-2">
-      <div role="group" aria-label={pl.multiplier} className={multiplierRow}>
+  function restMiss(): void {
+    onRestMiss();
+    setMultiplier(1);
+  }
+
+  function switchLayout(): void {
+    const next = layout === 'ring' ? 'grid' : 'ring';
+    setLayout(next);
+    writeKeypadLayout(next);
+  }
+
+  const keys: Keys = {
+    multipliers: (groupClassName, keyClassName) => (
+      <div role="group" aria-label={pl.multiplier} className={groupClassName}>
         {MULTIPLIERS.map(({ value, label }) => (
           <KeypadKey
             key={value}
             ariaPressed={multiplier === value}
             disabled={disabled}
             onPress={() => setMultiplier(value)}
-            className={`${multiplierHeight} ${key}`}
+            className={`${keyClassName} ${key}`}
             idleTone={multiplier === value ? selectedMultiplierTone : multiplierTone}
             // Ciemne tło wciśnięcia na kremowym klawiszu wyglądałoby jak odznaczenie, więc wybrany klawisz tylko się zmniejsza.
             pressedTone={multiplier === value ? selectedMultiplierTone : undefined}
@@ -56,30 +90,112 @@ export function Keypad({ onHit, disabled }: KeypadProps) {
           </KeypadKey>
         ))}
       </div>
-      <KeypadKey
-        disabled={disabled || multiplier === 3}
-        flashOnPress
-        onPress={() => hit(BULL_SEGMENT, multiplier === 2 ? 2 : 1)}
-        className={`${lastRowCell} ${key}`}
-        idleTone={segmentTone}
+    ),
+    // Układ to ustawienie widoku, więc przełącznik działa także na zablokowanej klawiaturze.
+    layoutSwitch: (className) => (
+      <button
+        type="button"
+        aria-label={layout === 'ring' ? pl.showKeypadAsGrid : pl.showKeypadAsRing}
+        onClick={switchLayout}
+        className={`${layoutSwitch} ${className}`}
       >
-        {multiplier === 2 ? pl.bull : BULL_SEGMENT}
+        {layout === 'ring' ? <GridIcon /> : <RingIcon />}
+        {layout === 'ring' ? pl.keypadLayoutGrid : pl.keypadLayoutRing}
+      </button>
+    ),
+    segment: (segment, className, style) => (
+      <KeypadKey
+        key={segment}
+        disabled={disabled}
+        flashOnPress
+        onPress={() => hit(segment, multiplier)}
+        className={className}
+        style={style}
+        idleTone={layout === 'ring' && segment === DARTBOARD_ORDER[0] ? topSegmentTone : segmentTone}
+      >
+        {segment}
       </KeypadKey>
-      <KeypadKey disabled={disabled} flashOnPress onPress={() => hit(MISS_SEGMENT, 0)} className={`${lastRowCell} ${key}`} idleTone={missTone}>
+    ),
+    outerBull: (className, style) => (
+      <KeypadKey disabled={disabled} flashOnPress onPress={() => hit(BULL_SEGMENT, 1)} className={className} style={style} idleTone={segmentTone}>
+        {BULL_SEGMENT}
+      </KeypadKey>
+    ),
+    bull: (className, style) => (
+      <KeypadKey disabled={disabled} flashOnPress onPress={() => hit(BULL_SEGMENT, 2)} className={className} style={style} idleTone={segmentTone}>
+        {pl.bull}
+      </KeypadKey>
+    ),
+    miss: (className) => (
+      <KeypadKey disabled={disabled} flashOnPress onPress={() => hit(MISS_SEGMENT, 0)} className={`${className} ${key}`} idleTone={missTone}>
         {pl.miss}
       </KeypadKey>
-      {SEGMENTS.map((segment) => (
-        <KeypadKey
-          key={segment}
-          disabled={disabled}
-          flashOnPress
-          onPress={() => hit(segment, multiplier)}
-          className={`${segmentCell} ${key}`}
-          idleTone={segmentTone}
-        >
-          {segment}
-        </KeypadKey>
-      ))}
+    ),
+    restMiss: (className) => (
+      <KeypadKey
+        disabled={disabled}
+        flashOnPress
+        onPress={restMiss}
+        className={`${className} rounded-(--radius-card) px-1 ${restMissText} ${keyBase}`}
+        idleTone={missTone}
+      >
+        {pl.restMiss}
+      </KeypadKey>
+    ),
+  };
+
+  return layout === 'ring' ? <RingKeypad keys={keys} /> : <GridKeypad keys={keys} />;
+}
+
+// Poniżej lg: S/D/T nad kołem, Miss pod nim. Od lg trzy kolumny o wysokości koła.
+function RingKeypad({ keys }: { keys: Keys }) {
+  const centreKey = `min-w-0 flex-1 rounded-(--radius-card) ${ringText} ${keyBase}`;
+  const centreHeight = { height: `max(${MIN_KEY_PX}px, ${RING_CENTER_HEIGHT_PERCENT}cqi)` };
+
+  return (
+    <section aria-label={pl.keypad} className="flex flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(160px,1fr)] lg:gap-3">
+      <div className="flex h-13 gap-2 lg:h-auto lg:flex-col">
+        {keys.multipliers('grid flex-1 grid-cols-3 gap-2 lg:grid-cols-1 lg:grid-rows-3', 'lg:min-h-14')}
+        {keys.layoutSwitch('lg:h-14')}
+      </div>
+      <div className={`@container relative ${ringSide}`}>
+        {DARTBOARD_ORDER.map((segment, index) => {
+          const { left, top } = ringKeyPosition(index);
+          return keys.segment(segment, `absolute -translate-x-1/2 -translate-y-1/2 rounded-full ${ringText} ${keyBase}`, {
+            left: `${left}%`,
+            top: `${top}%`,
+            width: ringKeySize,
+            height: ringKeySize,
+          });
+        })}
+        <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 gap-2" style={{ width: `${RING_CENTER_WIDTH_PERCENT}%` }}>
+          {keys.outerBull(centreKey, centreHeight)}
+          {keys.bull(centreKey, centreHeight)}
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-2 lg:flex lg:flex-col lg:gap-3">
+        {keys.miss('col-span-3 h-14 lg:h-auto lg:flex-1')}
+        {keys.restMiss('h-14')}
+      </div>
+    </section>
+  );
+}
+
+// 1-20 w kolejności z tarczy: 5 kolumn poniżej lg, 10 od lg.
+function GridKeypad({ keys }: { keys: Keys }) {
+  return (
+    <section aria-label={pl.keypad} className="flex flex-col gap-2">
+      <div className="flex h-13 gap-2 lg:h-[58px]">
+        {keys.multipliers('grid flex-1 grid-cols-3 gap-2', '')}
+        {keys.layoutSwitch('')}
+      </div>
+      <div className="grid grid-cols-5 gap-2 lg:grid-cols-10">{DARTBOARD_ORDER.map((segment) => keys.segment(segment, `h-14 lg:h-[78px] ${key}`))}</div>
+      <div className="grid grid-cols-4 gap-2 lg:grid-cols-10">
+        {keys.outerBull(`col-span-2 h-14 lg:h-[62px] ${key}`)}
+        {keys.bull(`col-span-2 h-14 lg:h-[62px] ${key}`)}
+        {keys.miss('col-span-3 h-14 lg:col-span-4 lg:h-[62px]')}
+        {keys.restMiss('col-span-1 h-14 lg:col-span-2 lg:h-[62px]')}
+      </div>
     </section>
   );
 }

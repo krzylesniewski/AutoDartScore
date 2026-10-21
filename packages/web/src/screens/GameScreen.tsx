@@ -23,7 +23,7 @@ const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
-  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendUndo, sendAbandon, sendResume, sendEndPractice } = useMatch(matchId, audio.onLiveMessage);
+  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice } = useMatch(matchId, audio.onLiveMessage);
   // Zabawa i trening potrzebują podsumowania dopiero po końcu gry. Free run nigdy się nie kończy.
   const stats = useMatchSummary(matchId, state?.eventSeq ?? null, state !== null && (state.type === 'match' || state.finished));
   const [abandoning, setAbandoning] = useState(false);
@@ -91,7 +91,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
           Poniżej lg main jest kolumną flex, a prawa kolumna ma display: contents. Dok jest wtedy dzieckiem main.
           Sticky trzyma go na dole przez całe przewijanie, a mt-auto także wtedy, gdy treść jest krótsza niż ekran. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:pb-(--space-page) xl:grid-cols-[var(--scoreboard-width)_1fr]">
+        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
           <div className="flex flex-col gap-4">
             {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
             {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
@@ -122,7 +122,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
                   </Notice>
                 )}
               </div>
-              {!state?.finished && <Keypad onHit={sendHit} disabled={keypadDisabled} />}
+              {!state?.finished && <Keypad onHit={sendHit} onRestMiss={sendRestMiss} disabled={keypadDisabled} />}
             </div>
             {/* Baner jest poza dokiem. Wiszący nad przypiętym dokiem zasłaniałby Cofnij po przewinięciu na dół. */}
             <EventBanner banner={banner} />
