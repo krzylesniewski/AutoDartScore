@@ -1,9 +1,10 @@
 import { isGameFinished } from '@autoscore/engine';
-import type { HeadToHead, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
+import type { FrequentHitsResponse, HeadToHead, Hit, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
 import { HttpError, notFound } from './errors.js';
 import { effectiveThrows, lastActivityAt, lastSeq, replayMatch } from './replay.js';
 import { completedPlayerLegs } from './stats/completed-legs.js';
 import { buildForm, type FormGame } from './stats/form.js';
+import { buildFrequentHits } from './stats/frequent-hits.js';
 import { buildHeadToHead, type HeadToHeadGame } from './stats/head-to-head.js';
 import { buildRankings } from './stats/rankings.js';
 import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine } from './stats/tally.js';
@@ -15,6 +16,7 @@ export interface StatsService {
   rankings(filter: StatsFilter): Promise<StatsRankings>;
   headToHead(playerId: string, opponentId: string): Promise<HeadToHead>;
   playerForm(playerId: string, filter: StatsFilter): Promise<PlayerForm>;
+  frequentHits(playerId: string): Promise<FrequentHitsResponse>;
 }
 
 interface Dependencies {
@@ -153,6 +155,21 @@ export function createStatsService({ store }: Dependencies): StatsService {
         games.push({ matchId: match.id, type: match.type, createdAt: match.createdAt, legs });
       }
       return { playerId, filter, points: buildForm(games) };
+    },
+
+    async frequentHits(playerId) {
+      await requirePlayer(playerId);
+      const darts: Hit[] = [];
+      for (const match of await statsGames(playerId, 'all')) {
+        const { events } = await replayed(match);
+        for (const event of events) {
+          // Jak reszta statystyk liczy tylko zamknięte tury. Zwycięska tura też ma turn_completed.
+          if ((event.type === 'turn_completed' || event.type === 'bust') && event.playerId === playerId) {
+            darts.push(...event.darts);
+          }
+        }
+      }
+      return { playerId, hits: buildFrequentHits(darts) };
     },
   };
 }

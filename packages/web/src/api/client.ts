@@ -1,4 +1,4 @@
-import { ApiError, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
+import { ApiError, FrequentHitsResponse, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
 import type {
   AbandonMatchRequest,
   CreateMatchRequest,
@@ -118,6 +118,10 @@ export function getHeadToHead(playerId: string, opponentId: string): Promise<Hea
 
 export function getPlayerForm(playerId: string, filter: StatsFilter): Promise<PlayerForm> {
   return request(`/players/${encodeURIComponent(playerId)}/form?type=${filter}`, PlayerForm);
+}
+
+export function getFrequentHits(playerId: string): Promise<FrequentHitsResponse> {
+  return request(`/players/${encodeURIComponent(playerId)}/frequent-hits`, FrequentHitsResponse);
 }
 
 export function getRankings(filter: StatsFilter): Promise<StatsRankings> {

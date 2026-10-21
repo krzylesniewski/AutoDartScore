@@ -1,11 +1,11 @@
-import type { Hit } from '@autoscore/schema';
+import type { FrequentHit, Hit } from '@autoscore/schema';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DARTBOARD_ORDER } from '../game/dartboard-order';
 import { type KeypadLayout } from '../game/keypad-layout';
 import { ringKeyPosition } from '../game/keypad-ring';
 import { DIGIT_WAIT_MS } from '../game/shortcut-number';
-import { Keypad } from './Keypad';
+import { Keypad, type FrequentHits } from './Keypad';
 import { HIT_FLASH_MS } from './KeypadKey';
 
 const SEGMENTS = DARTBOARD_ORDER.map(String);
@@ -18,9 +18,10 @@ interface SetupOptions {
   disabled?: boolean;
   undoDisabled?: boolean;
   checkout?: Hit | null;
+  frequent?: FrequentHits | null;
 }
 
-function setup({ layout = 'ring', disabled = false, undoDisabled = false, checkout = null }: SetupOptions = {}) {
+function setup({ layout = 'ring', disabled = false, undoDisabled = false, checkout = null, frequent = null }: SetupOptions = {}) {
   if (layout === 'grid') {
     localStorage.setItem('autoscore.keypadLayout', 'grid');
   }
@@ -35,6 +36,7 @@ function setup({ layout = 'ring', disabled = false, undoDisabled = false, checko
       disabled={next.disabled ?? disabled}
       undoDisabled={next.undoDisabled ?? undoDisabled}
       checkout={next.checkout === undefined ? checkout : next.checkout}
+      frequent={frequent}
     />
   );
   const view = render(keypad({}));
@@ -754,6 +756,103 @@ describe('Keypad', () => {
       });
       expect(key(' ')).toBe(true);
       expect(onHit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('frequent hits', () => {
+    const SIX: readonly FrequentHit[] = [
+      { segment: 20, multiplier: 1, count: 9 },
+      { segment: 16, multiplier: 2, count: 6 },
+      { segment: 20, multiplier: 3, count: 4 },
+      { segment: 25, multiplier: 2, count: 3 },
+      { segment: 25, multiplier: 1, count: 2 },
+      { segment: 1, multiplier: 1, count: 1 },
+    ];
+    const anna = (hits: readonly FrequentHit[]): FrequentHits => ({ playerName: 'Anna', hits });
+    const row = () => screen.getByRole('group', { name: 'Najczęstsze: Anna' });
+    const rowKey = (name: string) => within(row()).getByRole('button', { name }) as HTMLButtonElement;
+
+    // Od lg blok stoi nad Miss w kole, a w siatce między S/D/T a 1-20.
+    function reservedBlock(layout: KeypadLayout): HTMLElement {
+      const anchor = layout === 'ring' ? screen.getByRole('button', { name: 'Miss' }).parentElement : screen.getByRole('button', { name: '20' }).parentElement?.previousElementSibling;
+      const block = layout === 'ring' ? anchor?.firstElementChild : anchor;
+      if (!(block instanceof HTMLElement)) {
+        throw new Error('no reserved block');
+      }
+      return block;
+    }
+
+    it.each(LAYOUTS)('names the row after the thrower and labels each hit in the %s layout', (layout) => {
+      setup({ layout, frequent: anna(SIX) });
+      expect(within(row()).getByText('Najczęstsze: Anna')).toBeTruthy();
+      expect(within(row()).getAllByRole('button').map((element) => element.textContent)).toEqual(['S20', 'D16', 'T20', 'Bull', '25', 'S1']);
+      expect(screen.getAllByRole('button', { name: '25' })).toHaveLength(2);
+      expect(screen.getAllByRole('button', { name: 'Bull' })).toHaveLength(2);
+      expect(reservedBlock(layout)).toBe(row());
+    });
+
+    it.each(LAYOUTS)('sends the exact hit under T and resets the toggle to S in the %s layout', (layout) => {
+      const { onHit, button } = setup({ layout, frequent: anna(SIX) });
+      fireEvent.click(button('T'));
+      fireEvent.click(rowKey('S20'));
+      expect(onHit).toHaveBeenLastCalledWith({ segment: 20, multiplier: 1 });
+      expect(button('S').getAttribute('aria-pressed')).toBe('true');
+
+      fireEvent.click(button('T'));
+      fireEvent.click(rowKey('D16'));
+      expect(onHit).toHaveBeenLastCalledWith({ segment: 16, multiplier: 2 });
+      expect(button('S').getAttribute('aria-pressed')).toBe('true');
+
+      fireEvent.click(rowKey('Bull'));
+      expect(onHit).toHaveBeenLastCalledWith({ segment: 25, multiplier: 2 });
+    });
+
+    it.each(LAYOUTS)('disables the row keys on a disabled keypad in the %s layout', (layout) => {
+      const { onHit } = setup({ layout, disabled: true, frequent: anna(SIX) });
+      for (const element of within(row()).getAllByRole('button')) {
+        expect((element as HTMLButtonElement).disabled).toBe(true);
+      }
+      fireEvent.click(rowKey('S20'));
+      expect(onHit).not.toHaveBeenCalled();
+    });
+
+    it('gives the row keys at least 44 px and a smaller text than the number keys', () => {
+      setup({ layout: 'grid', frequent: anna(SIX) });
+      expect(classes(rowKey('Bull'))).toEqual(expect.arrayContaining(['min-h-11', 'min-w-11', 'text-lg', 'touch-manipulation']));
+      expect(classes(within(row()).getByText('Najczęstsze: Anna'))).toContain('truncate');
+    });
+
+    it.each(LAYOUTS)('reserves the same block without hits in the %s layout', (layout) => {
+      setup({ layout, frequent: anna(SIX) });
+      const withHits = reservedBlock(layout).className;
+      cleanup();
+
+      for (const frequent of [null, anna([]), anna(SIX.slice(0, 1))]) {
+        setup({ layout, frequent });
+        expect(reservedBlock(layout).className).toBe(withHits);
+        if (frequent?.hits.length) {
+          expect(within(row()).getAllByRole('button')).toHaveLength(1);
+        } else {
+          expect(reservedBlock(layout).getAttribute('aria-hidden')).toBe('true');
+          expect(reservedBlock(layout).childElementCount).toBe(0);
+          expect(screen.queryByRole('group', { name: /Najczęstsze/ })).toBeNull();
+          expect(screen.getAllByRole('button')).toHaveLength(28);
+        }
+        cleanup();
+      }
+    });
+
+    it('hides the block below lg in the ring layout and keeps it at a fixed height', () => {
+      setup({ frequent: anna(SIX) });
+      expect(classes(reservedBlock('ring'))).toEqual(expect.arrayContaining(['hidden', 'lg:flex', 'h-31', 'shrink-0']));
+      expect(classes(screen.getByRole('button', { name: 'Miss' }))).toEqual(expect.arrayContaining(['lg:flex-1']));
+    });
+
+    it('keeps the block at a fixed height at every width in the grid layout', () => {
+      setup({ layout: 'grid', frequent: anna(SIX) });
+      expect(classes(reservedBlock('grid'))).toEqual(expect.arrayContaining(['flex', 'h-18', 'shrink-0']));
+      expect(classes(reservedBlock('grid')).some((name) => name === 'hidden' || name.includes(':h-'))).toBe(false);
+      expect(classes(within(row()).getAllByRole('button')[0]?.parentElement as HTMLElement)).toContain('grid-cols-6');
     });
   });
 });

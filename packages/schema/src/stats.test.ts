@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORM_GAMES, HeadToHead, MIN_LEGS_FOR_AVERAGE, MatchSummary, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsRankings, type PlayerStatLine } from './index.js';
+import { FORM_GAMES, FREQUENT_HITS_LIMIT, FrequentHitsResponse, HeadToHead, MIN_LEGS_FOR_AVERAGE, MatchSummary, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsRankings, type PlayerStatLine } from './index.js';
 
 const line: PlayerStatLine = {
   dartsThrown: 6,
@@ -208,5 +208,39 @@ describe('PlayerForm', () => {
     expect(FORM_GAMES).toBe(20);
     expect(PlayerFormQuery.parse({})).toEqual({ type: 'all' });
     expect(PlayerFormQuery.safeParse({ type: 'bogus' }).success).toBe(false);
+  });
+});
+
+describe('FrequentHitsResponse', () => {
+  const hits = [
+    { segment: 20, multiplier: 1, count: 12 },
+    { segment: 20, multiplier: 3, count: 4 },
+    { segment: 25, multiplier: 2, count: 2 },
+  ];
+  const parses = (list: readonly object[]) => FrequentHitsResponse.safeParse({ playerId: 'p1', hits: list }).success;
+
+  it('parses the hits of a player', () => {
+    const response = { playerId: 'p1', hits };
+    expect(FrequentHitsResponse.parse(response)).toEqual(response);
+    expect(parses([])).toBe(true);
+  });
+
+  it('rejects a Miss', () => {
+    expect(parses([{ segment: 0, multiplier: 0, count: 3 }])).toBe(false);
+  });
+
+  it('rejects an invalid segment and multiplier combination', () => {
+    expect(parses([{ segment: 25, multiplier: 3, count: 1 }])).toBe(false);
+  });
+
+  it('rejects a hit with count 0', () => {
+    expect(parses([{ segment: 20, multiplier: 1, count: 0 }])).toBe(false);
+  });
+
+  it(`rejects more than ${FREQUENT_HITS_LIMIT} hits`, () => {
+    expect(FREQUENT_HITS_LIMIT).toBe(6);
+    const many = Array.from({ length: FREQUENT_HITS_LIMIT + 1 }, (_, index) => ({ segment: index + 1, multiplier: 1, count: 1 }));
+    expect(parses(many)).toBe(false);
+    expect(parses(many.slice(1))).toBe(true);
   });
 });

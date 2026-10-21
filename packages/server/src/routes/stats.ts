@@ -28,6 +28,8 @@ export function statsRoutes(app: FastifyInstance, stats: StatsService): void {
     return stats.playerForm(request.params.id, parsed.data.type);
   });
 
+  app.get<IdParams>('/players/:id/frequent-hits', async (request) => stats.frequentHits(request.params.id));
+
   app.get('/stats/rankings', async (request) => {
     const parsed = RankingsQuery.safeParse(request.query);
     if (!parsed.success) {

@@ -85,6 +85,9 @@ let respond: (call: Call) => Promise<Response>;
 // GET .../summary idzie osobno, żeby asercje na calls dotyczyły tylko komend.
 let summaryCalls: string[];
 let respondSummary: (url: string) => Promise<Response>;
+// GET /players/:id/frequent-hits też osobno, z tego samego powodu.
+let frequentCalls: string[];
+let respondFrequent: (playerId: string) => Promise<Response>;
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -130,8 +133,10 @@ beforeEach(() => {
   FakeWebSocket.instances = [];
   calls = [];
   summaryCalls = [];
+  frequentCalls = [];
   respond = async (call) => json(201, throwResult(call, initial));
   respondSummary = async () => json(200, summary({ matchId: MATCH_ID, eventSeq: initial.eventSeq }));
+  respondFrequent = async (playerId) => json(200, { playerId, hits: [] });
   FakeAudio.created = [];
   FakeAudio.played = [];
   FakeAudio.loaded = [];
@@ -144,6 +149,12 @@ beforeEach(() => {
       if (url.endsWith('/summary')) {
         summaryCalls.push(url);
         return respondSummary(url);
+      }
+      const frequent = /\/players\/([^/]+)\/frequent-hits$/.exec(url);
+      if (frequent) {
+        const playerId = decodeURIComponent(frequent[1] ?? '');
+        frequentCalls.push(playerId);
+        return respondFrequent(playerId);
       }
       const call = { url, body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined };
       calls.push(call);
@@ -1190,5 +1201,99 @@ describe('GameScreen undo window', () => {
     });
     expect(screen.getByRole('button', { name: 'Cofnij' })).toBe(undoButton());
     expect(screen.queryByText(LOCKED_TEXT)).toBeNull();
+  });
+});
+
+describe('frequent hits', () => {
+  const BARTEK_HITS = [
+    { segment: 20, multiplier: 1, count: 9 },
+    { segment: 1, multiplier: 1, count: 5 },
+    { segment: 20, multiplier: 3, count: 2 },
+  ];
+  const ANNA_HITS = [{ segment: 19, multiplier: 3, count: 4 }];
+  const annaThrows = { ...initial, eventSeq: 7, currentPlayerId: 'p1' };
+
+  function row(name: string): HTMLElement | null {
+    return screen.queryByRole('group', { name: `Najczęstsze: ${name}` });
+  }
+
+  function rowLabels(name: string): string[] {
+    const group = row(name);
+    return group ? within(group).getAllByRole('button').map((element) => element.textContent ?? '') : [];
+  }
+
+  beforeEach(() => {
+    respondFrequent = async (playerId) => json(200, { playerId, hits: playerId === 'p2' ? BARTEK_HITS : ANNA_HITS });
+  });
+
+  it('shows the hits of the current thrower', async () => {
+    connect();
+    expect(await screen.findByRole('group', { name: 'Najczęstsze: Bartek' })).toBeTruthy();
+    expect(rowLabels('Bartek')).toEqual(['S20', 'S1', 'T20']);
+    expect(frequentCalls).toEqual(['p2']);
+  });
+
+  it('fetches the hits of the next thrower and never shows the old list under the new name', async () => {
+    const pending: (() => void)[] = [];
+    const ws = connect();
+    await screen.findByRole('group', { name: 'Najczęstsze: Bartek' });
+    respondFrequent = (playerId) => new Promise((resolve) => pending.push(() => resolve(json(200, { playerId, hits: ANNA_HITS }))));
+
+    ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: 7, state: annaThrows });
+    await vi.waitFor(() => expect(frequentCalls).toEqual(['p2', 'p1']));
+    expect(row('Bartek')).toBeNull();
+    expect(row('Anna')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'S20' })).toBeNull();
+
+    pending.shift()?.();
+    expect(await screen.findByRole('group', { name: 'Najczęstsze: Anna' })).toBeTruthy();
+    expect(rowLabels('Anna')).toEqual(['T19']);
+  });
+
+  it('ignores a late response for the previous thrower', async () => {
+    const pending = new Map<string, () => void>();
+    respondFrequent = (playerId) =>
+      new Promise((resolve) => pending.set(playerId, () => resolve(json(200, { playerId, hits: playerId === 'p2' ? BARTEK_HITS : ANNA_HITS }))));
+    const ws = connect();
+    ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: 7, state: annaThrows });
+    await vi.waitFor(() => expect(frequentCalls).toEqual(['p2', 'p1']));
+
+    pending.get('p2')?.();
+    await act(flush);
+    expect(row('Bartek')).toBeNull();
+    expect(row('Anna')).toBeNull();
+
+    pending.get('p1')?.();
+    expect(await screen.findByRole('group', { name: 'Najczęstsze: Anna' })).toBeTruthy();
+    expect(rowLabels('Anna')).toEqual(['T19']);
+  });
+
+  it.each([
+    ['an error', () => json(500, { error: 'internal', message: 'boom' })],
+    ['an empty list', () => json(200, { playerId: 'p2', hits: [] })],
+  ])('shows no row buttons after %s', async (_name, response) => {
+    respondFrequent = async () => response();
+    connect();
+    await vi.waitFor(() => expect(frequentCalls).toEqual(['p2']));
+    await act(flush);
+    expect(row('Bartek')).toBeNull();
+    expect(screen.queryByText('Najczęstsze: Bartek')).toBeNull();
+    expect(screen.getAllByRole('button', { name: '20' })).toHaveLength(1);
+  });
+
+  it('posts a row click as a HitEvent with that segment and multiplier', async () => {
+    connect();
+    const group = await screen.findByRole('group', { name: 'Najczęstsze: Bartek' });
+    tap('D');
+    fireEvent.click(within(group).getByRole('button', { name: 'T20' }));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.url).toBe(`/api/matches/${MATCH_ID}/throws`);
+    expect(HitEvent.parse(calls[0]?.body)).toMatchObject({ matchId: MATCH_ID, source: 'keypad', segment: 20, multiplier: 3 });
+  });
+
+  it('fetches nothing for a finished game', async () => {
+    connect({ ...initial, finished: true, status: 'finished', currentPlayerId: null, winnerId: 'p2' });
+    await act(flush);
+    expect(frequentCalls).toEqual([]);
   });
 });
