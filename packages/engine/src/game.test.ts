@@ -8,6 +8,8 @@ import {
   createGame,
   createSolo501,
   createX01Match,
+  currentRound,
+  dartsInCurrentLeg,
   isGameFinished,
   replayCasualMatch,
   replayFreeRun,
@@ -123,5 +125,49 @@ describe('isGameFinished', () => {
   it('never ends Free run', () => {
     expect(isGameFinished(createGame(freeRunConfig))).toBe(false);
     expect(isGameFinished(replayGame(freeRunConfig, nineDarter).state)).toBe(false);
+  });
+});
+
+describe('currentRound', () => {
+  it('is null in Free run', () => {
+    expect(currentRound(createGame(freeRunConfig))).toBeNull();
+    expect(currentRound(replayGame(freeRunConfig, nineDarter).state)).toBeNull();
+  });
+
+  it.each([
+    ['match', matchConfig, leg301, 2],
+    ['casual', casualConfig, leg301, 2],
+    ['solo_501', solo501Config, nineDarter, 3],
+  ])('is null once a %s game is finished', (_name, config: GameConfig, hits, lastRound) => {
+    expect(currentRound(replayGame(config, hits.slice(0, -1)).state)).toBe(lastRound);
+    expect(currentRound(replayGame(config, hits).state)).toBeNull();
+  });
+});
+
+describe('dartsInCurrentLeg', () => {
+  it('sums both players in a 1v1 and starts at 0 after a leg is won', () => {
+    const bestOf3 = { ...matchConfig, legsToWin: 2 } satisfies GameConfig;
+    expect(dartsInCurrentLeg(createGame(bestOf3))).toBe(0);
+    expect(dartsInCurrentLeg(replayGame(bestOf3, leg301.slice(0, -1)).state)).toBe(8);
+    expect(dartsInCurrentLeg(replayGame(bestOf3, leg301).state)).toBe(0);
+    expect(dartsInCurrentLeg(replayGame(bestOf3, [...leg301, MISS]).state)).toBe(1);
+  });
+
+  it('keeps the darts of the last leg in a finished 1v1', () => {
+    const finished = replayGame(matchConfig, leg301).state;
+    expect(isGameFinished(finished)).toBe(true);
+    expect(dartsInCurrentLeg(finished)).toBe(9);
+  });
+
+  it('sums every player in a casual game, also after it is finished', () => {
+    expect(dartsInCurrentLeg(createGame(casualConfig))).toBe(0);
+    expect(dartsInCurrentLeg(replayGame(casualConfig, leg301.slice(0, 4)).state)).toBe(4);
+    expect(dartsInCurrentLeg(replayGame(casualConfig, leg301).state)).toBe(9);
+  });
+
+  it('counts the darts of a practice session', () => {
+    expect(dartsInCurrentLeg(createGame(solo501Config))).toBe(0);
+    expect(dartsInCurrentLeg(replayGame(solo501Config, nineDarter).state)).toBe(9);
+    expect(dartsInCurrentLeg(replayGame(freeRunConfig, nineDarter.slice(0, 4)).state)).toBe(4);
   });
 });

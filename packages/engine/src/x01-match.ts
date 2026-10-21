@@ -25,6 +25,7 @@ export interface X01MatchState {
   readonly turnStartRemaining: number; // wynik rzucającego sprzed bieżącej tury
   readonly currentDarts: readonly Hit[]; // rzutki bieżącej, niezamkniętej tury
   readonly dartsThrownInLeg: readonly [number, number];
+  readonly turnsInLeg: readonly [number, number]; // tury każdego gracza w legu do numeru kolejki, bust też jest turą
   readonly legsWon: readonly [number, number];
   readonly winnerIndex: 0 | 1 | null;
 }
@@ -64,6 +65,7 @@ function startLeg(
     turnStartRemaining: config.startingScore,
     currentDarts: [],
     dartsThrownInLeg: [0, 0],
+    turnsInLeg: [0, 0],
     legsWon,
     winnerIndex: null,
   };
@@ -79,11 +81,13 @@ function withIndex<T>(pair: readonly [T, T], index: 0 | 1, value: T): [T, T] {
 
 // Kolejna tura: zmiana gracza w tym samym legu.
 function nextTurn(state: X01MatchState, remaining: readonly [number, number], dartsThrown: readonly [number, number]): X01MatchState {
-  const next = other(state.currentPlayerIndex);
+  const player = state.currentPlayerIndex;
+  const next = other(player);
   return {
     ...state,
     currentPlayerIndex: next,
     turnIndex: state.turnIndex + 1,
+    turnsInLeg: withIndex(state.turnsInLeg, player, state.turnsInLeg[player] + 1),
     remaining,
     turnStartRemaining: remaining[next],
     currentDarts: [],

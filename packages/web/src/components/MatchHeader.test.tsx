@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import type { MatchSnapshot } from '@autoscore/schema';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { casual, player, snapshot } from '../test/snapshots';
 import { MatchHeader } from './MatchHeader';
 
@@ -190,8 +191,9 @@ describe('MatchHeader', () => {
       expect(panel().contains(screen.getByText('Porzucony'))).toBe(false);
       const order = (element: Element | null | undefined) => element?.className.split(' ').find((name) => name.startsWith('lg:order-'));
       expect(order(screen.getByText('501').closest('ul'))).toBe('lg:order-1');
-      expect(order(screen.getByText('Porzucony').closest('span'))).toBe('lg:order-2');
-      expect(order(screen.getByRole('button', { name: 'Wznów mecz' }).parentElement)).toBe('lg:order-3');
+      expect(order(screen.getByRole('timer').parentElement)).toBe('lg:order-2');
+      expect(order(screen.getByText('Porzucony').closest('span'))).toBe('lg:order-3');
+      expect(order(screen.getByRole('button', { name: 'Wznów mecz' }).parentElement)).toBe('lg:order-4');
       for (const name of ['Wznów mecz', 'Głos', 'Efekty dźwiękowe', 'Menu gry']) {
         expect(screen.getAllByRole('button', { name })).toHaveLength(1);
       }
@@ -222,6 +224,122 @@ describe('MatchHeader', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Zakończ trening' }));
       expect(onEndPractice).toHaveBeenCalled();
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    });
+  });
+
+  describe('round and leg clock', () => {
+    const NOW = '2026-10-21T18:10:41.000Z';
+    const freeRun = (overrides: Partial<MatchSnapshot> = {}) =>
+      snapshot({
+        type: 'practice',
+        practiceMode: 'free_run',
+        startingScore: null,
+        legsToWin: null,
+        round: null,
+        players: [player('p1', 'Anna', { remaining: null, dartsThrownInLeg: 1 })],
+        ...overrides,
+      });
+
+    function renderHeader(state: MatchSnapshot) {
+      return render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+    }
+
+    function tick(ms: number): void {
+      act(() => {
+        vi.advanceTimersByTime(ms);
+      });
+    }
+
+    function startClock(): void {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(NOW));
+    }
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it.each([
+      ['a 1v1', snapshot({ round: 7 })],
+      ['a casual game', casual(['Anna', 'Bartek', 'Celina'], { round: 7 })],
+      ['Solo 501', snapshot({ type: 'practice', practiceMode: 'solo_501', legsToWin: null, round: 7, players: [player('p1', 'Anna')] })],
+    ])('shows Kolejka 7 in %s', (_name, state) => {
+      renderHeader(state);
+      expect(screen.getByText('Kolejka 7')).toBeTruthy();
+      expect(screen.getByRole('timer', { name: 'Czas lega 0 min 0 s' })).toBeTruthy();
+    });
+
+    it('shows only the session clock in Free run', () => {
+      startClock();
+      renderHeader(freeRun({ startedAt: '2026-10-21T18:00:00.000Z', legStartedAt: '2026-10-21T18:00:00.000Z' }));
+      expect(screen.queryByText(/^Kolejka/)).toBeNull();
+      expect(screen.getByRole('timer', { name: 'Czas sesji 10 min 41 s' }).textContent).toContain('10:41');
+      expect(screen.queryByRole('timer', { name: /^Czas lega/ })).toBeNull();
+    });
+
+    it('ticks every second without aria-live', () => {
+      startClock();
+      renderHeader(snapshot({ legStartedAt: '2026-10-21T18:10:00.000Z' }));
+      const timer = screen.getByRole('timer', { name: 'Czas lega 0 min 41 s' });
+      expect(timer.textContent).toContain('0:41');
+      expect(timer.hasAttribute('aria-live')).toBe(false);
+      expect(timer.closest('[aria-live]')).toBeNull();
+      tick(1000);
+      expect(timer.textContent).toContain('0:42');
+      expect(timer.getAttribute('aria-label')).toBe('Czas lega 0 min 42 s');
+    });
+
+    it('leaves out the closed pauses of the leg', () => {
+      startClock();
+      renderHeader(snapshot({ legStartedAt: '2026-10-21T18:00:00.000Z', legPausedMs: 300_000 }));
+      expect(screen.getByRole('timer', { name: 'Czas lega 5 min 41 s' })).toBeTruthy();
+    });
+
+    it('stands still in an abandoned game', () => {
+      startClock();
+      const abandonment = { playerId: 'p1', reason: null, at: '2026-10-21T18:05:00.000Z' };
+      renderHeader(snapshot({ status: 'abandoned', abandonment, round: 3, legStartedAt: '2026-10-21T18:00:00.000Z', legPausedMs: 60_000 }));
+      expect(screen.getByText('Kolejka 3')).toBeTruthy();
+      const timer = screen.getByRole('timer', { name: 'Czas lega 4 min 0 s' });
+      tick(5000);
+      expect(timer.textContent).toContain('4:00');
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('stands still at the end of an ended practice', () => {
+      startClock();
+      renderHeader(freeRun({ status: 'ended', endedAt: '2026-10-21T18:02:03.000Z', startedAt: '2026-10-21T18:00:00.000Z', legStartedAt: '2026-10-21T18:00:00.000Z' }));
+      expect(screen.getByRole('timer', { name: 'Czas sesji 2 min 3 s' })).toBeTruthy();
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('shows 0:00 and does not tick before the first dart of a leg', () => {
+      startClock();
+      renderHeader(snapshot({ legIndex: 1, startedAt: '2026-10-21T18:00:00.000Z', legStartedAt: null }));
+      const timer = screen.getByRole('timer', { name: 'Czas lega 0 min 0 s' });
+      expect(timer.textContent).toContain('0:00');
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('shows hours past an hour', () => {
+      startClock();
+      renderHeader(snapshot({ legStartedAt: '2026-10-21T17:08:38.000Z' }));
+      expect(screen.getByRole('timer', { name: 'Czas lega 1 godz. 2 min 3 s' }).textContent).toContain('1:02:03');
+    });
+
+    it('shows neither round nor clock after the game ends', () => {
+      renderHeader(snapshot({ finished: true, round: null, startedAt: '2026-10-21T18:00:00.000Z', legStartedAt: '2026-10-21T18:00:00.000Z', finishedAt: NOW }));
+      expect(screen.queryByText(/^Kolejka/)).toBeNull();
+      expect(screen.queryByRole('timer')).toBeNull();
+    });
+
+    it('keeps round and clock outside the collapsible panel', () => {
+      renderHeader(snapshot({ round: 7 }));
+      const toggle = screen.getByRole('button', { name: 'Menu gry' });
+      const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
+      expect(panel?.classList.contains('hidden')).toBe(true);
+      expect(panel?.contains(screen.getByText('Kolejka 7'))).toBe(false);
+      expect(panel?.contains(screen.getByRole('timer'))).toBe(false);
     });
   });
 });

@@ -122,6 +122,11 @@ const snapshot = {
   endedAt: null,
   finishedAt: null,
   editableUntil: null,
+  round: 1,
+  startedAt: null,
+  legStartedAt: null,
+  pausedMs: 0,
+  legPausedMs: 0,
   eventSeq: 1,
   currentPlayerId: 'p1',
   legIndex: 0,
@@ -215,6 +220,35 @@ describe('MatchSnapshot', () => {
 
   it.each(['finishedAt', 'editableUntil'])('requires %s', (field) => {
     expect(MatchSnapshot.safeParse({ ...snapshot, [field]: undefined }).success).toBe(false);
+  });
+
+  it('accepts a snapshot with game and leg times', () => {
+    const timed = {
+      ...snapshot,
+      round: 7,
+      startedAt: '2026-10-15T18:30:05.000Z',
+      legStartedAt: '2026-10-15T18:35:00.000Z',
+      pausedMs: 60_000,
+      legPausedMs: 0,
+    };
+    expect(MatchSnapshot.parse(timed)).toEqual(timed);
+  });
+
+  it.each(['round', 'startedAt', 'legStartedAt', 'pausedMs', 'legPausedMs'])('requires %s', (field) => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, [field]: undefined }).success).toBe(false);
+  });
+
+  it('rejects round 0', () => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, round: 0 }).success).toBe(false);
+  });
+
+  it.each(['pausedMs', 'legPausedMs'])('rejects a negative or non-integer %s', (field) => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, [field]: -1 }).success).toBe(false);
+    expect(MatchSnapshot.safeParse({ ...snapshot, [field]: 1.5 }).success).toBe(false);
+  });
+
+  it.each(['startedAt', 'legStartedAt'])('rejects a %s that is not an ISO date', (field) => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, [field]: 'przed chwilą' }).success).toBe(false);
   });
 });
 

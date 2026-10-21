@@ -20,6 +20,7 @@ export interface CasualMatchState {
   readonly turnStartRemaining: number; // wynik rzucającego sprzed bieżącej tury
   readonly currentDarts: readonly Hit[]; // rzutki bieżącej, niezamkniętej tury
   readonly dartsThrownInLeg: readonly number[];
+  readonly turnsInLeg: readonly number[]; // tury każdego gracza do numeru kolejki, bust też jest turą
   readonly placements: readonly Placement[]; // w kolejności miejsc
   readonly finished: boolean;
 }
@@ -48,6 +49,7 @@ export function createCasualMatch(config: CasualMatchConfig): CasualMatchState {
     turnStartRemaining: startingScore,
     currentDarts: [],
     dartsThrownInLeg: playerIds.map(() => 0),
+    turnsInLeg: playerIds.map(() => 0),
     placements: [],
     finished: false,
   };
@@ -86,11 +88,13 @@ function nextTurn(
   dartsThrown: readonly number[],
   placements: readonly Placement[] = state.placements,
 ): CasualMatchState {
-  const next = nextActivePlayer(state.config.playerIds, placements, state.currentPlayerIndex);
+  const player = state.currentPlayerIndex;
+  const next = nextActivePlayer(state.config.playerIds, placements, player);
   return {
     ...state,
     currentPlayerIndex: next,
     turnIndex: state.turnIndex + 1,
+    turnsInLeg: withIndex(state.turnsInLeg, player, at(state.turnsInLeg, player) + 1),
     remaining,
     turnStartRemaining: at(remaining, next),
     currentDarts: [],

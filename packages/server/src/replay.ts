@@ -1,5 +1,5 @@
-import { isGameFinished, replayGame, type ApplyResult, type GameConfig, type GameState } from '@autoscore/engine';
-import { StartingScore, type Abandonment, type ThrowRecord } from '@autoscore/schema';
+import { dartsInCurrentLeg, isGameFinished, replayGame, type ApplyResult, type GameConfig, type GameState } from '@autoscore/engine';
+import { StartingScore, type Abandonment, type MatchSnapshot, type ThrowRecord } from '@autoscore/schema';
 import type { MatchLog, StoredMatch } from './store/store.js';
 
 // Rzutki, które nadal się liczą: każdy wpis undo zdejmuje ostatnią z nich. Porzucenie, wznowienie i koniec treningu nie zmieniają rzutek.
@@ -41,6 +41,41 @@ export function abandonment(log: MatchLog): Abandonment | null {
     }
   }
   return open;
+}
+
+export type GameTimes = Pick<MatchSnapshot, 'startedAt' | 'legStartedAt' | 'pausedMs' | 'legPausedMs'>;
+
+// Przerwy od porzucenia do wznowienia. Otwarte porzucenie jeszcze nie jest przerwą, bo nie wiadomo, kiedy się skończy.
+function closedPauses(log: MatchLog): { start: number; end: number }[] {
+  const pauses: { start: number; end: number }[] = [];
+  let start: number | null = null;
+  for (const entry of log.entries) {
+    if (entry.type === 'match_abandoned') {
+      start = Date.parse(entry.createdAt);
+    } else if (entry.type === 'match_resumed' && start !== null) {
+      pauses.push({ start, end: Date.parse(entry.createdAt) });
+      start = null;
+    }
+  }
+  return pauses;
+}
+
+// Liczy się tylko część przerwy po starcie, więc przerwa przed pierwszą rzutką lega nie wydłuża lega.
+function pausedSince(pauses: readonly { start: number; end: number }[], from: string | null): number {
+  if (from === null) {
+    return 0;
+  }
+  const fromMs = Date.parse(from);
+  return pauses.reduce((sum, { start, end }) => sum + Math.max(0, end - Math.max(start, fromMs)), 0);
+}
+
+// Czasy gry i bieżącego lega wyłącznie z receivedAt rzutek i createdAt wpisów w logu.
+export function gameTimes(log: MatchLog, throws: readonly ThrowRecord[], game: GameState): GameTimes {
+  const startedAt = throws[0]?.receivedAt ?? null;
+  const legDarts = dartsInCurrentLeg(game);
+  const legStartedAt = legDarts > 0 ? (throws[throws.length - legDarts]?.receivedAt ?? null) : null;
+  const pauses = closedPauses(log);
+  return { startedAt, legStartedAt, pausedMs: pausedSince(pauses, startedAt), legPausedMs: pausedSince(pauses, legStartedAt) };
 }
 
 // Czas zakończenia treningu albo null, gdy trening trwa.

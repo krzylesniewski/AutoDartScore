@@ -100,3 +100,29 @@ export function isGameFinished(game: GameState): boolean {
 export function countsToStats(config: GameConfig): boolean {
   return !(config.type === 'practice' && config.practiceMode === 'free_run');
 }
+
+// Kolejka rzucającego w bieżącym legu, liczona od 1. W Solo 501 jest jeden gracz i jeden leg, więc turnIndex to już licznik jego tur.
+export function currentRound(game: GameState): number | null {
+  if (isGameFinished(game)) {
+    return null;
+  }
+  switch (game.type) {
+    case 'match':
+      return game.state.turnsInLeg[game.state.currentPlayerIndex] + 1;
+    case 'casual':
+      return (game.state.turnsInLeg[game.state.currentPlayerIndex] ?? 0) + 1;
+    case 'practice':
+      return game.practiceMode === 'solo_501' ? game.state.turnIndex + 1 : null;
+  }
+}
+
+// Po wygranym legu licznik 1v1 zaczyna od zera, a po wygranym meczu zostają rzutki ostatniego lega.
+export function dartsInCurrentLeg(game: GameState): number {
+  switch (game.type) {
+    case 'match':
+    case 'casual':
+      return game.state.dartsThrownInLeg.reduce((sum, darts) => sum + darts, 0);
+    case 'practice':
+      return game.state.dartsThrown;
+  }
+}

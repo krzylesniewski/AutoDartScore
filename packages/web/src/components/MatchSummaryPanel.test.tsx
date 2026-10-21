@@ -142,6 +142,35 @@ describe('MatchSummaryPanel', () => {
   });
 });
 
+describe('MatchSummaryPanel: game time', () => {
+  const times = { startedAt: '2026-10-21T18:00:00.000Z', finishedAt: '2026-10-21T18:15:34.000Z', pausedMs: 3 * 60_000 };
+  const finishedCasual = casual(['Anna', 'Bartek'], { finished: true, currentPlayerId: null, round: null, placements: [{ playerId: 'p1', place: 1 }, { playerId: 'p2', place: 2 }] });
+  const finishedSolo = snapshot({
+    type: 'practice',
+    practiceMode: 'solo_501',
+    legsToWin: null,
+    finished: true,
+    currentPlayerId: null,
+    round: null,
+    winnerId: 'p1',
+    players: [player('p1', 'Anna', { remaining: 0 })],
+  });
+
+  it.each([
+    ['a 1v1', match],
+    ['a casual game', finishedCasual],
+    ['Solo 501', finishedSolo],
+  ])('shows Czas gry without the pauses in %s', (_name, state) => {
+    render(<MatchSummaryPanel state={{ ...state, ...times }} summary={null} error={false} />);
+    expect(screen.getByText('Czas gry 12:34')).toBeTruthy();
+  });
+
+  it('shows no Czas gry without a start time', () => {
+    render(<MatchSummaryPanel state={{ ...finishedCasual, ...times, startedAt: null }} summary={null} error={false} />);
+    expect(screen.queryByText(/Czas gry/)).toBeNull();
+  });
+});
+
 describe('MatchSummaryPanel: saving a guest', () => {
   let requests: { url: string; method: string; body: unknown }[];
   let status: number;

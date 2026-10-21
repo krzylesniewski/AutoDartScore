@@ -2,6 +2,7 @@ import type { MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlay
 import { useState } from 'react';
 import { updatePlayer } from '../api/client';
 import { formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../game/format-stat';
+import { durationSeconds, formatDuration, gameElapsedMs } from '../game/leg-clock';
 import { pl } from '../i18n/pl';
 import { CheckIcon, TrophyIcon, WarningIcon } from './icons';
 
@@ -39,6 +40,7 @@ export function MatchSummaryPanel({ state, summary, error }: MatchSummaryPanelPr
   const name = (playerId: string | null) => state.players.find((player) => player.id === playerId)?.name ?? '';
   // Podsumowanie sprzed ostatniej rzutki nie zawiera zamykającej tury, więc czekamy na aktualne.
   const current = summary && summary.eventSeq >= state.eventSeq ? summary : null;
+  const elapsed = gameElapsedMs(state);
 
   return (
     <section className="flex flex-col gap-3 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-4 font-display">
@@ -47,6 +49,7 @@ export function MatchSummaryPanel({ state, summary, error }: MatchSummaryPanelPr
         {pl.matchOver}
       </h2>
       <MatchResult state={state} name={name} />
+      {elapsed !== null && <p className="text-(--color-text-muted)">{pl.gameTime(formatDuration(durationSeconds(elapsed)))}</p>}
       {state.players
         .filter((player) => player.guest)
         .map((player) => (

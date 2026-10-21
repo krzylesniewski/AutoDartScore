@@ -2,6 +2,7 @@ import type { CreateMatchRequest, MatchSnapshot, MatchSnapshotPlayer, MatchSumma
 import { useRef, useState, type ReactNode } from 'react';
 import { createMatch } from '../api/client';
 import { formatAverage } from '../game/format-stat';
+import { durationSeconds, formatDuration, gameElapsedMs } from '../game/leg-clock';
 import { rematchRequest } from '../game/rematch-request';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
@@ -103,6 +104,10 @@ function setupLine(state: MatchSnapshot): string {
   }
   if (state.legsToWin !== null) {
     parts.push(pl.bestOfOption(state.legsToWin * 2 - 1));
+  }
+  const elapsed = gameElapsedMs(state);
+  if (elapsed !== null) {
+    parts.push(pl.gameTime(formatDuration(durationSeconds(elapsed))));
   }
   return parts.join(' · ');
 }

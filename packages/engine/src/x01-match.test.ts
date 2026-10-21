@@ -4,6 +4,7 @@ import {
   applyThrow,
   createX01Match,
   currentPlayerId,
+  currentRound,
   EngineError,
   replayX01Match,
   type X01MatchConfig,
@@ -247,5 +248,52 @@ describe('replay', () => {
     const snapshot = structuredClone(start);
     applyThrow(start, T(20));
     expect(start).toEqual(snapshot);
+  });
+});
+
+describe('round in a leg', () => {
+  const round = (state: X01MatchState) => currentRound({ type: 'match', state });
+  const turn = [S(1), S(1), S(1)];
+
+  it('gives both players round 1 in their first turn and the starter round 2 only after the opponent', () => {
+    const start = createX01Match(config);
+    expect(round(start)).toBe(1);
+
+    const annaDone = throwAll(start, turn).state;
+    expect(currentPlayerId(annaDone)).toBe('bartek');
+    expect(round(annaDone)).toBe(1);
+    expect(annaDone.turnsInLeg).toEqual([1, 0]);
+
+    const bartekDone = throwAll(annaDone, turn).state;
+    expect(currentPlayerId(bartekDone)).toBe('anna');
+    expect(round(bartekDone)).toBe(2);
+    expect(bartekDone.turnsInLeg).toEqual([1, 1]);
+  });
+
+  it('counts a bust on the first dart as a turn', () => {
+    const busted = applyThrow(atScore(10), T(20)).state;
+    expect(busted.turnsInLeg).toEqual([1, 0]);
+    expect(round(busted)).toBe(1);
+    expect(round(throwAll(busted, turn).state)).toBe(2);
+  });
+
+  it('starts the next leg at round 1 for both players, whoever starts it', () => {
+    const nineDarter = [T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(19), D(12)];
+    const legTwo = throwAll(createX01Match(config), nineDarter).state;
+    expect(legTwo.legIndex).toBe(1);
+    expect(currentPlayerId(legTwo)).toBe('bartek');
+    expect(legTwo.turnsInLeg).toEqual([0, 0]);
+    expect(round(legTwo)).toBe(1);
+
+    const bartekDone = throwAll(legTwo, turn).state;
+    expect(currentPlayerId(bartekDone)).toBe('anna');
+    expect(round(bartekDone)).toBe(1);
+    expect(round(throwAll(bartekDone, turn).state)).toBe(2);
+  });
+
+  it('has no round once the match is won', () => {
+    const finished = applyThrow(atScore(40, { ...createX01Match(config), legsWon: [1, 0] }), D(20)).state;
+    expect(finished.winnerIndex).toBe(0);
+    expect(round(finished)).toBeNull();
   });
 });
