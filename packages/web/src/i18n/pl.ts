@@ -301,6 +301,7 @@ export const pl = {
   restMiss: 'Reszta Miss',
   keypadLayoutRing: 'Koło',
   keypadLayoutGrid: 'Siatka',
+  frequentHits: (name: string) => `Najczęstsze: ${name}`,
   showKeypadAsRing: 'Pokaż klawiaturę jako koło',
   showKeypadAsGrid: 'Pokaż klawiaturę jako siatkę',
 } as const;

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LegWon } from './domain-events.js';
+import { Hit, MISS_SEGMENT, Multiplier, Segment } from './hit.js';
 import { MatchType } from './match.js';
 import { PlayerColor } from './player.js';
 
@@ -143,3 +144,22 @@ export const PlayerForm = z.object({
   points: z.array(PlayerFormPoint).max(FORM_GAMES), // od najstarszej gry
 });
 export type PlayerForm = z.infer<typeof PlayerForm>;
+
+// Najczęstsze trafienia gracza z zamkniętych tur gier liczonych do statystyk, bez Miss.
+export const FREQUENT_HITS_LIMIT = 6;
+
+export const FrequentHit = z.object({
+  segment: Segment,
+  multiplier: Multiplier,
+  count: z.int().min(1),
+}).refine((hit) => Hit.safeParse(hit).success && hit.segment !== MISS_SEGMENT, {
+  message: 'Invalid segment and multiplier combination',
+  path: ['multiplier'],
+});
+export type FrequentHit = z.infer<typeof FrequentHit>;
+
+export const FrequentHitsResponse = z.object({
+  playerId: PlayerId,
+  hits: z.array(FrequentHit).max(FREQUENT_HITS_LIMIT), // od najczęstszego
+});
+export type FrequentHitsResponse = z.infer<typeof FrequentHitsResponse>;

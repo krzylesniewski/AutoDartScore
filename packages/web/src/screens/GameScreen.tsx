@@ -1,5 +1,6 @@
 import type { Hit } from '@autoscore/schema';
 import { useCallback, useState, type ReactNode } from 'react';
+import { useFrequentHits } from '../api/use-frequent-hits';
 import { useMatch } from '../api/use-match';
 import { useMatchSummary } from '../api/use-match-summary';
 import { useAnnouncer } from '../audio/use-announcer';
@@ -30,6 +31,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice } = useMatch(matchId, audio.onLiveMessage);
   // Zabawa i trening potrzebują podsumowania dopiero po końcu gry. Free run nigdy się nie kończy.
   const stats = useMatchSummary(matchId, state?.eventSeq ?? null, state !== null && (state.type === 'match' || state.finished));
+  const frequentHits = useFrequentHits(state && !state.finished ? state.currentPlayerId : null);
   const [abandoning, setAbandoning] = useState(false);
   const closeDialog = useCallback(() => setAbandoning(false), []);
   const [ending, setEnding] = useState(false);
@@ -62,6 +64,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
   }
   const keypadDisabled = !state || abandoned || ended || connection !== 'open';
   const checkout = state ? (checkoutRoute(state)?.[0] ?? null) : null;
+  const thrower = state?.players.find((player) => player.id === state.currentPlayerId);
+  const frequent = thrower && frequentHits && frequentHits.length > 0 ? { playerName: thrower.name, hits: frequentHits } : null;
 
   // W trakcie komendy trasa pochodzi ze starego stanu, więc podwójne kliknięcie albo szybki drugi Enter nie wysyła nieaktualnej rzutki.
   function enterCheckout(hit: Hit): void {
@@ -164,6 +168,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
                   disabled={keypadDisabled}
                   undoDisabled={busy || abandoned || ended}
                   checkout={busy ? null : checkout}
+                  frequent={frequent}
                 />
               )}
             </div>

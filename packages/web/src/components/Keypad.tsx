@@ -1,6 +1,7 @@
-import { BULL_SEGMENT, MISS_SEGMENT, type Hit } from '@autoscore/schema';
+import { BULL_SEGMENT, MISS_SEGMENT, type FrequentHit, type Hit } from '@autoscore/schema';
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { DARTBOARD_ORDER } from '../game/dartboard-order';
+import { frequentHitLabel } from '../game/frequent-hit-label';
 import { readKeypadLayout, writeKeypadLayout, type KeypadLayout } from '../game/keypad-layout';
 import { MIN_KEY_PX, RING_CENTER_HEIGHT_PERCENT, RING_CENTER_WIDTH_PERCENT, RING_KEY_PERCENT, ringKeyPosition } from '../game/keypad-ring';
 import { pl } from '../i18n/pl';
@@ -39,6 +40,10 @@ const layoutSwitch =
 const ringSide = 'aspect-square w-full max-w-[400px] mx-auto lg:mx-0 lg:w-[clamp(330px,100dvh_-_var(--keypad-ring-reserve),450px)] lg:max-w-none';
 const ringKeySize = `max(${MIN_KEY_PX}px, ${RING_KEY_PERCENT}cqi)`;
 const ringText = 'text-[clamp(20px,6.5cqi,30px)] leading-none';
+// Blok najczęstszych trafień ma stałą wysokość także bez listy, żeby klawiatura nie skakała przy ładowaniu i zmianie gracza.
+// Mniejszy tekst niż na klawiszach liczb, żeby Bull mieścił się w klawiszu 44 px.
+const frequentLabel = 'h-5 truncate font-display text-base leading-5 text-(--color-text-muted)';
+const frequentKey = `min-h-11 min-w-11 rounded-(--radius-card) px-0 text-lg leading-none ${keyBase}`;
 
 export interface KeypadProps {
   onHit(hit: Hit): void;
@@ -48,6 +53,12 @@ export interface KeypadProps {
   undoDisabled: boolean;
   // Pierwsza rzutka podpowiedzi zamknięcia dla Enter albo null, gdy nie ma czego wpisać.
   checkout: Hit | null;
+  frequent?: FrequentHits | null;
+}
+
+export interface FrequentHits {
+  playerName: string;
+  hits: readonly FrequentHit[];
 }
 
 // Wspólne klawisze obu układów. Układ podaje tylko klasy rozmiaru i położenia.
@@ -59,9 +70,10 @@ interface Keys {
   bull(className: string, style?: CSSProperties): ReactNode;
   miss(className: string): ReactNode;
   restMiss(className: string): ReactNode;
+  frequent(blockClassName: string, keysClassName: string): ReactNode;
 }
 
-export function Keypad({ onHit, onRestMiss, onUndo, disabled, undoDisabled, checkout }: KeypadProps) {
+export function Keypad({ onHit, onRestMiss, onUndo, disabled, undoDisabled, checkout, frequent = null }: KeypadProps) {
   const [multiplier, setMultiplier] = useState<Multiplier>(1);
   // Kopia w refie, bo skrót może w jednym zdarzeniu wpisać dwie liczby (2 i 5), a druga ma już widzieć S po pierwszej.
   const currentMultiplier = useRef<Multiplier>(1);
@@ -212,6 +224,31 @@ export function Keypad({ onHit, onRestMiss, onUndo, disabled, undoDisabled, chec
         {pl.restMiss}
       </KeypadKey>
     ),
+    // Klawisz wysyła swoje trafienie bez względu na przełącznik S/D/T.
+    frequent: (blockClassName, keysClassName) =>
+      frequent && frequent.hits.length > 0 ? (
+        <div role="group" aria-label={pl.frequentHits(frequent.playerName)} className={blockClassName}>
+          <p aria-hidden="true" className={frequentLabel}>
+            {pl.frequentHits(frequent.playerName)}
+          </p>
+          <div className={keysClassName}>
+            {frequent.hits.map((frequentHit) => (
+              <KeypadKey
+                key={`${frequentHit.segment}:${frequentHit.multiplier}`}
+                disabled={disabled}
+                flashOnPress
+                onPress={() => hit(frequentHit.segment, frequentHit.multiplier)}
+                className={frequentKey}
+                idleTone={segmentTone}
+              >
+                {frequentHitLabel(frequentHit)}
+              </KeypadKey>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div aria-hidden="true" className={blockClassName} />
+      ),
   };
 
   return layout === 'ring' ? <RingKeypad keys={keys} /> : <GridKeypad keys={keys} />;
@@ -228,6 +265,7 @@ function handleIn<K>(handles: Map<K, KeypadKeyHandle>, id: K): (handle: KeypadKe
 }
 
 // Poniżej lg: S/D/T nad kołem, Miss pod nim. Od lg trzy kolumny o wysokości koła.
+// Najczęstsze trafienia są tylko od lg, nad Miss. Etykieta i dwa rzędy po trzy klawisze 44 px mieszczą się w 160 px.
 function RingKeypad({ keys }: { keys: Keys }) {
   const centreKey = `min-w-0 flex-1 rounded-(--radius-card) ${ringText} ${keyBase}`;
   const centreHeight = { height: `max(${MIN_KEY_PX}px, ${RING_CENTER_HEIGHT_PERCENT}cqi)` };
@@ -254,6 +292,7 @@ function RingKeypad({ keys }: { keys: Keys }) {
         </div>
       </div>
       <div className="grid grid-cols-4 gap-2 lg:flex lg:flex-col lg:gap-3">
+        {keys.frequent('hidden h-31 shrink-0 flex-col gap-2 lg:flex', 'grid flex-1 grid-cols-3 grid-rows-2 gap-2')}
         {keys.miss('col-span-3 h-14 lg:h-auto lg:flex-1')}
         {keys.restMiss('h-14')}
       </div>
@@ -269,6 +308,7 @@ function GridKeypad({ keys }: { keys: Keys }) {
         {keys.multipliers('grid flex-1 grid-cols-3 gap-2', '')}
         {keys.layoutSwitch('')}
       </div>
+      {keys.frequent('flex h-18 shrink-0 flex-col gap-2', 'grid flex-1 grid-cols-6 gap-2')}
       <div className="grid grid-cols-5 gap-2 lg:grid-cols-10">{DARTBOARD_ORDER.map((segment) => keys.segment(segment, `h-14 lg:h-[78px] ${key}`))}</div>
       <div className="grid grid-cols-4 gap-2 lg:grid-cols-10">
         {keys.outerBull(`col-span-2 h-14 lg:h-[62px] ${key}`)}
