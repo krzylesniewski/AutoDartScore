@@ -2,10 +2,11 @@ import { hitPoints } from '@autoscore/engine';
 import type { Hit, MatchSnapshot } from '@autoscore/schema';
 import type { ReactNode } from 'react';
 import type { LastTurn } from '../api/use-match';
-import { suggestCheckout } from '../game/checkout';
+import { checkoutRoute } from '../game/checkout-route';
 import { hitLabel } from '../game/hit-label';
 import { pl } from '../i18n/pl';
 import { BustIcon, FlagIcon, UndoIcon } from './icons';
+import { SHORTCUT_BADGE } from './KeypadKey';
 
 const DARTS_PER_TURN = 3;
 
@@ -24,9 +25,11 @@ export interface TurnPanelProps {
   busy: boolean;
   undoDisabled?: boolean;
   onUndo(): void;
+  onCheckout(hit: Hit): void;
+  checkoutDisabled: boolean;
 }
 
-export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo }: TurnPanelProps) {
+export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo, onCheckout, checkoutDisabled }: TurnPanelProps) {
   // Pusta tura zaraz po zamknięciu pokazuje ostatnią turę, dopóki nie przyjdzie kolejna zmiana stanu.
   const shown = state.currentDarts.length === 0 && lastTurn?.eventSeq === state.eventSeq ? lastTurn : null;
   const darts: readonly Hit[] = shown ? shown.darts : state.currentDarts;
@@ -58,17 +61,21 @@ export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo 
           <span className={label}>{pl.turnTotal}</span>
           <TurnTotal darts={darts} shown={shown} />
         </div>
-        <CheckoutHint state={state} />
+        <CheckoutHint state={state} onCheckout={onCheckout} disabled={checkoutDisabled} />
       </div>
       <div className="grid grid-cols-3 gap-3">
         <button
           type="button"
           onClick={onUndo}
           disabled={busy || undoDisabled}
-          className={`${button} border-(--color-border-strong) bg-(--color-surface-button) disabled:opacity-40`}
+          aria-keyshortcuts="Backspace"
+          className={`relative ${button} border-(--color-border-strong) bg-(--color-surface-button) disabled:opacity-40`}
         >
           <UndoIcon />
           {pl.undo}
+          <span aria-hidden="true" className={SHORTCUT_BADGE}>
+            {pl.shortcutBackspace}
+          </span>
         </button>
         <SoonButton label={pl.nextRound} className="border-(--color-border-strong) bg-(--color-surface-button)" />
         <SoonButton label={pl.toReview} icon={<FlagIcon />} className="border-(--color-accent) bg-(--color-bg)" />
@@ -118,28 +125,53 @@ function TurnTotal({ darts, shown }: { darts: readonly Hit[]; shown: LastTurn | 
   );
 }
 
-function CheckoutHint({ state }: { state: MatchSnapshot }) {
+interface CheckoutHintProps {
+  state: MatchSnapshot;
+  onCheckout(hit: Hit): void;
+  disabled: boolean;
+}
+
+const checkoutCard = `flex flex-1 flex-col items-end justify-center gap-1 lg:grid lg:h-20 lg:grid-cols-[minmax(0,1fr)_auto] lg:content-center lg:items-center lg:gap-x-4 lg:gap-y-0 lg:px-5 ${ownCard}`;
+const checkoutChip =
+  'rounded-(--radius-chip) bg-(--color-accent) px-3 py-1 font-display text-[clamp(28px,8cqi,44px)] leading-none font-bold whitespace-nowrap text-(--color-on-accent) lg:col-start-2 lg:row-start-1 lg:px-5';
+
+function CheckoutHint({ state, onCheckout, disabled }: CheckoutHintProps) {
   const player = state.players.find((candidate) => candidate.id === state.currentPlayerId);
   if (state.finished || state.startingScore === null || !player || player.remaining === null) {
     return null;
   }
-  const dartsLeft = (DARTS_PER_TURN - state.currentDarts.length) as 1 | 2 | 3;
-  const route = suggestCheckout(player.remaining, dartsLeft);
+  const route = checkoutRoute(state);
+  const first = route?.[0];
   // Bez trasy zostaje niewidoczna karta tej samej wysokości, żeby od lg klawiatura nie skakała przy pojawieniu się podpowiedzi.
-  // Od lg siatka: etykieta i opis po lewej, chip po prawej.
+  if (!route || !first) {
+    return (
+      <div aria-hidden="true" className={`${checkoutCard} invisible max-lg:hidden`}>
+        <span className={`${label} lg:col-start-1 lg:row-start-1`}>{' '}</span>
+        <span className={`${checkoutChip} lg:row-span-2`}>{' '}</span>
+        <span className="text-right text-sm text-(--color-text-muted) lg:col-start-1 lg:row-start-2 lg:text-left lg:text-base">{' '}</span>
+      </div>
+    );
+  }
+  const firstLabel = hitLabel(first);
+  // Od lg siatka: etykieta, opis i instrukcja po lewej, chip po prawej przez wszystkie wiersze.
   return (
-    <div
-      aria-hidden={route ? undefined : 'true'}
-      className={`flex flex-1 flex-col items-end justify-center gap-1 lg:grid lg:h-20 lg:grid-cols-[minmax(0,1fr)_auto] lg:content-center lg:items-center lg:gap-x-4 lg:gap-y-0 lg:px-5 ${ownCard} ${route ? '' : 'invisible max-lg:hidden'}`}
+    <button
+      type="button"
+      disabled={disabled}
+      aria-keyshortcuts="Enter"
+      onClick={() => onCheckout(first)}
+      className={`${checkoutCard} cursor-pointer text-start disabled:cursor-default`}
     >
-      <span className={`${label} lg:col-start-1 lg:row-start-1`}>{route ? pl.checkout : ' '}</span>
-      <span className="rounded-(--radius-chip) bg-(--color-accent) px-3 py-1 font-display text-[clamp(28px,8cqi,44px)] leading-none font-bold whitespace-nowrap text-(--color-on-accent) lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:px-5">
-        {route ? route.map(hitLabel).join(' ') : ' '}
-      </span>
+      <span className={`${label} lg:col-start-1 lg:row-start-1`}>{pl.checkout}</span>
+      <span className={`${checkoutChip} lg:row-span-3`}>{route.map(hitLabel).join(' ')}</span>
       <span className="text-right text-sm text-(--color-text-muted) lg:col-start-1 lg:row-start-2 lg:text-left lg:text-base">
-        {route ? `${pl.darts(route.length)} ${pl.toWinLeg}` : ' '}
+        {`${pl.darts(route.length)} ${pl.toWinLeg}`}
       </span>
-    </div>
+      <span className="max-w-full truncate text-right text-sm leading-tight text-(--color-text-muted) lg:col-start-1 lg:row-start-3 lg:text-left">
+        <span className="pointer-coarse:hidden">{pl.checkoutClickHint(firstLabel)}</span>
+        <span className="hidden pointer-coarse:inline">{pl.checkoutTapHint(firstLabel)}</span>
+      </span>
+    </button>
   );
 }
 
