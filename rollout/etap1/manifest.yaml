@@ -11,7 +11,7 @@ claudeBin: ~/.nvm/versions/node/v22.18.0/bin/claude
 repo:
   path: ~/Documents/00_Nauka/AutoScoreDart
   github: krzylesniewski/AutoDartScore
-  base: main
+  base: feat/keypad-ring # tymczasowo dla P33-P35 (decyzja 2026-10-21), wieczorem całość do main jednym PR-em; potem z powrotem main
   public: true
   # Node 24 z nvm przed domyślnym Node 22. pnpm jest z Homebrew.
   pathPrepend: [~/.nvm/versions/node/v24.22.0/bin]
@@ -78,6 +78,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p33-p35.md
       kind: markdown
       tag: p33-p35
+    # Tylko dla PR-ów z briefTags: [p36-p40].
+    - title: P36-P40, kolor gracza, unikalne imiona, blokada zakończonego meczu, kolejka i czas lega, ekran Ustawienia (wiążące dla P36-P40, każdy PR tylko swoja sekcja)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p36-p40.md
+      kind: markdown
+      tag: p36-p40
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -476,3 +481,62 @@ prs:
     changeset: none
     scope: ['packages/web/**', 'packages/server/**', 'packages/schema/**', 'README.md']
     briefTags: [p33-p35]
+
+  # Feedback graczy 2026-10-21 (feedback-graczy.md, design/plan-p36-p40.md).
+  # Stały kolor awatara z wyborem z 16, zamiast koloru z pozycji na liście (sekcja P36).
+  - id: P36
+    branch: feat/player-color
+    title: 'feat: fixed avatar color with a 16-color picker'
+    brief: briefs/P36.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'packages/server/**', 'packages/schema/**', 'design/theme.css', 'README.md']
+    briefTags: [p36-p40]
+
+  # Unikalne imiona graczy, 409 player_name_taken (sekcja P37).
+  - id: P37
+    branch: feat/unique-player-names
+    title: 'feat: reject duplicate player names'
+    brief: briefs/P37.md
+    deps: [P36]
+    priority: 60
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**', 'packages/server/**', 'packages/schema/**', 'README.md']
+    briefTags: [p36-p40]
+
+  # Zakończona gra tylko do odczytu 5 minut po ostatniej rzutce, 409 match_locked (sekcja P38).
+  - id: P38
+    branch: feat/match-lock
+    title: 'feat: lock a finished match five minutes after the last throw'
+    brief: briefs/P38.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'packages/server/**', 'packages/schema/**', 'README.md', 'deploy/README.md']
+    briefTags: [p36-p40]
+
+  # Numer kolejki i czas lega na ekranie gry, czas gry na końcu (sekcja P39).
+  - id: P39
+    branch: feat/round-and-leg-time
+    title: 'feat: round number and leg timer on the game screen'
+    brief: briefs/P39.md
+    deps: [P38, P34]
+    priority: 50
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'packages/server/**', 'packages/schema/**', 'packages/engine/**']
+    briefTags: [p36-p40, rwd]
+
+  # Ekran Ustawienia: układ klawiatury, głos, efekty; bez przełącznika układu w klawiaturze (sekcja P40).
+  - id: P40
+    branch: feat/web-settings
+    title: 'feat(web): settings screen with keypad layout and sound'
+    brief: briefs/P40.md
+    deps: [P39, P34]
+    priority: 50
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p36-p40, rwd]
