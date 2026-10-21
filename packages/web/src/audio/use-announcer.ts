@@ -25,16 +25,28 @@ function readEnabled(key: string): boolean {
   }
 }
 
-export function readVoiceEnabled(): boolean {
-  return readEnabled(VOICE_STORAGE_KEY);
-}
-
 function writeEnabled(key: string, enabled: boolean): void {
   try {
     localStorage.setItem(key, enabled ? 'on' : 'off');
   } catch {
     // Ustawienie zostaje tylko do przeładowania strony.
   }
+}
+
+export function readVoiceEnabled(): boolean {
+  return readEnabled(VOICE_STORAGE_KEY);
+}
+
+export function readEffectsEnabled(): boolean {
+  return readEnabled(EFFECTS_STORAGE_KEY);
+}
+
+export function writeVoiceEnabled(enabled: boolean): void {
+  writeEnabled(VOICE_STORAGE_KEY, enabled);
+}
+
+export function writeEffectsEnabled(enabled: boolean): void {
+  writeEnabled(EFFECTS_STORAGE_KEY, enabled);
 }
 
 interface AudioOutput {
@@ -46,7 +58,7 @@ interface AudioOutput {
 // Głos i efekty są domyślnie włączone na każdym urządzeniu. Drugi ekran wyłącza je sam, a wybór zostaje w localStorage.
 export function useAnnouncer(): UseAnnouncer {
   const [voiceEnabled, setVoiceState] = useState(readVoiceEnabled);
-  const [effectsEnabled, setEffectsState] = useState(() => readEnabled(EFFECTS_STORAGE_KEY));
+  const [effectsEnabled, setEffectsState] = useState(readEffectsEnabled);
   const voiceRef = useRef(voiceEnabled);
   const effectsRef = useRef(effectsEnabled);
   const audio = useRef<AudioOutput | null>(null);
@@ -96,7 +108,7 @@ export function useAnnouncer(): UseAnnouncer {
   }, []);
 
   const setVoiceEnabled = useCallback((next: boolean) => {
-    writeEnabled(VOICE_STORAGE_KEY, next);
+    writeVoiceEnabled(next);
     voiceRef.current = next;
     if (!next) {
       audio.current?.speech.cancel();
@@ -106,7 +118,7 @@ export function useAnnouncer(): UseAnnouncer {
   }, [stopWhenSilent]);
 
   const setEffectsEnabled = useCallback((next: boolean) => {
-    writeEnabled(EFFECTS_STORAGE_KEY, next);
+    writeEffectsEnabled(next);
     effectsRef.current = next;
     if (!next) {
       audio.current?.player.stop();

@@ -2,10 +2,9 @@ import { BULL_SEGMENT, MISS_SEGMENT, type FrequentHit, type Hit } from '@autosco
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { DARTBOARD_ORDER } from '../game/dartboard-order';
 import { frequentHitLabel } from '../game/frequent-hit-label';
-import { readKeypadLayout, writeKeypadLayout, type KeypadLayout } from '../game/keypad-layout';
+import { readKeypadLayout, type KeypadLayout } from '../game/keypad-layout';
 import { MIN_KEY_PX, RING_CENTER_HEIGHT_PERCENT, RING_CENTER_WIDTH_PERCENT, RING_KEY_PERCENT, ringKeyPosition } from '../game/keypad-ring';
 import { pl } from '../i18n/pl';
-import { GridIcon, RingIcon } from './icons';
 import { KeypadKey, type KeypadKeyHandle, type KeypadKeyTone } from './KeypadKey';
 import { useKeypadShortcuts } from './use-keypad-shortcuts';
 
@@ -32,8 +31,6 @@ const missTone: KeypadKeyTone = { fill: 'bg-(--color-surface) text-(--color-text
 const multiplierTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text-muted)', border: idleBorder };
 const selectedMultiplierTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse)', border: 'border-(--color-text)' };
 const restMissText = 'text-lg leading-none';
-const layoutSwitch =
-  'flex min-h-11 min-w-11 shrink-0 touch-manipulation items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-3 font-display text-lg font-semibold text-(--color-text-muted)';
 
 // Bok koła od lg: wysokość okna minus wszystko nad klawiaturą i pod nią (--keypad-ring-reserve w theme.css).
 // Przy kole mniejszym niż około 327 px sąsiednie okrągłe klawisze 44 px nachodziłyby na siebie, stąd dolna granica 330 px.
@@ -64,7 +61,6 @@ export interface FrequentHits {
 // Wspólne klawisze obu układów. Układ podaje tylko klasy rozmiaru i położenia.
 interface Keys {
   multipliers(groupClassName: string, keyClassName: string): ReactNode;
-  layoutSwitch(className: string): ReactNode;
   segment(segment: number, className: string, style?: CSSProperties): ReactNode;
   outerBull(className: string, style?: CSSProperties): ReactNode;
   bull(className: string, style?: CSSProperties): ReactNode;
@@ -77,7 +73,8 @@ export function Keypad({ onHit, onRestMiss, onUndo, disabled, undoDisabled, chec
   const [multiplier, setMultiplier] = useState<Multiplier>(1);
   // Kopia w refie, bo skrót może w jednym zdarzeniu wpisać dwie liczby (2 i 5), a druga ma już widzieć S po pierwszej.
   const currentMultiplier = useRef<Multiplier>(1);
-  const [layout, setLayout] = useState<KeypadLayout>(readKeypadLayout);
+  // Układ wybiera się na ekranie „Ustawienia”, który nigdy nie stoi obok klawiatury, więc wystarcza odczyt przy montowaniu.
+  const [layout] = useState<KeypadLayout>(readKeypadLayout);
   const segmentKeys = useRef(new Map<number, KeypadKeyHandle>());
   const multiplierKeys = useRef(new Map<Multiplier, KeypadKeyHandle>());
   const outerBullKey = useRef<KeypadKeyHandle>(null);
@@ -119,12 +116,6 @@ export function Keypad({ onHit, onRestMiss, onUndo, disabled, undoDisabled, chec
     onEnterCheckout: enterCheckout,
   });
 
-  function switchLayout(): void {
-    const next = layout === 'ring' ? 'grid' : 'ring';
-    setLayout(next);
-    writeKeypadLayout(next);
-  }
-
   const keys: Keys = {
     multipliers: (groupClassName, keyClassName) => (
       <div role="group" aria-label={pl.multiplier} className={groupClassName}>
@@ -145,18 +136,6 @@ export function Keypad({ onHit, onRestMiss, onUndo, disabled, undoDisabled, chec
           </KeypadKey>
         ))}
       </div>
-    ),
-    // Układ to ustawienie widoku, więc przełącznik działa także na zablokowanej klawiaturze.
-    layoutSwitch: (className) => (
-      <button
-        type="button"
-        aria-label={layout === 'ring' ? pl.showKeypadAsGrid : pl.showKeypadAsRing}
-        onClick={switchLayout}
-        className={`${layoutSwitch} ${className}`}
-      >
-        {layout === 'ring' ? <GridIcon /> : <RingIcon />}
-        {layout === 'ring' ? pl.keypadLayoutGrid : pl.keypadLayoutRing}
-      </button>
     ),
     segment: (segment, className, style) => (
       <KeypadKey
@@ -272,10 +251,7 @@ function RingKeypad({ keys }: { keys: Keys }) {
 
   return (
     <section aria-label={pl.keypad} className="flex flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(160px,1fr)] lg:gap-3">
-      <div className="flex h-13 gap-2 lg:h-auto lg:flex-col">
-        {keys.multipliers('grid flex-1 grid-cols-3 gap-2 lg:grid-cols-1 lg:grid-rows-3', 'lg:min-h-14')}
-        {keys.layoutSwitch('lg:h-14')}
-      </div>
+      {keys.multipliers('grid h-13 grid-cols-3 gap-2 lg:h-auto lg:grid-cols-1 lg:grid-rows-3', 'lg:min-h-14')}
       <div className={`@container relative ${ringSide}`}>
         {DARTBOARD_ORDER.map((segment, index) => {
           const { left, top } = ringKeyPosition(index);
@@ -304,10 +280,7 @@ function RingKeypad({ keys }: { keys: Keys }) {
 function GridKeypad({ keys }: { keys: Keys }) {
   return (
     <section aria-label={pl.keypad} className="flex flex-col gap-2">
-      <div className="flex h-13 gap-2 lg:h-[58px]">
-        {keys.multipliers('grid flex-1 grid-cols-3 gap-2', '')}
-        {keys.layoutSwitch('')}
-      </div>
+      {keys.multipliers('grid h-13 grid-cols-3 gap-2 lg:h-[58px]', '')}
       {keys.frequent('flex h-18 shrink-0 flex-col gap-2', 'grid flex-1 grid-cols-6 gap-2')}
       <div className="grid grid-cols-5 gap-2 lg:grid-cols-10">{DARTBOARD_ORDER.map((segment) => keys.segment(segment, `h-14 lg:h-[78px] ${key}`))}</div>
       <div className="grid grid-cols-4 gap-2 lg:grid-cols-10">

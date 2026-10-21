@@ -3,19 +3,26 @@ import { readVoiceEnabled } from '../audio/use-announcer';
 import { pl } from '../i18n/pl';
 import { TargetIcon } from './icons';
 
-export type AppPage = 'new-game' | 'stats' | 'history';
+export type AppPage = 'new-game' | 'stats' | 'history' | 'settings';
 
 const LINKS: readonly { page: AppPage; href: string; label: string }[] = [
   { page: 'new-game', href: '#/', label: pl.newGame },
   { page: 'stats', href: '#/stats', label: pl.stats },
   { page: 'history', href: '#/history', label: pl.history },
+  { page: 'settings', href: '#/settings', label: pl.settings },
 ];
 
 const item = 'flex min-h-11 shrink-0 items-center rounded-(--radius-chip) px-3 whitespace-nowrap sm:px-4';
 
-export function AppNav({ current }: { current: AppPage }) {
-  // Głos przełącza się na ekranie gry, więc tutaj wystarcza odczyt przy wejściu na ekran.
-  const [voiceEnabled] = useState(readVoiceEnabled);
+export interface AppNavProps {
+  current: AppPage;
+  // Podaje go tylko ekran, który sam przełącza głos. Inne ekrany go nie zmieniają, więc wystarcza im odczyt przy wejściu.
+  voiceEnabled?: boolean;
+}
+
+export function AppNav({ current, voiceEnabled: shownVoice }: AppNavProps) {
+  const [storedVoice] = useState(readVoiceEnabled);
+  const voiceEnabled = shownVoice ?? storedVoice;
 
   return (
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-9 gap-y-2 border-b border-(--color-border-subtle) bg-(--color-surface-header) px-4 pt-[env(safe-area-inset-top)] min-h-16 max-sm:flex-nowrap max-sm:gap-x-3 sm:px-7">
@@ -35,10 +42,6 @@ export function AppNav({ current }: { current: AppPage }) {
               {link.label}
             </a>
           ))}
-          <span aria-disabled="true" className={`${item} gap-2 text-(--color-text-muted) opacity-60 max-sm:hidden`}>
-            {pl.settings}
-            <span className="text-sm uppercase">{pl.soon}</span>
-          </span>
         </nav>
       </div>
       <div className="flex shrink-0 items-center gap-5 text-base text-(--color-text-muted) max-sm:gap-2">

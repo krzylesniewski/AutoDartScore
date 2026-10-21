@@ -9,8 +9,6 @@ import { Keypad, type FrequentHits } from './Keypad';
 import { HIT_FLASH_MS } from './KeypadKey';
 
 const SEGMENTS = DARTBOARD_ORDER.map(String);
-const SHOW_GRID = 'Pokaż klawiaturę jako siatkę';
-const SHOW_RING = 'Pokaż klawiaturę jako koło';
 const LAYOUTS: readonly KeypadLayout[] = ['ring', 'grid'];
 
 interface SetupOptions {
@@ -101,17 +99,17 @@ describe('Keypad', () => {
     expect(onHit).toHaveBeenCalledWith({ segment: 0, multiplier: 0 });
   });
 
-  it.each(LAYOUTS)('renders each of the 28 keys once in the %s layout', (layout) => {
+  it.each(LAYOUTS)('renders each of the 27 keys once in the %s layout', (layout) => {
     setup({ layout });
-    expect(screen.getAllByRole('button')).toHaveLength(28);
-    for (const name of ['S', 'D', 'T', layout === 'ring' ? SHOW_GRID : SHOW_RING, '25', 'Bull', 'Miss', 'Reszta Miss', ...SEGMENTS]) {
+    expect(screen.getAllByRole('button')).toHaveLength(27);
+    for (const name of ['S', 'D', 'T', '25', 'Bull', 'Miss', 'Reszta Miss', ...SEGMENTS]) {
       expect(screen.getAllByRole('button', { name })).toHaveLength(1);
     }
   });
 
   it.each(LAYOUTS)('orders the %s layout from the multiplier to 1-20 in dartboard order and the misses', (layout) => {
     setup({ layout });
-    expect(buttonNames()).toEqual(['S', 'D', 'T', layout === 'ring' ? SHOW_GRID : SHOW_RING, ...SEGMENTS, '25', 'Bull', 'Miss', 'Reszta Miss']);
+    expect(buttonNames()).toEqual(['S', 'D', 'T', ...SEGMENTS, '25', 'Bull', 'Miss', 'Reszta Miss']);
     expect(within(screen.getByRole('group', { name: 'Mnożnik' })).getAllByRole('button').map(visibleText)).toEqual(['S', 'D', 'T']);
   });
 
@@ -160,63 +158,16 @@ describe('Keypad', () => {
     expect(onRestMiss).not.toHaveBeenCalled();
   });
 
-  describe('layout switch', () => {
-    it('shows the ring by default and switches to the grid and back', () => {
-      const { button } = setup();
-      expect(classes(button('20'))).toContain('rounded-full');
-      expect(button(SHOW_GRID).textContent).toBe('Siatka');
+  it('renders the grid from a stored grid entry', () => {
+    const { button } = setup({ layout: 'grid' });
+    expect(classes(button('20'))).not.toContain('rounded-full');
+  });
 
-      fireEvent.click(button(SHOW_GRID));
-      expect(classes(button('20'))).not.toContain('rounded-full');
-      expect(button(SHOW_RING).textContent).toBe('Koło');
-      expect(localStorage.getItem('autoscore.keypadLayout')).toBe('grid');
-
-      fireEvent.click(button(SHOW_RING));
-      expect(classes(button('20'))).toContain('rounded-full');
-      expect(localStorage.getItem('autoscore.keypadLayout')).toBe('ring');
-    });
-
-    it('renders the grid from a stored grid entry', () => {
-      const { button } = setup({ layout: 'grid' });
-      expect(classes(button('20'))).not.toContain('rounded-full');
-      expect(button(SHOW_RING)).toBeTruthy();
-    });
-
-    it('keeps the multiplier across a switch', () => {
-      const { onHit, button } = setup();
-      fireEvent.click(button('T'));
-      fireEvent.click(button(SHOW_GRID));
-      expect(button('T').getAttribute('aria-pressed')).toBe('true');
-      fireEvent.click(button('19'));
-      expect(onHit).toHaveBeenCalledWith({ segment: 19, multiplier: 3 });
-    });
-
-    it('switches when localStorage throws', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-        throw new Error('blocked');
-      });
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new Error('blocked');
-      });
-      const { button } = setup();
-      fireEvent.click(button(SHOW_GRID));
-      expect(classes(button('20'))).not.toContain('rounded-full');
-      expect(button(SHOW_RING)).toBeTruthy();
-    });
-
-    it('stays enabled on a disabled keypad', () => {
-      const { button } = setup({ disabled: true });
-      expect(button(SHOW_GRID).disabled).toBe(false);
-      fireEvent.click(button(SHOW_GRID));
-      expect(button(SHOW_RING).disabled).toBe(false);
-      expect(button('20').disabled).toBe(true);
-    });
-
-    it('is a plain button with touch-manipulation and at least 44 px', () => {
-      const { button } = setup();
-      expect(button(SHOW_GRID).getAttribute('type')).toBe('button');
-      expect(classes(button(SHOW_GRID))).toEqual(expect.arrayContaining(['touch-manipulation', 'min-h-11', 'min-w-11']));
-    });
+  it.each(LAYOUTS)('has no layout button in the %s layout', (layout) => {
+    setup({ layout });
+    for (const name of ['Siatka', 'Koło', 'Pokaż klawiaturę jako siatkę', 'Pokaż klawiaturę jako koło']) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
   });
 
   describe.each(LAYOUTS)('feedback in the %s layout', (layout) => {
@@ -507,7 +458,7 @@ describe('Keypad', () => {
           expect(classes(badges[0] as HTMLElement)).toEqual(expect.arrayContaining(['absolute', 'hidden', 'lg:block']));
           expect(classes(element)).toContain('relative');
         }
-        for (const name of [...SEGMENTS, 'Reszta Miss', layout === 'ring' ? SHOW_GRID : SHOW_RING]) {
+        for (const name of [...SEGMENTS, 'Reszta Miss']) {
           expect(button(name).hasAttribute('aria-keyshortcuts')).toBe(false);
           expect(button(name).querySelector('span[aria-hidden="true"]')).toBeNull();
         }
@@ -836,7 +787,7 @@ describe('Keypad', () => {
           expect(reservedBlock(layout).getAttribute('aria-hidden')).toBe('true');
           expect(reservedBlock(layout).childElementCount).toBe(0);
           expect(screen.queryByRole('group', { name: /Najczęstsze/ })).toBeNull();
-          expect(screen.getAllByRole('button')).toHaveLength(28);
+          expect(screen.getAllByRole('button')).toHaveLength(27);
         }
         cleanup();
       }

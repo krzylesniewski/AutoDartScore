@@ -50,6 +50,15 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Historia' }).getAttribute('href')).toBe('#/history');
   });
 
+  it('opens the settings on #/settings', () => {
+    window.location.hash = '#/settings';
+    render(<App />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Ustawienia' })).toBeTruthy();
+    const link = screen.getByRole('link', { name: 'Ustawienia' });
+    expect(link.getAttribute('href')).toBe('#/settings');
+    expect(link.getAttribute('aria-current')).toBe('page');
+  });
+
   it('opens the match history on #/history', async () => {
     window.location.hash = '#/history';
     render(<App />);

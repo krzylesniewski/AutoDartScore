@@ -146,7 +146,7 @@ describe('HomeScreen: new game form', () => {
     const nav = screen.getByRole('navigation', { name: 'Główna nawigacja' });
     expect(within(nav).getByRole('link', { name: 'Nowa gra' }).getAttribute('aria-current')).toBe('page');
     expect(within(nav).getByRole('link', { name: 'Statystyki' }).getAttribute('href')).toBe('#/stats');
-    expect(within(nav).getByText('Ustawienia').closest('[aria-disabled="true"]')).not.toBeNull();
+    expect(within(nav).getByRole('link', { name: 'Ustawienia' }).getAttribute('href')).toBe('#/settings');
     expect(screen.getByText('Kamera: brak')).toBeTruthy();
     expect(screen.getByText('Głos: włączony')).toBeTruthy();
     await chips();
