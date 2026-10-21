@@ -13,9 +13,11 @@ import { MatchStatsPanel } from '../components/MatchStatsPanel';
 import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
-import { WarningIcon } from '../components/icons';
+import { LockIcon, WarningIcon } from '../components/icons';
 import { canEndPractice } from '../game/can-end-practice';
 import { checkoutRoute } from '../game/checkout-route';
+import { formatCountdown } from '../game/undo-window';
+import { useUndoWindow } from '../game/use-undo-window';
 import { pl } from '../i18n/pl';
 
 const NEW_GAME_HREF = '#/';
@@ -32,6 +34,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const closeDialog = useCallback(() => setAbandoning(false), []);
   const [ending, setEnding] = useState(false);
   const closeEndDialog = useCallback(() => setEnding(false), []);
+  const undoWindow = useUndoWindow(state);
 
   if (notFound) {
     return (
@@ -68,15 +71,23 @@ export function GameScreen({ matchId }: { matchId: string }) {
     sendHit(hit);
   }
 
+  // Odmowa serwera wygrywa z zegarem urządzenia. Tekst blokady pokazujemy raz, zamiast błędu cofnięcia.
+  const lockedByServer = state?.finished === true && error === pl.matchLocked;
+  const undoLocked = undoWindow.locked || lockedByServer;
+  const shownError = lockedByServer ? null : error;
+  const undoCountdown = !undoLocked && undoWindow.secondsLeft !== null ? formatCountdown(undoWindow.secondsLeft) : null;
+
   if (state?.type === 'match' && state.finished) {
     return (
       <MatchEndView
         state={state}
         summary={stats.summary}
         summaryError={stats.error}
-        error={error}
+        error={shownError}
         connectionLost={connection === 'closed'}
         busy={busy}
+        undoLocked={undoLocked}
+        undoCountdown={undoCountdown}
         onUndo={sendUndo}
         voiceEnabled={audio.voiceEnabled}
         onVoiceChange={audio.setVoiceEnabled}
@@ -113,7 +124,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
                 state={state}
                 lastTurn={lastTurn}
                 busy={busy}
-                undoDisabled={abandoned || ended}
+                undoDisabled={abandoned || ended || undoLocked}
+                undoCountdown={undoCountdown}
                 onUndo={sendUndo}
                 onCheckout={enterCheckout}
                 checkoutDisabled={keypadDisabled}
@@ -127,7 +139,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
             >
               <div className="flex flex-col gap-3 empty:hidden lg:absolute lg:inset-x-0 lg:top-0 lg:z-20">
                 {connection === 'closed' && <Notice text={pl.connectionLost} />}
-                {error && <Notice text={error} />}
+                {shownError && <Notice text={shownError} />}
+                {undoLocked && <Notice text={pl.matchLocked} icon={<LockIcon className="text-(--color-accent)" />} />}
                 {abandoned && (
                   <Notice text={pl.abandonedReadOnly}>
                     <a href={HOME_HREF} className="ml-auto underline">
@@ -182,10 +195,10 @@ export function GameScreen({ matchId }: { matchId: string }) {
   );
 }
 
-function Notice({ text, children }: { text: string; children?: ReactNode }) {
+function Notice({ text, icon = <WarningIcon className="text-(--color-accent)" />, children }: { text: string; icon?: ReactNode; children?: ReactNode }) {
   return (
     <p className="flex items-center gap-2 rounded-(--radius-card) border-(length:--border-width) border-(--color-accent) bg-(--color-surface) px-4 py-2 font-display text-xl text-(--color-text)">
-      <WarningIcon className="text-(--color-accent)" />
+      {icon}
       {text}
       {children}
     </p>

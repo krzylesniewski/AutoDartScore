@@ -1106,3 +1106,89 @@ describe('live auth', () => {
     expect(FakeWebSocket.instances).toHaveLength(1);
   });
 });
+
+describe('GameScreen undo window', () => {
+  const LOCKED_TEXT = 'Mecz zamknięty, nie można go już zmienić';
+
+  function undoButton(): HTMLButtonElement {
+    return screen.getByRole('button', { name: /^Cofnij/ }) as HTMLButtonElement;
+  }
+
+  function finishedCasual(editableUntil: string) {
+    return casual(['Anna', 'Bartek'], {
+      id: MATCH_ID,
+      eventSeq: 9,
+      finished: true,
+      currentPlayerId: null,
+      placements: [
+        { playerId: 'p1', place: 1 },
+        { playerId: 'p2', place: 2 },
+      ],
+      finishedAt: new Date(Date.parse(editableUntil) - 300_000).toISOString(),
+      editableUntil,
+    });
+  }
+
+  it('counts down on Cofnij of a finished casual game and then locks it', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-21T20:00:48.000Z'));
+    connect(finishedCasual('2026-10-21T20:05:00.000Z'));
+    expect(screen.getByRole('button', { name: 'Cofnij (4:12)' })).toBe(undoButton());
+    expect(undoButton().disabled).toBe(false);
+    expect(screen.queryByText(LOCKED_TEXT)).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(screen.getByRole('button', { name: 'Cofnij (3:12)' })).toBe(undoButton());
+
+    act(() => {
+      vi.advanceTimersByTime(192_000);
+    });
+    expect(screen.getByRole('button', { name: 'Cofnij' })).toBe(undoButton());
+    expect(undoButton().disabled).toBe(true);
+    expect(screen.getAllByText(LOCKED_TEXT)).toHaveLength(1);
+  });
+
+  it('shows the lock notice once on 409 match_locked and disables Cofnij', async () => {
+    respond = async () => json(409, { error: 'match_locked', message: `Match ${MATCH_ID} is locked` });
+    connect(finishedCasual(new Date(Date.now() + 60_000).toISOString()));
+    expect(undoButton().disabled).toBe(false);
+    fireEvent.click(undoButton());
+    expect(await screen.findByText(LOCKED_TEXT)).toBeTruthy();
+    expect(screen.getAllByText(LOCKED_TEXT)).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Cofnij' })).toBe(undoButton());
+    expect(undoButton().disabled).toBe(true);
+  });
+
+  it('shows the lock notice on 409 match_locked in the match end view', async () => {
+    respond = async () => json(409, { error: 'match_locked', message: `Match ${MATCH_ID} is locked` });
+    connect({
+      ...initial,
+      finished: true,
+      status: 'finished',
+      currentPlayerId: null,
+      winnerId: 'p2',
+      players: [player('p1', 'Anna', { remaining: 501, legsWon: 1 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2 })],
+      finishedAt: new Date(Date.now() - 60_000).toISOString(),
+      editableUntil: new Date(Date.now() + 240_000).toISOString(),
+    });
+    expect(screen.getByText('Mecz zakończony')).toBeTruthy();
+    fireEvent.click(undoButton());
+    expect(await screen.findByText(LOCKED_TEXT)).toBeTruthy();
+    expect(screen.getAllByText(LOCKED_TEXT)).toHaveLength(1);
+    expect(undoButton().disabled).toBe(true);
+  });
+
+  it('shows a plain Cofnij in a game in progress', () => {
+    vi.useFakeTimers();
+    connect();
+    expect(screen.getByRole('button', { name: 'Cofnij' })).toBe(undoButton());
+    expect(undoButton().disabled).toBe(false);
+    act(() => {
+      vi.advanceTimersByTime(3_600_000);
+    });
+    expect(screen.getByRole('button', { name: 'Cofnij' })).toBe(undoButton());
+    expect(screen.queryByText(LOCKED_TEXT)).toBeNull();
+  });
+});

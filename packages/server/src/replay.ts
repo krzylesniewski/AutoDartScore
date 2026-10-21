@@ -1,4 +1,4 @@
-import { replayGame, type ApplyResult, type GameConfig, type GameState } from '@autoscore/engine';
+import { isGameFinished, replayGame, type ApplyResult, type GameConfig, type GameState } from '@autoscore/engine';
 import { StartingScore, type Abandonment, type ThrowRecord } from '@autoscore/schema';
 import type { MatchLog, StoredMatch } from './store/store.js';
 
@@ -17,6 +17,11 @@ export function effectiveThrows(log: MatchLog): ThrowRecord[] {
     }
   }
   return throws;
+}
+
+// Silnik odrzuca rzutki po końcu gry, więc ostatnia liczona rzutka zakończonej gry to ta, która ją zakończyła.
+export function finishedAt(game: GameState, throws: readonly ThrowRecord[]): string | null {
+  return isGameFinished(game) ? (throws.at(-1)?.receivedAt ?? null) : null;
 }
 
 // Otwarte porzucenie albo null, gdy gra nie jest porzucona.
