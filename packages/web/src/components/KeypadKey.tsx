@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 
 export const HIT_FLASH_MS = 200;
 
@@ -19,6 +19,7 @@ export interface KeypadKeyProps {
   flashOnPress?: boolean;
   ariaPressed?: boolean;
   className: string;
+  style?: CSSProperties | undefined;
   idleTone: KeypadKeyTone;
   pressedTone?: KeypadKeyTone | undefined;
 }
@@ -30,6 +31,7 @@ export function KeypadKey({
   flashOnPress = false,
   ariaPressed,
   className,
+  style,
   idleTone,
   pressedTone = PRESSED_TONE,
 }: KeypadKeyProps) {
@@ -92,6 +94,7 @@ export function KeypadKey({
       onPointerCancel={release}
       onPointerLeave={release}
       onClick={handleClick}
+      style={style}
       className={`${className} ${feedback} ${tone.fill} ${border}${pressed ? ' motion-safe:scale-96' : ''}`}
     >
       {children}

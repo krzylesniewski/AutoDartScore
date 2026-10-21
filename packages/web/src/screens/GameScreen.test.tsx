@@ -414,6 +414,102 @@ describe('GameScreen', () => {
   });
 });
 
+describe('Reszta Miss', () => {
+  // Odpowiedź jak z serwera: rzutka dopisana do tury, a po trzeciej tura przechodzi na drugiego gracza.
+  function advancing(start: MatchSnapshot): (call: Call) => Promise<Response> {
+    let current = start;
+    return async (call) => {
+      const hit = HitEvent.parse(call.body);
+      const darts = [...current.currentDarts, { segment: hit.segment, multiplier: hit.multiplier }];
+      current =
+        darts.length === 3
+          ? { ...current, eventSeq: current.eventSeq + 1, currentDarts: [], currentPlayerId: 'p1' }
+          : { ...current, eventSeq: current.eventSeq + 1, currentDarts: darts };
+      return json(201, throwResult(call, current));
+    };
+  }
+
+  function misses() {
+    return calls.map((call) => HitEvent.parse(call.body));
+  }
+
+  it.each([
+    [0, 3],
+    [1, 2],
+    [2, 1],
+  ])('posts the rest of the turn as misses with %i darts thrown', async (thrown, expected) => {
+    const start: MatchSnapshot = { ...initial, currentDarts: Array.from({ length: thrown }, () => ({ segment: 20, multiplier: 1 }) as const) };
+    respond = advancing(start);
+    connect(start);
+    tap('Reszta Miss');
+    await vi.waitFor(() => expect(calls).toHaveLength(expected));
+    await flush();
+    expect(calls).toHaveLength(expected);
+    expect(calls.every((call) => call.url === `/api/matches/${MATCH_ID}/throws`)).toBe(true);
+    expect(misses().map(({ segment, multiplier }) => ({ segment, multiplier }))).toEqual(Array.from({ length: expected }, () => ({ segment: 0, multiplier: 0 })));
+    expect(new Set(misses().map((hit) => hit.eventId)).size).toBe(expected);
+    expect(misses().map((hit) => hit.sequence)).toEqual(Array.from({ length: expected }, (_, index) => index));
+  });
+
+  it('sends the next miss only after the previous response', async () => {
+    const next = advancing(initial);
+    const pending: (() => void)[] = [];
+    respond = (call) => new Promise((resolve) => pending.push(() => resolve(next(call))));
+    connect();
+    tap('Reszta Miss');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    expect(calls).toHaveLength(1);
+    pending.shift()?.();
+    await vi.waitFor(() => expect(calls).toHaveLength(2));
+    await flush();
+    expect(calls).toHaveLength(2);
+    pending.shift()?.();
+    await vi.waitFor(() => expect(calls).toHaveLength(3));
+    pending.shift()?.();
+    await flush();
+    expect(calls).toHaveLength(3);
+  });
+
+  it('stops at the first failed miss', async () => {
+    respond = async () => json(409, { error: 'match_finished', message: 'Match is finished' });
+    connect();
+    tap('Reszta Miss');
+    expect(await screen.findByText('Nie udało się wysłać rzutki')).toBeTruthy();
+    await flush();
+    expect(calls).toHaveLength(1);
+  });
+
+  it('stops when a response shows another thrower', async () => {
+    respond = async (call) => json(201, throwResult(call, { ...initial, eventSeq: 5, currentDarts: [], currentPlayerId: 'p1' }));
+    connect();
+    tap('Reszta Miss');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    await flush();
+    expect(calls).toHaveLength(1);
+  });
+
+  it('stops when a response shows the same turn without the miss', async () => {
+    connect();
+    tap('Reszta Miss');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    await flush();
+    expect(calls).toHaveLength(1);
+  });
+
+  it('is disabled and posts nothing while the connection is not open', async () => {
+    const ws = connect();
+    ws.serverClose(1006);
+    const button = screen.getByRole('button', { name: 'Reszta Miss' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.click(button);
+    await flush();
+    expect(calls).toHaveLength(0);
+  });
+});
+
 describe('abandon and resume', () => {
   // Porzucić można dopiero po ukończonym legu.
   const secondLeg: MatchSnapshot = { ...initial, legIndex: 1 };
