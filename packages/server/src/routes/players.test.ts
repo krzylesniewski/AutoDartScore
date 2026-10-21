@@ -1,5 +1,6 @@
 import { ApiError, Player } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { defaultPlayerColor } from '../store/player-color.js';
 import { T, createGame, createPlayer, setup, throwDarts, type TestApp } from '../test-helpers.js';
 
 let t: TestApp;
@@ -41,6 +42,32 @@ describe('players', () => {
 
     const list = await t.app.inject({ method: 'GET', url: '/players' });
     expect(list.json()).toEqual([anna, celina, bartek, darek]);
+  });
+
+  it('stores a chosen color', async () => {
+    const anna = await createPlayer(t.app, 'Anna', { color: 7 });
+    expect(anna.color).toBe(7);
+    const list = await t.app.inject({ method: 'GET', url: '/players' });
+    expect(Player.array().parse(list.json())).toEqual([anna]);
+  });
+
+  it('gives a player without a chosen color the default color on every read', async () => {
+    const anna = await createPlayer(t.app, 'Anna');
+    const guest = await createPlayer(t.app, 'Gość', { guest: true });
+    expect(anna.color).toBe(defaultPlayerColor(anna.id));
+    expect(guest.color).toBe(defaultPlayerColor(guest.id));
+    for (let read = 0; read < 2; read++) {
+      const list = await t.app.inject({ method: 'GET', url: '/players' });
+      expect(Player.array().parse(list.json()).map((player) => player.color)).toEqual([defaultPlayerColor(anna.id)]);
+    }
+    const game = await createGame(t.app, { type: 'casual', playerIds: [anna.id, guest.id], startingScore: 301 });
+    expect(game.players.map((player) => player.color)).toEqual([defaultPlayerColor(anna.id), defaultPlayerColor(guest.id)]);
+  });
+
+  it.each([0, 17, 1.5])('rejects color %d', async (color) => {
+    const response = await t.app.inject({ method: 'POST', url: '/players', payload: { name: 'Anna', color } });
+    expect(response.statusCode).toBe(400);
+    expect(ApiError.parse(response.json()).error).toBe('invalid_request');
   });
 
   it('rejects an empty name', async () => {

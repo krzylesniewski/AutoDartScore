@@ -120,6 +120,7 @@ export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number
       id: player.id,
       name: player.name,
       avatar: player.avatar,
+      color: player.color,
       guest: player.guest,
       ...perPlayer(player, index),
     })),

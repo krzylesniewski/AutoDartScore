@@ -6,14 +6,14 @@ import { EMPTY_TOTALS, type PlayerTotals } from './tally.js';
 
 const createdAt = '2026-10-15T18:30:00.000Z';
 
-function profile(id: string, name: string): Player {
-  return { id, name, avatar: null, guest: false, archivedAt: null, createdAt };
+function profile(id: string, name: string, color: number): Player {
+  return { id, name, avatar: null, color, guest: false, archivedAt: null, createdAt };
 }
 
-const anna = profile('anna', 'Anna');
-const bartek = profile('bartek', 'Bartek');
-const celina = profile('celina', 'Celina');
-const darek = profile('darek', 'Darek');
+const anna = profile('anna', 'Anna', 1);
+const bartek = profile('bartek', 'Bartek', 7);
+const celina = profile('celina', 'Celina', 12);
+const darek = profile('darek', 'Darek', 16);
 
 // Leg z 3 rzutkami, więc średnia na 3 rzutki równa się punktom.
 function leg(playerId: string, legIndex: number, average: number): PlayerLeg {
@@ -89,9 +89,9 @@ describe('buildRankings', () => {
       games: [game([...threeLegs('anna', 30), leg('bartek', 0, 90), leg('bartek', 1, 60), leg('celina', 0, 45)])],
     });
     expect(rankings.players).toEqual([
-      { playerId: 'anna', name: 'Anna', avatar: null, position: 1, average: 30, legs: 3 },
-      { playerId: 'bartek', name: 'Bartek', avatar: null, position: null, average: 75, legs: 2 },
-      { playerId: 'celina', name: 'Celina', avatar: null, position: null, average: 45, legs: 1 },
+      { playerId: 'anna', name: 'Anna', avatar: null, color: 1, position: 1, average: 30, legs: 3 },
+      { playerId: 'bartek', name: 'Bartek', avatar: null, color: 7, position: null, average: 75, legs: 2 },
+      { playerId: 'celina', name: 'Celina', avatar: null, color: 12, position: null, average: 45, legs: 1 },
     ]);
     expect(rankings.bestLegAverage.map((entry) => entry.name)).toEqual(['Anna']);
   });
@@ -102,7 +102,7 @@ describe('buildRankings', () => {
       games: [game([leg('anna', 0, 60), leg('anna', 1, 30)]), game([{ playerId: 'anna', legIndex: 0, points: 100, darts: 6 }])],
     });
     expect(rankings.players[0]).toMatchObject({ position: 1, average: 47.5, legs: 3 });
-    expect(rankings.bestLegAverage).toEqual([{ playerId: 'anna', name: 'Anna', avatar: null, position: 1, value: 60 }]);
+    expect(rankings.bestLegAverage).toEqual([{ playerId: 'anna', name: 'Anna', avatar: null, color: 1, position: 1, value: 60 }]);
     expect(rankings).toMatchObject({ games: 2, legs: 3 });
   });
 
@@ -137,7 +137,7 @@ describe('buildRankings', () => {
       players: [anna, bartek],
       games: [game([], { anna: { highestTurn: 60 } }), game([], { anna: { highestTurn: 180 } }, 'casual'), game([], { bartek: { highestTurn: 180 } }, 'practice')],
     });
-    expect(rankings.highestTurn).toEqual([{ playerId: 'anna', name: 'Anna', avatar: null, position: 1, value: 60 }]);
+    expect(rankings.highestTurn).toEqual([{ playerId: 'anna', name: 'Anna', avatar: null, color: 1, position: 1, value: 60 }]);
   });
 
   it('ranks a highest turn of 0 and leaves out a player without a closed turn', () => {
@@ -145,7 +145,7 @@ describe('buildRankings', () => {
       players: [anna, bartek],
       games: [game([], { anna: { highestTurn: 0 }, bartek: { highestTurn: null } })],
     });
-    expect(rankings.highestTurn).toEqual([{ playerId: 'anna', name: 'Anna', avatar: null, position: 1, value: 0 }]);
+    expect(rankings.highestTurn).toEqual([{ playerId: 'anna', name: 'Anna', avatar: null, color: 1, position: 1, value: 0 }]);
   });
 
   it('counts a guest game and its legs without listing the guest', () => {

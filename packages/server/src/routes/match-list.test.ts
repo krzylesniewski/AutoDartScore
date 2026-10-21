@@ -1,6 +1,6 @@
 import { ApiError, MatchListItem } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LEG_301, S, T, abandon, createGame, createPlayers, endPractice, listMatches, setup, throwDarts, type TestApp } from '../test-helpers.js';
+import { LEG_301, S, T, abandon, createGame, createPlayer, createPlayers, endPractice, listMatches, setup, throwDarts, type TestApp } from '../test-helpers.js';
 
 let t: TestApp;
 beforeEach(async () => {
@@ -58,6 +58,19 @@ describe('GET /matches', () => {
     expect(unfinished[1]).toMatchObject({ type: 'match', legsToWin: 2, currentPlayerId: anna, legIndex: 0, abandonment: null });
     expect(unfinished[1]?.players.map((player) => player.remaining)).toEqual([481, 501]);
     expect(unfinished[2]).toMatchObject({ practiceMode: 'free_run', startingScore: null, freeRun: { dartsThrown: 0 } });
+  });
+
+  it("gives every player's color", async () => {
+    const anna = await createPlayer(t.app, 'Anna', { color: 16 });
+    const bartek = await createPlayer(t.app, 'Bartek', { color: 7 });
+    const celina = await createPlayer(t.app, 'Celina');
+    await createGame(t.app, { type: 'casual', playerIds: [anna.id, bartek.id, celina.id], startingScore: 301 });
+    const [item] = await list();
+    expect(item?.players.map((player) => [player.id, player.color])).toEqual([
+      [anna.id, 16],
+      [bartek.id, 7],
+      [celina.id, celina.color],
+    ]);
   });
 
   it('returns every game without a filter', async () => {

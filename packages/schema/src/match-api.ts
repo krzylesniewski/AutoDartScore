@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { DomainEvent } from './domain-events.js';
 import { Hit, HitSource, Multiplier, Segment } from './hit.js';
 import { BestOf, MatchStatus, MatchType, Placement, PracticeMode, StartingScore } from './match.js';
+import { PlayerColor } from './player.js';
 
 const PlayerId = z.string().min(1);
 
@@ -53,6 +54,7 @@ export const MatchSnapshotPlayer = z.object({
   id: PlayerId,
   name: z.string().min(1),
   avatar: z.string().nullable(),
+  color: PlayerColor,
   guest: z.boolean(),
   remaining: z.int().min(0).nullable(), // null w Free run
   legsWon: z.int().min(0).nullable(), // tylko w meczu 1v1

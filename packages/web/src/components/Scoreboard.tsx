@@ -1,4 +1,5 @@
 import type { MatchSnapshot, MatchSnapshotPlayer } from '@autoscore/schema';
+import { avatarColorClass } from '../game/avatar-color';
 import { formatDecimal } from '../game/format-stat';
 import { scoreboardOrder } from '../game/scoreboard-order';
 import { pl } from '../i18n/pl';
@@ -71,9 +72,6 @@ const FLAT = { card: '', arrow: '', avatar: '', nameBlock: '', legs: '', value: 
 
 type Size = 'large' | 'compact';
 type Style = (typeof sizes)[keyof typeof sizes];
-
-// Pełne nazwy klas, bo Tailwind generuje CSS tylko dla klas zapisanych dosłownie.
-const AVATAR_COLORS = ['bg-(--color-avatar-1)', 'bg-(--color-avatar-2)', 'bg-(--color-avatar-3)', 'bg-(--color-avatar-4)'] as const;
 
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 
@@ -165,7 +163,6 @@ interface PlayerRowProps {
 
 function PlayerRow({ player, state, style, next }: PlayerRowProps) {
   const throwing = player.id === state.currentPlayerId;
-  const colorIndex = state.players.findIndex((candidate) => candidate.id === player.id);
   const layout = style.stacked ? STACKED : FLAT;
   return (
     <div
@@ -175,7 +172,7 @@ function PlayerRow({ player, state, style, next }: PlayerRowProps) {
     >
       <span className={`flex w-[1em] text-(length:--text-label) text-(--color-accent) ${layout.arrow}`}>{throwing && <ThrowingIcon />}</span>
       <span
-        className={`flex shrink-0 items-center justify-center rounded-full font-display font-bold text-(--color-on-avatar) ${style.avatar} ${layout.avatar} ${AVATAR_COLORS[colorIndex] ?? AVATAR_COLORS[0]}`}
+        className={`flex shrink-0 items-center justify-center rounded-full font-display font-bold text-(--color-on-avatar) ${style.avatar} ${layout.avatar} ${avatarColorClass(player.color)}`}
       >
         {player.avatar ?? player.name.charAt(0).toUpperCase()}
       </span>

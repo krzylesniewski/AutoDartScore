@@ -6,6 +6,7 @@ export interface PlayersTable {
   id: string;
   name: string;
   avatar: string | null;
+  color: number | null; // null: kolor z defaultPlayerColor(id)
   guest: number;
   created_at: string;
 }
@@ -60,6 +61,7 @@ export interface PlayerChangesTable {
   seq: number;
   name: string;
   avatar: string | null;
+  color: number | null;
   guest: number;
   archived_at: string | null;
   created_at: string;

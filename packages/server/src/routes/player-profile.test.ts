@@ -71,6 +71,37 @@ describe('PATCH /players/:id', () => {
     expect(await t.db.selectFrom('players').selectAll().where('id', '=', anna.id).executeTakeFirstOrThrow()).toEqual(before);
   });
 
+  it('changes the color with one player_changes row and keeps it on a later name change', async () => {
+    const anna = await createPlayer(t.app, 'Anna');
+    expect(await patch(anna.id, { color: 9 })).toEqual({ ...anna, color: 9 });
+    expect(await countRows(t.db, 'player_changes')).toBe(1);
+
+    expect(await patch(anna.id, { name: 'Ania' })).toEqual({ ...anna, name: 'Ania', color: 9 });
+    expect((await players()).find((player) => player.id === anna.id)?.color).toBe(9);
+    const changes = await t.db.selectFrom('player_changes').select(['seq', 'name', 'color']).where('player_id', '=', anna.id).orderBy('seq').execute();
+    expect(changes).toEqual([
+      { seq: 1, name: 'Anna', color: 9 },
+      { seq: 2, name: 'Ania', color: 9 },
+    ]);
+  });
+
+  it('shows a new color in the game and the rankings', async () => {
+    const [anna, bartek] = (await createPlayers(t.app, 2)) as [string, string];
+    const matchId = await playLeg301(anna, bartek);
+    await patch(bartek, { color: 12 });
+
+    expect((await getMatch(t.app, matchId)).players[1]).toMatchObject({ id: bartek, color: 12 });
+    expect((await rankings()).players.find((player) => player.playerId === bartek)).toMatchObject({ color: 12 });
+  });
+
+  it.each([0, 17, null])('answers 400 for color %s', async (color) => {
+    const anna = await createPlayer(t.app, 'Anna');
+    const response = await patchPlayer(t.app, anna.id, { color });
+    expect(response.statusCode).toBe(400);
+    expect(ApiError.parse(response.json()).error).toBe('invalid_request');
+    expect(await countRows(t.db, 'player_changes')).toBe(0);
+  });
+
   it('archives a player out of the player list but not out of the rankings, and restores them', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-18T10:00:00.000Z'));

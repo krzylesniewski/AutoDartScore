@@ -101,8 +101,8 @@ describe('MatchSummary', () => {
 });
 
 describe('StatsRankings', () => {
-  const anna = { playerId: 'p1', name: 'Anna', avatar: '🎯' };
-  const bartek = { playerId: 'p2', name: 'Bartek', avatar: null };
+  const anna = { playerId: 'p1', name: 'Anna', avatar: '🎯', color: 1 };
+  const bartek = { playerId: 'p2', name: 'Bartek', avatar: null, color: 7 };
 
   it('parses a ranking with a ranked and an unranked player', () => {
     const rankings = {
@@ -127,6 +127,16 @@ describe('StatsRankings', () => {
   it('accepts position null only for a ranked player', () => {
     expect(RankedPlayer.safeParse({ ...anna, position: null, average: 50, legs: 1 }).success).toBe(true);
     expect(RankingEntry.safeParse({ ...anna, position: null, value: 50 }).success).toBe(false);
+  });
+
+  it.each([
+    ['a missing color', undefined],
+    ['color 0', 0],
+    ['color 17', 17],
+    ['a fractional color', 1.5],
+  ])('rejects %s', (_name, color) => {
+    expect(RankedPlayer.safeParse({ ...anna, color, position: 1, average: 50, legs: 3 }).success).toBe(false);
+    expect(RankingEntry.safeParse({ ...anna, color, position: 1, value: 50 }).success).toBe(false);
   });
 
   it('rejects position 0', () => {

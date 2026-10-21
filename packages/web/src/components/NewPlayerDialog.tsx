@@ -2,6 +2,7 @@ import type { Player } from '@autoscore/schema';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ApiRequestError, createPlayer } from '../api/client';
 import { pl } from '../i18n/pl';
+import { AvatarColorPicker } from './AvatarColorPicker';
 import { WarningIcon } from './icons';
 
 export interface NewPlayerDialogProps {
@@ -18,6 +19,7 @@ export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
   const titleId = useId();
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState('');
+  const [color, setColor] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
@@ -42,7 +44,10 @@ export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
     setError(null);
     try {
       const trimmedAvatar = avatar.trim();
-      onCreated(await createPlayer({ name: name.trim(), guest: false, ...(trimmedAvatar ? { avatar: trimmedAvatar } : {}) }));
+      // Bez wyboru kolor dobiera serwer.
+      onCreated(
+        await createPlayer({ name: name.trim(), guest: false, ...(trimmedAvatar ? { avatar: trimmedAvatar } : {}), ...(color === null ? {} : { color }) }),
+      );
     } catch (caught) {
       setError(caught instanceof ApiRequestError ? caught.message : pl.requestFailed);
       setSaving(false);
@@ -55,7 +60,7 @@ export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex w-full max-w-md flex-col gap-4 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-6"
+        className="flex max-h-full w-full max-w-xl flex-col gap-4 overflow-y-auto rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-6"
       >
         <h2 id={titleId} className="font-display text-(length:--text-heading) font-bold uppercase">
           {pl.newPlayerTitle}
@@ -69,6 +74,7 @@ export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
             <span className={label}>{pl.playerAvatar}</span>
             <input value={avatar} maxLength={16} onChange={(event) => setAvatar(event.target.value)} className={`${input} w-28`} />
           </label>
+          <AvatarColorPicker value={color} onChange={setColor} name={name} avatar={avatar} />
           {error && (
             <p className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
               <WarningIcon />

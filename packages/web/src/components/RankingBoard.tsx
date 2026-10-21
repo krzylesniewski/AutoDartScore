@@ -32,13 +32,8 @@ function tiles(rankings: StatsRankings): readonly Tile[] {
   ];
 }
 
-// Lista graczy po średniej i cztery kafelki z pierwszą trójką. Gracz ma ten sam kolor avatara w liście i w kafelkach.
+// Lista graczy po średniej i cztery kafelki z pierwszą trójką.
 export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
-  const colorIndex = (playerId: string, fallback: number) => {
-    const index = rankings.players.findIndex((player) => player.playerId === playerId);
-    return index >= 0 ? index : fallback;
-  };
-
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] xl:min-h-0 xl:flex-1">
       <section aria-labelledby="ranking-average" className={card}>
@@ -46,14 +41,14 @@ export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
           {pl.statAverage}
         </h2>
         <ol className="pr-2 xl:min-h-0 xl:flex-1 xl:overflow-y-auto [scrollbar-color:var(--color-border-strong)_var(--color-surface-header)]">
-          {rankings.players.map((player, index) => (
+          {rankings.players.map((player) => (
             <li key={player.playerId}>
               <a href={statsHref(player.playerId)} className="block">
                 <Row
                   position={player.position}
                   name={player.name}
                   avatar={player.avatar}
-                  colorIndex={index}
+                  color={player.color}
                   detail={pl.legsCount(player.legs)}
                   value={formatAverage(player.average)}
                 />
@@ -71,9 +66,9 @@ export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
               <span className="text-[15px] text-(--color-text-muted)">{tile.unit}</span>
             </div>
             <ol className="xl:min-h-0 xl:overflow-y-auto">
-              {tile.entries.map((entry, index) => (
+              {tile.entries.map((entry) => (
                 <li key={entry.playerId}>
-                  <Row position={entry.position} name={entry.name} avatar={entry.avatar} colorIndex={colorIndex(entry.playerId, index)} value={tile.format(entry.value)} />
+                  <Row position={entry.position} name={entry.name} avatar={entry.avatar} color={entry.color} value={tile.format(entry.value)} />
                 </li>
               ))}
             </ol>
@@ -89,21 +84,21 @@ interface RowProps {
   position: number | null;
   name: string;
   avatar: string | null;
-  colorIndex: number;
+  color: number;
   detail?: string;
   value: string;
 }
 
 // Lider ma pasek w kolorze akcentu, numer "1." i większą wartość, więc kolor nie jest jedynym wyróżnieniem.
 // Tylko szczegół (lista średnich) przechodzi pod imię w wąskiej karcie. Kafelki mają poniżej 384 px już na monitorze.
-function Row({ position, name, avatar, colorIndex, detail, value }: RowProps) {
+function Row({ position, name, avatar, color, detail, value }: RowProps) {
   const leader = position === 1;
   const stacked = detail ? '@max-sm:flex-col @max-sm:items-stretch @max-sm:gap-0 @max-sm:leading-tight' : '';
   return (
     <div data-leader={leader || undefined} className="flex min-h-13 items-center gap-3.5 border-b border-(--color-border) @max-xs:gap-2.5">
       <span aria-hidden="true" className={`h-9 w-1.5 shrink-0 rounded-sm ${leader ? 'bg-(--color-accent)' : ''}`} />
       <span className={`w-8 shrink-0 font-display text-2xl font-bold ${leader ? 'text-(--color-text)' : 'text-(--color-text-muted)'}`}>{position === null ? '' : `${position}.`}</span>
-      <Avatar name={name} avatar={avatar} colorIndex={colorIndex} />
+      <Avatar name={name} avatar={avatar} color={color} />
       <span className={`flex min-w-0 flex-1 items-center gap-3.5 ${stacked}`}>
         <span className={`min-w-0 flex-1 truncate text-[21px] font-semibold ${leader ? 'text-(--color-text)' : 'text-(--color-text-muted)'}`}>{name}</span>
         {detail && <span className="shrink-0 text-[15px] text-(--color-text-muted)">{detail}</span>}

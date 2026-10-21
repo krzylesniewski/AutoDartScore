@@ -116,6 +116,13 @@ const migrations: Record<string, Migration> = {
         .execute();
     },
   },
+  // Bez koloru (null) serwer pokazuje kolor wyliczony z id. SQLite dodaje jedną kolumnę na polecenie.
+  '0004_player_color': {
+    async up(db: Kysely<unknown>) {
+      await db.schema.alterTable('players').addColumn('color', 'integer').execute();
+      await db.schema.alterTable('player_changes').addColumn('color', 'integer').execute();
+    },
+  },
 };
 
 const provider: MigrationProvider = {

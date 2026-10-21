@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 import type { CreatePlayerRequest, MatchType, Player, PracticeMode, ThrowRecord, UpdatePlayerRequest } from '@autoscore/schema';
 import type { Database, MatchEventsTable, MatchesTable, PlayerChangesTable, PlayersTable, ThrowsTable } from '../db/database.js';
+import { defaultPlayerColor } from './player-color.js';
 
 // Jedyny moduł, który dotyka Kysely. Tylko wstawia i czyta: nic nie jest nadpisywane ani usuwane.
 // Gracz to wiersz players z nałożoną ostatnią zmianą z player_changes, więc każdy odczyt widzi aktualny profil.
@@ -57,16 +58,17 @@ function now(): string {
   return new Date().toISOString();
 }
 
-type PlayerRow = Pick<Selectable<PlayersTable>, 'id' | 'name' | 'avatar' | 'guest' | 'created_at'>;
+type PlayerRow = Pick<Selectable<PlayersTable>, 'id' | 'name' | 'avatar' | 'color' | 'guest' | 'created_at'>;
 type PlayerChange = Selectable<PlayerChangesTable>;
 
-// createdAt zawsze z players, reszta z ostatniej zmiany, jeśli jakaś jest.
+// createdAt zawsze z players, reszta z ostatniej zmiany, jeśli jakaś jest. Bez zapisanego koloru kolor wynika z id.
 function toPlayer(row: PlayerRow, change: PlayerChange | undefined): Player {
   const current = change ?? { ...row, archived_at: null };
   return {
     id: row.id,
     name: current.name,
     avatar: current.avatar,
+    color: current.color ?? defaultPlayerColor(row.id),
     guest: current.guest === 1,
     archivedAt: current.archived_at,
     createdAt: row.created_at,
@@ -184,6 +186,7 @@ export function createStore(db: Kysely<Database>): Store {
         id: randomUUID(),
         name: request.name,
         avatar: request.avatar ?? null,
+        color: request.color ?? null,
         guest: request.guest ? 1 : 0,
         created_at: now(),
       };
@@ -200,9 +203,9 @@ export function createStore(db: Kysely<Database>): Store {
         .leftJoin('match_players', 'match_players.player_id', 'players.id')
         .leftJoin('matches', 'matches.id', 'match_players.match_id')
         .leftJoin('match_events', 'match_events.match_id', 'matches.id')
-        .select(['players.id', 'players.name', 'players.avatar', 'players.guest', 'players.created_at'])
+        .select(['players.id', 'players.name', 'players.avatar', 'players.color', 'players.guest', 'players.created_at'])
         .select((eb) => [eb.fn.max('match_events.created_at').as('last_event_at'), eb.fn.max('matches.created_at').as('last_match_at')])
-        .groupBy(['players.id', 'players.name', 'players.avatar', 'players.guest', 'players.created_at'])
+        .groupBy(['players.id', 'players.name', 'players.avatar', 'players.color', 'players.guest', 'players.created_at'])
         .execute();
       const changes = await latestChanges(db);
       return rows
@@ -244,6 +247,7 @@ export function createStore(db: Kysely<Database>): Store {
           seq: (last?.seq ?? 0) + 1,
           name: request.name ?? current.name,
           avatar: request.avatar === undefined ? current.avatar : request.avatar,
+          color: request.color ?? current.color,
           guest: request.guest === false ? 0 : current.guest ? 1 : 0,
           archived_at: archivedAt,
           created_at: at,

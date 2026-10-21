@@ -5,8 +5,7 @@ import { Avatar } from './Avatar';
 
 export interface GameSetupSummaryProps {
   setup: GameSetup;
-  // Wybrani gracze w kolejności wyboru, z kolorem avatara z listy graczy.
-  players: readonly { player: Player; colorIndex: number }[];
+  players: readonly Player[]; // w kolejności wyboru
 }
 
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
@@ -39,16 +38,16 @@ export function GameSetupSummary({ setup, players }: GameSetupSummaryProps) {
       {players.length === 0 && <p className="text-xl text-(--color-text-muted)">{pl.noPlayersSelected}</p>}
       {players.length === 2 && first && second ? (
         <div className="flex items-center justify-between gap-3">
-          <PreviewPlayer entry={first} />
+          <PreviewPlayer player={first} />
           <span className="font-display text-[40px] font-bold text-(--color-accent) uppercase">{pl.versus}</span>
-          <PreviewPlayer entry={second} />
+          <PreviewPlayer player={second} />
         </div>
       ) : (
         players.length > 0 && (
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
-            {players.map(({ player, colorIndex }) => (
+            {players.map((player) => (
               <li key={player.id} className="flex items-center gap-2 text-xl font-semibold">
-                <Avatar name={player.name} avatar={player.avatar} colorIndex={colorIndex} />
+                <Avatar name={player.name} avatar={player.avatar} color={player.color} />
                 {player.name}
               </li>
             ))}
@@ -67,10 +66,10 @@ export function GameSetupSummary({ setup, players }: GameSetupSummaryProps) {
   );
 }
 
-function PreviewPlayer({ entry: { player, colorIndex } }: { entry: GameSetupSummaryProps['players'][number] }) {
+function PreviewPlayer({ player }: { player: Player }) {
   return (
     <span className="flex w-35 min-w-0 flex-col items-center gap-1.5">
-      <Avatar name={player.name} avatar={player.avatar} colorIndex={colorIndex} size="preview" />
+      <Avatar name={player.name} avatar={player.avatar} color={player.color} size="preview" />
       <span className="max-w-full truncate text-[21px] font-semibold">{player.name}</span>
     </span>
   );

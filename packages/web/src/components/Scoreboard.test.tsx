@@ -25,6 +25,13 @@ describe('Scoreboard', () => {
     expect(row && within(row).getByText('Anna')).toBeTruthy();
   });
 
+  it("gives each avatar the player's own color, not the list position", () => {
+    const state = snapshot({ players: [player('p1', 'Anna', { avatar: '🦊', color: 12 }), player('p2', 'Bartek', { avatar: '🎯', color: 7 })] });
+    render(<Scoreboard state={state} size="large" />);
+    expect(screen.getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
+    expect(screen.getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
+  });
+
   it('marks the thrower row', () => {
     render(<Scoreboard state={snapshot({ currentPlayerId: 'p2' })} size="large" />);
     const row = screen.getByText('Rzuca').closest('li');

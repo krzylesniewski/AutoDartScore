@@ -10,8 +10,8 @@ function json(status: number, body: unknown): Response {
 
 const createdAt = '2026-10-15T18:30:00.000Z';
 const players: Player[] = [
-  { id: 'p1', name: 'Anna', avatar: null, guest: false, archivedAt: null, createdAt },
-  { id: 'p2', name: 'Bartek', avatar: '🎯', guest: false, archivedAt: null, createdAt },
+  { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, archivedAt: null, createdAt },
+  { id: 'p2', name: 'Bartek', avatar: '🎯', color: 7, guest: false, archivedAt: null, createdAt },
 ];
 
 const emptyHeadToHead: HeadToHead = {
@@ -54,7 +54,7 @@ function stats(playerId: string, overrides: Partial<PlayerStats> = {}): PlayerSt
 }
 
 function entry(playerId: string, name: string, position: number, value: number): RankingEntry {
-  return { playerId, name, avatar: playerId === 'p2' ? '🎯' : null, position, value };
+  return { playerId, name, avatar: playerId === 'p2' ? '🎯' : null, color: playerId === 'p2' ? 7 : 1, position, value };
 }
 
 const rankingsFixture: StatsRankings = {
@@ -62,10 +62,10 @@ const rankingsFixture: StatsRankings = {
   games: 23,
   legs: 61,
   players: [
-    { playerId: 'p1', name: 'Anna', avatar: null, position: 1, average: 61.5, legs: 25 },
-    { playerId: 'p2', name: 'Bartek', avatar: '🎯', position: 2, average: 55.25, legs: 21 },
-    { playerId: 'p3', name: 'Celina', avatar: null, position: 3, average: 40, legs: 3 },
-    { playerId: 'p4', name: 'Darek', avatar: null, position: null, average: 70, legs: 2 },
+    { playerId: 'p1', name: 'Anna', avatar: null, color: 1, position: 1, average: 61.5, legs: 25 },
+    { playerId: 'p2', name: 'Bartek', avatar: '🎯', color: 7, position: 2, average: 55.25, legs: 21 },
+    { playerId: 'p3', name: 'Celina', avatar: null, color: 3, position: 3, average: 40, legs: 3 },
+    { playerId: 'p4', name: 'Darek', avatar: null, color: 16, position: null, average: 70, legs: 2 },
   ],
   bestLegAverage: [entry('p1', 'Anna', 1, 98.33), entry('p2', 'Bartek', 2, 86.5), entry('p3', 'Celina', 3, 74.2)],
   highestCheckout: [entry('p2', 'Bartek', 1, 121), entry('p3', 'Celina', 1, 121), entry('p1', 'Anna', 3, 80), entry('p4', 'Darek', 3, 80)],
@@ -101,13 +101,14 @@ beforeEach(() => {
       requests.push({ url, method, body });
       if (method === 'PATCH') {
         const id = decodeURIComponent(/players\/([^/]+)$/.exec(url)?.[1] ?? '');
-        const changes = body as { name?: string; avatar?: string | null; archived?: boolean };
+        const changes = body as { name?: string; avatar?: string | null; color?: number; archived?: boolean };
         profiles = profiles.map((player) =>
           player.id === id
             ? {
                 ...player,
                 ...(changes.name === undefined ? {} : { name: changes.name }),
                 ...(changes.avatar === undefined ? {} : { avatar: changes.avatar }),
+                ...(changes.color === undefined ? {} : { color: changes.color }),
                 ...(changes.archived === undefined ? {} : { archivedAt: changes.archived ? '2026-10-18T10:00:00.000Z' : null }),
               }
             : player,
@@ -197,6 +198,13 @@ describe('StatsScreen: ranking', () => {
     const leaders = (container: HTMLElement) => [...container.querySelectorAll('[data-leader]')].map((row) => row.textContent);
     expect(leaders(tile('Średnia (3 rzutki)'))).toEqual(['1.AAnna25 legów61,50']);
     expect(leaders(tile('Najwyższe zamknięcie'))).toEqual(['1.🎯Bartek121', '1.CCelina121']);
+  });
+
+  it("gives each avatar the player's own color in the list and in the tiles", async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(within(tile('Średnia (3 rzutki)')).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
+    expect(within(tile('Rekordowy leg (średnia)')).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
   });
 
   it('says when a tile has fewer than 3 players', async () => {
@@ -350,10 +358,31 @@ describe('StatsScreen: player profile', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Ania' })).toBeTruthy();
-    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([{ url: '/api/players/p1', method: 'PATCH', body: { name: 'Ania', avatar: '🦊' } }]);
+    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([{ url: '/api/players/p1', method: 'PATCH', body: { name: 'Ania', avatar: '🦊', color: 1 } }]);
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByRole('button', { name: 'Ania' }).getAttribute('aria-pressed')).toBe('true');
     expect(urls.filter((url) => url === '/api/players?archived=include')).toHaveLength(2);
+  });
+
+  it("shows the player's own color on the profile card", async () => {
+    render(<StatsScreen playerId="p2" />);
+    const section = await screen.findByRole('region', { name: 'Bartek' });
+    expect(within(section).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
+  });
+
+  it('checks the current color and sends a newly chosen one', async () => {
+    render(<StatsScreen playerId="p2" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edytuj profil' }));
+    const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
+    const checked = (within(dialog).getAllByRole('radio') as HTMLInputElement[]).filter((radio) => radio.checked);
+    expect(checked.map((radio) => radio.getAttribute('aria-label'))).toEqual(['Różowy']);
+    expect(checked[0]?.nextElementSibling?.textContent).toBe('✓');
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'Błękitny' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
+
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([{ url: '/api/players/p2', method: 'PATCH', body: { name: 'Bartek', avatar: '🎯', color: 12 } }]);
+    await vi.waitFor(() => expect(within(screen.getByRole('region', { name: 'Bartek' })).getByText('🎯').classList).toContain('bg-(--color-avatar-12)'));
   });
 
   it('keeps the chosen head-to-head opponent after an edit', async () => {
@@ -379,7 +408,7 @@ describe('StatsScreen: player profile', () => {
     expect((within(dialog).getByLabelText('Avatar (emoji)') as HTMLInputElement).value).toBe('🎯');
     fireEvent.change(within(dialog).getByLabelText('Avatar (emoji)'), { target: { value: '' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
-    await vi.waitFor(() => expect(requests.find((request) => request.method === 'PATCH')?.body).toEqual({ name: 'Anna', avatar: null }));
+    await vi.waitFor(() => expect(requests.find((request) => request.method === 'PATCH')?.body).toEqual({ name: 'Anna', avatar: null, color: 1 }));
   });
 
   it('shows an API error in the edit dialog', async () => {

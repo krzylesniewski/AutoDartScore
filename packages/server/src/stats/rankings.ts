@@ -17,7 +17,7 @@ export interface RankingsInput {
 
 const TOP = 3;
 
-type Profile = Pick<Player, 'id' | 'name' | 'avatar'>;
+type Profile = Pick<Player, 'id' | 'name' | 'avatar' | 'color'>;
 
 interface Candidate {
   readonly player: Profile;
@@ -43,7 +43,7 @@ function positioned<T extends Candidate>(candidates: readonly T[], order: 'asc' 
 function top(candidates: readonly Candidate[], order: 'asc' | 'desc'): RankingEntry[] {
   return positioned(candidates, order)
     .filter((entry) => entry.position <= TOP)
-    .map(({ player, value, position }) => ({ playerId: player.id, name: player.name, avatar: player.avatar, position, value }));
+    .map(({ player, value, position }) => ({ playerId: player.id, name: player.name, avatar: player.avatar, color: player.color, position, value }));
 }
 
 export function buildRankings({ players, games }: RankingsInput): Omit<StatsRankings, 'filter'> {
@@ -85,6 +85,7 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
     playerId: player.id,
     name: player.name,
     avatar: player.avatar,
+    color: player.color,
     position,
     average: value,
     legs: count,

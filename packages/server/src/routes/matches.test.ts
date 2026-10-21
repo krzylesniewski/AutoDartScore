@@ -9,6 +9,7 @@ import {
   T,
   countRows,
   createGame,
+  createPlayer,
   createPlayers,
   getMatch,
   hitEvent,
@@ -91,6 +92,17 @@ describe('POST /matches', () => {
     const response = await t.app.inject({ method: 'POST', url: '/matches', payload: body(ids) });
     expect(response.statusCode).toBe(400);
     expect(ApiError.parse(response.json()).error).toBe(error);
+  });
+
+  it("gives every player's color in GET /matches/:id", async () => {
+    const anna = await createPlayer(t.app, 'Anna');
+    const bartek = await createPlayer(t.app, 'Bartek', { color: 7 });
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna.id, bartek.id] });
+    const state = await getMatch(t.app, id);
+    expect(state.players.map((player) => [player.id, player.color])).toEqual([
+      [anna.id, anna.color],
+      [bartek.id, 7],
+    ]);
   });
 
   it('answers GET of an unknown match with 404', async () => {
