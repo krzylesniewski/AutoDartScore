@@ -414,6 +414,78 @@ describe('GameScreen', () => {
   });
 });
 
+describe('keyboard shortcuts and checkout entry', () => {
+  // Bartkowi zostaje 40, więc podpowiedź to D20.
+  const onForty: MatchSnapshot = { ...initial, players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 40, legsWon: 0 })] };
+
+  function posted() {
+    return calls.map((call) => {
+      const { segment, multiplier } = HitEvent.parse(call.body);
+      return { url: call.url, segment, multiplier };
+    });
+  }
+
+  it('posts the first route dart on Enter', async () => {
+    connect(onForty);
+    fireEvent.keyDown(window, { key: 'Enter' });
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    expect(posted()).toEqual([{ url: `/api/matches/${MATCH_ID}/throws`, segment: 20, multiplier: 2 }]);
+    expect(HitEvent.parse(calls[0]?.body)).toMatchObject({ matchId: MATCH_ID, source: 'keypad', confidence: 1 });
+  });
+
+  it('posts the first route dart on a click on the checkout panel', async () => {
+    connect(onForty);
+    fireEvent.click(screen.getByRole('button', { name: /Zamknięcie/ }));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    expect(posted()).toEqual([{ url: `/api/matches/${MATCH_ID}/throws`, segment: 20, multiplier: 2 }]);
+  });
+
+  it('posts no second stale dart while the first is in flight', async () => {
+    const pending: (() => void)[] = [];
+    respond = (call) => new Promise((resolve) => pending.push(() => resolve(json(201, throwResult(call, onForty)))));
+    connect(onForty);
+    fireEvent.click(screen.getByRole('button', { name: /Zamknięcie/ }));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: /Zamknięcie/ }));
+    fireEvent.keyDown(window, { key: 'Enter' });
+    pending.shift()?.();
+    await flush();
+    await flush();
+    expect(calls).toHaveLength(1);
+  });
+
+  it('posts Backspace to the undo endpoint', async () => {
+    respond = async () => json(200, { undoneThrowId: 't1', state: { ...initial, eventSeq: 5 } });
+    connect();
+    fireEvent.keyDown(window, { key: 'Backspace' });
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+  });
+
+  it('posts a Space as a Miss', async () => {
+    connect();
+    fireEvent.keyDown(window, { key: ' ' });
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(posted()).toEqual([{ url: `/api/matches/${MATCH_ID}/throws`, segment: 0, multiplier: 0 }]);
+  });
+
+  it('posts nothing for keys typed in the abandon dialog', async () => {
+    connect({ ...onForty, legIndex: 1 });
+    tap('Porzuć mecz');
+    const reason = within(screen.getByRole('dialog')).getByRole('textbox', { name: 'Powód (opcjonalnie)' });
+    reason.focus();
+    fireEvent.change(reason, { target: { value: 'koniec prądu' } });
+    for (const key of [' ', 'b', '3', 'Enter', 'Backspace']) {
+      fireEvent.keyDown(reason, { key });
+    }
+    fireEvent.keyDown(window, { key: ' ' });
+    await flush();
+    expect(calls).toEqual([]);
+  });
+});
+
 describe('Reszta Miss', () => {
   // Odpowiedź jak z serwera: rzutka dopisana do tury, a po trzeciej tura przechodzi na drugiego gracza.
   function advancing(start: MatchSnapshot): (call: Call) => Promise<Response> {

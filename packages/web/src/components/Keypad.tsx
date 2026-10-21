@@ -1,11 +1,12 @@
 import { BULL_SEGMENT, MISS_SEGMENT, type Hit } from '@autoscore/schema';
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { DARTBOARD_ORDER } from '../game/dartboard-order';
 import { readKeypadLayout, writeKeypadLayout, type KeypadLayout } from '../game/keypad-layout';
 import { MIN_KEY_PX, RING_CENTER_HEIGHT_PERCENT, RING_CENTER_WIDTH_PERCENT, RING_KEY_PERCENT, ringKeyPosition } from '../game/keypad-ring';
 import { pl } from '../i18n/pl';
 import { GridIcon, RingIcon } from './icons';
-import { KeypadKey, type KeypadKeyTone } from './KeypadKey';
+import { KeypadKey, type KeypadKeyHandle, type KeypadKeyTone } from './KeypadKey';
+import { useKeypadShortcuts } from './use-keypad-shortcuts';
 
 type Multiplier = 1 | 2 | 3;
 
@@ -14,6 +15,10 @@ const MULTIPLIERS: readonly { value: Multiplier; label: string }[] = [
   { value: 2, label: pl.multiplierDouble },
   { value: 3, label: pl.multiplierTreble },
 ];
+
+const OUTER_BULL_SHORTCUT = { keys: 'B', label: pl.shortcutB };
+const BULL_SHORTCUT = { keys: 'Shift+B', label: pl.shortcutShiftB };
+const MISS_SHORTCUT = { keys: 'Space', label: pl.shortcutSpace };
 
 const keyBase = 'border-(length:--border-width) font-display font-bold disabled:opacity-40';
 const key = `rounded-(--radius-card) text-(length:--text-heading) ${keyBase}`;
@@ -38,7 +43,11 @@ const ringText = 'text-[clamp(20px,6.5cqi,30px)] leading-none';
 export interface KeypadProps {
   onHit(hit: Hit): void;
   onRestMiss(): void;
+  onUndo(): void;
   disabled: boolean;
+  undoDisabled: boolean;
+  // Pierwsza rzutka podpowiedzi zamknięcia dla Enter albo null, gdy nie ma czego wpisać.
+  checkout: Hit | null;
 }
 
 // Wspólne klawisze obu układów. Układ podaje tylko klasy rozmiaru i położenia.
@@ -52,19 +61,51 @@ interface Keys {
   restMiss(className: string): ReactNode;
 }
 
-export function Keypad({ onHit, onRestMiss, disabled }: KeypadProps) {
+export function Keypad({ onHit, onRestMiss, onUndo, disabled, undoDisabled, checkout }: KeypadProps) {
   const [multiplier, setMultiplier] = useState<Multiplier>(1);
+  // Kopia w refie, bo skrót może w jednym zdarzeniu wpisać dwie liczby (2 i 5), a druga ma już widzieć S po pierwszej.
+  const currentMultiplier = useRef<Multiplier>(1);
   const [layout, setLayout] = useState<KeypadLayout>(readKeypadLayout);
+  const segmentKeys = useRef(new Map<number, KeypadKeyHandle>());
+  const multiplierKeys = useRef(new Map<Multiplier, KeypadKeyHandle>());
+  const outerBullKey = useRef<KeypadKeyHandle>(null);
+  const bullKey = useRef<KeypadKeyHandle>(null);
+  const missKey = useRef<KeypadKeyHandle>(null);
+
+  function selectMultiplier(value: Multiplier): void {
+    currentMultiplier.current = value;
+    setMultiplier(value);
+  }
 
   function hit(segment: number, value: Hit['multiplier']): void {
     onHit({ segment, multiplier: value });
-    setMultiplier(1);
+    selectMultiplier(1);
   }
 
   function restMiss(): void {
     onRestMiss();
-    setMultiplier(1);
+    selectMultiplier(1);
   }
+
+  function enterCheckout(): void {
+    if (!checkout) {
+      return;
+    }
+    onHit(checkout);
+    selectMultiplier(1);
+  }
+
+  useKeypadShortcuts({
+    enabled: !disabled,
+    undoEnabled: !undoDisabled,
+    onMiss: () => missKey.current?.press(),
+    onMultiplier: (value) => multiplierKeys.current.get(value)?.press(),
+    onNumber: (segment) => segmentKeys.current.get(segment)?.press(),
+    onOuterBull: () => outerBullKey.current?.press(),
+    onBull: () => bullKey.current?.press(),
+    onUndo,
+    onEnterCheckout: enterCheckout,
+  });
 
   function switchLayout(): void {
     const next = layout === 'ring' ? 'grid' : 'ring';
@@ -78,13 +119,15 @@ export function Keypad({ onHit, onRestMiss, disabled }: KeypadProps) {
         {MULTIPLIERS.map(({ value, label }) => (
           <KeypadKey
             key={value}
+            ref={handleIn(multiplierKeys.current, value)}
             ariaPressed={multiplier === value}
             disabled={disabled}
-            onPress={() => setMultiplier(value)}
+            onPress={() => selectMultiplier(value)}
             className={`${keyClassName} ${key}`}
             idleTone={multiplier === value ? selectedMultiplierTone : multiplierTone}
             // Ciemne tło wciśnięcia na kremowym klawiszu wyglądałoby jak odznaczenie, więc wybrany klawisz tylko się zmniejsza.
             pressedTone={multiplier === value ? selectedMultiplierTone : undefined}
+            shortcut={{ keys: label, label }}
           >
             {label}
           </KeypadKey>
@@ -106,9 +149,10 @@ export function Keypad({ onHit, onRestMiss, disabled }: KeypadProps) {
     segment: (segment, className, style) => (
       <KeypadKey
         key={segment}
+        ref={handleIn(segmentKeys.current, segment)}
         disabled={disabled}
         flashOnPress
-        onPress={() => hit(segment, multiplier)}
+        onPress={() => hit(segment, currentMultiplier.current)}
         className={className}
         style={style}
         idleTone={layout === 'ring' && segment === DARTBOARD_ORDER[0] ? topSegmentTone : segmentTone}
@@ -117,17 +161,43 @@ export function Keypad({ onHit, onRestMiss, disabled }: KeypadProps) {
       </KeypadKey>
     ),
     outerBull: (className, style) => (
-      <KeypadKey disabled={disabled} flashOnPress onPress={() => hit(BULL_SEGMENT, 1)} className={className} style={style} idleTone={segmentTone}>
+      <KeypadKey
+        ref={outerBullKey}
+        disabled={disabled}
+        flashOnPress
+        onPress={() => hit(BULL_SEGMENT, 1)}
+        className={className}
+        style={style}
+        idleTone={segmentTone}
+        shortcut={OUTER_BULL_SHORTCUT}
+      >
         {BULL_SEGMENT}
       </KeypadKey>
     ),
     bull: (className, style) => (
-      <KeypadKey disabled={disabled} flashOnPress onPress={() => hit(BULL_SEGMENT, 2)} className={className} style={style} idleTone={segmentTone}>
+      <KeypadKey
+        ref={bullKey}
+        disabled={disabled}
+        flashOnPress
+        onPress={() => hit(BULL_SEGMENT, 2)}
+        className={className}
+        style={style}
+        idleTone={segmentTone}
+        shortcut={BULL_SHORTCUT}
+      >
         {pl.bull}
       </KeypadKey>
     ),
     miss: (className) => (
-      <KeypadKey disabled={disabled} flashOnPress onPress={() => hit(MISS_SEGMENT, 0)} className={`${className} ${key}`} idleTone={missTone}>
+      <KeypadKey
+        ref={missKey}
+        disabled={disabled}
+        flashOnPress
+        onPress={() => hit(MISS_SEGMENT, 0)}
+        className={`${className} ${key}`}
+        idleTone={missTone}
+        shortcut={MISS_SHORTCUT}
+      >
         {pl.miss}
       </KeypadKey>
     ),
@@ -145,6 +215,16 @@ export function Keypad({ onHit, onRestMiss, disabled }: KeypadProps) {
   };
 
   return layout === 'ring' ? <RingKeypad keys={keys} /> : <GridKeypad keys={keys} />;
+}
+
+function handleIn<K>(handles: Map<K, KeypadKeyHandle>, id: K): (handle: KeypadKeyHandle | null) => void {
+  return (handle) => {
+    if (handle) {
+      handles.set(id, handle);
+    } else {
+      handles.delete(id);
+    }
+  };
 }
 
 // Poniżej lg: S/D/T nad kołem, Miss pod nim. Od lg trzy kolumny o wysokości koła.
