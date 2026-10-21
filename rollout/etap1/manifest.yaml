@@ -73,6 +73,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p31-p32.md
       kind: markdown
       tag: p31-p32
+    # Tylko dla PR-ów z briefTags: [p33-p35].
+    - title: P33-P35, klawiatura po kole jak na tarczy, skróty, najczęstsze trafienia (wiążące dla P33-P35, każdy PR tylko swoja sekcja)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p33-p35.md
+      kind: markdown
+      tag: p33-p35
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -435,3 +440,39 @@ prs:
     changeset: none
     scope: ['packages/web/**', 'packages/schema/**', 'README.md']
     briefTags: [p31-p32]
+
+  # Decyzja 2026-10-21 (design/plan-p33-p35.md): klawiatura po kole jak na tarczy.
+  # Koło (domyślne) i siatka w kolejności z tarczy, duży Miss, Reszta Miss, przełącznik układu (sekcja P33).
+  - id: P33
+    branch: feat/web-keypad-ring
+    title: 'feat(web): dartboard-order keypad with ring and grid layouts'
+    brief: briefs/P33.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p33-p35, rwd]
+
+  # Skróty z klawiatury fizycznej i zamknięcie jednym kliknięciem (sekcja P34).
+  - id: P34
+    branch: feat/web-keypad-shortcuts
+    title: 'feat(web): keyboard shortcuts and one-click checkout entry'
+    brief: briefs/P34.md
+    deps: [P33]
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p33-p35]
+
+  # Najczęstsze trafienia rzucającego: endpoint i rząd szybkich przycisków (sekcja P35).
+  - id: P35
+    branch: feat/frequent-hits
+    title: 'feat: frequent hits row for the current thrower'
+    brief: briefs/P35.md
+    deps: [P33]
+    priority: 50
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'packages/server/**', 'packages/schema/**', 'README.md']
+    briefTags: [p33-p35]
