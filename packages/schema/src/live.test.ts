@@ -16,6 +16,8 @@ const state = {
   status: 'in_progress',
   abandonment: null,
   endedAt: null,
+  finishedAt: null,
+  editableUntil: null,
   eventSeq: 3,
   currentPlayerId: 'p2',
   legIndex: 0,

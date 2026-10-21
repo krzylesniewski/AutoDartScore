@@ -4,7 +4,15 @@ import { loadConfig } from './config.js';
 
 describe('loadConfig', () => {
   it('uses the defaults', () => {
-    expect(loadConfig({})).toEqual({ host: '0.0.0.0', port: 3000, databasePath: 'autoscore.sqlite', auth: null, corsOrigins: null, webDir: null });
+    expect(loadConfig({})).toEqual({
+      host: '0.0.0.0',
+      port: 3000,
+      databasePath: 'autoscore.sqlite',
+      auth: null,
+      corsOrigins: null,
+      webDir: null,
+      matchLockMinutes: 5,
+    });
   });
 
   it('reads the overrides', () => {
@@ -15,6 +23,7 @@ describe('loadConfig', () => {
       auth: null,
       corsOrigins: null,
       webDir: null,
+      matchLockMinutes: 5,
     });
   });
 
@@ -79,5 +88,21 @@ describe('loadConfig web dir', () => {
 
   it('resolves a relative path against the working directory', () => {
     expect(loadConfig({ AUTOSCORE_WEB_DIR: 'rel/dist' }).webDir).toBe(path.resolve('rel/dist'));
+  });
+});
+
+describe('loadConfig match lock', () => {
+  it.each([
+    [{}, 5],
+    [{ AUTOSCORE_MATCH_LOCK_MINUTES: '' }, 5],
+    [{ AUTOSCORE_MATCH_LOCK_MINUTES: '0' }, 0],
+    [{ AUTOSCORE_MATCH_LOCK_MINUTES: '15' }, 15],
+    [{ AUTOSCORE_MATCH_LOCK_MINUTES: '525600' }, 525_600],
+  ])('reads %j as %i minutes', (env, minutes) => {
+    expect(loadConfig(env).matchLockMinutes).toBe(minutes);
+  });
+
+  it.each(['abc', '-1', '2.5', ' 5', '525601'])('rejects %j', (value) => {
+    expect(() => loadConfig({ AUTOSCORE_MATCH_LOCK_MINUTES: value })).toThrow(`Invalid AUTOSCORE_MATCH_LOCK_MINUTES: ${value}`);
   });
 });

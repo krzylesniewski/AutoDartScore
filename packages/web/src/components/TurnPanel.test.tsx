@@ -42,6 +42,19 @@ describe('TurnPanel', () => {
     expect(screen.queryByText('czeka na rzutkę')).toBeNull();
   });
 
+  it('shows the time left on Cofnij in a finished game', () => {
+    const state = snapshot({ finished: true, currentPlayerId: null, winnerId: 'p1' });
+    render(<TurnPanel state={state} lastTurn={null} busy={false} undoCountdown="4:12" onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
+    const button = screen.getByRole('button', { name: 'Cofnij (4:12)' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    expect(button.className.split(' ')).toContain('tabular-nums');
+  });
+
+  it('shows a plain Cofnij without a countdown', () => {
+    render(<TurnPanel state={snapshot()} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
+    expect(screen.getByRole('button', { name: 'Cofnij' })).toBeTruthy();
+  });
+
   it('keeps an invisible checkout placeholder without a route', () => {
     const state = snapshot({ currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: 301, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] });
     const { container } = render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);

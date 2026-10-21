@@ -25,10 +25,11 @@ export interface AppOptions {
   readonly logger?: boolean;
   readonly auth?: AuthConfig | null;
   readonly corsOrigins?: readonly string[] | null;
-  readonly now?: () => number; // zegar dla tokenów i limitu logowań. Domyślnie Date.now
+  readonly now?: () => number; // zegar dla tokenów, limitu logowań i blokady zakończonej gry. Domyślnie Date.now
   readonly liveAuthTimeoutMs?: number;
   readonly livePingIntervalMs?: number;
   readonly webDir?: string | null; // katalog zbudowanego frontu. null wyłącza serwowanie plików
+  readonly matchLockMinutes?: number; // ile minut po ostatniej rzutce da się cofać w zakończonej grze. Domyślnie 5
 }
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
@@ -59,7 +60,14 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   );
 
   const store = createStore(options.db);
-  const service = createMatchService({ store, hub: createLiveHub(), queue: createSerialQueue(), random: options.random ?? Math.random });
+  const service = createMatchService({
+    store,
+    hub: createLiveHub(),
+    queue: createSerialQueue(),
+    random: options.random ?? Math.random,
+    now,
+    matchLockMs: (options.matchLockMinutes ?? 5) * 60_000,
+  });
   healthRoutes(app);
   if (auth !== null) {
     authRoutes(app, { auth, limiter: createLoginLimiter(now), now });

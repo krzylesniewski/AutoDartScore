@@ -120,6 +120,8 @@ const snapshot = {
   status: 'in_progress',
   abandonment: null,
   endedAt: null,
+  finishedAt: null,
+  editableUntil: null,
   eventSeq: 1,
   currentPlayerId: 'p1',
   legIndex: 0,
@@ -184,6 +186,25 @@ describe('MatchSnapshot', () => {
 
   it('rejects an endedAt that is not an ISO date', () => {
     expect(MatchSnapshot.safeParse({ ...snapshot, status: 'ended', endedAt: 'wczoraj' }).success).toBe(false);
+  });
+
+  it('accepts a finished snapshot with the undo window', () => {
+    const finished = {
+      ...snapshot,
+      finished: true,
+      status: 'finished',
+      finishedAt: '2026-10-15T18:40:00.000Z',
+      editableUntil: '2026-10-15T18:45:00.000Z',
+    };
+    expect(MatchSnapshot.parse(finished)).toEqual(finished);
+  });
+
+  it.each(['finishedAt', 'editableUntil'])('rejects a %s that is not an ISO date', (field) => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, [field]: 'za pięć minut' }).success).toBe(false);
+  });
+
+  it.each(['finishedAt', 'editableUntil'])('requires %s', (field) => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, [field]: undefined }).success).toBe(false);
   });
 });
 

@@ -12,9 +12,12 @@ export interface ServerConfig {
   readonly auth: AuthConfig | null;
   readonly corsOrigins: readonly string[] | null;
   readonly webDir: string | null;
+  readonly matchLockMinutes: number;
 }
 
 const MIN_TOKEN_SECRET_LENGTH = 32;
+// Rok. Większa wartość mogłaby wyprowadzić finishedAt + blokada poza zakres poprawnej daty.
+const MAX_MATCH_LOCK_MINUTES = 525_600;
 
 export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
   return {
@@ -25,6 +28,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     auth: parseAuth(env.AUTOSCORE_PASSWORD, env.AUTOSCORE_TOKEN_SECRET),
     corsOrigins: parseCorsOrigins(env.AUTOSCORE_CORS_ORIGIN),
     webDir: parseWebDir(env.AUTOSCORE_WEB_DIR),
+    matchLockMinutes: parseMatchLockMinutes(env.AUTOSCORE_MATCH_LOCK_MINUTES),
   };
 }
 
@@ -37,6 +41,17 @@ function parsePort(value: string | undefined): number {
     throw new Error(`Invalid PORT: ${value}`);
   }
   return port;
+}
+
+function parseMatchLockMinutes(value: string | undefined): number {
+  if (value === undefined || value === '') {
+    return 5;
+  }
+  const minutes = Number(value);
+  if (!/^\d+$/.test(value) || minutes > MAX_MATCH_LOCK_MINUTES) {
+    throw new Error(`Invalid AUTOSCORE_MATCH_LOCK_MINUTES: ${value}`);
+  }
+  return minutes;
 }
 
 // Ścieżka względna liczy się od katalogu roboczego, pod systemd to packages/server.

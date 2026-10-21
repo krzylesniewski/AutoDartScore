@@ -117,6 +117,14 @@ export function UndoIcon({ className }: IconProps) {
   );
 }
 
+export function LockIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M7 10V7a5 5 0 0110 0v3h2v12H5V10zm2 0h6V7a3 3 0 00-6 0z" />
+    </Svg>
+  );
+}
+
 export function FlagIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

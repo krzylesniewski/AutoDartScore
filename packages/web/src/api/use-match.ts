@@ -265,8 +265,8 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
         setError(null);
         acceptState(result.state);
       } catch (caught) {
-        const nothingToUndo = caught instanceof ApiRequestError && caught.status === 409 && caught.code === 'nothing_to_undo';
-        setError(nothingToUndo ? pl.nothingToUndo : pl.undoFailed);
+        const code = caught instanceof ApiRequestError && caught.status === 409 ? caught.code : null;
+        setError(code === 'nothing_to_undo' ? pl.nothingToUndo : code === 'match_locked' ? pl.matchLocked : pl.undoFailed);
       }
     });
   }, [matchId, enqueue, acceptState]);

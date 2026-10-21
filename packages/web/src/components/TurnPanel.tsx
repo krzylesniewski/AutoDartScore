@@ -24,12 +24,13 @@ export interface TurnPanelProps {
   lastTurn: LastTurn | null;
   busy: boolean;
   undoDisabled?: boolean;
+  undoCountdown?: string | null; // pozostały czas na cofnięcie w zakończonej grze, np. 4:12
   onUndo(): void;
   onCheckout(hit: Hit): void;
   checkoutDisabled: boolean;
 }
 
-export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo, onCheckout, checkoutDisabled }: TurnPanelProps) {
+export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, undoCountdown = null, onUndo, onCheckout, checkoutDisabled }: TurnPanelProps) {
   // Pusta tura zaraz po zamknięciu pokazuje ostatnią turę, dopóki nie przyjdzie kolejna zmiana stanu.
   const shown = state.currentDarts.length === 0 && lastTurn?.eventSeq === state.eventSeq ? lastTurn : null;
   const darts: readonly Hit[] = shown ? shown.darts : state.currentDarts;
@@ -69,10 +70,10 @@ export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, onUndo,
           onClick={onUndo}
           disabled={busy || undoDisabled}
           aria-keyshortcuts="Backspace"
-          className={`relative ${button} border-(--color-border-strong) bg-(--color-surface-button) disabled:opacity-40`}
+          className={`relative ${button} border-(--color-border-strong) bg-(--color-surface-button) tabular-nums disabled:opacity-40`}
         >
           <UndoIcon />
-          {pl.undo}
+          {undoCountdown === null ? pl.undo : pl.undoWithTime(undoCountdown)}
           <span aria-hidden="true" className={SHORTCUT_BADGE}>
             {pl.shortcutBackspace}
           </span>

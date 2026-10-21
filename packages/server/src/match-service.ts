@@ -12,7 +12,7 @@ import {
 } from '@autoscore/schema';
 import { HttpError, invalidRequest, notFound } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
-import { abandonment, effectiveThrows, gameConfig, lastActivityAt, lastSeq, practiceEndedAt, replayMatch } from './replay.js';
+import { abandonment, effectiveThrows, finishedAt, gameConfig, lastActivityAt, lastSeq, practiceEndedAt, replayMatch } from './replay.js';
 import type { SerialQueue } from './serial-queue.js';
 import { toSnapshot } from './snapshot.js';
 import type { NewMatch, Store, StoredMatch } from './store/store.js';
@@ -35,9 +35,11 @@ interface Dependencies {
   readonly hub: LiveHub;
   readonly queue: SerialQueue;
   readonly random: () => number;
+  readonly now: () => number;
+  readonly matchLockMs: number; // tyle po rzutce kończącej grę da się jeszcze cofać
 }
 
-export function createMatchService({ store, hub, queue, random }: Dependencies): MatchService {
+export function createMatchService({ store, hub, queue, random, now, matchLockMs }: Dependencies): MatchService {
   async function requireMatch(id: string): Promise<StoredMatch> {
     const match = await store.findMatch(id);
     if (!match) {
@@ -50,10 +52,12 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
   async function load(match: StoredMatch) {
     const log = await store.loadLog(match.id);
     const throws = effectiveThrows(log);
+    const game = replayMatch(match, throws).state;
     return {
       throws,
       seq: lastSeq(log),
-      game: replayMatch(match, throws).state,
+      game,
+      finishedAt: finishedAt(game, throws),
       abandonment: abandonment(log),
       endedAt: practiceEndedAt(log),
       updatedAt: lastActivityAt(log, match),
@@ -61,8 +65,8 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
   }
 
   async function snapshot(match: StoredMatch): Promise<MatchSnapshot> {
-    const { game, seq, abandonment, endedAt } = await load(match);
-    return toSnapshot(match, game, seq, abandonment, endedAt);
+    const { game, seq, abandonment, endedAt, finishedAt } = await load(match);
+    return toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs });
   }
 
   function abandoned(id: string): HttpError {
@@ -75,6 +79,10 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
 
   function ended(id: string): HttpError {
     return new HttpError(409, 'practice_ended', `Match ${id} is ended`);
+  }
+
+  function locked(id: string): HttpError {
+    return new HttpError(409, 'match_locked', `Match ${id} is locked`);
   }
 
   function publishState(id: string, state: MatchSnapshot): void {
@@ -185,7 +193,12 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
         }
 
         const { throw: record, seq } = appended;
-        const state = toSnapshot(match, applied.state, seq, null, null);
+        const state = toSnapshot(match, applied.state, seq, {
+          abandonment: null,
+          endedAt: null,
+          finishedAt: isGameFinished(applied.state) ? record.receivedAt : null,
+          lockMs: matchLockMs,
+        });
         const meta = { matchId: id, eventSeq: seq };
         hub.publish(id, [
           { type: 'throw_registered', ...meta, throw: record },
@@ -199,19 +212,24 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
     undo(id) {
       return queue(id, async () => {
         const match = await requireMatch(id);
-        const { throws, abandonment, endedAt } = await load(match);
+        const { throws, abandonment, endedAt, finishedAt: finishTime } = await load(match);
         if (endedAt) {
           throw ended(id);
         }
         if (abandonment) {
           throw abandoned(id);
         }
+        // >=, żeby blokada 0 minut działała od razu, także w tej samej milisekundzie co rzutka kończąca grę.
+        if (finishTime !== null && now() >= Date.parse(finishTime) + matchLockMs) {
+          throw locked(id);
+        }
         const last = throws.pop();
         if (!last) {
           throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no throw to undo`);
         }
         const seq = await store.appendUndo(id, last.id);
-        const state = toSnapshot(match, replayMatch(match, throws).state, seq, null, null);
+        const game = replayMatch(match, throws).state;
+        const state = toSnapshot(match, game, seq, { abandonment: null, endedAt: null, finishedAt: finishedAt(game, throws), lockMs: matchLockMs });
         const meta = { matchId: id, eventSeq: seq };
         hub.publish(id, [
           { type: 'throw_undone', ...meta, throwId: last.id },
@@ -293,8 +311,8 @@ export function createMatchService({ store, hub, queue, random }: Dependencies):
         if (query.playerId !== undefined && !match.players.some((player) => player.id === query.playerId)) {
           continue;
         }
-        const { game, seq, abandonment, endedAt, updatedAt } = await load(match);
-        const state = toSnapshot(match, game, seq, abandonment, endedAt);
+        const { game, seq, abandonment, endedAt, finishedAt, updatedAt } = await load(match);
+        const state = toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs });
         if (query.status === 'unfinished' && (state.status === 'finished' || state.status === 'ended')) {
           continue;
         }

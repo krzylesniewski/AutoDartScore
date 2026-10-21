@@ -88,6 +88,8 @@ export const pl = {
   turnTotal: 'Suma tury',
   checkout: 'Zamknięcie',
   undo: 'Cofnij',
+  undoWithTime: (time: string) => `Cofnij (${time})`,
+  matchLocked: 'Mecz zamknięty, nie można go już zmienić',
   nextRound: 'Nowa runda',
   toReview: 'Do weryfikacji',
   voice: 'Głos',

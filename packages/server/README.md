@@ -68,6 +68,14 @@ Trasy API mają pierwszeństwo. Plik, którego pierwszy segment ścieżki pokryw
 
 Gdy w katalogu nie ma czytelnego `index.html`, także gdy katalog nie istnieje, serwer nie wstaje z błędem `Missing index.html in AUTOSCORE_WEB_DIR: <katalog>`.
 
+## Zamknięcie zakończonej gry
+
+| Zmienna | Domyślnie | Znaczenie |
+|---|---|---|
+| `AUTOSCORE_MATCH_LOCK_MINUTES` | `5` | Ile minut po rzutce kończącej mecz 1v1, zabawę albo Solo 501 da się jeszcze cofać. `0` zamyka grę od razu. |
+
+Stan gry podaje `finishedAt` (czas przyjęcia rzutki kończącej grę) i `editableUntil` (`finishedAt` plus ta liczba minut). Oba pola są `null`, dopóki gra trwa. Od chwili `editableUntil` cofnięcie dostaje 409 `match_locked`, a log się nie zmienia. Cofnięcie rzutki kończącej grę w oknie otwiera grę, a kolejne zakończenie liczy okno od nowa. Wartość spoza samych cyfr albo większa niż `525600` (rok) zatrzymuje start z błędem `Invalid AUTOSCORE_MATCH_LOCK_MINUTES: <wartość>`.
+
 ## Struktura
 
 - `src/main.ts`: start procesu (konfiguracja, baza, migracje, nasłuch).

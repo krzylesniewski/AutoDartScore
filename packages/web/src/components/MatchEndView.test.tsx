@@ -1,7 +1,10 @@
 import type { MatchSnapshot } from '@autoscore/schema';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { formatCountdown } from '../game/undo-window';
+import { useUndoWindow } from '../game/use-undo-window';
 import { player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import { LockIcon } from './icons';
 import { MatchEndView, type MatchEndViewProps } from './MatchEndView';
 
 interface Call {
@@ -39,6 +42,8 @@ function view(overrides: Partial<MatchEndViewProps> = {}) {
     error: null,
     connectionLost: false,
     busy: false,
+    undoLocked: false,
+    undoCountdown: null,
     onUndo: vi.fn(),
     voiceEnabled: true,
     onVoiceChange: vi.fn(),
@@ -48,6 +53,39 @@ function view(overrides: Partial<MatchEndViewProps> = {}) {
   };
   render(<MatchEndView {...props} />);
   return props;
+}
+
+// Ekran z prawdziwym odliczaniem, tak jak składa go GameScreen.
+function CountingView({ state }: { state: MatchSnapshot }) {
+  const undo = useUndoWindow(state);
+  return (
+    <MatchEndView
+      state={state}
+      summary={current}
+      summaryError={false}
+      error={null}
+      connectionLost={false}
+      busy={false}
+      undoLocked={undo.locked}
+      undoCountdown={undo.secondsLeft === null ? null : formatCountdown(undo.secondsLeft)}
+      onUndo={vi.fn()}
+      voiceEnabled
+      onVoiceChange={vi.fn()}
+      effectsEnabled
+      onEffectsChange={vi.fn()}
+    />
+  );
+}
+
+function lockPath(): string | null | undefined {
+  const { container, unmount } = render(<LockIcon />);
+  const d = container.querySelector('path')?.getAttribute('d');
+  unmount();
+  return d;
+}
+
+function undoButton(name: string | RegExp = /^Cofnij/): HTMLButtonElement {
+  return screen.getByRole('button', { name }) as HTMLButtonElement;
 }
 
 function rematchButton(): HTMLButtonElement {
@@ -174,6 +212,38 @@ describe('MatchEndView', () => {
   it('disables Cofnij while busy', () => {
     view({ busy: true });
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('counts down on Cofnij and then disables it with the lock notice', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-21T20:00:48.000Z'));
+    try {
+      render(<CountingView state={{ ...finished, finishedAt: '2026-10-21T20:00:00.000Z', editableUntil: '2026-10-21T20:05:00.000Z' }} />);
+      const button = undoButton('Cofnij (4:12)');
+      expect(button.disabled).toBe(false);
+      expect(button.className.split(' ')).toContain('tabular-nums');
+      expect(screen.queryByText('Mecz zamknięty, nie można go już zmienić')).toBeNull();
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(undoButton('Cofnij (4:11)').disabled).toBe(false);
+
+      act(() => {
+        vi.advanceTimersByTime(251_000);
+      });
+      expect(undoButton('Cofnij').disabled).toBe(true);
+      const notice = screen.getByText('Mecz zamknięty, nie można go już zmienić');
+      expect(notice.querySelector('path')?.getAttribute('d')).toBe(lockPath());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows the lock notice once next to a locked Cofnij', () => {
+    view({ undoLocked: true });
+    expect(undoButton().disabled).toBe(true);
+    expect(screen.getAllByText('Mecz zamknięty, nie można go już zmienić')).toHaveLength(1);
   });
 
   it('offers to save a guest but not a saved player', () => {

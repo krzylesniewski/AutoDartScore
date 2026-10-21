@@ -1,12 +1,12 @@
 import type { CreateMatchRequest, MatchSnapshot, MatchSnapshotPlayer, MatchSummary } from '@autoscore/schema';
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { createMatch } from '../api/client';
 import { formatAverage } from '../game/format-stat';
 import { rematchRequest } from '../game/rematch-request';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
 import { EffectsToggle } from './EffectsToggle';
-import { CheckIcon, TrophyIcon, UndoIcon, WarningIcon } from './icons';
+import { CheckIcon, LockIcon, TrophyIcon, UndoIcon, WarningIcon } from './icons';
 import { SaveGuest, SUMMARY_ROWS } from './MatchSummaryPanel';
 import { VoiceToggle } from './VoiceToggle';
 
@@ -24,6 +24,8 @@ export interface MatchEndViewProps {
   error: string | null;
   connectionLost: boolean;
   busy: boolean;
+  undoLocked: boolean;
+  undoCountdown: string | null; // pozostały czas na cofnięcie, np. 4:12
   onUndo(): void;
   voiceEnabled: boolean;
   onVoiceChange(next: boolean): void;
@@ -38,6 +40,8 @@ export function MatchEndView({
   error,
   connectionLost,
   busy,
+  undoLocked,
+  undoCountdown,
   onUndo,
   voiceEnabled,
   onVoiceChange,
@@ -63,10 +67,11 @@ export function MatchEndView({
         </div>
       </header>
       <main className="grid min-h-0 flex-1 grid-cols-1 content-start gap-(--space-page) overflow-auto p-(--space-page) lg:grid-cols-[1fr_470px]">
-        {(connectionLost || error) && (
+        {(connectionLost || error || undoLocked) && (
           <div className="flex flex-col gap-3 lg:col-span-2">
             {connectionLost && <Notice text={pl.connectionLost} />}
             {error && <Notice text={error} />}
+            {undoLocked && <Notice text={pl.matchLocked} icon={<LockIcon className="text-(--color-accent)" />} />}
           </div>
         )}
         <div className="flex min-w-0 flex-col gap-4">
@@ -86,7 +91,7 @@ export function MatchEndView({
           )}
         </div>
       </main>
-      <ActionBar state={state} busy={busy} onUndo={onUndo} />
+      <ActionBar state={state} busy={busy} undoLocked={undoLocked} undoCountdown={undoCountdown} onUndo={onUndo} />
     </div>
   );
 }
@@ -204,7 +209,15 @@ function ComparisonTable({ state, summary, players }: ComparisonTableProps) {
   );
 }
 
-function ActionBar({ state, busy, onUndo }: { state: MatchSnapshot; busy: boolean; onUndo(): void }) {
+interface ActionBarProps {
+  state: MatchSnapshot;
+  busy: boolean;
+  undoLocked: boolean;
+  undoCountdown: string | null;
+  onUndo(): void;
+}
+
+function ActionBar({ state, busy, undoLocked, undoCountdown, onUndo }: ActionBarProps) {
   const request = rematchRequest(state);
   // Ref blokuje drugie kliknięcie w tym samym takcie, zanim stan zdąży wyłączyć przycisk.
   const pending = useRef(false);
@@ -236,11 +249,11 @@ function ActionBar({ state, busy, onUndo }: { state: MatchSnapshot; busy: boolea
         <button
           type="button"
           onClick={onUndo}
-          disabled={busy}
-          className={`${button} border-(--color-border-strong) bg-(--color-surface-button) disabled:opacity-40`}
+          disabled={busy || undoLocked}
+          className={`${button} border-(--color-border-strong) bg-(--color-surface-button) tabular-nums disabled:opacity-40`}
         >
           <UndoIcon />
-          {pl.undo}
+          {undoCountdown === null ? pl.undo : pl.undoWithTime(undoCountdown)}
         </button>
       </div>
       <div className="flex flex-col gap-2 lg:items-end">
@@ -270,10 +283,10 @@ function ActionBar({ state, busy, onUndo }: { state: MatchSnapshot; busy: boolea
   );
 }
 
-function Notice({ text }: { text: string }) {
+function Notice({ text, icon = <WarningIcon className="text-(--color-accent)" /> }: { text: string; icon?: ReactNode }) {
   return (
     <p className="flex items-center gap-2 rounded-(--radius-card) border-(length:--border-width) border-(--color-accent) bg-(--color-surface) px-4 py-2 font-display text-xl text-(--color-text)">
-      <WarningIcon className="text-(--color-accent)" />
+      {icon}
       {text}
     </p>
   );

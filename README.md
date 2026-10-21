@@ -58,6 +58,7 @@ Konfiguracja idzie przez zmienne środowiskowe.
 | `HOST` | `0.0.0.0` | Adres nasłuchu serwera. Domyślny pozwala połączyć się z innych urządzeń w sieci. |
 | `DATABASE_PATH` | `autoscore.sqlite` | Ścieżka pliku SQLite, względna wobec katalogu, w którym działa proces serwera. |
 | `AUTOSCORE_API_URL` | `http://localhost:3000` | Adres serwera, na który proxy Vite przekazuje `/api`. |
+| `AUTOSCORE_MATCH_LOCK_MINUTES` | `5` | Ile minut po rzutce kończącej grę da się jeszcze cofać. `0` zamyka grę od razu. Wartość spoza samych cyfr albo większa niż `525600` (rok) zatrzymuje start z błędem `Invalid AUTOSCORE_MATCH_LOCK_MINUTES`. |
 
 `PORT` musi składać się z samych cyfr i nie przekraczać 65535. Inaczej serwer kończy pracę przy starcie z błędem `Invalid PORT`. Po zmianie `PORT` ustaw `AUTOSCORE_API_URL` na ten sam port, na przykład:
 
@@ -76,7 +77,7 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 | `POST` | `/matches` | Nowa gra (`CreateMatchRequest`, rodzaj w polu `type`). Odpowiedź 201 z `MatchSnapshot`. |
 | `GET` | `/matches/:id` | Bieżący stan gry (`MatchSnapshot`). |
 | `POST` | `/matches/:id/throws` | Rzutka (`HitEvent`). Odpowiedź 201 z `{ throw, events, state }`. |
-| `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki. Body jest ignorowane. Odpowiedź 200 z `{ undoneThrowId, state }`. |
+| `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki. Body jest ignorowane. Odpowiedź 200 z `{ undoneThrowId, state }`. W zakończonej grze działa do `editableUntil` ze stanu gry (`finishedAt` plus `AUTOSCORE_MATCH_LOCK_MINUTES`), potem daje 409 `match_locked`. |
 | WebSocket | `/matches/:id/live` | Strumień stanu i zdarzeń jednej gry. |
 
 Rodzaje gry w `POST /matches`:
@@ -125,6 +126,7 @@ Każdy błąd ma postać `{ "error": "<kod>", "message": "<opis>" }` (`ApiError`
 | `match_finished` | 409 | Rzutka po końcu gry. |
 | `event_id_conflict` | 409 | `eventId` jest już użyty w innej grze. |
 | `nothing_to_undo` | 409 | W logu nie ma rzutki do cofnięcia. |
+| `match_locked` | 409 | Cofnięcie w zakończonej grze po `editableUntil`. Serwer nic nie zapisuje. |
 | `internal_error` | 500 | Nieoczekiwany błąd serwera. |
 
 Żądania POST z body muszą mieć nagłówek `content-type: application/json`. Bez niego curl wysyła dane formularza, a serwer odpowiada 400 `invalid_request` („Unsupported Media Type”). Cofnięcie działa z tym nagłówkiem i bez niego.

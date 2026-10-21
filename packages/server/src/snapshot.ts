@@ -89,8 +89,15 @@ function status(finished: boolean, abandonment: Abandonment | null, endedAt: str
   return abandonment ? 'abandoned' : 'in_progress';
 }
 
+export interface SnapshotTimes {
+  readonly abandonment: Abandonment | null;
+  readonly endedAt: string | null;
+  readonly finishedAt: string | null;
+  readonly lockMs: number;
+}
+
 // Porzucona gra i zakończony trening zachowują rzucającego i rzutki tury, żeby podgląd pokazywał stan z chwili przerwania.
-export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number, abandonment: Abandonment | null, endedAt: string | null): MatchSnapshot {
+export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number, { abandonment, endedAt, finishedAt, lockMs }: SnapshotTimes): MatchSnapshot {
   const finished = isGameFinished(game);
   const { perPlayer, startingScore, ...rest } = progress(game, finished);
   return {
@@ -105,6 +112,8 @@ export function toSnapshot(match: StoredMatch, game: GameState, eventSeq: number
     status: status(finished, abandonment, endedAt),
     abandonment,
     endedAt,
+    finishedAt,
+    editableUntil: finishedAt === null ? null : new Date(Date.parse(finishedAt) + lockMs).toISOString(),
     eventSeq,
     ...rest,
     players: match.players.map((player, index) => ({
