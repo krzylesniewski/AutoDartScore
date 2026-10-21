@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 import type { CreatePlayerRequest, MatchType, Player, PracticeMode, ThrowRecord, UpdatePlayerRequest } from '@autoscore/schema';
 import type { Database, MatchEventsTable, MatchesTable, PlayerChangesTable, PlayersTable, ThrowsTable } from '../db/database.js';
+import { playerNameTaken } from '../errors.js';
 import { defaultPlayerColor } from './player-color.js';
+import { normalizePlayerName } from './player-name.js';
 
 // Jedyny moduł, który dotyka Kysely. Tylko wstawia i czyta: nic nie jest nadpisywane ani usuwane.
 // Gracz to wiersz players z nałożoną ostatnią zmianą z player_changes, więc każdy odczyt widzi aktualny profil.
@@ -39,6 +41,7 @@ export interface Store {
   listPlayers(options: { readonly includeArchived: boolean }): Promise<Player[]>;
   findPlayers(ids: readonly string[]): Promise<Player[]>;
   // null dla nieznanego gracza.
+  // createPlayer i updatePlayer odrzucają imię zajęte przez innego aktywnego, zapisanego gracza.
   updatePlayer(id: string, request: UpdatePlayerRequest): Promise<Player | null>;
   createMatch(match: NewMatch): Promise<string>;
   findMatch(id: string): Promise<StoredMatch | null>;
@@ -156,6 +159,20 @@ export function createStore(db: Kysely<Database>): Store {
     return new Map(rows.map((row) => [row.player_id, row]));
   }
 
+  // Porównuje z aktualnymi profilami, bo imię, gość i archiwizacja mogły się zmienić w player_changes.
+  async function nameTaken(trx: Kysely<Database>, name: string, excludeId?: string): Promise<boolean> {
+    const rows = await trx.selectFrom('players').selectAll().execute();
+    const changes = await latestChanges(trx);
+    const normalized = normalizePlayerName(name);
+    return rows.some((row) => {
+      if (row.id === excludeId) {
+        return false;
+      }
+      const player = toPlayer(row, changes.get(row.id));
+      return !player.guest && player.archivedAt === null && normalizePlayerName(player.name) === normalized;
+    });
+  }
+
   async function withProfiles(rows: readonly PlayerRow[]): Promise<Player[]> {
     const changes = await latestChanges(db, rows.map((row) => row.id));
     return rows.map((row) => toPlayer(row, changes.get(row.id)));
@@ -181,17 +198,23 @@ export function createStore(db: Kysely<Database>): Store {
   }
 
   return {
+    // SQLite wykonuje transakcje po kolei na jednym połączeniu, więc sprawdzenie i zapis się nie przeplatają.
     async createPlayer(request) {
-      const row = {
-        id: randomUUID(),
-        name: request.name,
-        avatar: request.avatar ?? null,
-        color: request.color ?? null,
-        guest: request.guest ? 1 : 0,
-        created_at: now(),
-      };
-      await db.insertInto('players').values(row).execute();
-      return toPlayer(row, undefined);
+      return db.transaction().execute(async (trx) => {
+        if (!request.guest && (await nameTaken(trx, request.name))) {
+          throw playerNameTaken(request.name);
+        }
+        const row = {
+          id: randomUUID(),
+          name: request.name,
+          avatar: request.avatar ?? null,
+          color: request.color ?? null,
+          guest: request.guest ? 1 : 0,
+          created_at: now(),
+        };
+        await trx.insertInto('players').values(row).execute();
+        return toPlayer(row, undefined);
+      });
     },
 
     // Ostatnia aktywność to najnowszy wpis w logu albo utworzenie gry gracza. Sortowanie w TS, bo NULL-e
@@ -252,6 +275,14 @@ export function createStore(db: Kysely<Database>): Store {
           archived_at: archivedAt,
           created_at: at,
         };
+        // Sprawdzamy tylko zmiany, które mogą utworzyć nowy duplikat. Dawne duplikaty zostają w danych
+        // i da się je dalej edytować, np. zmienić kolor albo wysłać to samo imię.
+        const active = change.guest === 0 && change.archived_at === null;
+        const couldCollide =
+          normalizePlayerName(change.name) !== normalizePlayerName(current.name) || current.guest || current.archivedAt !== null;
+        if (active && couldCollide && (await nameTaken(trx, change.name, id))) {
+          throw playerNameTaken(change.name);
+        }
         await trx.insertInto('player_changes').values(change).execute();
         return toPlayer(row, change);
       });

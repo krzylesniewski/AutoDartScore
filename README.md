@@ -73,7 +73,7 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 | Metoda | Ścieżka | Opis |
 |---|---|---|
 | `GET` | `/players` | Lista graczy bez gości, posortowana po imieniu. |
-| `POST` | `/players` | Nowy gracz (`CreatePlayerRequest`: `name` 1-40 znaków po obcięciu spacji, opcjonalny `avatar` 1-16 znaków, opcjonalny `color` 1-16, `guest` domyślnie `false`). Bez `color` gracz dostaje stały kolor wyliczony z `id`. Odpowiedź 201 z `Player`. |
+| `POST` | `/players` | Nowy gracz (`CreatePlayerRequest`: `name` 1-40 znaków po obcięciu spacji, opcjonalny `avatar` 1-16 znaków, opcjonalny `color` 1-16, `guest` domyślnie `false`). Bez `color` gracz dostaje stały kolor wyliczony z `id`. Odpowiedź 201 z `Player`. Imię zajęte przez innego zapisanego, niezarchiwizowanego gracza daje 409 `player_name_taken` (nie dotyczy gości). |
 | `POST` | `/matches` | Nowa gra (`CreateMatchRequest`, rodzaj w polu `type`). Odpowiedź 201 z `MatchSnapshot`. |
 | `GET` | `/matches/:id` | Bieżący stan gry (`MatchSnapshot`). |
 | `POST` | `/matches/:id/throws` | Rzutka (`HitEvent`). Odpowiedź 201 z `{ throw, events, state }`. |
@@ -126,6 +126,7 @@ Każdy błąd ma postać `{ "error": "<kod>", "message": "<opis>" }` (`ApiError`
 | `match_finished` | 409 | Rzutka po końcu gry. |
 | `event_id_conflict` | 409 | `eventId` jest już użyty w innej grze. |
 | `nothing_to_undo` | 409 | W logu nie ma rzutki do cofnięcia. |
+| `player_name_taken` | 409 | Imię zajęte przez innego zapisanego, niezarchiwizowanego gracza. Wielkość liter i nadmiarowe spacje się nie liczą. |
 | `match_locked` | 409 | Cofnięcie w zakończonej grze po `editableUntil`. Serwer nic nie zapisuje. |
 | `internal_error` | 500 | Nieoczekiwany błąd serwera. |
 

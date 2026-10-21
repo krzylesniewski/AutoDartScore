@@ -1,7 +1,7 @@
 import { ApiError, Player } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultPlayerColor } from '../store/player-color.js';
-import { T, createGame, createPlayer, setup, throwDarts, type TestApp } from '../test-helpers.js';
+import { T, countRows, createGame, createPlayer, patchPlayer, setup, throwDarts, type TestApp } from '../test-helpers.js';
 
 let t: TestApp;
 beforeEach(async () => {
@@ -91,5 +91,41 @@ describe('players', () => {
     const response = await t.app.inject({ method: 'GET', url: '/nope' });
     expect(response.statusCode).toBe(404);
     expect(ApiError.parse(response.json()).error).toBe('not_found');
+  });
+});
+
+describe('duplicate player names', () => {
+  async function expectTaken(payload: object) {
+    const before = [await countRows(t.db, 'players'), await countRows(t.db, 'player_changes')];
+    const response = await t.app.inject({ method: 'POST', url: '/players', payload });
+    expect(response.statusCode).toBe(409);
+    expect(ApiError.parse(response.json()).error).toBe('player_name_taken');
+    expect([await countRows(t.db, 'players'), await countRows(t.db, 'player_changes')]).toEqual(before);
+  }
+
+  it.each(['anna', '  ANNA  '])('rejects %j after Anna', async (name) => {
+    await createPlayer(t.app, 'Anna');
+    await expectTaken({ name });
+  });
+
+  it('ignores extra inner spaces', async () => {
+    await createPlayer(t.app, 'Anna Maria');
+    await expectTaken({ name: 'anna   maria' });
+  });
+
+  it('lets a guest take the name of a saved player', async () => {
+    await createPlayer(t.app, 'Anna');
+    await createPlayer(t.app, 'Anna', { guest: true });
+  });
+
+  it('does not count a guest', async () => {
+    await createPlayer(t.app, 'Anna', { guest: true });
+    await createPlayer(t.app, 'Anna');
+  });
+
+  it('does not count an archived player', async () => {
+    const anna = await createPlayer(t.app, 'Anna');
+    expect((await patchPlayer(t.app, anna.id, { archived: true })).statusCode).toBe(200);
+    await createPlayer(t.app, 'Anna');
   });
 });

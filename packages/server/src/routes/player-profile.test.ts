@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { ApiError, MatchListItem, Player, PlayerStats, StatsRankings } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LEG_301, countRows, createGame, createPlayer, createPlayers, getMatch, patchPlayer, setup, throwDarts, type TestApp } from '../test-helpers.js';
@@ -154,6 +155,49 @@ describe('PATCH /players/:id', () => {
     expect(response.statusCode).toBe(400);
     expect(ApiError.parse(response.json()).error).toBe('invalid_request');
     expect(await countRows(t.db, 'player_changes')).toBe(0);
+  });
+});
+
+describe('PATCH /players/:id with a taken name', () => {
+  async function expectTaken(playerId: string, payload: object) {
+    const before = [await countRows(t.db, 'players'), await countRows(t.db, 'player_changes')];
+    const response = await patchPlayer(t.app, playerId, payload);
+    expect(response.statusCode).toBe(409);
+    expect(ApiError.parse(response.json()).error).toBe('player_name_taken');
+    expect([await countRows(t.db, 'players'), await countRows(t.db, 'player_changes')]).toEqual(before);
+  }
+
+  it('rejects renaming to a name taken by another player', async () => {
+    const [, bartek] = (await createPlayers(t.app, 2)) as [string, string];
+    await expectTaken(bartek, { name: 'ANNA' });
+  });
+
+  it('rejects saving a guest whose name a saved player has', async () => {
+    await createPlayer(t.app, 'Anna');
+    const guest = await createPlayer(t.app, 'anna', { guest: true });
+    await expectTaken(guest.id, { guest: false });
+  });
+
+  it('rejects restoring an archived player whose name another active player has', async () => {
+    const archived = await createPlayer(t.app, 'Anna');
+    await patch(archived.id, { archived: true });
+    await createPlayer(t.app, 'Anna');
+    await expectTaken(archived.id, { archived: false });
+  });
+
+  it('lets a player change the case of their own name', async () => {
+    const anna = await createPlayer(t.app, 'Anna');
+    expect(await patch(anna.id, { name: 'ANNA' })).toMatchObject({ name: 'ANNA' });
+  });
+
+  it('lets both players of an existing duplicate change their color and resend their name', async () => {
+    const anna = await createPlayer(t.app, 'Anna');
+    const other = { id: randomUUID(), name: 'Anna', avatar: null, color: null, guest: 0, created_at: new Date().toISOString() };
+    await t.db.insertInto('players').values(other).execute();
+    for (const id of [anna.id, other.id]) {
+      expect(await patch(id, { color: 5 })).toMatchObject({ color: 5 });
+      expect(await patch(id, { name: 'Anna' })).toMatchObject({ name: 'Anna' });
+    }
   });
 });
 

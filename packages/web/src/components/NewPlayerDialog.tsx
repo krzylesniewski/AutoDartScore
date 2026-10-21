@@ -17,11 +17,13 @@ const input = 'min-h-12 rounded-(--radius-card) border-(length:--border-width) b
 // Każdy nowy gracz jest zapisywany. API nadal przyjmuje gości, ale UI ich nie tworzy.
 export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
   const titleId = useId();
+  const nameErrorId = useId();
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState('');
   const [color, setColor] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -42,6 +44,7 @@ export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
     event.preventDefault();
     setSaving(true);
     setError(null);
+    setNameError(null);
     try {
       const trimmedAvatar = avatar.trim();
       // Bez wyboru kolor dobiera serwer.
@@ -49,7 +52,11 @@ export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
         await createPlayer({ name: name.trim(), guest: false, ...(trimmedAvatar ? { avatar: trimmedAvatar } : {}), ...(color === null ? {} : { color }) }),
       );
     } catch (caught) {
-      setError(caught instanceof ApiRequestError ? caught.message : pl.requestFailed);
+      if (caught instanceof ApiRequestError && caught.code === 'player_name_taken') {
+        setNameError(pl.playerNameTaken(name.trim()));
+      } else {
+        setError(caught instanceof ApiRequestError ? caught.message : pl.requestFailed);
+      }
       setSaving(false);
     }
   }
@@ -68,8 +75,25 @@ export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
         <form onSubmit={(event) => void save(event)} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1">
             <span className={label}>{pl.playerName}</span>
-            <input ref={nameInput} value={name} maxLength={40} onChange={(event) => setName(event.target.value)} className={input} />
+            <input
+              ref={nameInput}
+              value={name}
+              maxLength={40}
+              aria-invalid={nameError ? 'true' : undefined}
+              aria-describedby={nameError ? nameErrorId : undefined}
+              onChange={(event) => {
+                setName(event.target.value);
+                setNameError(null);
+              }}
+              className={input}
+            />
           </label>
+          {nameError && (
+            <p id={nameErrorId} className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
+              <WarningIcon />
+              {nameError}
+            </p>
+          )}
           <label className="flex flex-col gap-1">
             <span className={label}>{pl.playerAvatar}</span>
             <input value={avatar} maxLength={16} onChange={(event) => setAvatar(event.target.value)} className={`${input} w-28`} />

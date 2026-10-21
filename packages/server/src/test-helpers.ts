@@ -118,7 +118,7 @@ export async function getMatch(app: FastifyInstance, matchId: string): Promise<M
   return response.json();
 }
 
-export async function countRows(db: Kysely<Database>, table: 'throws' | 'match_events' | 'player_changes'): Promise<number> {
+export async function countRows(db: Kysely<Database>, table: 'players' | 'throws' | 'match_events' | 'player_changes'): Promise<number> {
   const row = await db.selectFrom(table).select((eb) => eb.fn.countAll<number>().as('count')).executeTakeFirstOrThrow();
   return Number(row.count);
 }
