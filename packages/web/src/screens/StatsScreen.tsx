@@ -181,72 +181,74 @@ function PlayerCard({ playerId }: { playerId: string }) {
   }, [playerId, filter]);
 
   return (
-    <main className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-5 overflow-auto p-4 sm:gap-6 sm:p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-4 max-sm:flex-col max-sm:items-start max-sm:gap-2">
-        <a href={RANKING_HREF} className="inline-flex min-h-11 items-center gap-1 font-display text-xl font-semibold uppercase text-(--color-text) underline sm:order-last">
-          <span aria-hidden="true" className="sm:hidden">←</span>
-          {pl.ranking}
-        </a>
-        <h1 className="font-display text-[length:clamp(2.25rem,9vw,3rem)] leading-none font-bold uppercase">{pl.stats}</h1>
-      </div>
-
-      {current && <PlayerProfile player={current} onChanged={() => setVersion((value) => value + 1)} />}
-
-      <section className="flex flex-col gap-2">
-        <h2 className={label}>{pl.players}</h2>
-        {players.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
-        {players.status === 'error' && <ErrorText text={players.message} />}
-        {players.status === 'ready' && players.value.length === 0 && <p className="text-(--color-text-muted)">{pl.noPlayers}</p>}
-        {players.status === 'ready' && (
-          <div className="flex flex-wrap gap-2 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1">
-            {players.value.map((player) => (
-              <button
-                key={player.id}
-                type="button"
-                aria-pressed={player.id === playerId}
-                onClick={() => {
-                  window.location.hash = statsHref(player.id);
-                }}
-                className={`${choiceStyle(player.id === playerId)} flex max-w-full items-center gap-2 max-sm:shrink-0`}
-              >
-                {player.avatar && <span aria-hidden="true">{player.avatar}</span>}
-                <span className="min-w-0 truncate">{player.name}</span>
-                {player.archivedAt !== null && <span className="text-base text-(--color-text-muted) uppercase">{pl.archived}</span>}
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h2 className={label}>{pl.statsFilter}</h2>
-        <FilterButtons filter={filter} onChange={setFilter} />
-      </section>
-
-      <StatsCard stats={stats} />
-
-      <section aria-labelledby="player-form" className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h2 id="player-form" className={label}>
-            {pl.form}
-          </h2>
-          <span className="text-[15px] text-(--color-text-muted)">{pl.formSubtitle}</span>
+    <main className="flex min-h-0 flex-1 flex-col overflow-auto">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-4 sm:gap-6 sm:p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-4 max-sm:flex-col max-sm:items-start max-sm:gap-2">
+          <a href={RANKING_HREF} className="inline-flex min-h-11 items-center gap-1 font-display text-xl font-semibold uppercase text-(--color-text) underline sm:order-last">
+            <span aria-hidden="true" className="sm:hidden">←</span>
+            {pl.ranking}
+          </a>
+          <h1 className="font-display text-[length:clamp(2.25rem,9vw,3rem)] leading-none font-bold uppercase">{pl.stats}</h1>
         </div>
-        {form.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
-        {form.status === 'error' && <ErrorText text={form.message} />}
-        {form.status === 'ready' && <FormChart points={form.value.points} />}
-      </section>
 
-      {current && <HeadToHeadPanel key={playerId} player={current} opponents={known.filter((player) => player.id !== playerId)} />}
+        {current && <PlayerProfile player={current} onChanged={() => setVersion((value) => value + 1)} />}
 
-      <section aria-labelledby="player-history" className="flex flex-col gap-2">
-        <h2 id="player-history" className={label}>
-          {pl.playerHistory}
-        </h2>
-        {history.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
-        {history.status === 'error' && <ErrorText text={history.message} />}
-        {history.status === 'ready' && <MatchHistoryList games={history.value} now={new Date()} />}
-      </section>
+        <section className="flex flex-col gap-2">
+          <h2 className={label}>{pl.players}</h2>
+          {players.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
+          {players.status === 'error' && <ErrorText text={players.message} />}
+          {players.status === 'ready' && players.value.length === 0 && <p className="text-(--color-text-muted)">{pl.noPlayers}</p>}
+          {players.status === 'ready' && (
+            <div className="flex flex-wrap gap-2 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1">
+              {players.value.map((player) => (
+                <button
+                  key={player.id}
+                  type="button"
+                  aria-pressed={player.id === playerId}
+                  onClick={() => {
+                    window.location.hash = statsHref(player.id);
+                  }}
+                  className={`${choiceStyle(player.id === playerId)} flex max-w-full items-center gap-2 max-sm:shrink-0`}
+                >
+                  {player.avatar && <span aria-hidden="true">{player.avatar}</span>}
+                  <span className="min-w-0 truncate">{player.name}</span>
+                  {player.archivedAt !== null && <span className="text-base text-(--color-text-muted) uppercase">{pl.archived}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className={label}>{pl.statsFilter}</h2>
+          <FilterButtons filter={filter} onChange={setFilter} />
+        </section>
+
+        <StatsCard stats={stats} />
+
+        <section aria-labelledby="player-form" className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="player-form" className={label}>
+              {pl.form}
+            </h2>
+            <span className="text-[15px] text-(--color-text-muted)">{pl.formSubtitle}</span>
+          </div>
+          {form.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
+          {form.status === 'error' && <ErrorText text={form.message} />}
+          {form.status === 'ready' && <FormChart points={form.value.points} />}
+        </section>
+
+        {current && <HeadToHeadPanel key={playerId} player={current} opponents={known.filter((player) => player.id !== playerId)} />}
+
+        <section aria-labelledby="player-history" className="flex flex-col gap-2">
+          <h2 id="player-history" className={label}>
+            {pl.playerHistory}
+          </h2>
+          {history.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
+          {history.status === 'error' && <ErrorText text={history.message} />}
+          {history.status === 'ready' && <MatchHistoryList games={history.value} now={new Date()} />}
+        </section>
+      </div>
     </main>
   );
 }
