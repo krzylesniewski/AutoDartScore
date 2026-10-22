@@ -573,9 +573,9 @@ describe('StatsScreen: responsive layout', () => {
   it('scales the player card and keeps long names inside the chips', async () => {
     render(<StatsScreen playerId="p1" />);
     const chip = await screen.findByRole('button', { name: 'Anna' });
-    const main = classes(screen.getByRole('main'));
-    expect(main).toEqual(expect.arrayContaining(['p-4', 'sm:p-6']));
-    expect(main).not.toContain('p-6');
+    const column = classes(screen.getByRole('main').firstElementChild);
+    expect(column).toEqual(expect.arrayContaining(['p-4', 'sm:p-6']));
+    expect(column).not.toContain('p-6');
     const title = screen.getByRole('heading', { level: 1 });
     expect(classes(title).some((name) => name.includes('clamp('))).toBe(true);
     expect(classes(title.parentElement)).toContain('flex-wrap');
@@ -598,6 +598,16 @@ describe('StatsScreen: responsive layout', () => {
     render(<StatsScreen playerId="p1" />);
     await screen.findByRole('button', { name: 'Anna' });
     expect(classes(screen.getByRole('main'))).toEqual(expect.arrayContaining(['min-h-0', 'flex-1']));
+  });
+
+  it('scrolls the player card over the full width', async () => {
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    const main = screen.getByRole('main');
+    expect(classes(main)).toEqual(expect.arrayContaining(['overflow-auto', 'min-h-0', 'flex-1']));
+    expect(classes(main)).not.toContain('max-w-4xl');
+    expect(classes(main)).not.toContain('mx-auto');
+    expect(classes(main.firstElementChild)).toEqual(expect.arrayContaining(['mx-auto', 'w-full', 'max-w-4xl', 'p-4', 'sm:p-6', 'gap-5', 'sm:gap-6']));
   });
 
   it('puts the ranking link above the title on phones', async () => {
