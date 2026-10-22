@@ -15,7 +15,7 @@ export interface RankingsInput {
   readonly games: readonly RankedGame[];
 }
 
-const TOP = 3;
+const TOP = 5;
 
 type Profile = Pick<Player, 'id' | 'name' | 'avatar' | 'color'>;
 

@@ -32,7 +32,7 @@ function tiles(rankings: StatsRankings): readonly Tile[] {
   ];
 }
 
-// Lista graczy po średniej i cztery kafelki z pierwszą trójką.
+// Lista graczy po średniej i cztery kafelki z pierwszą piątką.
 export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] xl:min-h-0 xl:flex-1">
