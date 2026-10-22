@@ -8,6 +8,7 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 - Słowa gracza zapisuj możliwie dosłownie, bez oceniania. Interpretację dopisz osobno w „Uwagach”.
 - Kto zgłosił: imię albo „autor”. Bez danych kontaktowych.
 - Gdy wpis trafi do planu, uzupełnij „Status” i link (PR, sekcja planu).
+- Przebieg: wpis ze statusem `nowy` → kilka wpisów razem trafia do planu i manifestu rolloutu (`zaplanowany`) → rollout wdraża zmiany, a po scaleniu status `zrobiony` z numerem PR-a. Szczegóły w `CLAUDE.md`, sekcja „Feedback graczy: od zgłoszenia do rolloutu”.
 
 **Rodzaj:** `błąd` · `utrudnienie` · `pomysł` · `pochwała`
 **Obszar:** `ekran gry` · `klawiatura` · `głos` · `statystyki` · `kreator` · `historia` · `telefon` · `online` · `inne`
@@ -26,6 +27,22 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 ```
 
 ## Wpisy
+
+### 2026-10-22: podpowiedź zamknięcia z T1 zamiast pojedynczej 3
+- **Zgłosił:** gracze (przekazał autor)
+- **Rodzaj / obszar:** utrudnienie / ekran gry
+- **Co powiedział:** „co do zakończeń: jak mam 43 punkty do końca, to nie pokazuj T1 D20, tylko 3 + D20”
+- **Kontekst:** panel zamknięcia na ekranie gry (np. 43 do końca, początek tury)
+- **Status:** zaplanowany (P44, `design/plan-p43-p44.md`; decyzja autora 2026-10-22: przegląd wszystkich tras według jawnych reguł)
+- **Uwagi:** przyczyna w kodzie: `suggestCheckout` (`packages/web/src/game/checkout.ts`) bierze pierwszą pasującą rzutkę przygotowującą z listy `SETUP`, a ta zaczyna się od trebli (T20…T1), dopiero potem są single. Gdy przygotowanie to wielokrotność 3 do 18, wygrywa mała trebla zamiast singla o tej samej wartości. Dotyczy 19 wyników: 7 (T1 D2), 11, 15, 19, 23, 27, 35 (T1 z D4…D16), 43-58 co 3 (T1…T6 D20) i 103-118 co 3 (T20 T1…T6 D20). Kierunek poprawki: rzutka przygotowująca o wartości do 20 to singiel (43 → 3 D20, 46 → 6 D20, 106 → T20 6 D20), trebla tylko powyżej 20; reszta tras bez zmian. Panel i Enter (P34) korzystają z tej samej trasy (`checkoutRoute`), więc zmiana obejmie oba. Singiel już dziś wyświetla się jako sama liczba („3”), bez „S”. Decyzja autora 2026-10-22: „3 + D20” to tylko przykładowy zapis, wygląd panelu zostaje bez zmian (osobne kafelki, singiel jako sama liczba); zmienia się tylko wybór rzutki przygotowującej. Decyzja autora 2026-10-22: przeglądamy wszystkie trasy według jawnych reguł (plan P44).
+
+### 2026-10-22: przewijanie karty gracza działa tylko nad danymi
+- **Zgłosił:** gracze (przekazał autor)
+- **Rodzaj / obszar:** błąd / statystyki
+- **Co powiedział:** „W szczegółach statystyk dla jednej osoby scroll działa tylko, jak masz kursor nad danymi. Popraw tak, żeby działał nie ważne, gdzie jest”
+- **Kontekst:** karta gracza (`#/stats/:id`), monitor lub laptop z myszą, kursor na pustym marginesie obok kolumny z danymi
+- **Status:** zaplanowany (P43, `design/plan-p43-p44.md`)
+- **Uwagi:** przyczyna w kodzie: na karcie gracza przewija się `<main>` z `mx-auto max-w-4xl overflow-auto` (`PlayerCard` w `packages/web/src/screens/StatsScreen.tsx`), czyli tylko wyśrodkowana kolumna o szerokości 896 px. Kółko myszy nad pustymi marginesami po bokach nic nie przewija. Kierunek poprawki: `<main>` na całą szerokość pod paskiem nawigacji jako element przewijany (`flex-1 overflow-auto`), a w nim wyśrodkowana kolumna `mx-auto max-w-4xl` z dotychczasowymi odstępami. Testy do dopasowania: „scales the player card…” w `StatsScreen.test.tsx` sprawdza odstępy na `<main>`. Ranking (`#/stats`) i Historia mają `<main>` na całą szerokość, więc ich to nie dotyczy.
 
 ### 2026-10-22: zniknęła opcja porzucenia partii
 - **Zgłosił:** gracze (przekazał autor)

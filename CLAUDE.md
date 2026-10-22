@@ -165,6 +165,12 @@ pnpm lint           # ESLint na całym repo
 - PR jest gotowy, gdy przechodzą `pnpm test`, `pnpm typecheck` i `pnpm lint` (te same checki co w CI).
 - Niejasność w briefie lub decyzja spoza planu: zgłoś pytanie zamiast zgadywać.
 
+### Feedback graczy: od zgłoszenia do rolloutu (decyzja 2026-10-22)
+
+1. **Zgłoszenie:** każdy feedback od graczy trafia najpierw do `feedback-graczy.md` jako wpis ze statusem `nowy`, z przyczyną w kodzie i kierunkiem poprawki w „Uwagach”. Claude nie wdraża feedbacku sam, nawet małej poprawki, chyba że autor wprost o to poprosi.
+2. **Paczka:** gdy zbierze się kilka wpisów, autor rozstrzyga otwarte pytania, a Claude przygotowuje plan `design/plan-pX-pY.md` (sekcja na każdy PR, jak `design/plan-p36-p40.md`) i wpisy w `rollout/etap1/manifest.yaml` (PR-y oraz źródło briefu z tagiem planu). Statusy wpisów zmieniają się na `zaplanowany` z numerem PR-a w planie.
+3. **Wdrożenie:** zmiany wdraża rollout na podstawie manifestu (`/rollout`), autor akceptuje i scala. Po scaleniu statusy zmieniają się na `zrobiony` z numerem PR-a na GitHubie.
+
 ## Detekcja: zasady pracy
 
 - Agent nie widzi prawdziwej tarczy, więc o jakości decydują dane. Wszystkie zmiany w `vision` weryfikuj na zestawie z `/fixtures` (klatki "przed" i "po" rzucie, z oznaczonym segmentem i mnożnikiem).
