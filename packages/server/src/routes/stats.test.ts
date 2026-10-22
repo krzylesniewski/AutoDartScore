@@ -153,6 +153,14 @@ describe('GET /players/:id/stats', () => {
     expect(await stats(bartek)).toMatchObject({ dartsThrown: 6, points: 0, average: 0 });
   });
 
+  it('counts no average, leg or match for a game abandoned before its first leg ended', async () => {
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 1 });
+    await throwDarts(t.app, id, [T(20), T(20), T(20)]);
+    expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
+
+    expect(await stats(anna)).toMatchObject({ dartsThrown: 3, points: 180, average: null, legsWon: 0, matchesPlayed: 0, matchesWon: 0 });
+  });
+
   it('gives a null average to a Solo 501 ended before zero', async () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'solo_501', playerIds: [anna] });
     await throwDarts(t.app, id, [T(20), T(20), T(20)]);

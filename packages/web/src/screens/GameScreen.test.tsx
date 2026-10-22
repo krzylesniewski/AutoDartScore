@@ -607,9 +607,9 @@ describe('abandon and resume', () => {
     return screen.getByRole('dialog', { name: 'Porzucić mecz?' });
   }
 
-  it('hides Porzuć mecz before the first leg is completed', () => {
+  it('offers Porzuć mecz from the start of the game', () => {
     connect();
-    expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Porzuć mecz' })).toBeTruthy();
   });
 
   it('opens the dialog with the current player preselected and posts the abandon', async () => {

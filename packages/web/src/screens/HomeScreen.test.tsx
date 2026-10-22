@@ -575,9 +575,9 @@ describe('HomeScreen: games to finish', () => {
     expect(within(await row('Anna vs Bartek')).queryByText('Porzucony')).toBeNull();
   });
 
-  it('offers Porzuć only after a completed leg', async () => {
+  it('offers Porzuć for every game in progress, also in the first leg', async () => {
     render(<HomeScreen />);
-    expect(within(await row('Anna vs Bartek')).queryByRole('button', { name: /^Porzuć/ })).toBeNull();
+    expect(within(await row('Anna vs Bartek')).getByRole('button', { name: 'Porzuć: Anna vs Bartek' })).toBeTruthy();
     expect(within(await row('Celina vs Darek')).getByRole('button', { name: 'Porzuć: Celina vs Darek' })).toBeTruthy();
     expect(button('Porzuć: Celina vs Darek').textContent).toBe('');
     expect(within(await row('Zabawa, 3 graczy')).queryByRole('button', { name: /^Porzuć/ })).toBeNull();

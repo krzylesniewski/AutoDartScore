@@ -540,3 +540,6 @@ prs:
     changeset: none
     scope: ['packages/web/**']
     briefTags: [p36-p40, rwd]
+
+  # Feedback graczy 2026-10-22 (feedback-graczy.md, design/plan-p41-p42.md). P41 (porzucenie gry od startu
+  # i z ekranu Historia, #45) i P42 (top 5 w kafelkach rankingu, #44) zrobione ręcznie, poza rolloutem.

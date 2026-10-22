@@ -273,10 +273,9 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
 
   const sendAbandon = useCallback(
     (playerId: string, reason: string | null) => {
-      const trimmed = reason?.trim();
       enqueue(async () => {
         try {
-          const state = await abandonMatch(matchId, { playerId, ...(trimmed ? { reason: trimmed } : {}) });
+          const state = await abandonMatch(matchId, playerId, reason);
           setError(null);
           acceptState(state);
         } catch {

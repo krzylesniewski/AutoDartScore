@@ -27,6 +27,22 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-10-22: zniknęła opcja porzucenia partii
+- **Zgłosił:** gracze (przekazał autor)
+- **Rodzaj / obszar:** błąd / ekran gry
+- **Co powiedział:** „zniknęła opcja porzucenia partii, albo nie możemy jej znaleźć”
+- **Kontekst:** ekran gry w trakcie meczu, po zmianie domyślnych ustawień na 301 i best of 1 (P32)
+- **Status:** zaplanowany (P41, `design/plan-p41-p42.md`; decyzje autora 2026-10-22: porzucenie meczu i zabawy od startu gry, także przed pierwszą rzutką; trening (Free run i Solo 501) tylko z „Zakończ trening”; porzucona gra bez ukończonego lega nie liczy się do statystyk; na telefonie przycisk zostaje w menu, a porzucić grę można też z ekranu Historia)
+- **Uwagi:** przycisk „Porzuć mecz” istnieje, ale pokazuje się tylko po co najmniej jednym ukończonym legu (`canAbandon` w `packages/web/src/game/can-abandon.ts`, reguła od P10): w meczu 1v1 przy `legIndex >= 1`, w zabawie gdy ktoś zajął już miejsce, w treningu nigdy. Od P32 mecz domyślnie ma best of 1, więc jedyny leg kończy mecz i w meczu 1v1 przycisk w praktyce nie pojawia się wcale. Ta sama reguła ukrywa ikonę porzucenia na liście niedokończonych gier na ekranie startowym (`UnfinishedGames.tsx`). Dodatkowo poniżej `lg` przycisk jest schowany w menu gry (ikona ☰ w `MatchHeader.tsx`), więc na telefonie i tablecie w pionie łatwo go przeoczyć. Serwer porzucenia nie ogranicza (komentarz w `can-abandon.ts`). Decyzja autora 2026-10-22: porzucenie od pierwszej rzutki w każdym typie gry, także w treningu (gra bez ukończonego lega też może trafić do porzuconych). Zmiana w `canAbandon` (front) i w testach, serwer już na to pozwala. Do ustalenia przy planowaniu: czy przed pierwszą rzutką też (dziś pusta gra zostaje na liście do dokończenia); jak porzucenie ma się do „Zakończ trening” w Free run (dwa przyciski czy jeden); czy porzucona gra bez ukończonego lega liczy się do statystyk (dziś przerwany leg porzuconego meczu nie wchodzi do średniej ani rankingu). Decyzja autora 2026-10-22 (telefon): „Porzuć mecz” nie wychodzi z menu gry; zamiast tego porzucenie ma być dostępne także z ekranu Historia (dziś `HistoryScreen.tsx` go nie ma, jest tylko ikona na liście niedokończonych gier na ekranie startowym), z tym samym oknem `AbandonDialog`.
+
+### 2026-10-22: więcej niż top 3 w kafelkach rankingu statystyk
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / statystyki
+- **Co powiedział:** „zobacz jeszcze, czy to celowo w statystykach pokazujemy top 3? Bo jeśli tak, zwiększyłbym to do top 5 albo nawet 10. Jak się nie zmieści, to dodałbym scrolla”
+- **Kontekst:** ekran statystyk, ranking (kafelki obok listy średnich)
+- **Status:** zaplanowany (P42, `design/plan-p41-p42.md`; decyzja autora 2026-10-22: top 5, przewijanie w kafelku jak dziś tylko od `xl`, bez wyróżnienia podium, próg „za mało graczy” zostaje na 3)
+- **Uwagi:** tak, celowo: top 3 jest od pierwszej wersji ekranu statystyk (P10, makieta motywu A, `design/mockups/theme-a-stats.png`) i potem potwierdzone w `design/stats-highest-turn.md` („Ranking top 3”). Dotyczy tylko czterech kafelków: najlepsza średnia lega, najwyższe zakończenie, najkrótszy leg, najwyższa tura. Lista średnich po lewej pokazuje już wszystkich graczy z przewijaniem. Limit jest w serwerze (`const TOP = 3` w `packages/server/src/stats/rankings.ts`, remisy dzielą miejsce, więc wpisów może być więcej niż 3), schema go nie ogranicza. Front ma przewijanie w kafelku tylko od `xl` (`xl:overflow-y-auto` w `RankingBoard.tsx`), a komunikat „za mało graczy” pokazuje się przy mniej niż 3 wpisach (stała 3 też w `RankingBoard.tsx`). Do decyzji: 5 czy 10; przewijanie w kafelku na wszystkich szerokościach czy tylko na monitorze (na telefonie kafelki są jeden pod drugim, więc 10 wierszy × 4 kafelki to długa strona); czy wyróżnić podium (1-3) na tle reszty; czy próg „za mało graczy” zostaje na 3.
+
 ### 2026-10-21: wybór klawiatury kołowej albo starej prostokątnej w ustawieniach
 - **Zgłosił:** gracze (przekazał autor)
 - **Rodzaj / obszar:** pomysł / klawiatura
