@@ -16,3 +16,4 @@ coverage/
 
 # Wyniki spike'ów (klatki, porównania)
 spikes/**/out/
+.claude/settings.local.json
