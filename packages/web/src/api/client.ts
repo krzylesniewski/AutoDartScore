@@ -132,7 +132,10 @@ export function getMatchSummary(matchId: string): Promise<MatchSummary> {
   return request(`/matches/${encodeURIComponent(matchId)}/summary`, MatchSummary);
 }
 
-export function abandonMatch(id: string, body: AbandonMatchRequest): Promise<MatchSnapshot> {
+// Pusty powód (same spacje) nie idzie do serwera.
+export function abandonMatch(id: string, playerId: string, reason: string | null): Promise<MatchSnapshot> {
+  const trimmed = reason?.trim();
+  const body: AbandonMatchRequest = { playerId, ...(trimmed ? { reason: trimmed } : {}) };
   return request(`/matches/${encodeURIComponent(id)}/abandon`, MatchSnapshot, postJson(body));
 }
 

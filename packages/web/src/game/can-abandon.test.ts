@@ -12,8 +12,8 @@ describe('canAbandon', () => {
     expect(canAbandon(casual(['Anna', 'Bartek', 'Celina']))).toBe(true);
   });
 
-  it('allows a Solo 501 but never a Free run', () => {
-    expect(canAbandon(snapshot({ type: 'practice', practiceMode: 'solo_501', players: [player('p1', 'Anna')] }))).toBe(true);
+  it('never allows a practice game, neither Solo 501 nor Free run', () => {
+    expect(canAbandon(snapshot({ type: 'practice', practiceMode: 'solo_501', players: [player('p1', 'Anna')] }))).toBe(false);
     expect(canAbandon(snapshot({ type: 'practice', practiceMode: 'free_run', players: [player('p1', 'Anna', { remaining: null })] }))).toBe(false);
   });
 

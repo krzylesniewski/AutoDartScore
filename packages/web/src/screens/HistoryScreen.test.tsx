@@ -54,7 +54,7 @@ beforeEach(() => {
   games = [finishedMatch, finishedCasual, finishedSolo, abandoned, inProgress, ended];
   failing = false;
   posts = [];
-  abandonResponse = () => json(200, snapshot({ id: 'm_open', status: 'abandoned' }));
+  abandonResponse = () => json(200, snapshot({ id: 'm_open', status: 'abandoned', abandonment: { playerId: 'p2', reason: null, at: '2026-10-18T11:00:00.000Z' } }));
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -149,18 +149,19 @@ describe('HistoryScreen', () => {
     expect(row('W trakcie').contains(buttons[0] ?? null)).toBe(true);
   });
 
-  it('abandons a game after the dialog and reloads the list', async () => {
+  it('abandons a game after the dialog and updates its row in place', async () => {
     render(<HistoryScreen />);
     await screen.findByText('Anna 2 : 1 Bartek');
     fireEvent.click(within(row('W trakcie')).getByRole('button', { name: /^Porzuć:/ }));
     const dialog = screen.getByRole('dialog', { name: 'Porzucić mecz?' });
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Bartek' }));
-    games = games.map((game) => (game.id === 'm_open' ? { ...game, status: 'abandoned', abandonment: { playerId: 'p2', reason: null, at: '2026-10-18T11:00:00.000Z' } } : game));
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: '   ' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Porzuć mecz' }));
 
     await vi.waitFor(() => expect(screen.getAllByText('Porzucony')).toHaveLength(2));
     expect(posts).toEqual([{ url: '/api/matches/m_open/abandon', body: { playerId: 'p2' } }]);
-    expect(urls).toEqual(['/api/matches', '/api/matches']);
+    expect(urls).toEqual(['/api/matches']);
+    expect(rows()).toHaveLength(6);
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByRole('button', { name: /^Porzuć:/ })).toBeNull();
   });
@@ -173,6 +174,18 @@ describe('HistoryScreen', () => {
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Porzuć mecz' }));
     expect(await screen.findByText('Nie udało się porzucić meczu')).toBeTruthy();
     expect(rows()).toHaveLength(6);
+    expect(within(row('W trakcie')).getByRole('button', { name: /^Porzuć:/ })).toBeTruthy();
+  });
+
+  it('clears the abandon error when the filter changes', async () => {
+    abandonResponse = () => json(409, { error: 'match_finished', message: 'Match is finished' });
+    render(<HistoryScreen />);
+    await screen.findByText('Anna 2 : 1 Bartek');
+    fireEvent.click(within(row('W trakcie')).getByRole('button', { name: /^Porzuć:/ }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Porzuć mecz' }));
+    await screen.findByText('Nie udało się porzucić meczu');
+    fireEvent.click(screen.getByRole('button', { name: 'Mecze 1v1' }));
+    expect(screen.queryByText('Nie udało się porzucić meczu')).toBeNull();
   });
 
   it('shows an empty state', async () => {

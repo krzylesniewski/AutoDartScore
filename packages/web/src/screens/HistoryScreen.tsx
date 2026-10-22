@@ -4,6 +4,7 @@ import { abandonMatch, listMatches } from '../api/client';
 import { AbandonDialog } from '../components/AbandonDialog';
 import { AppNav } from '../components/AppNav';
 import { MatchHistoryList } from '../components/MatchHistoryList';
+import { Notice } from '../components/Notice';
 import { WarningIcon } from '../components/icons';
 import { pl } from '../i18n/pl';
 
@@ -27,7 +28,6 @@ type Games = { status: 'loading' } | { status: 'ready'; games: MatchListItem[] }
 export function HistoryScreen() {
   const [type, setType] = useState<MatchType | null>(null);
   const [games, setGames] = useState<Games>({ status: 'loading' });
-  const [reloads, setReloads] = useState(0);
   const [abandoning, setAbandoning] = useState<MatchListItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -50,16 +50,17 @@ export function HistoryScreen() {
     return () => {
       cancelled = true;
     };
-  }, [type, reloads]);
+  }, [type]);
 
   async function abandon(game: MatchListItem, playerId: string, reason: string | null): Promise<void> {
     setAbandoning(null);
     setBusy(true);
     setNotice(null);
     try {
-      const trimmed = reason?.trim();
-      await abandonMatch(game.id, { playerId, ...(trimmed ? { reason: trimmed } : {}) });
-      setReloads((count) => count + 1);
+      const state = await abandonMatch(game.id, playerId, reason);
+      // Wiersz zmienia się na miejscu, bez ponownego pobrania listy: lista nie miga i zostaje przewinięta tam, gdzie była.
+      const updated: MatchListItem = { ...game, status: state.status, abandonment: state.abandonment, updatedAt: state.abandonment?.at ?? game.updatedAt };
+      setGames((current) => (current.status === 'ready' ? { status: 'ready', games: current.games.map((item) => (item.id === game.id ? updated : item)) } : current));
     } catch {
       setNotice(pl.abandonFailed);
     } finally {
@@ -84,7 +85,10 @@ export function HistoryScreen() {
             </h2>
             <div className="flex flex-wrap gap-2.5">
               {FILTERS.map((option) => (
-                <button key={option.label} type="button" aria-pressed={type === option.value} onClick={() => setType(option.value)} className={choiceStyle(type === option.value)}>
+                <button key={option.label} type="button" aria-pressed={type === option.value} onClick={() => {
+                    setType(option.value);
+                    setNotice(null);
+                  }} className={choiceStyle(type === option.value)}>
                   {option.label}
                 </button>
               ))}
@@ -92,10 +96,9 @@ export function HistoryScreen() {
           </section>
         </div>
         {notice && (
-          <p role="alert" className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
-            <WarningIcon />
-            {notice}
-          </p>
+          <div role="alert">
+            <Notice text={notice} />
+          </div>
         )}
         {games.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
         {games.status === 'error' && (

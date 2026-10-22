@@ -121,8 +121,7 @@ export function HomeScreen() {
     setBusy(true);
     setNotice(null);
     try {
-      const trimmed = reason?.trim();
-      await abandonMatch(game.id, { playerId, ...(trimmed ? { reason: trimmed } : {}) });
+      await abandonMatch(game.id, playerId, reason);
       await reloadGames();
     } catch {
       setNotice(pl.abandonFailed);

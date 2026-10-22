@@ -4,7 +4,8 @@ import { canAbandon } from '../game/can-abandon';
 import { canEndPractice } from '../game/can-end-practice';
 import { unfinishedRow } from '../game/unfinished-row';
 import { pl } from '../i18n/pl';
-import { BustIcon, PauseIcon, WarningIcon } from './icons';
+import { Notice } from './Notice';
+import { BustIcon, PauseIcon } from './icons';
 
 export type GameList = { status: 'loading' } | { status: 'error' } | { status: 'ready'; games: readonly MatchListItem[] };
 
@@ -86,14 +87,5 @@ export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon,
         </ul>
       )}
     </section>
-  );
-}
-
-function Notice({ text }: { text: string }) {
-  return (
-    <p className="flex items-center gap-2 font-display text-lg text-(--color-accent)">
-      <WarningIcon />
-      {text}
-    </p>
   );
 }
