@@ -81,6 +81,15 @@ describe('POST /matches/:id/abandon', () => {
     expect((await logEntries(t.db, id)).at(-1)).toMatchObject({ type: 'match_abandoned', player_id: bartek, reason: null });
   });
 
+  it('abandons a game before its first throw and a best of 1 in its only leg', async () => {
+    const solo = await createGame(t.app, { type: 'practice', practiceMode: 'solo_501', playerIds: [anna] });
+    expect((await abandonOk(solo.id, { playerId: anna })).status).toBe('abandoned');
+
+    const { id } = await match301(1);
+    await throwDarts(t.app, id, [T(20), S(19)]);
+    expect(await abandonOk(id, { playerId: bartek })).toMatchObject({ status: 'abandoned', legIndex: 0 });
+  });
+
   it('rejects throws and undo on an abandoned game but answers a resent eventId', async () => {
     const { id } = await match301();
     const earlier = hitEvent(id, S(20));

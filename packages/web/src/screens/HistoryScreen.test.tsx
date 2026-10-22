@@ -1,7 +1,7 @@
 import type { MatchListItem } from '@autoscore/schema';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { listItem, player } from '../test/snapshots';
+import { listItem, player, snapshot } from '../test/snapshots';
 import { HistoryScreen } from './HistoryScreen';
 
 function json(status: number, body: unknown): Response {
@@ -46,14 +46,22 @@ const ended = listItem({
 let urls: string[];
 let games: MatchListItem[];
 let failing: boolean;
+let abandonResponse: () => Response;
+let posts: { url: string; body: unknown }[];
 
 beforeEach(() => {
   urls = [];
   games = [finishedMatch, finishedCasual, finishedSolo, abandoned, inProgress, ended];
   failing = false;
+  posts = [];
+  abandonResponse = () => json(200, snapshot({ id: 'm_open', status: 'abandoned' }));
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string) => {
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        posts.push({ url, body: JSON.parse(String(init.body)) });
+        return abandonResponse();
+      }
       urls.push(url);
       return failing ? json(500, { error: 'internal_error', message: 'Internal server error' }) : json(200, games);
     }),
@@ -131,6 +139,40 @@ describe('HistoryScreen', () => {
     }
     fireEvent.click(screen.getByRole('button', { name: 'Wszystkie' }));
     await vi.waitFor(() => expect(urls.at(-1)).toBe('/api/matches'));
+  });
+
+  it('offers abandoning only for a game in progress', async () => {
+    render(<HistoryScreen />);
+    await screen.findByText('Anna 2 : 1 Bartek');
+    const buttons = screen.getAllByRole('button', { name: /^Porzuć:/ });
+    expect(buttons).toHaveLength(1);
+    expect(row('W trakcie').contains(buttons[0] ?? null)).toBe(true);
+  });
+
+  it('abandons a game after the dialog and reloads the list', async () => {
+    render(<HistoryScreen />);
+    await screen.findByText('Anna 2 : 1 Bartek');
+    fireEvent.click(within(row('W trakcie')).getByRole('button', { name: /^Porzuć:/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Porzucić mecz?' });
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'Bartek' }));
+    games = games.map((game) => (game.id === 'm_open' ? { ...game, status: 'abandoned', abandonment: { playerId: 'p2', reason: null, at: '2026-10-18T11:00:00.000Z' } } : game));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Porzuć mecz' }));
+
+    await vi.waitFor(() => expect(screen.getAllByText('Porzucony')).toHaveLength(2));
+    expect(posts).toEqual([{ url: '/api/matches/m_open/abandon', body: { playerId: 'p2' } }]);
+    expect(urls).toEqual(['/api/matches', '/api/matches']);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Porzuć:/ })).toBeNull();
+  });
+
+  it('shows a failed abandon and keeps the list', async () => {
+    abandonResponse = () => json(409, { error: 'match_finished', message: 'Match is finished' });
+    render(<HistoryScreen />);
+    await screen.findByText('Anna 2 : 1 Bartek');
+    fireEvent.click(within(row('W trakcie')).getByRole('button', { name: /^Porzuć:/ }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Porzuć mecz' }));
+    expect(await screen.findByText('Nie udało się porzucić meczu')).toBeTruthy();
+    expect(rows()).toHaveLength(6);
   });
 
   it('shows an empty state', async () => {

@@ -1,12 +1,16 @@
 import type { MatchListItem } from '@autoscore/schema';
 import type { ReactNode } from 'react';
+import { canAbandon } from '../game/can-abandon';
 import { historyRow, type HistoryStatus } from '../game/history-row';
 import { pl } from '../i18n/pl';
-import { PauseIcon, StopIcon, ThrowingIcon, TrophyIcon } from './icons';
+import { BustIcon, PauseIcon, StopIcon, ThrowingIcon, TrophyIcon } from './icons';
 
 export interface MatchHistoryListProps {
   games: readonly MatchListItem[];
   now: Date;
+  // Bez onAbandon lista nie pokazuje przycisku porzucenia (np. gry gracza w statystykach).
+  onAbandon?(game: MatchListItem): void;
+  busy?: boolean;
 }
 
 const STATUS_ICONS: Record<HistoryStatus, ReactNode> = {
@@ -16,6 +20,8 @@ const STATUS_ICONS: Record<HistoryStatus, ReactNode> = {
   ended: <StopIcon className="text-(--color-text-muted)" />,
 };
 
+const iconButton =
+  'flex size-11 shrink-0 items-center justify-center rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-transparent text-base text-(--color-text-muted) disabled:opacity-40';
 const link =
   'flex min-h-11 shrink-0 items-center rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-4 font-display text-[19px] font-semibold';
 
@@ -23,7 +29,7 @@ function matchHref(id: string): string {
   return `#/matches/${encodeURIComponent(id)}`;
 }
 
-export function MatchHistoryList({ games, now }: MatchHistoryListProps) {
+export function MatchHistoryList({ games, now, onAbandon, busy = false }: MatchHistoryListProps) {
   if (games.length === 0) {
     return <p className="py-3 font-display text-2xl text-(--color-text-muted)">{pl.noGamesInHistory}</p>;
   }
@@ -53,9 +59,16 @@ export function MatchHistoryList({ games, now }: MatchHistoryListProps) {
               {STATUS_ICONS[row.status]}
               {row.statusLabel}
             </span>
-            <a href={matchHref(game.id)} aria-label={pl.detailsOf(row.result)} className={`${link} @max-xl:justify-self-end`}>
-              {pl.details}
-            </a>
+            <div className="flex shrink-0 gap-3 @max-xl:justify-self-end">
+              {onAbandon && canAbandon(game) && (
+                <button type="button" aria-label={pl.abandonGame(row.result)} disabled={busy} onClick={() => onAbandon(game)} className={iconButton}>
+                  <BustIcon />
+                </button>
+              )}
+              <a href={matchHref(game.id)} aria-label={pl.detailsOf(row.result)} className={link}>
+                {pl.details}
+              </a>
+            </div>
           </li>
         );
       })}

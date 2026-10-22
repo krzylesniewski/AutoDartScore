@@ -58,9 +58,9 @@ describe('MatchHeader', () => {
     expect(screen.getByRole('link', { name: 'Ekran startowy' }).getAttribute('href')).toBe('#/');
   });
 
-  it('hides Porzuć mecz in a 1v1 before the first leg is completed', () => {
+  it('offers Porzuć mecz in a 1v1 from the start, before the first leg is completed', () => {
     render(<MatchHeader state={snapshot({ legIndex: 0 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
-    expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Porzuć mecz' })).toBeTruthy();
   });
 
   it('offers Porzuć mecz in a game in progress with a completed leg', () => {
@@ -105,6 +105,17 @@ describe('MatchHeader', () => {
       screen.getByRole('button', { name: 'Zakończ trening' }).click();
       expect(onEndPractice).toHaveBeenCalled();
       expect(screen.queryByText('Zakończony')).toBeNull();
+    });
+
+    it('offers only Zakończ trening in a Free run and both buttons in a Solo 501', () => {
+      const { unmount } = render(<MatchHeader state={freeRun(1)} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} onEndPractice={vi.fn()} />);
+      expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+      unmount();
+
+      const solo = snapshot({ type: 'practice', practiceMode: 'solo_501', legsToWin: null, players: [player('p1', 'Anna', { dartsThrownInLeg: 3 })] });
+      render(<MatchHeader state={solo} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} onEndPractice={vi.fn()} />);
+      expect(screen.getByRole('button', { name: 'Porzuć mecz' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Zakończ trening' })).toBeTruthy();
     });
 
     it('hides Zakończ trening with 0 darts and in a 1v1', () => {

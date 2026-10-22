@@ -3,19 +3,17 @@ import { casual, player, snapshot } from '../test/snapshots';
 import { canAbandon } from './can-abandon';
 
 describe('canAbandon', () => {
-  it('allows a 1v1 only after the first leg', () => {
-    expect(canAbandon(snapshot({ legIndex: 0 }))).toBe(false);
+  it('allows a 1v1 from the start, also in the first leg', () => {
+    expect(canAbandon(snapshot({ legIndex: 0 }))).toBe(true);
     expect(canAbandon(snapshot({ legIndex: 1 }))).toBe(true);
   });
 
-  it('allows a casual game only once someone holds a place', () => {
-    const game = casual(['Anna', 'Bartek', 'Celina']);
-    expect(canAbandon(game)).toBe(false);
-    expect(canAbandon({ ...game, players: [player('p1', 'Anna', { remaining: 0, place: 1 }), ...game.players.slice(1)] })).toBe(true);
+  it('allows a casual game before anyone holds a place', () => {
+    expect(canAbandon(casual(['Anna', 'Bartek', 'Celina']))).toBe(true);
   });
 
-  it('never allows a practice game', () => {
-    expect(canAbandon(snapshot({ type: 'practice', practiceMode: 'solo_501', legIndex: 1, players: [player('p1', 'Anna')] }))).toBe(false);
+  it('allows a Solo 501 but never a Free run', () => {
+    expect(canAbandon(snapshot({ type: 'practice', practiceMode: 'solo_501', players: [player('p1', 'Anna')] }))).toBe(true);
     expect(canAbandon(snapshot({ type: 'practice', practiceMode: 'free_run', players: [player('p1', 'Anna', { remaining: null })] }))).toBe(false);
   });
 
