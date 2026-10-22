@@ -688,7 +688,7 @@ Makiety: `design/mockups/theme-a-new-game.html` (+ `.png`), `theme-a-new-game-10
 
 10. **Filtr typu gry:** Wszystkie / Mecze 1v1 / Zabawa / Trening (Trening = Solo 501). Zawsze cała historia, bez filtra okresu. Tylko mecze z `countsToStats` (Free run nigdy) i tylko zapisani gracze (goście pomijani).
 11. **Nagłówek:** liczba gier i legów w wybranym filtrze.
-12. **Sześć rankingów, top 3 każdy** (od 2026-10-22 kafelki pokazują top 5, decyzja z `feedback-graczy.md`), liczone z tabeli rzutek (nie z liczników):
+12. **Sześć rankingów, top 5 każdy** (do 2026-10-22 top 3), liczone z tabeli rzutek (nie z liczników):
     - **Najlepsza średnia w legu:** najwyższa średnia na 3 rzutki w jednym legu (punkty / rzutki × 3). Rekord, szczytowa forma.
     - **Średnia ogólna:** średnia na 3 rzutki ze wszystkich rzutek gracza we wszystkich legach. Typowy poziom. Busty dodają rzutki bez punktów.
     - **Najwyższe zamknięcie:** największy `checkout` z `leg_won`.
@@ -705,7 +705,7 @@ Makiety: `design/mockups/theme-a-new-game.html` (+ `.png`), `theme-a-new-game-10
 - **Gry do dokończenia:** wszystkie nieskończone gry, także Free run, bez limitu (decyzja z P9). Wiersz ma „Dokończ”, a „Porzuć” (z potwierdzeniem) tylko wtedy, gdy gra ma co najmniej 1 ukończony leg. Ta sama reguła obowiązuje dla „Porzuć mecz” na ekranie gry (zmiana względem P9). Gra bez ukończonego lega zostaje na liście do dokończenia. **Trening (Solo 501 i Free run, decyzja z P12, realizuje P13):** zamiast „Porzuć” przycisk „Zakończ trening” na ekranie gry i w wierszu listy, dostępny po pierwszej rzutce, z potwierdzeniem; zapisuje zdarzenie w logu (nic nie jest usuwane), zamyka sesję i usuwa ją z „Gier do dokończenia”. Zakończony Free run zachowuje licznik sesji; Solo 501 zakończony przed zerem nie ma wygranego lega i przerwany leg nie wchodzi do średniej. Kropki stanu: lokalnie („Kamera: brak”, głos z ustawień urządzenia), endpoint statusu w Etapie 2. Awatar: tylko emoji, zdjęcia później.
 - **Próba na double:** każda rzutka rzucona, gdy wynik gracza da się zamknąć jedną rzutką (parzysty ≤ 40 albo 50).
 - **Remisy:** ta sama pozycja dla równych wartości. **Minimum do średnich:** 3 ukończone legi.
-- **Ekran statystyk:** po lewej przewijana lista wszystkich graczy posortowana według średniej na 3 rzutki ze wszystkich legów („Średnia (3 rzutki)”), z pozycją, awatarem i liczbą legów. Po prawej 4 kafelki top 5 (do 2026-10-22 top 3): **Rekordowy leg (średnia)**, **Najwyższe zamknięcie**, **Najkrótszy leg**, **Liczba 180**. Średnia ogólna jest w liście, nie w kafelku; skuteczność doubli zostaje w karcie gracza z P6, nie w kafelku.
+- **Ekran statystyk:** po lewej przewijana lista wszystkich graczy posortowana według średniej na 3 rzutki ze wszystkich legów („Średnia (3 rzutki)”), z pozycją, awatarem i liczbą legów. Po prawej 4 kafelki top 5 (do 2026-10-22 top 3): **Rekordowy leg (średnia)**, **Najwyższe zamknięcie**, **Najkrótszy leg**, **Najwyższa tura** (wcześniej **Liczba 180**, `design/stats-highest-turn.md`). Średnia ogólna jest w liście, nie w kafelku; skuteczność doubli zostaje w karcie gracza z P6, nie w kafelku.
 - Ranking z P8 (średnia z ostatnich 20 legów) jest zastąpiony tą listą; P8 nie robi już rankingu.
 
 # Typy gier: mecz 1v1, zabawa i trening

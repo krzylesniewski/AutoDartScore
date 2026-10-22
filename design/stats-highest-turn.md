@@ -6,7 +6,7 @@ Na ekranie statystyk kafel rankingu **„Liczba 180”** zastępujemy kaflem **�
 - Wartość gracza: maksymalna suma punktów jednej tury (`turn_completed.total`), od 0 do 180.
 - Liczą się **tylko gry typu `match` (Mecz 1v1)**, z `countsToStats`. Zabawa i trening nie wchodzą do tego kafla.
 - Tura z bustem się nie liczy (punkty przepadły). Tura zamykająca leg liczy się normalnie (np. zamknięcie 121 w turze = 121).
-- Ranking top 3 malejąco (od 2026-10-22 top 5 we wszystkich kafelkach, decyzja z `feedback-graczy.md`), remisy i pomijanie graczy bez wartości tak samo jak w pozostałych kaflach (obecna funkcja `top`).
+- Ranking top 5 malejąco (do 2026-10-22 top 3), remisy i pomijanie graczy bez wartości tak samo jak w pozostałych kaflach (obecna funkcja `top`).
 
 ## Filtr typu gry
 - „Wszystkie” i „Mecze 1v1”: kafel liczony z meczów 1v1 w tym filtrze.
