@@ -3,6 +3,7 @@ import type { Hit } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import { suggestCheckout } from './checkout';
 
+const S = (segment: number): Hit => ({ segment, multiplier: 1 });
 const T = (segment: number): Hit => ({ segment, multiplier: 3 });
 const D = (segment: number): Hit => ({ segment, multiplier: 2 });
 const BULL: Hit = { segment: 25, multiplier: 2 };
@@ -43,6 +44,18 @@ describe('suggestCheckout', () => {
   });
 
   it.each([
+    [43, [S(3), D(20)]],
+    [46, [S(6), D(20)]],
+    [58, [S(18), D(20)]],
+    [7, [S(3), D(2)]],
+    [35, [S(3), D(16)]],
+    [106, [T(20), S(6), D(20)]],
+    [118, [T(20), S(18), D(20)]],
+  ] as const)('suggests a single for a setup worth 1-20 at %i', (remaining, expected) => {
+    expect(suggestCheckout(remaining, 3)).toEqual(expected);
+  });
+
+  it.each([
     [41, 1],
     [99, 2],
     [159, 3],
@@ -66,6 +79,11 @@ describe('suggestCheckout', () => {
         expect(route).toHaveLength(minimal);
         expect(route?.reduce((sum, hit) => sum + hitPoints(hit), 0)).toBe(remaining);
         expect(route?.at(-1)?.multiplier).toBe(2);
+        for (const setup of route?.slice(0, -1) ?? []) {
+          if (hitPoints(setup) <= 20) {
+            expect(setup.multiplier, `${remaining} in ${dartsLeft}`).toBe(1);
+          }
+        }
       }
     }
   });
