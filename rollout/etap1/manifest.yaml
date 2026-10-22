@@ -83,6 +83,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p36-p40.md
       kind: markdown
       tag: p36-p40
+    # Tylko dla PR-ów z briefTags: [p43-p44].
+    - title: P43-P44, przewijanie karty gracza na całej szerokości, trasy podpowiedzi zamknięcia (wiążące dla P43-P44, każdy PR tylko swoja sekcja)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p43-p44.md
+      kind: markdown
+      tag: p43-p44
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -543,3 +548,26 @@ prs:
 
   # Feedback graczy 2026-10-22 (feedback-graczy.md, design/plan-p41-p42.md). P41 (porzucenie gry od startu
   # i z ekranu Historia, #45) i P42 (top 5 w kafelkach rankingu, #44) zrobione ręcznie, poza rolloutem.
+
+  # Feedback graczy 2026-10-22 (feedback-graczy.md, design/plan-p43-p44.md). Dwa niezależne zadania.
+  # Karta gracza przewija się na całej szerokości, nie tylko nad kolumną z danymi (sekcja P43).
+  - id: P43
+    branch: fix/web-stats-player-scroll
+    title: 'fix(web): scroll the player stats card over its full width'
+    brief: briefs/P43.md
+    priority: 60
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p43-p44, rwd]
+
+  # Trasy podpowiedzi zamknięcia według jawnych reguł, singiel zamiast małej trebli (sekcja P44).
+  - id: P44
+    branch: fix/web-checkout-routes
+    title: 'fix(web): suggest a single instead of a low treble in checkouts'
+    brief: briefs/P44.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p43-p44]
