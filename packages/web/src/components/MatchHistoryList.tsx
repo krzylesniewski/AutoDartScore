@@ -37,6 +37,7 @@ export function MatchHistoryList({ games, now, onAbandon, busy = false }: MatchH
     <ul className="@container flex flex-col">
       {games.map((game) => {
         const row = historyRow(game, now);
+        const abandonable = onAbandon !== undefined && canAbandon(game);
         return (
           <li
             key={game.id}
@@ -59,9 +60,10 @@ export function MatchHistoryList({ games, now, onAbandon, busy = false }: MatchH
               {STATUS_ICONS[row.status]}
               {row.statusLabel}
             </span>
-            <div className="flex shrink-0 gap-3 @max-xl:justify-self-end">
-              {onAbandon && canAbandon(game) && (
-                <button type="button" aria-label={pl.abandonGame(row.result)} disabled={busy} onClick={() => onAbandon(game)} className={iconButton}>
+            {/* W wąskiej karcie dwa przyciski schodzą do osobnego wiersza, żeby nie ściskać odznaki statusu. */}
+            <div className={`flex shrink-0 gap-3 @max-xl:justify-self-end ${abandonable ? '@max-xl:col-span-2' : ''}`}>
+              {abandonable && (
+                <button type="button" aria-label={pl.abandonGame(row.result)} disabled={busy} onClick={() => onAbandon?.(game)} className={iconButton}>
                   <BustIcon />
                 </button>
               )}
