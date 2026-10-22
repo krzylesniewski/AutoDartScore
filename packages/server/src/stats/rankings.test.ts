@@ -14,6 +14,9 @@ const anna = profile('anna', 'Anna', 1);
 const bartek = profile('bartek', 'Bartek', 7);
 const celina = profile('celina', 'Celina', 12);
 const darek = profile('darek', 'Darek', 16);
+const ewa = profile('ewa', 'Ewa', 3);
+const filip = profile('filip', 'Filip', 9);
+const gosia = profile('gosia', 'Gosia', 5);
 
 // Leg z 3 rzutkami, więc średnia na 3 rzutki równa się punktom.
 function leg(playerId: string, legIndex: number, average: number): PlayerLeg {
@@ -62,25 +65,54 @@ describe('buildRankings', () => {
     ]);
   });
 
-  it('keeps every entry tied for 3rd place in a tile', () => {
+  it('keeps every entry tied for 5th place in a tile', () => {
     const rankings = buildRankings({
-      players: [anna, bartek, celina, darek],
-      games: [game([], { anna: { highestCheckout: 100 }, bartek: { highestCheckout: 80 }, celina: { highestCheckout: 40 }, darek: { highestCheckout: 40 } })],
+      players: [anna, bartek, celina, darek, ewa, filip, gosia],
+      games: [
+        game([], {
+          anna: { highestCheckout: 100 },
+          bartek: { highestCheckout: 80 },
+          celina: { highestCheckout: 60 },
+          darek: { highestCheckout: 50 },
+          ewa: { highestCheckout: 40 },
+          filip: { highestCheckout: 40 },
+          gosia: { highestCheckout: 20 },
+        }),
+      ],
     });
     expect(rankings.highestCheckout.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
       ['Anna', 1, 100],
       ['Bartek', 2, 80],
-      ['Celina', 3, 40],
-      ['Darek', 3, 40],
+      ['Celina', 3, 60],
+      ['Darek', 4, 50],
+      ['Ewa', 5, 40],
+      ['Filip', 5, 40],
     ]);
   });
 
-  it('cuts a tile after 3rd place', () => {
+  it('cuts a tile after 5th place', () => {
+    const rankings = buildRankings({
+      players: [anna, bartek, celina, darek, ewa, filip],
+      games: [
+        game([], {
+          anna: { highestCheckout: 100 },
+          bartek: { highestCheckout: 80 },
+          celina: { highestCheckout: 60 },
+          darek: { highestCheckout: 50 },
+          ewa: { highestCheckout: 40 },
+          filip: { highestCheckout: 20 },
+        }),
+      ],
+    });
+    expect(rankings.highestCheckout.map((entry) => entry.name)).toEqual(['Anna', 'Bartek', 'Celina', 'Darek', 'Ewa']);
+  });
+
+  it('lists every player in a tile with fewer than 5 players', () => {
     const rankings = buildRankings({
       players: [anna, bartek, celina, darek],
       games: [game([], { anna: { highestCheckout: 100 }, bartek: { highestCheckout: 80 }, celina: { highestCheckout: 60 }, darek: { highestCheckout: 40 } })],
     });
-    expect(rankings.highestCheckout.map((entry) => entry.name)).toEqual(['Anna', 'Bartek', 'Celina']);
+    expect(rankings.highestCheckout.map((entry) => entry.name)).toEqual(['Anna', 'Bartek', 'Celina', 'Darek']);
   });
 
   it('needs 3 completed legs for a position and the record leg', () => {
@@ -129,6 +161,7 @@ describe('buildRankings', () => {
       ['Anna', 1, 140],
       ['Bartek', 1, 140],
       ['Celina', 3, 60],
+      ['Darek', 4, 45],
     ]);
   });
 

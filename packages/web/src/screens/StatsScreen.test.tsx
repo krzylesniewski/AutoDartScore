@@ -178,7 +178,7 @@ describe('StatsScreen: ranking', () => {
     expect(within(list).getByText('Średnia od 3 ukończonych legów.')).toBeTruthy();
   });
 
-  it('shows exactly 4 top 3 tiles and no doubles tile', async () => {
+  it('shows exactly 4 top 5 tiles and no doubles tile', async () => {
     render(<StatsScreen playerId={null} />);
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
     const tiles = ['Rekordowy leg (średnia)', 'Najwyższe zamknięcie', 'Najkrótszy leg', 'Najwyższa tura'];
