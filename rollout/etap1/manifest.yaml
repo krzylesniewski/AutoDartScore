@@ -655,7 +655,8 @@ prs:
     effort: { brief: high, implement: high, verify: high }
     changeset: none
     # Nowy typ wiadomości może wymagać poprawki danych testowych frontu; README opisuje wiadomość.
-    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
+    # Announcer dostaje tylko przypadek `achievement`, żeby przeszedł typecheck (decyzja autora 2026-10-26); dźwięk w P51.
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/audio/src/announcer.ts', 'packages/audio/src/announcer.test.ts', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
     briefTags: [p48-p51]
 
   # Osiągnięcia i komentarz do zera w głosie i na ekranie gry, nagrania już w public/audio (sekcja P51).
