@@ -758,6 +758,15 @@ Free run jest też dobrym narzędziem do zbierania klatek testowych dla detekcji
 - Tryby treningowe i wyzwania dzienne.
 - "Bull-off" jako alternatywa losowania przy wyborze, kto zaczyna.
 
+## Wykres zejścia z wyniku na podsumowaniu gry (pomysł 2026-10-26, do paczki rolloutu)
+
+- **Cel:** zobaczyć, jak szybko gracze schodzą z wyniku w legu.
+- **Gdzie:** widok zakończonej gry (podsumowanie, `MatchEndView`), pod kartą lega („Leg 1”, `LegCards`).
+- **Wykres:** oś pionowa to pozostały wynik (od punktów startowych do 0), oś pozioma to liczba rzuconych lotek. Wszyscy gracze lega na jednym wykresie (decyzja 2026-10-26), każdy ma swoją linię w kolorze awatara, z imieniem w legendzie, bo kolor nie może sam nieść znaczenia.
+- **Dane:** z rzutek lega (zapis zdarzeniowy), więc bust i korekty wynikają z odtworzenia zdarzeń. Podsumowanie (`MatchSummary`) nie ma dziś przebiegu wyniku, więc trzeba je rozszerzyć w `packages/schema` albo liczyć przebieg z rzutek po stronie serwera.
+- **Decyzje 2026-10-26:** punkt po każdej lotce (oś pozioma to dokładna liczba lotek); przy buście linia wraca do wyniku sprzed tury, ze znacznikiem „Bust”; wykres tylko dla ostatniego lega; mecz 1v1 i zabawa tak, trening bez wykresu.
+- **Zgłoszenie:** `feedback-graczy.md`, wpis z 2026-10-26 (status `zaplanowany`); plan `design/plan-p45.md`, PR P45 w `rollout/etap1/manifest.yaml`.
+
 # Proponowany MVP (kolejność prac)
 
 1. Silnik 501 z poprawnymi zasadami i testami (zdarzenia: `turn_completed`, `bust`, `leg_won`, `match_won`).
