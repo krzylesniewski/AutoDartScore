@@ -33,7 +33,7 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 - **Rodzaj / obszar:** pomysł / kreator
 - **Co powiedział:** „W sekcji nowa gra, trening, przygotuj nowy tryb gry: końcówki. I tam powinna się losować końcówka lega w dwóch przedziałach: 0-50 i 51-100. I podczas treningu zaznaczam, czy mi się udało, czy nie. Jest to trening per osoba”
 - **Kontekst:** kreator gry, trening jednego gracza
-- **Status:** zaplanowany (P46-P47, `design/plan-p46-p47.md`)
+- **Status:** zrobiony (P46 PR #53, P47 PR #54, `design/plan-p46-p47.md`)
 - **Uwagi:** dziś trening ma tylko Free run i Solo 501 (`PracticeMode` w `packages/schema/src/match.ts`). Silnik nie losuje, więc serwer losuje ziarno przy tworzeniu gry, a silnik wylicza z niego kolejne końcówki deterministycznie (ta sama końcówka po odświeżeniu i na drugim ekranie). Wynik próby to nowe zdarzenie w logu. Decyzje autora 2026-10-26: przedział wybierany w kreatorze (2-50 albo 51-100, od 2, bo 0 i 1 nie da się zamknąć); jedna tura (3 lotki) na końcówkę, bez wpisywania lotek; przyciski „Udało się” i „Nie udało się”; sesja bez limitu do „Zakończ trening”, z licznikiem prób i procentem udanych; nie wchodzi do statystyk X01.
 
 ### 2026-10-26: wykres zejścia z wyniku na podsumowaniu gry
