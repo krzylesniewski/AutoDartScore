@@ -28,6 +28,8 @@ export interface KeypadKeyProps {
   ref?: Ref<KeypadKeyHandle> | undefined;
   children: ReactNode;
   disabled: boolean;
+  // W odróżnieniu od disabled nie kasuje trwającego błysku, bo kliknięcie, które wysyła komendę, od razu ustawia ten stan.
+  ignorePress?: boolean;
   onPress(): void;
   flashOnPress?: boolean;
   ariaPressed?: boolean;
@@ -36,12 +38,15 @@ export interface KeypadKeyProps {
   idleTone: KeypadKeyTone;
   pressedTone?: KeypadKeyTone | undefined;
   shortcut?: KeypadKeyShortcut | undefined;
+  title?: string | undefined;
+  flashBorder?: string;
 }
 
 export function KeypadKey({
   ref,
   children,
   disabled,
+  ignorePress = false,
   onPress,
   flashOnPress = false,
   ariaPressed,
@@ -50,6 +55,8 @@ export function KeypadKey({
   idleTone,
   pressedTone = PRESSED_TONE,
   shortcut,
+  title,
+  flashBorder = FLASH_BORDER,
 }: KeypadKeyProps) {
   const [pressed, setPressed] = useState(false);
   const [flashing, setFlashing] = useState(false);
@@ -80,7 +87,7 @@ export function KeypadKey({
 
   // Safari na iOS nie pokazuje :active bez obsługi dotyku, a krótkie stuknięcie i tak go nie pokaże. Dlatego zdarzenia wskaźnika.
   function handlePointerDown(event: PointerEvent<HTMLButtonElement>): void {
-    if (disabled || event.button !== 0) {
+    if (disabled || ignorePress || event.button !== 0) {
       return;
     }
 
@@ -93,6 +100,10 @@ export function KeypadKey({
 
   // Błysk startuje z kliknięcia, więc widać go też po bardzo krótkim stuknięciu i po skrócie z klawiatury.
   function handleClick(): void {
+    if (ignorePress) {
+      return;
+    }
+
     onPress();
     if (!flashOnPress) {
       return;
@@ -106,7 +117,7 @@ export function KeypadKey({
   // Bez listy zależności uchwyt powstaje przy każdym renderze, więc skrót zawsze woła aktualne onPress.
   useImperativeHandle(ref, () => ({
     press() {
-      if (disabled) {
+      if (disabled || ignorePress) {
         return;
       }
       handleClick();
@@ -118,7 +129,7 @@ export function KeypadKey({
   }));
 
   const tone = pressed ? pressedTone : idleTone;
-  const border = flashing ? FLASH_BORDER : tone.border;
+  const border = flashing ? flashBorder : tone.border;
 
   return (
     <button
@@ -126,6 +137,7 @@ export function KeypadKey({
       disabled={disabled}
       aria-pressed={ariaPressed}
       aria-keyshortcuts={shortcut?.keys}
+      title={title}
       data-pressed={pressed ? '' : undefined}
       data-flash={flashing ? '' : undefined}
       onPointerDown={handlePointerDown}
