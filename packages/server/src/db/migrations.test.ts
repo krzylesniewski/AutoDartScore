@@ -1,3 +1,4 @@
+import { checkoutTarget } from '@autoscore/engine';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
 import { defaultPlayerColor } from '../store/player-color.js';
@@ -144,10 +145,10 @@ describe('migrateToLatest', () => {
       .execute();
 
     await migrateToLatest(db);
-    const matches = await db.selectFrom('matches').select(['id', 'checkout_range', 'checkout_seed']).orderBy('id').execute();
+    const matches = await db.selectFrom('matches').select(['id', 'checkout_range', 'checkout_seed', 'checkout_rule']).orderBy('id').execute();
     expect(matches).toEqual([
-      { id: 'f1', checkout_range: null, checkout_seed: null },
-      { id: 'm1', checkout_range: null, checkout_seed: null },
+      { id: 'f1', checkout_range: null, checkout_seed: null, checkout_rule: null },
+      { id: 'm1', checkout_range: null, checkout_seed: null, checkout_rule: null },
     ]);
     const events = await db.selectFrom('match_events').select('success').execute();
     expect(events).toEqual([{ success: null }, { success: null }, { success: null }]);
@@ -173,6 +174,74 @@ describe('migrateToLatest', () => {
       const attempt = await app.inject({ method: 'POST', url: `/matches/${created.json().id}/checkout-attempts`, payload: { success: true } });
       expect(attempt.statusCode).toBe(201);
       expect(attempt.json().checkouts).toMatchObject({ attempts: 1, successes: 1 });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('keeps the old checkout rule for sessions written under 0005_checkout_practice', async () => {
+    const db = openDatabase(':memory:');
+    await migrateTo(db, '0005_checkout_practice');
+    const createdAt = '2026-10-24T18:30:00.000Z';
+    const seed = 424_242;
+    const target = (n: number) => checkoutTarget(seed, '51-100', n);
+    await db.insertInto('players').values({ id: 'p1', name: 'Anna', avatar: null, color: 1, guest: 0, created_at: createdAt }).execute();
+    const practice = { type: 'practice', starting_score: null, legs_to_win: null, first_player_index: null, counts_to_stats: 0, created_at: createdAt };
+    await db
+      .insertInto('matches')
+      .values([
+        { ...practice, id: 'c1', practice_mode: 'checkouts', checkout_range: '51-100', checkout_seed: seed },
+        { ...practice, id: 'f1', practice_mode: 'free_run', checkout_range: null, checkout_seed: null },
+      ])
+      .execute();
+    await db
+      .insertInto('match_players')
+      .values([
+        { match_id: 'c1', player_id: 'p1', position: 0 },
+        { match_id: 'f1', player_id: 'p1', position: 0 },
+      ])
+      .execute();
+    const entry = { match_id: 'c1', throw_id: null, player_id: null, reason: null, created_at: createdAt };
+    await db
+      .insertInto('match_events')
+      .values([
+        { ...entry, seq: 1, type: 'checkout_attempt', success: 1 },
+        { ...entry, seq: 2, type: 'checkout_attempt', success: 0 },
+        { ...entry, seq: 3, type: 'checkout_attempt', success: 1 },
+        { ...entry, seq: 4, type: 'checkout_attempt_undone', success: null },
+        { ...entry, seq: 5, type: 'checkout_attempt', success: 0 },
+      ])
+      .execute();
+
+    await migrateToLatest(db);
+    const matches = await db.selectFrom('matches').select(['id', 'checkout_rule']).orderBy('id').execute();
+    expect(matches).toEqual([
+      { id: 'c1', checkout_rule: 'new_each_attempt' },
+      { id: 'f1', checkout_rule: null },
+    ]);
+
+    const app = await buildApp({ db, random: () => 0 });
+    try {
+      const session = await app.inject({ method: 'GET', url: '/matches/c1' });
+      expect(session.statusCode).toBe(200);
+      expect(session.json().checkouts).toEqual({
+        range: '51-100',
+        target: target(3),
+        attempts: 3,
+        successes: 1,
+        skips: 0,
+        history: [
+          { target: target(0), success: true },
+          { target: target(1), success: false },
+          { target: target(2), success: false },
+        ],
+      });
+
+      const failed = await app.inject({ method: 'POST', url: '/matches/c1/checkout-attempts', payload: { success: false } });
+      expect(failed.statusCode).toBe(201);
+      expect(failed.json().checkouts).toMatchObject({ target: target(4), attempts: 4 });
+      expect(failed.json().checkouts.history.at(-1)).toEqual({ target: target(3), success: false });
     } finally {
       await app.close();
       await db.destroy();

@@ -9,16 +9,26 @@ import { HIT_FLASH_MS } from './KeypadKey';
 const SEVEN_OF_TWELVE = [true, true, false, true, false, true, false, true, false, true, true, false];
 
 function actions(overrides: Partial<CheckoutActionsProps> = {}) {
-  const props: CheckoutActionsProps = { resultsDisabled: false, undoDisabled: false, busy: false, onResult: vi.fn(), onUndo: vi.fn(), ...overrides };
+  const props: CheckoutActionsProps = {
+    resultsDisabled: false,
+    skipDisabled: false,
+    undoDisabled: false,
+    busy: false,
+    onResult: vi.fn(),
+    onSkip: vi.fn(),
+    onUndo: vi.fn(),
+    ...overrides,
+  };
   const { rerender } = render(<CheckoutActions {...props} />);
   return { ...props, rerender: (next: Partial<CheckoutActionsProps>) => rerender(<CheckoutActions {...props} {...next} />) };
 }
 
-const BUTTONS = ['Udało się', 'Nie udało się', 'Cofnij'];
+const BUTTONS = ['Udało się', 'Nie udało się', 'Nowa końcówka', 'Cofnij'];
 const SHORTCUTS = [
   { key: 'Enter', name: 'Udało się' },
   { key: '1', name: 'Udało się' },
   { key: '0', name: 'Nie udało się' },
+  { key: 'n', name: 'Nowa końcówka' },
   { key: 'Backspace', name: 'Cofnij' },
 ];
 
@@ -64,9 +74,9 @@ describe('CheckoutTargetCard', () => {
 });
 
 describe('CheckoutActions', () => {
-  it('names each result with an icon and text', () => {
+  it('names each result and Nowa końcówka with an icon and text', () => {
     actions();
-    for (const name of ['Udało się', 'Nie udało się']) {
+    for (const name of ['Udało się', 'Nie udało się', 'Nowa końcówka']) {
       expect(button(name).querySelector('svg')).toBeTruthy();
       expect(button(name).textContent).toContain(name);
     }
@@ -86,6 +96,8 @@ describe('CheckoutActions', () => {
     expect(button('Udało się').getAttribute('aria-keyshortcuts')).toBe('Enter 1');
     expect(button('Nie udało się').title).toBe('Skrót: 0');
     expect(button('Nie udało się').getAttribute('aria-keyshortcuts')).toBe('0');
+    expect(button('Nowa końcówka').title).toBe('Skrót: N');
+    expect(button('Nowa końcówka').getAttribute('aria-keyshortcuts')).toBe('N');
     expect(button('Cofnij').title).toBe('Skrót: Backspace');
     expect(button('Cofnij').getAttribute('aria-keyshortcuts')).toBe('Backspace');
   });
@@ -96,14 +108,50 @@ describe('CheckoutActions', () => {
       expect(button(name).className.split(' ')).toEqual(expect.arrayContaining(['min-h-(--button-height)', 'lg:min-h-24']));
     }
     expect(button('Cofnij').className.split(' ')).toContain('min-h-12');
+    expect(button('Nowa końcówka').className).toBe(button('Cofnij').className);
+  });
+
+  it('puts Nowa końcówka and Cofnij in one row of two equal columns under the results', () => {
+    actions();
+    const row = button('Nowa końcówka').parentElement;
+    expect(row).toBe(button('Cofnij').parentElement);
+    expect(row?.className.split(' ')).toEqual(expect.arrayContaining(['grid', 'grid-cols-2']));
+    expect(row?.previousElementSibling).toBe(button('Udało się').parentElement);
+  });
+
+  it('reports a skip once on a click and once on N', () => {
+    const props = actions();
+    fireEvent.click(button('Nowa końcówka'));
+    expect(props.onSkip).toHaveBeenCalledOnce();
+    pressKey('N');
+    expect(props.onSkip).toHaveBeenCalledTimes(2);
+    expect(props.onResult).not.toHaveBeenCalled();
+    expect(props.onUndo).not.toHaveBeenCalled();
+  });
+
+  it('ignores a held N', () => {
+    const props = actions();
+    fireEvent.keyDown(window, { key: 'n', repeat: true });
+    expect(props.onSkip).not.toHaveBeenCalled();
+  });
+
+  it('disables Nowa końcówka with skipDisabled and leaves N to the browser', () => {
+    const props = actions({ skipDisabled: true });
+    expect(button('Nowa końcówka').disabled).toBe(true);
+    expect(button('Udało się').disabled).toBe(false);
+    fireEvent.click(button('Nowa końcówka'));
+    expect(fireEvent.keyDown(window, { key: 'n' })).toBe(true);
+    expect(props.onSkip).not.toHaveBeenCalled();
   });
 
   it('ignores clicks while a command is in flight', () => {
     const props = actions({ busy: true });
     fireEvent.click(button('Udało się'));
     fireEvent.click(button('Nie udało się'));
+    fireEvent.click(button('Nowa końcówka'));
     fireEvent.click(button('Cofnij'));
     expect(props.onResult).not.toHaveBeenCalled();
+    expect(props.onSkip).not.toHaveBeenCalled();
     expect(props.onUndo).not.toHaveBeenCalled();
   });
 
@@ -151,14 +199,20 @@ describe('CheckoutActions', () => {
       if (name === 'Cofnij') {
         expect(props.onUndo).toHaveBeenCalledOnce();
         expect(props.onResult).not.toHaveBeenCalled();
+        expect(props.onSkip).not.toHaveBeenCalled();
+      } else if (name === 'Nowa końcówka') {
+        expect(props.onSkip).toHaveBeenCalledOnce();
+        expect(props.onResult).not.toHaveBeenCalled();
+        expect(props.onUndo).not.toHaveBeenCalled();
       } else {
         expect(props.onResult).toHaveBeenCalledExactlyOnceWith(name === 'Udało się');
+        expect(props.onSkip).not.toHaveBeenCalled();
         expect(props.onUndo).not.toHaveBeenCalled();
       }
     });
 
     it('gives disabled buttons no feedback and calls nothing on click or shortcut', () => {
-      const props = actions({ resultsDisabled: true, undoDisabled: true });
+      const props = actions({ resultsDisabled: true, skipDisabled: true, undoDisabled: true });
       for (const name of BUTTONS) {
         fireEvent.pointerDown(button(name));
         fireEvent.click(button(name));
@@ -169,6 +223,7 @@ describe('CheckoutActions', () => {
         expectNoFeedback(button(name));
       }
       expect(props.onResult).not.toHaveBeenCalled();
+      expect(props.onSkip).not.toHaveBeenCalled();
       expect(props.onUndo).not.toHaveBeenCalled();
     });
 
@@ -185,6 +240,7 @@ describe('CheckoutActions', () => {
         expectNoFeedback(button(name));
       }
       expect(props.onResult).not.toHaveBeenCalled();
+      expect(props.onSkip).not.toHaveBeenCalled();
       expect(props.onUndo).not.toHaveBeenCalled();
     });
 

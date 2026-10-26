@@ -1,4 +1,12 @@
-import { dartsInCurrentLeg, isGameFinished, replayGame, type ApplyResult, type GameConfig, type GameState } from '@autoscore/engine';
+import {
+  dartsInCurrentLeg,
+  isGameFinished,
+  replayGame,
+  type ApplyResult,
+  type CheckoutStep,
+  type GameConfig,
+  type GameState,
+} from '@autoscore/engine';
 import { StartingScore, type Abandonment, type MatchSnapshot, type ThrowRecord } from '@autoscore/schema';
 import type { MatchLog, StoredMatch } from './store/store.js';
 
@@ -19,17 +27,22 @@ export function effectiveThrows(log: MatchLog): ThrowRecord[] {
   return throws;
 }
 
-// Wyniki prób checkoutu, które nadal się liczą: każde cofnięcie zdejmuje ostatnią z nich.
-export function effectiveCheckoutAttempts(log: MatchLog): boolean[] {
-  const attempts: boolean[] = [];
+// Próby i pominięcia checkoutu, które nadal się liczą, w kolejności z logu. Każde cofnięcie zdejmuje ostatni krok,
+// który musi być tego samego rodzaju co cofnięcie.
+export function effectiveCheckoutSteps(log: MatchLog): CheckoutStep[] {
+  const steps: CheckoutStep[] = [];
   for (const entry of log.entries) {
     if (entry.type === 'checkout_attempt') {
-      attempts.push(entry.success);
-    } else if (entry.type === 'checkout_attempt_undone' && attempts.pop() === undefined) {
-      throw new Error(`Corrupt log: checkout_attempt_undone at seq ${entry.seq} without an effective attempt`);
+      steps.push({ type: 'attempt', success: entry.success });
+    } else if (entry.type === 'checkout_skipped') {
+      steps.push({ type: 'skip' });
+    } else if (entry.type === 'checkout_attempt_undone' && steps.pop()?.type !== 'attempt') {
+      throw new Error(`Corrupt log: checkout_attempt_undone at seq ${entry.seq} does not match the last effective attempt`);
+    } else if (entry.type === 'checkout_skip_undone' && steps.pop()?.type !== 'skip') {
+      throw new Error(`Corrupt log: checkout_skip_undone at seq ${entry.seq} does not match the last effective skip`);
     }
   }
-  return attempts;
+  return steps;
 }
 
 // Silnik odrzuca rzutki po końcu gry, więc ostatnia liczona rzutka zakończonej gry to ta, która ją zakończyła.
@@ -161,6 +174,7 @@ export function gameConfig(match: MatchSetup): GameConfig {
             playerId,
             range: required(match.checkoutRange, 'checkout_range', match.id),
             seed: required(match.checkoutSeed, 'checkout_seed', match.id),
+            rule: required(match.checkoutRule, 'checkout_rule', match.id),
           };
       }
     }
@@ -168,10 +182,10 @@ export function gameConfig(match: MatchSetup): GameConfig {
 }
 
 // Stan gry zawsze z odtworzenia logu, bez osobnej pamięci podręcznej stanu.
-export function replayMatch(match: StoredMatch, throws: readonly ThrowRecord[], attempts: readonly boolean[] = []): ApplyResult<GameState> {
+export function replayMatch(match: StoredMatch, throws: readonly ThrowRecord[], checkoutSteps: readonly CheckoutStep[] = []): ApplyResult<GameState> {
   return replayGame(
     gameConfig(match),
     throws.map(({ segment, multiplier }) => ({ segment, multiplier })),
-    attempts,
+    checkoutSteps,
   );
 }

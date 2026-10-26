@@ -3,9 +3,11 @@ import { checkoutShortcut } from '../game/checkout-shortcut';
 
 export interface CheckoutShortcutOptions {
   enabled: boolean;
+  skipEnabled: boolean;
   undoEnabled: boolean;
   onSuccess(): void;
   onFailure(): void;
+  onSkip(): void;
   onUndo(): void;
 }
 
@@ -31,7 +33,13 @@ export function useCheckoutShortcuts(options: CheckoutShortcutOptions): void {
       }
       const shortcut = checkoutShortcut(event);
       // Klawisz bez akcji zostaje dla przeglądarki, żeby Backspace i Enter na linku albo przycisku działały jak zwykle.
-      if (!shortcut || (shortcut === 'undo' && !current.undoEnabled) || isTextField(event.target) || document.querySelector('[role="dialog"]')) {
+      if (
+        !shortcut ||
+        (shortcut === 'skip' && !current.skipEnabled) ||
+        (shortcut === 'undo' && !current.undoEnabled) ||
+        isTextField(event.target) ||
+        document.querySelector('[role="dialog"]')
+      ) {
         return;
       }
       // Enter na przycisku z fokusem kliknąłby go drugi raz.
@@ -46,6 +54,9 @@ export function useCheckoutShortcuts(options: CheckoutShortcutOptions): void {
           return;
         case 'failure':
           current.onFailure();
+          return;
+        case 'skip':
+          current.onSkip();
           return;
         case 'undo':
           current.onUndo();

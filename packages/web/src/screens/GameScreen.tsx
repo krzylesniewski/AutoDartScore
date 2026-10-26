@@ -31,7 +31,7 @@ const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
-  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt } = useMatch(
+  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt, sendCheckoutSkip } = useMatch(
     matchId,
     audio.onLiveMessage,
   );
@@ -46,7 +46,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const closeEndDialog = useCallback(() => setEnding(false), []);
   const undoWindow = useUndoWindow(state);
   const checkouts = checkoutMode ? state.checkouts : null;
-  const controls = state ? checkoutControls(state, connection === 'open') : { results: false, undo: false };
+  const controls = state ? checkoutControls(state, connection === 'open') : { results: false, skip: false, undo: false };
 
   // Jak w enterCheckout: w trakcie komendy widoczny cel jest nieaktualny, więc skrót niczego nie wysyła.
   function recordAttempt(success: boolean): void {
@@ -54,6 +54,13 @@ export function GameScreen({ matchId }: { matchId: string }) {
       return;
     }
     sendCheckoutAttempt(success);
+  }
+
+  function skipCheckout(): void {
+    if (busy || !controls.skip) {
+      return;
+    }
+    sendCheckoutSkip();
   }
 
   function undoAttempt(): void {
@@ -196,9 +203,11 @@ export function GameScreen({ matchId }: { matchId: string }) {
               {checkouts && !ended && (
                 <CheckoutActions
                   resultsDisabled={!controls.results}
+                  skipDisabled={!controls.skip}
                   undoDisabled={!controls.undo}
                   busy={busy}
                   onResult={recordAttempt}
+                  onSkip={skipCheckout}
                   onUndo={undoAttempt}
                 />
               )}

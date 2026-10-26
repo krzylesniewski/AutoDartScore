@@ -170,6 +170,7 @@ const checkoutSession = {
   target: 81,
   attempts: 2,
   successes: 1,
+  skips: 1,
   history: [
     { target: 100, success: false },
     { target: 64, success: true },
@@ -179,7 +180,7 @@ const checkoutSession = {
 describe('CheckoutSession', () => {
   it('accepts a session and one without attempts', () => {
     expect(CheckoutSession.parse(checkoutSession)).toEqual(checkoutSession);
-    const fresh = { range: '2-50', target: 2, attempts: 0, successes: 0, history: [] };
+    const fresh = { range: '2-50', target: 2, attempts: 0, successes: 0, skips: 0, history: [] };
     expect(CheckoutSession.parse(fresh)).toEqual(fresh);
   });
 
@@ -191,12 +192,21 @@ describe('CheckoutSession', () => {
     ['an unknown range', { ...checkoutSession, range: '0-50' }],
     ['target 1', { ...checkoutSession, target: 1 }],
     ['target 101', { ...checkoutSession, target: 101 }],
+    ['no skips', { ...checkoutSession, skips: undefined }],
+    ['negative skips', { ...checkoutSession, skips: -1 }],
+    ['fractional skips', { ...checkoutSession, skips: 0.5 }],
+    ['skips as a string', { ...checkoutSession, skips: '1' }],
   ])('rejects %s', (_name, value) => {
     expect(CheckoutSession.safeParse(value).success).toBe(false);
   });
 
-  it('does not carry a seed', () => {
-    expect(CheckoutSession.parse({ ...checkoutSession, seed: 42 })).toEqual(checkoutSession);
+  it('accepts skips without attempts', () => {
+    const skipped = { range: '2-50', target: 30, attempts: 0, successes: 0, skips: 2, history: [] };
+    expect(CheckoutSession.parse(skipped)).toEqual(skipped);
+  });
+
+  it('does not carry a seed or a rule', () => {
+    expect(CheckoutSession.parse({ ...checkoutSession, seed: 42, rule: 'repeat_on_miss' })).toEqual(checkoutSession);
   });
 });
 

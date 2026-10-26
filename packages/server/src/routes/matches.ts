@@ -47,12 +47,15 @@ export async function matchRoutes(app: FastifyInstance, service: MatchService): 
     return service.abandon(request.params.id, parsed.data);
   });
 
-  // Undo, wznowienie i koniec treningu ignorują body. Własny parser w tym kontekście sprawia, że nawet pusty albo zepsuty JSON nie daje błędu 400.
+  // Undo, wznowienie, koniec treningu i pominięcie checkoutu ignorują body. Własny parser w tym kontekście sprawia, że nawet pusty albo zepsuty JSON nie daje błędu 400.
   await app.register(async (undoScope) => {
     undoScope.removeAllContentTypeParsers();
     undoScope.addContentTypeParser('*', { parseAs: 'buffer' }, (_request, _body, done) => done(null, undefined));
     undoScope.post<MatchParams>('/matches/:id/undo', async (request) => service.undo(request.params.id));
     undoScope.post<MatchParams>('/matches/:id/resume', async (request) => service.resume(request.params.id));
     undoScope.post<MatchParams>('/matches/:id/end', async (request) => service.endPractice(request.params.id));
+    undoScope.post<MatchParams>('/matches/:id/checkout-skips', async (request, reply) =>
+      reply.code(201).send(await service.registerCheckoutSkip(request.params.id)),
+    );
   });
 }

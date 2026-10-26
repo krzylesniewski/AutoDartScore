@@ -28,19 +28,27 @@ describe('checkoutPracticeName', () => {
 describe('checkoutControls', () => {
   const tried = checkoutSession(checkoutHistory([true]));
 
-  it('enables the results and Cofnij in a connected session with an attempt', () => {
-    expect(checkoutControls({ status: 'in_progress', checkouts: tried }, true)).toEqual({ results: true, undo: true });
+  const skipped = checkoutSession([], { skips: 2 });
+
+  it('enables the results, the skip and Cofnij in a connected session with an attempt', () => {
+    expect(checkoutControls({ status: 'in_progress', checkouts: tried }, true)).toEqual({ results: true, skip: true, undo: true });
   });
 
-  it('disables Cofnij with 0 attempts', () => {
-    expect(checkoutControls({ status: 'in_progress', checkouts: checkoutSession() }, true)).toEqual({ results: true, undo: false });
+  it('disables Cofnij with 0 attempts and 0 skips', () => {
+    expect(checkoutControls({ status: 'in_progress', checkouts: checkoutSession() }, true)).toEqual({ results: true, skip: true, undo: false });
   });
 
-  it('disables the results without a connection', () => {
-    expect(checkoutControls({ status: 'in_progress', checkouts: tried }, false)).toEqual({ results: false, undo: true });
+  it('enables Cofnij with only skips', () => {
+    expect(checkoutControls({ status: 'in_progress', checkouts: skipped }, true)).toEqual({ results: true, skip: true, undo: true });
+    expect(checkoutControls({ status: 'in_progress', checkouts: skipped }, false)).toEqual({ results: false, skip: false, undo: true });
   });
 
-  it.each(['ended', 'abandoned'] as const)('disables both in a session that is %s', (status) => {
-    expect(checkoutControls({ status, checkouts: tried }, true)).toEqual({ results: false, undo: false });
+  it('disables the results and the skip without a connection', () => {
+    expect(checkoutControls({ status: 'in_progress', checkouts: tried }, false)).toEqual({ results: false, skip: false, undo: true });
+  });
+
+  it.each(['ended', 'abandoned'] as const)('disables everything in a session that is %s', (status) => {
+    expect(checkoutControls({ status, checkouts: tried }, true)).toEqual({ results: false, skip: false, undo: false });
+    expect(checkoutControls({ status, checkouts: skipped }, true)).toEqual({ results: false, skip: false, undo: false });
   });
 });

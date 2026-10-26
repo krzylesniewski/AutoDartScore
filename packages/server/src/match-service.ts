@@ -14,7 +14,7 @@ import { HttpError, invalidRequest, notFound } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
 import {
   abandonment,
-  effectiveCheckoutAttempts,
+  effectiveCheckoutSteps,
   effectiveThrows,
   finishedAt,
   gameConfig,
@@ -33,6 +33,7 @@ export interface MatchService {
   get(id: string): Promise<MatchSnapshot>;
   registerThrow(id: string, body: unknown): Promise<{ statusCode: 200 | 201; result: ThrowResult }>;
   registerCheckoutAttempt(id: string, success: boolean): Promise<MatchSnapshot>;
+  registerCheckoutSkip(id: string): Promise<MatchSnapshot>;
   undo(id: string): Promise<UndoResult>;
   abandon(id: string, request: AbandonMatchRequest): Promise<MatchSnapshot>;
   resume(id: string): Promise<MatchSnapshot>;
@@ -64,12 +65,12 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
   async function load(match: StoredMatch) {
     const log = await store.loadLog(match.id);
     const throws = effectiveThrows(log);
-    const attempts = effectiveCheckoutAttempts(log);
-    const game = replayMatch(match, throws, attempts).state;
+    const checkoutSteps = effectiveCheckoutSteps(log);
+    const game = replayMatch(match, throws, checkoutSteps).state;
     return {
       log,
       throws,
-      attempts,
+      checkoutSteps,
       seq: lastSeq(log),
       game,
       finishedAt: finishedAt(game, throws),
@@ -124,6 +125,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           firstPlayerIndex: draw(request.playerIds.length),
           checkoutRange: null,
           checkoutSeed: null,
+          checkoutRule: null,
           playerIds: request.playerIds,
         };
       case 'casual':
@@ -135,6 +137,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           firstPlayerIndex: draw(request.playerIds.length),
           checkoutRange: null,
           checkoutSeed: null,
+          checkoutRule: null,
           playerIds: request.playerIds,
         };
       case 'practice': {
@@ -148,10 +151,32 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           firstPlayerIndex: null,
           checkoutRange: checkouts ? (request.checkoutRange ?? null) : null,
           checkoutSeed: checkouts ? Math.min(Math.floor(random() * (MAX_CHECKOUT_SEED + 1)), MAX_CHECKOUT_SEED) : null,
+          checkoutRule: checkouts ? 'repeat_on_miss' : null,
           playerIds: request.playerIds,
         };
       }
     }
+  }
+
+  // Próba i pominięcie mają te same warunki: tylko trwający, nieporzucony trening checkoutów.
+  function checkoutCommand(id: string, append: () => Promise<number>): Promise<MatchSnapshot> {
+    return queue(id, async () => {
+      const match = await requireMatch(id);
+      if (!isCheckouts(match)) {
+        throw new HttpError(409, 'not_checkouts', `Match ${id} is not a checkout practice`);
+      }
+      const { abandonment, endedAt } = await load(match);
+      if (endedAt) {
+        throw ended(id);
+      }
+      if (abandonment) {
+        throw abandoned(id);
+      }
+      await append();
+      const state = await snapshot(match);
+      publishState(id, state);
+      return state;
+    });
   }
 
   async function idempotentReply(id: string, eventId: string) {
@@ -244,41 +269,30 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     },
 
     registerCheckoutAttempt(id, success) {
-      return queue(id, async () => {
-        const match = await requireMatch(id);
-        if (!isCheckouts(match)) {
-          throw new HttpError(409, 'not_checkouts', `Match ${id} is not a checkout practice`);
-        }
-        const { abandonment, endedAt } = await load(match);
-        if (endedAt) {
-          throw ended(id);
-        }
-        if (abandonment) {
-          throw abandoned(id);
-        }
-        await store.appendCheckoutAttempt(id, success);
-        const state = await snapshot(match);
-        publishState(id, state);
-        return state;
-      });
+      return checkoutCommand(id, () => store.appendCheckoutAttempt(id, success));
+    },
+
+    registerCheckoutSkip(id) {
+      return checkoutCommand(id, () => store.appendCheckoutSkip(id));
     },
 
     undo(id) {
       return queue(id, async () => {
         const match = await requireMatch(id);
-        const { log, throws, attempts, abandonment, endedAt, finishedAt: finishTime } = await load(match);
+        const { log, throws, checkoutSteps, abandonment, endedAt, finishedAt: finishTime } = await load(match);
         if (endedAt) {
           throw ended(id);
         }
         if (abandonment) {
           throw abandoned(id);
         }
-        // Cofnięcie próby przywraca jej cel jako bieżący, bo cel numer n zależy tylko od ziarna i n.
+        // Cofnięcie próby albo pominięcia przywraca poprzedni cel, bo cel zależy tylko od ziarna i liczby losowań.
         if (isCheckouts(match)) {
-          if (attempts.length === 0) {
-            throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no checkout attempt to undo`);
+          const last = checkoutSteps.at(-1);
+          if (!last) {
+            throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no checkout attempt or skip to undo`);
           }
-          await store.appendCheckoutUndo(id);
+          await (last.type === 'attempt' ? store.appendCheckoutUndo(id) : store.appendCheckoutSkipUndo(id));
           const state = await snapshot(match);
           publishState(id, state);
           return { undoneThrowId: null, state };
@@ -352,7 +366,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (match.type !== 'practice') {
           throw new HttpError(409, 'not_practice', `Match ${id} is not a practice session`);
         }
-        const { game, throws, attempts, abandonment, endedAt } = await load(match);
+        const { game, throws, checkoutSteps, abandonment, endedAt } = await load(match);
         if (endedAt) {
           throw ended(id);
         }
@@ -362,7 +376,8 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (abandonment) {
           throw abandoned(id);
         }
-        if (isCheckouts(match) && attempts.length === 0) {
+        // Same pominięcia nie wystarczą, bo nie są próbami.
+        if (isCheckouts(match) && !checkoutSteps.some((step) => step.type === 'attempt')) {
           throw new HttpError(409, 'nothing_to_end', `Match ${id} has no checkout attempt yet`);
         }
         if (!isCheckouts(match) && throws.length === 0) {

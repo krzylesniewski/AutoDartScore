@@ -4,7 +4,7 @@ import { suggestCheckout } from '../game/checkout';
 import { formatCheckoutPercent } from '../game/checkout-practice';
 import { hitLabel } from '../game/hit-label';
 import { pl } from '../i18n/pl';
-import { BustIcon, CheckIcon, UndoIcon } from './icons';
+import { BustIcon, CheckIcon, ShuffleIcon, UndoIcon } from './icons';
 import { KeypadKey, type KeypadKeyHandle, type KeypadKeyTone } from './KeypadKey';
 import { ROUTE_CHIP } from './TurnPanel';
 import { useCheckoutShortcuts } from './use-checkout-shortcuts';
@@ -19,6 +19,8 @@ const failureTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--
 const failurePressedTone: KeypadKeyTone = { fill: 'bg-(--color-surface-active) text-(--color-text)', border: 'border-(--color-accent)' };
 // Wciśnięty zostaje kremowy, jak wybrany mnożnik na klawiaturze rzutek.
 const successTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse)', border: 'border-(--color-text)' };
+const secondaryButton =
+  'flex min-h-12 items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-3 font-display text-(length:--text-button) font-semibold disabled:opacity-40';
 const undoTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text)', border: 'border-(--color-border-strong)' };
 
 export function CheckoutTargetCard({ session }: { session: CheckoutSession }) {
@@ -40,24 +42,29 @@ export function CheckoutTargetCard({ session }: { session: CheckoutSession }) {
 
 export interface CheckoutActionsProps {
   resultsDisabled: boolean;
+  skipDisabled: boolean;
   undoDisabled: boolean;
   busy: boolean;
   onResult(success: boolean): void;
+  onSkip(): void;
   onUndo(): void;
 }
 
 // Do odpowiedzi serwera widoczny cel jest nieaktualny, więc kliknięcia w trakcie komendy przepadają zamiast czekać w kolejce.
-export function CheckoutActions({ resultsDisabled, undoDisabled, busy, onResult, onUndo }: CheckoutActionsProps) {
+export function CheckoutActions({ resultsDisabled, skipDisabled, undoDisabled, busy, onResult, onSkip, onUndo }: CheckoutActionsProps) {
   const failureKey = useRef<KeypadKeyHandle>(null);
   const successKey = useRef<KeypadKeyHandle>(null);
+  const skipKey = useRef<KeypadKeyHandle>(null);
   const undoKey = useRef<KeypadKeyHandle>(null);
 
   // Jak skróty klawiatury rzutek: bez połączenia i po końcu sesji klawisze zostają dla przeglądarki.
   useCheckoutShortcuts({
     enabled: !resultsDisabled,
+    skipEnabled: !skipDisabled,
     undoEnabled: !undoDisabled,
     onSuccess: () => successKey.current?.press(),
     onFailure: () => failureKey.current?.press(),
+    onSkip: () => skipKey.current?.press(),
     onUndo: () => undoKey.current?.press(),
   });
 
@@ -96,20 +103,36 @@ export function CheckoutActions({ resultsDisabled, undoDisabled, busy, onResult,
           {pl.checkoutSuccess}
         </KeypadKey>
       </div>
-      <KeypadKey
-        ref={undoKey}
-        disabled={undoDisabled}
-        ignorePress={busy}
-        flashOnPress
-        onPress={onUndo}
-        title={pl.undoShortcut}
-        shortcut={{ keys: 'Backspace', label: pl.shortcutBackspace }}
-        className="flex min-h-12 items-center justify-center gap-2 self-start rounded-(--radius-card) border-(length:--border-width) px-5 font-display text-(length:--text-button) font-semibold disabled:opacity-40 lg:min-w-56"
-        idleTone={undoTone}
-      >
-        <UndoIcon />
-        {pl.undo}
-      </KeypadKey>
+      <div className="grid grid-cols-2 gap-3">
+        <KeypadKey
+          ref={skipKey}
+          disabled={skipDisabled}
+          ignorePress={busy}
+          flashOnPress
+          onPress={onSkip}
+          title={pl.checkoutSkipShortcut}
+          shortcut={{ keys: 'N', label: 'N' }}
+          className={secondaryButton}
+          idleTone={undoTone}
+        >
+          <ShuffleIcon />
+          {pl.checkoutSkip}
+        </KeypadKey>
+        <KeypadKey
+          ref={undoKey}
+          disabled={undoDisabled}
+          ignorePress={busy}
+          flashOnPress
+          onPress={onUndo}
+          title={pl.undoShortcut}
+          shortcut={{ keys: 'Backspace', label: pl.shortcutBackspace }}
+          className={secondaryButton}
+          idleTone={undoTone}
+        >
+          <UndoIcon />
+          {pl.undo}
+        </KeypadKey>
+      </div>
     </div>
   );
 }
