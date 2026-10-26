@@ -17,7 +17,6 @@ import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
 import { LockIcon, WarningIcon } from '../components/icons';
-import { useCheckoutShortcuts } from '../components/use-checkout-shortcuts';
 import { canEndPractice } from '../game/can-end-practice';
 import { checkoutControls } from '../game/checkout-practice';
 import { checkoutRoute } from '../game/checkout-route';
@@ -63,15 +62,6 @@ export function GameScreen({ matchId }: { matchId: string }) {
     }
     sendUndo();
   }
-
-  // Jak skróty klawiatury rzutek: bez połączenia i po końcu sesji klawisze zostają dla przeglądarki.
-  useCheckoutShortcuts({
-    enabled: checkoutMode && controls.results,
-    undoEnabled: controls.undo,
-    onSuccess: () => recordAttempt(true),
-    onFailure: () => recordAttempt(false),
-    onUndo: undoAttempt,
-  });
 
   if (notFound) {
     return (

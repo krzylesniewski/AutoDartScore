@@ -1,19 +1,25 @@
 import type { CheckoutAttempt, CheckoutSession } from '@autoscore/schema';
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 import { suggestCheckout } from '../game/checkout';
 import { formatCheckoutPercent } from '../game/checkout-practice';
 import { hitLabel } from '../game/hit-label';
 import { pl } from '../i18n/pl';
 import { BustIcon, CheckIcon, UndoIcon } from './icons';
-import { SHORTCUT_BADGE } from './KeypadKey';
+import { KeypadKey, type KeypadKeyHandle, type KeypadKeyTone } from './KeypadKey';
 import { ROUTE_CHIP } from './TurnPanel';
+import { useCheckoutShortcuts } from './use-checkout-shortcuts';
 
 const RECENT_COUNT = 5;
 
 const card = 'rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface)';
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 const resultButton =
-  'relative flex min-h-(--button-height) items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-3 py-2 text-center font-display text-[22px] leading-tight font-bold disabled:opacity-40 lg:min-h-24 lg:text-(length:--text-heading)';
+  'flex min-h-(--button-height) items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-3 py-2 text-center font-display text-[22px] leading-tight font-bold disabled:opacity-40 lg:min-h-24 lg:text-(length:--text-heading)';
+const failureTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text)', border: 'border-(--color-accent)' };
+const failurePressedTone: KeypadKeyTone = { fill: 'bg-(--color-surface-active) text-(--color-text)', border: 'border-(--color-accent)' };
+// Wciśnięty zostaje kremowy, jak wybrany mnożnik na klawiaturze rzutek.
+const successTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse)', border: 'border-(--color-text)' };
+const undoTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text)', border: 'border-(--color-border-strong)' };
 
 export function CheckoutTargetCard({ session }: { session: CheckoutSession }) {
   const id = useId();
@@ -42,62 +48,68 @@ export interface CheckoutActionsProps {
 
 // Do odpowiedzi serwera widoczny cel jest nieaktualny, więc kliknięcia w trakcie komendy przepadają zamiast czekać w kolejce.
 export function CheckoutActions({ resultsDisabled, undoDisabled, busy, onResult, onUndo }: CheckoutActionsProps) {
-  function result(success: boolean): void {
-    if (!busy) {
-      onResult(success);
-    }
-  }
+  const failureKey = useRef<KeypadKeyHandle>(null);
+  const successKey = useRef<KeypadKeyHandle>(null);
+  const undoKey = useRef<KeypadKeyHandle>(null);
+
+  // Jak skróty klawiatury rzutek: bez połączenia i po końcu sesji klawisze zostają dla przeglądarki.
+  useCheckoutShortcuts({
+    enabled: !resultsDisabled,
+    undoEnabled: !undoDisabled,
+    onSuccess: () => successKey.current?.press(),
+    onFailure: () => failureKey.current?.press(),
+    onUndo: () => undoKey.current?.press(),
+  });
 
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
+        <KeypadKey
+          ref={failureKey}
           disabled={resultsDisabled}
-          onClick={() => result(false)}
+          ignorePress={busy}
+          flashOnPress
+          onPress={() => onResult(false)}
           title={pl.checkoutFailureShortcut}
-          aria-keyshortcuts="0"
-          className={`${resultButton} border-(--color-accent) bg-(--color-surface-button) text-(--color-text)`}
+          shortcut={{ keys: '0', label: '0' }}
+          className={resultButton}
+          idleTone={failureTone}
+          pressedTone={failurePressedTone}
+          flashBorder="border-(--color-text)"
         >
           <BustIcon className="text-(--color-accent)" />
           {pl.checkoutFailure}
-          <span aria-hidden="true" className={SHORTCUT_BADGE}>
-            0
-          </span>
-        </button>
-        <button
-          type="button"
+        </KeypadKey>
+        <KeypadKey
+          ref={successKey}
           disabled={resultsDisabled}
-          onClick={() => result(true)}
+          ignorePress={busy}
+          flashOnPress
+          onPress={() => onResult(true)}
           title={pl.checkoutSuccessShortcut}
-          aria-keyshortcuts="Enter 1"
-          className={`${resultButton} border-(--color-text) bg-(--color-text) text-(--color-text-inverse)`}
+          shortcut={{ keys: 'Enter 1', label: pl.shortcutEnterOr1 }}
+          className={resultButton}
+          idleTone={successTone}
+          pressedTone={successTone}
         >
           <CheckIcon />
           {pl.checkoutSuccess}
-          <span aria-hidden="true" className={SHORTCUT_BADGE}>
-            {pl.shortcutEnterOr1}
-          </span>
-        </button>
+        </KeypadKey>
       </div>
-      <button
-        type="button"
+      <KeypadKey
+        ref={undoKey}
         disabled={undoDisabled}
-        onClick={() => {
-          if (!busy) {
-            onUndo();
-          }
-        }}
+        ignorePress={busy}
+        flashOnPress
+        onPress={onUndo}
         title={pl.undoShortcut}
-        aria-keyshortcuts="Backspace"
-        className="relative flex min-h-12 items-center justify-center gap-2 self-start rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-5 font-display text-(length:--text-button) font-semibold disabled:opacity-40 lg:min-w-56"
+        shortcut={{ keys: 'Backspace', label: pl.shortcutBackspace }}
+        className="flex min-h-12 items-center justify-center gap-2 self-start rounded-(--radius-card) border-(length:--border-width) px-5 font-display text-(length:--text-button) font-semibold disabled:opacity-40 lg:min-w-56"
+        idleTone={undoTone}
       >
         <UndoIcon />
         {pl.undo}
-        <span aria-hidden="true" className={SHORTCUT_BADGE}>
-          {pl.shortcutBackspace}
-        </span>
-      </button>
+      </KeypadKey>
     </div>
   );
 }

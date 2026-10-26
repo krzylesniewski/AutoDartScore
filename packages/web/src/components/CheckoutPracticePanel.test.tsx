@@ -1,16 +1,34 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { checkoutHistory, checkoutSession } from '../test/snapshots';
 import { CheckoutActions, CheckoutRecentAttempts, CheckoutTargetCard, type CheckoutActionsProps } from './CheckoutPracticePanel';
 import { CheckoutPracticeSummary } from './CheckoutPracticeSummary';
+import { HIT_FLASH_MS } from './KeypadKey';
 
 // 7 udanych z 12, ostatnia próba nieudana.
 const SEVEN_OF_TWELVE = [true, true, false, true, false, true, false, true, false, true, true, false];
 
 function actions(overrides: Partial<CheckoutActionsProps> = {}) {
   const props: CheckoutActionsProps = { resultsDisabled: false, undoDisabled: false, busy: false, onResult: vi.fn(), onUndo: vi.fn(), ...overrides };
-  render(<CheckoutActions {...props} />);
-  return props;
+  const { rerender } = render(<CheckoutActions {...props} />);
+  return { ...props, rerender: (next: Partial<CheckoutActionsProps>) => rerender(<CheckoutActions {...props} {...next} />) };
+}
+
+const BUTTONS = ['Udało się', 'Nie udało się', 'Cofnij'];
+const SHORTCUTS = [
+  { key: 'Enter', name: 'Udało się' },
+  { key: '1', name: 'Udało się' },
+  { key: '0', name: 'Nie udało się' },
+  { key: 'Backspace', name: 'Cofnij' },
+];
+
+function pressKey(key: string): void {
+  fireEvent.keyDown(window, { key });
+}
+
+function expectNoFeedback(element: HTMLElement): void {
+  expect(element.hasAttribute('data-flash')).toBe(false);
+  expect(element.hasAttribute('data-pressed')).toBe(false);
 }
 
 function button(name: string): HTMLButtonElement {
@@ -94,6 +112,103 @@ describe('CheckoutActions', () => {
     expect(button('Udało się').disabled).toBe(true);
     expect(button('Nie udało się').disabled).toBe(true);
     expect(button('Cofnij').disabled).toBe(false);
+  });
+
+  describe('press feedback', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it.each(BUTTONS)('flashes %s after a click for HIT_FLASH_MS', (name) => {
+      vi.useFakeTimers();
+      actions();
+      fireEvent.click(button(name));
+      expect(button(name).hasAttribute('data-flash')).toBe(true);
+
+      act(() => {
+        vi.advanceTimersByTime(HIT_FLASH_MS - 1);
+      });
+      expect(button(name).hasAttribute('data-flash')).toBe(true);
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(button(name).hasAttribute('data-flash')).toBe(false);
+    });
+
+    it.each(BUTTONS)('shows %s as pressed between pointer down and up', (name) => {
+      actions();
+      fireEvent.pointerDown(button(name));
+      expect(button(name).hasAttribute('data-pressed')).toBe(true);
+      fireEvent.pointerUp(button(name));
+      expect(button(name).hasAttribute('data-pressed')).toBe(false);
+    });
+
+    it.each(SHORTCUTS)('flashes $name on $key', ({ key, name }) => {
+      const props = actions();
+      pressKey(key);
+      expect(button(name).hasAttribute('data-flash')).toBe(true);
+      if (name === 'Cofnij') {
+        expect(props.onUndo).toHaveBeenCalledOnce();
+        expect(props.onResult).not.toHaveBeenCalled();
+      } else {
+        expect(props.onResult).toHaveBeenCalledExactlyOnceWith(name === 'Udało się');
+        expect(props.onUndo).not.toHaveBeenCalled();
+      }
+    });
+
+    it('gives disabled buttons no feedback and calls nothing on click or shortcut', () => {
+      const props = actions({ resultsDisabled: true, undoDisabled: true });
+      for (const name of BUTTONS) {
+        fireEvent.pointerDown(button(name));
+        fireEvent.click(button(name));
+        expectNoFeedback(button(name));
+      }
+      for (const { key, name } of SHORTCUTS) {
+        pressKey(key);
+        expectNoFeedback(button(name));
+      }
+      expect(props.onResult).not.toHaveBeenCalled();
+      expect(props.onUndo).not.toHaveBeenCalled();
+    });
+
+    it('gives no feedback while a command is in flight and keeps the buttons enabled', () => {
+      const props = actions({ busy: true });
+      for (const name of BUTTONS) {
+        expect(button(name).disabled).toBe(false);
+        fireEvent.pointerDown(button(name));
+        fireEvent.click(button(name));
+        expectNoFeedback(button(name));
+      }
+      for (const { key, name } of SHORTCUTS) {
+        pressKey(key);
+        expectNoFeedback(button(name));
+      }
+      expect(props.onResult).not.toHaveBeenCalled();
+      expect(props.onUndo).not.toHaveBeenCalled();
+    });
+
+    it('keeps a started flash when the command turns busy right after the click', () => {
+      vi.useFakeTimers();
+      const props = actions();
+      fireEvent.click(button('Udało się'));
+      props.rerender({ busy: true });
+      expect(button('Udało się').hasAttribute('data-flash')).toBe(true);
+
+      act(() => {
+        vi.advanceTimersByTime(HIT_FLASH_MS);
+      });
+      expect(button('Udało się').hasAttribute('data-flash')).toBe(false);
+    });
+
+    it('flashes the red-bordered failure button with the text color', () => {
+      actions();
+      expect(button('Nie udało się').className.split(' ')).toContain('border-(--color-accent)');
+      fireEvent.click(button('Nie udało się'));
+      const classes = button('Nie udało się').className.split(' ');
+      expect(classes).toContain('border-(--color-text)');
+      expect(classes).not.toContain('border-(--color-accent)');
+    });
   });
 });
 
