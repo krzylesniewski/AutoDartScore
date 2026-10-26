@@ -75,14 +75,14 @@ function bucket(total: number): Partial<Record<'scores180' | 'scores140' | 'scor
   return total >= 60 ? { scores60: 1 } : {};
 }
 
-function minOrNull(a: number | null, b: number | null): number | null {
+export function minOrNull(a: number | null, b: number | null): number | null {
   if (a === null) {
     return b;
   }
   return b === null ? a : Math.min(a, b);
 }
 
-function maxOrNull(a: number | null, b: number | null): number | null {
+export function maxOrNull(a: number | null, b: number | null): number | null {
   if (a === null) {
     return b;
   }

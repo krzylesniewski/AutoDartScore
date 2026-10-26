@@ -112,6 +112,17 @@ describe('createAnnouncer', () => {
     expect(speaker.calls).toEqual(['cancel', 'speak:events/bust_1.mp3|Bust']);
   });
 
+  it('speaks the same with an achievement in the batch', () => {
+    const achievement: LiveMessage = { type: 'achievement', matchId: MATCH_ID, eventSeq: 5, playerId: 'anna', kind: 'turn_record', value: 100, previous: 60 };
+    send([turnCompleted(5, 100), achievement, stateUpdated(5)]);
+    const withAchievement = speaker.calls;
+    speaker = new FakeSpeaker();
+    announcer = createAnnouncer(speaker, undefined, firstVariant);
+    send([turnCompleted(5, 100), stateUpdated(5)]);
+    expect(withAchievement).toEqual(speaker.calls);
+    expect(withAchievement).toEqual(['cancel', 'speak:scores/100.mp3|sto']);
+  });
+
   it('cancels and drops the buffer on throw_undone', () => {
     announcer.handle(turnCompleted(5, 100));
     announcer.handle({ type: 'throw_undone', matchId: MATCH_ID, eventSeq: 6, throwId: 't_5' });
