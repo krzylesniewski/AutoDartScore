@@ -2,7 +2,7 @@ import { HitEvent, type LiveMessage, type MatchSnapshot } from '@autoscore/schem
 import { LiveAuthMessage } from '@autoscore/schema';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { casual, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
 import { GameScreen } from './GameScreen';
 
 const MATCH_ID = 'm_42';
@@ -821,6 +821,169 @@ describe('end practice', () => {
     tap('Zakończ trening');
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Zakończ trening' }));
     expect(await screen.findByText('Nie udało się zakończyć treningu')).toBeTruthy();
+  });
+});
+
+describe('checkout practice', () => {
+  const fresh = checkoutPractice(checkoutSession([], { target: 100, range: '51-100' }), { id: MATCH_ID, eventSeq: 1 });
+  const tried = checkoutPractice(checkoutSession(checkoutHistory([true]), { target: 64, range: '51-100' }), { id: MATCH_ID, eventSeq: 2 });
+  const endedState: MatchSnapshot = { ...tried, eventSeq: 3, status: 'ended', endedAt: '2026-10-15T19:00:00.000Z' };
+
+  beforeEach(() => {
+    respond = async (call) => (call.url.endsWith('/undo') ? json(200, { undoneThrowId: null, state: { ...fresh, eventSeq: 3 } }) : json(201, tried));
+  });
+
+  function attemptBodies(): unknown[] {
+    return calls.filter((call) => call.url === `/api/matches/${MATCH_ID}/checkout-attempts`).map((call) => call.body);
+  }
+
+  it('shows the target and the route without the keypad or the turn panel', async () => {
+    connect(fresh);
+    const card = screen.getByRole('region', { name: 'Końcówka' });
+    expect(within(card).getByText('100')).toBeTruthy();
+    expect(within(card).getByText('T20 D20')).toBeTruthy();
+    expect(within(card).getByText('0 z 0 · —')).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Klawiatura rzutek' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Miss' })).toBeNull();
+    expect(screen.queryByText('Suma tury')).toBeNull();
+    expect(screen.queryByText('Anna rzuca')).toBeNull();
+    await flush();
+    expect(frequentCalls).toEqual([]);
+  });
+
+  it('posts a success and a failure and shows the next target', async () => {
+    connect(fresh);
+    tap('Udało się');
+    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true }]));
+    expect(await screen.findByText('1 z 1 · 100%')).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: 'Końcówka' })).getByText('64')).toBeTruthy();
+    tap('Nie udało się');
+    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true }, { success: false }]));
+  });
+
+  it('sends one request for a double click', async () => {
+    const pending: (() => void)[] = [];
+    respond = () => new Promise((resolve) => pending.push(() => resolve(json(201, tried))));
+    connect(fresh);
+    tap('Udało się');
+    tap('Udało się');
+    fireEvent.keyDown(window, { key: 'Enter' });
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    pending.shift()?.();
+    await flush();
+    await flush();
+    expect(attemptBodies()).toEqual([{ success: true }]);
+  });
+
+  it('undoes one attempt for a double click on Cofnij', async () => {
+    const pending: (() => void)[] = [];
+    respond = () => new Promise((resolve) => pending.push(() => resolve(json(200, { undoneThrowId: null, state: { ...fresh, eventSeq: 3 } }))));
+    connect(tried);
+    tap('Cofnij');
+    tap('Cofnij');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    pending.shift()?.();
+    await flush();
+    await flush();
+    expect(calls).toEqual([{ url: `/api/matches/${MATCH_ID}/undo`, body: undefined }]);
+  });
+
+  it('disables Cofnij before the first attempt', () => {
+    connect(fresh);
+    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Udało się' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('records Enter and 1 as a success and 0 as a failure', async () => {
+    connect(fresh);
+    fireEvent.keyDown(window, { key: 'Enter' });
+    await vi.waitFor(() => expect(attemptBodies()).toHaveLength(1));
+    await flush();
+    fireEvent.keyDown(window, { key: '1' });
+    await vi.waitFor(() => expect(attemptBodies()).toHaveLength(2));
+    await flush();
+    fireEvent.keyDown(window, { key: '0' });
+    await vi.waitFor(() => expect(attemptBodies()).toHaveLength(3));
+    expect(attemptBodies()).toEqual([{ success: true }, { success: true }, { success: false }]);
+  });
+
+  it('undoes on Backspace', async () => {
+    connect(tried);
+    fireEvent.keyDown(window, { key: 'Backspace' });
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+  });
+
+  it('prevents the default action of a handled key', () => {
+    connect(fresh);
+    const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('sends nothing for a held key, a modifier or Backspace with 0 attempts', async () => {
+    connect(fresh);
+    fireEvent.keyDown(window, { key: 'Enter', repeat: true });
+    fireEvent.keyDown(window, { key: '1', ctrlKey: true });
+    fireEvent.keyDown(window, { key: '0', metaKey: true });
+    fireEvent.keyDown(window, { key: 'Enter', altKey: true });
+    fireEvent.keyDown(window, { key: 'Backspace' });
+    await flush();
+    expect(calls).toEqual([]);
+  });
+
+  it('sends nothing while the end practice dialog is open', async () => {
+    connect(tried);
+    tap('Zakończ trening');
+    for (const key of ['Enter', '1', '0', 'Backspace']) {
+      fireEvent.keyDown(window, { key });
+    }
+    await flush();
+    expect(calls).toEqual([]);
+    expect(screen.getByRole('dialog', { name: 'Zakończyć trening?' })).toBeTruthy();
+  });
+
+  it('shows a failed attempt', async () => {
+    respond = async () => json(500, { error: 'internal', message: 'boom' });
+    connect(fresh);
+    tap('Nie udało się');
+    expect(await screen.findByText('Nie udało się zapisać próby')).toBeTruthy();
+  });
+
+  it('offers Zakończ trening only after the first attempt', async () => {
+    connect(fresh);
+    expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
+    tap('Udało się');
+    expect(await screen.findByRole('button', { name: 'Zakończ trening' })).toBeTruthy();
+  });
+
+  it('swaps the panel for the summary when another device ends the session', async () => {
+    const ws = connect(tried);
+    ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: endedState.eventSeq, state: endedState });
+    const summaryPanel = screen.getByRole('region', { name: 'Podsumowanie treningu' });
+    expect(within(summaryPanel).getByText('Udało się')).toBeTruthy();
+    expect(screen.getByText('Trening zakończony. Tylko do odczytu.')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Końcówka' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Udało się' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Nie udało się' })).toBeNull();
+    fireEvent.keyDown(window, { key: 'Enter' });
+    await flush();
+    expect(calls).toEqual([]);
+    expect(summaryCalls).toEqual([]);
+  });
+
+  it('keeps the recent attempts under the scoreboard', () => {
+    connect(tried);
+    const recent = screen.getByRole('region', { name: 'Ostatnie próby' });
+    expect(recent.previousElementSibling?.getAttribute('aria-label')).toBe('Wyniki');
+  });
+
+  it('keeps the actions in the bottom dock', () => {
+    connect(fresh);
+    const dock = screen.getByRole('button', { name: 'Udało się' }).closest('.sticky');
+    expect(dock?.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'lg:contents']));
   });
 });
 

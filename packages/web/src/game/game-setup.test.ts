@@ -35,4 +35,21 @@ describe('game setup', () => {
     expect(createRequest({ ...match, type: 'practice', playerIds: ['p1'] })).toEqual({ type: 'practice', playerIds: ['p1'], practiceMode: 'free_run' });
     expect(CreateMatchRequest.safeParse(createRequest({ ...match, playerIds: ['p1'] })).success).toBe(false);
   });
+
+  it('starts the checkout range at 2-50', () => {
+    expect(INITIAL_SETUP.checkoutRange).toBe('2-50');
+  });
+
+  it.each(['2-50', '51-100'] as const)('sends the %s range for checkout practice', (checkoutRange) => {
+    const request = createRequest({ ...INITIAL_SETUP, type: 'practice', playerIds: ['p1'], practiceMode: 'checkouts', checkoutRange });
+    expect(request).toEqual({ type: 'practice', playerIds: ['p1'], practiceMode: 'checkouts', checkoutRange });
+    expect(CreateMatchRequest.safeParse(request).success).toBe(true);
+  });
+
+  it.each(['free_run', 'solo_501'] as const)('sends no range for %s', (practiceMode) => {
+    const request = createRequest({ ...INITIAL_SETUP, type: 'practice', playerIds: ['p1'], practiceMode, checkoutRange: '51-100' });
+    expect(request).toEqual({ type: 'practice', playerIds: ['p1'], practiceMode });
+    expect(request).not.toHaveProperty('checkoutRange');
+    expect(CreateMatchRequest.safeParse(request).success).toBe(true);
+  });
 });

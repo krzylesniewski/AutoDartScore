@@ -1,5 +1,6 @@
 import type { MatchListItem } from '@autoscore/schema';
 import { pl } from '../i18n/pl';
+import { checkoutPracticeName, formatCheckoutPercent } from './checkout-practice';
 import { formatAverage } from './format-stat';
 
 export interface UnfinishedRow {
@@ -8,7 +9,7 @@ export interface UnfinishedRow {
   readonly state: string;
 }
 
-type Game = Pick<MatchListItem, 'type' | 'practiceMode' | 'startingScore' | 'legsToWin' | 'legIndex' | 'players' | 'freeRun'>;
+type Game = Pick<MatchListItem, 'type' | 'practiceMode' | 'startingScore' | 'legsToWin' | 'legIndex' | 'players' | 'freeRun' | 'checkouts'>;
 
 // Teksty wiersza na liście gier do dokończenia.
 export function unfinishedRow(game: Game): UnfinishedRow {
@@ -38,6 +39,14 @@ export function unfinishedRow(game: Game): UnfinishedRow {
   if (game.practiceMode === 'solo_501') {
     const remaining = first?.remaining ?? 0;
     return { title: pl.practiceTitle(pl.solo501), detail: pl.soloDetail(name, remaining), state: String(remaining) };
+  }
+  if (game.practiceMode === 'checkouts') {
+    const counts = { attempts: game.checkouts?.attempts ?? 0, successes: game.checkouts?.successes ?? 0 };
+    return {
+      title: pl.practiceTitle(checkoutPracticeName(game.checkouts)),
+      detail: pl.checkoutDetail(name, counts.successes, counts.attempts),
+      state: formatCheckoutPercent(counts),
+    };
   }
   return {
     title: pl.practiceTitle(pl.freeRun),

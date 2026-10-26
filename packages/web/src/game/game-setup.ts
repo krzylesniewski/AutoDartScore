@@ -1,4 +1,4 @@
-import type { BestOf, MatchType, PracticeMode, StartingScore } from '@autoscore/schema';
+import type { BestOf, CheckoutRange, MatchType, PracticeMode, StartingScore } from '@autoscore/schema';
 
 // Stan formularza nowej gry. Gracze w kolejności wyboru.
 export interface GameSetup {
@@ -7,9 +7,10 @@ export interface GameSetup {
   readonly startingScore: StartingScore;
   readonly bestOf: BestOf;
   readonly practiceMode: PracticeMode;
+  readonly checkoutRange: CheckoutRange;
 }
 
-export const INITIAL_SETUP: GameSetup = { type: 'match', playerIds: [], startingScore: 301, bestOf: 1, practiceMode: 'free_run' };
+export const INITIAL_SETUP: GameSetup = { type: 'match', playerIds: [], startingScore: 301, bestOf: 1, practiceMode: 'free_run', checkoutRange: '2-50' };
 
 export const PLAYER_COUNT: Record<MatchType, { readonly min: number; readonly max: number }> = {
   match: { min: 2, max: 2 },
@@ -42,6 +43,10 @@ export function createRequest(setup: GameSetup): unknown {
   }
   if (setup.type === 'casual') {
     return { type: setup.type, playerIds, startingScore: setup.startingScore };
+  }
+  // Serwer odrzuca przedział w innych trybach treningu.
+  if (setup.practiceMode === 'checkouts') {
+    return { type: setup.type, playerIds, practiceMode: setup.practiceMode, checkoutRange: setup.checkoutRange };
   }
   return { type: setup.type, playerIds, practiceMode: setup.practiceMode };
 }

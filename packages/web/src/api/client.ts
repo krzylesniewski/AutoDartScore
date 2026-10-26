@@ -1,6 +1,7 @@
 import { ApiError, FrequentHitsResponse, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
 import type {
   AbandonMatchRequest,
+  CheckoutAttemptRequest,
   CreateMatchRequest,
   CreatePlayerRequest,
   HitEvent,
@@ -145,4 +146,9 @@ export function resumeMatch(id: string): Promise<MatchSnapshot> {
 
 export function endPractice(id: string): Promise<MatchSnapshot> {
   return request(`/matches/${encodeURIComponent(id)}/end`, MatchSnapshot, { method: 'POST' });
+}
+
+export function postCheckoutAttempt(matchId: string, success: boolean): Promise<MatchSnapshot> {
+  const body: CheckoutAttemptRequest = { success };
+  return request(`/matches/${encodeURIComponent(matchId)}/checkout-attempts`, MatchSnapshot, postJson(body));
 }

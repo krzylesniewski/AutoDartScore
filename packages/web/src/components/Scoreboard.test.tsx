@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { casual, player, snapshot } from '../test/snapshots';
+import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot } from '../test/snapshots';
 import { Scoreboard } from './Scoreboard';
 
 describe('Scoreboard', () => {
@@ -91,6 +91,24 @@ describe('Scoreboard', () => {
     expect(screen.getByText('245')).toBeTruthy();
     expect(screen.getByText('6')).toBeTruthy();
     expect(screen.getByText('122,5')).toBeTruthy();
+  });
+
+  it('shows the attempt counter in checkout practice', () => {
+    const results = [true, true, false, true, false, true, false, true, false, true, true, false];
+    render(<Scoreboard state={checkoutPractice(checkoutSession(checkoutHistory(results)))} size="large" />);
+    const counter = within(screen.getByText('Anna').closest('li') ?? document.body);
+    const terms = counter.getAllByRole('term').map((term) => [term.textContent, term.nextElementSibling?.textContent]);
+    expect(terms).toEqual([
+      ['Próby', '12'],
+      ['Udane', '7'],
+      ['Skuteczność', '58%'],
+    ]);
+  });
+
+  it('shows no percent before the first checkout attempt', () => {
+    render(<Scoreboard state={checkoutPractice()} size="large" />);
+    const values = screen.getAllByRole('definition').map((value) => value.textContent);
+    expect(values).toEqual(['0', '0', '—']);
   });
 
   it('stacks the row only from lg in a narrow container', () => {

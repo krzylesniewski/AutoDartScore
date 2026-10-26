@@ -6,8 +6,8 @@ AUTO Score automatycznie liczy wynik w darcie. Dziś trafienia wpisuje się ręc
 
 Działa na `main`:
 
-- typy gier: mecz 1v1 (X01), zabawa dla 2-4 graczy z rankingiem miejsc, trening (Free run i Solo 501, a trening checkoutów na razie tylko przez API),
-- kreator nowej gry: typ gry, lista graczy, dodawanie gracza (imię, avatar emoji, kolor, gość), punkty startowe, liczba legów w meczu 1v1 i tryb treningu,
+- typy gier: mecz 1v1 (X01), zabawa dla 2-4 graczy z rankingiem miejsc, trening (Free run, Solo 501 i „Końcówki”: losowe końcówki z przedziału 2-50 albo 51-100, z podpowiedzią trasy i przyciskami „Udało się” i „Nie udało się”),
+- kreator nowej gry: typ gry, lista graczy, dodawanie gracza (imię, avatar emoji, kolor, gość), punkty startowe, liczba legów w meczu 1v1, tryb treningu i przedział końcówek,
 - ekran gry: pasek wyników, trzy sloty rzutek, suma tury, podpowiedź zamknięcia, klawiatura (1-20, 25, Miss, S/D/T) i przycisk „Cofnij”,
 - stan na żywo przez WebSocket, z ponownym połączeniem po zerwaniu,
 - głosowy odczyt wyniku tury, komunikaty „Bust” i „Zwycięzca” oraz efekty dźwiękowe, każde z przełącznikiem na ekranie gry.

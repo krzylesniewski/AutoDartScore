@@ -186,7 +186,7 @@ describe('HomeScreen: new game form', () => {
     await chips();
     expect(screen.getByRole('button', { name: 'Mecz 1v1', description: 'Dwóch graczy, best of N legów' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Zabawa', description: '3-4 graczy, walka o miejsca' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Trening', description: 'Solo: Free run lub 501' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Trening', description: 'Solo: Free run, 501, końcówki' })).toBeTruthy();
   });
 
   it('groups the options as named segmented controls', async () => {
@@ -195,7 +195,25 @@ describe('HomeScreen: new game form', () => {
     expect(within(screen.getByRole('group', { name: 'Punkty startowe' })).getAllByRole('button')).toHaveLength(3);
     expect(within(screen.getByRole('group', { name: 'Liczba legów' })).getAllByRole('button')).toHaveLength(3);
     fireEvent.click(button('Trening'));
-    expect(within(screen.getByRole('group', { name: 'Tryb treningu' })).getAllByRole('button')).toHaveLength(2);
+    expect(within(screen.getByRole('group', { name: 'Tryb treningu' })).getAllByRole('button').map((segment) => segment.textContent)).toEqual([
+      'Free run',
+      'Solo 501',
+      'Końcówki',
+    ]);
+  });
+
+  it('shows the checkout range group only for Końcówki, with 2-50 preselected', async () => {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('Trening'));
+    expect(screen.queryByRole('group', { name: 'Przedział końcówek' })).toBeNull();
+    fireEvent.click(button('Końcówki'));
+    const range = screen.getByRole('group', { name: 'Przedział końcówek', description: '2-50 albo 51-100' });
+    expect(within(range).getAllByRole('button').map((segment) => segment.textContent)).toEqual(['2-50', '51-100']);
+    expect(pressed('2-50')).toBe('true');
+    expect(pressed('51-100')).toBe('false');
+    fireEvent.click(button('Solo 501'));
+    expect(screen.queryByRole('group', { name: 'Przedział końcówek' })).toBeNull();
   });
 
   it('limits a 1v1 to 2 players and disables the other chips', async () => {
@@ -300,6 +318,14 @@ describe('HomeScreen: new game form', () => {
       ['Tryb', 'Solo 501'],
       ['Zasady', 'Straight-in, double-out'],
     ]);
+    fireEvent.click(button('Końcówki'));
+    fireEvent.click(button('51-100'));
+    expect(summaryRows()).toEqual([
+      ['Typ', 'Trening'],
+      ['Tryb', 'Końcówki'],
+      ['Przedział', '51-100'],
+      ['Zasady', 'Jedna tura na końcówkę, udało się albo nie'],
+    ]);
   });
 
   it('shows the vs header for 2 players in Zabawa', async () => {
@@ -358,6 +384,22 @@ describe('HomeScreen: new game form', () => {
     expect(request?.body).toEqual({ type: 'match', playerIds: ['p2', 'p1'], startingScore: 701, bestOf: 1 });
   });
 
+  it('posts checkout practice with the chosen range', async () => {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('Trening'));
+    fireEvent.click(button('Końcówki'));
+    fireEvent.click(button('51-100'));
+    fireEvent.click(button('Anna'));
+    expect(within(startBar()).getByText('Końcówki · 51-100 · Jedna tura na końcówkę, udało się albo nie')).toBeTruthy();
+    fireEvent.click(button('Start gry'));
+
+    await vi.waitFor(() => expect(window.location.hash).toBe('#/matches/m_7'));
+    const request = calls.find((call) => call.url === '/api/matches');
+    expect(request?.method).toBe('POST');
+    expect(request?.body).toEqual({ type: 'practice', playerIds: ['p1'], practiceMode: 'checkouts', checkoutRange: '51-100' });
+  });
+
   it('shows the server message when the game cannot start', async () => {
     respond = (call) => (call.url === '/api/matches' ? Promise.resolve(json(400, { error: 'unknown_player', message: 'Unknown player p2' })) : null);
     render(<HomeScreen />);
@@ -388,7 +430,7 @@ describe('HomeScreen: responsive layout', () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('Trening'));
-    expect(screen.getByRole('group', { name: 'Tryb treningu', description: 'swobodne rzucanie albo zejście z 501' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Tryb treningu', description: 'swobodne rzucanie, zejście z 501 albo losowe końcówki' })).toBeTruthy();
   });
 
   it('offers no exit or entry rule groups in any game type', async () => {

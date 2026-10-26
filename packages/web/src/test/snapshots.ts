@@ -1,4 +1,4 @@
-import type { LegProgress, MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
+import type { CheckoutAttempt, CheckoutSession, LegProgress, MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
 
 export function player(id: string, name: string, overrides: Partial<MatchSnapshotPlayer> = {}): MatchSnapshotPlayer {
   return { id, name, avatar: null, color: 1, guest: false, remaining: 501, legsWon: null, place: null, dartsThrownInLeg: 0, ...overrides };
@@ -36,6 +36,32 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
     legPausedMs: 0,
     ...overrides,
   };
+}
+
+// Liczniki wynikają z historii, tak jak wymaga schemat.
+export function checkoutSession(history: readonly CheckoutAttempt[] = [], overrides: Partial<Pick<CheckoutSession, 'range' | 'target'>> = {}): CheckoutSession {
+  return { range: '2-50', target: 40, attempts: history.length, successes: history.filter((attempt) => attempt.success).length, history: [...history], ...overrides };
+}
+
+// Kolejne próby z podanych wyników, na celach 2, 3, 4 i dalej.
+export function checkoutHistory(results: readonly boolean[]): CheckoutAttempt[] {
+  return results.map((success, index) => ({ target: index + 2, success }));
+}
+
+// Trening końcówek w kształcie snapshotu z serwera: bez wyniku, kolejki i zegara lega.
+export function checkoutPractice(session: CheckoutSession = checkoutSession(), overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {
+  return snapshot({
+    type: 'practice',
+    practiceMode: 'checkouts',
+    startingScore: null,
+    legsToWin: null,
+    countsToStats: false,
+    round: null,
+    turnIndex: session.attempts,
+    players: [player('p1', 'Anna', { remaining: null })],
+    checkouts: session,
+    ...overrides,
+  });
 }
 
 export function casual(names: readonly string[], overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {

@@ -11,6 +11,14 @@ export interface GameSetupSummaryProps {
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 
 function rows(setup: GameSetup): readonly [string, string][] {
+  if (setup.type === 'practice' && setup.practiceMode === 'checkouts') {
+    return [
+      [pl.summaryType, pl.typePractice],
+      [pl.summaryMode, pl.checkoutPractice],
+      [pl.summaryRange, setup.checkoutRange],
+      [pl.summaryRules, pl.rulesCheckouts],
+    ];
+  }
   if (setup.type === 'practice') {
     return [
       [pl.summaryType, pl.typePractice],

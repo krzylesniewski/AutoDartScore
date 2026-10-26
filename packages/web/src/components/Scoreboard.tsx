@@ -1,5 +1,6 @@
 import type { MatchSnapshot, MatchSnapshotPlayer } from '@autoscore/schema';
 import { avatarColorClass } from '../game/avatar-color';
+import { formatCheckoutPercent } from '../game/checkout-practice';
 import { formatDecimal } from '../game/format-stat';
 import { scoreboardOrder } from '../game/scoreboard-order';
 import { pl } from '../i18n/pl';
@@ -202,7 +203,9 @@ function PlayerRow({ player, state, style, next }: PlayerRowProps) {
           {pl.place(player.place)}
         </span>
       ) : state.freeRun ? (
-        <FreeRunCounter freeRun={state.freeRun} style={style} className={layout.value} />
+        <SessionCounter items={freeRunItems(state.freeRun)} style={style} className={layout.value} />
+      ) : state.checkouts ? (
+        <SessionCounter items={checkoutItems(state.checkouts)} style={style} className={layout.value} />
       ) : (
         <span
           className={`font-display leading-none font-bold tabular-nums ${style.score} ${layout.value} ${throwing ? 'text-(--color-text)' : 'text-(--color-text-muted)'}`}
@@ -228,12 +231,26 @@ function LegDots({ won, target }: { won: number; target: number }) {
   );
 }
 
-function FreeRunCounter({ freeRun, style, className }: { freeRun: NonNullable<MatchSnapshot['freeRun']>; style: Style; className: string }) {
-  const items = [
+type CounterItems = readonly (readonly [term: string, value: string])[];
+
+function freeRunItems(freeRun: NonNullable<MatchSnapshot['freeRun']>): CounterItems {
+  return [
     [pl.total, String(freeRun.totalPoints)],
     [pl.dartsThrown, String(freeRun.dartsThrown)],
     [pl.average, formatDecimal(freeRun.average, 1)],
-  ] as const;
+  ];
+}
+
+function checkoutItems(session: NonNullable<MatchSnapshot['checkouts']>): CounterItems {
+  return [
+    [pl.checkoutAttempts, String(session.attempts)],
+    [pl.checkoutSuccesses, String(session.successes)],
+    [pl.checkoutPercent, formatCheckoutPercent(session)],
+  ];
+}
+
+// Licznik sesji w miejscu pozostałego wyniku, w treningach bez wyniku.
+function SessionCounter({ items, style, className }: { items: CounterItems; style: Style; className: string }) {
   return (
     <dl className={`flex shrink-0 font-display ${style.counter} ${className}`}>
       {items.map(([term, value]) => (
