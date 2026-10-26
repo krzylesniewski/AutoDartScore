@@ -98,6 +98,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p46-p47.md
       kind: markdown
       tag: p46-p47
+    # Tylko dla PR-ów z briefTags: [p48-p51].
+    - title: P48-P51, poprawki treningu „Końcówki”, osiągnięcia i komentarz do zera (wiążące dla P48-P51, każdy PR tylko swoja sekcja)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p48-p51.md
+      kind: markdown
+      tag: p48-p51
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -617,3 +622,50 @@ prs:
     changeset: none
     scope: ['packages/web/**']
     briefTags: [p46-p47, rwd]
+
+  # Feedback 2026-10-26 (feedback-graczy.md, design/plan-p48-p51.md). P48-P50 niezależne, P51 po P50.
+  # Efekt wciśnięcia przycisków w treningu „Końcówki” (sekcja P48).
+  - id: P48
+    branch: fix/web-checkout-press-effect
+    title: 'fix(web): add the press effect to checkout practice buttons'
+    brief: briefs/P48.md
+    priority: 60
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p48-p51]
+
+  # Po nieudanej próbie ta sama końcówka, trzeci przycisk „Nowa końcówka” (sekcja P49).
+  - id: P49
+    branch: feat/practice-checkouts-repeat
+    title: 'feat: keep the checkout after a miss and add a skip button'
+    brief: briefs/P49.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/engine/**', 'packages/schema/**', 'packages/server/**', 'packages/web/**', 'README.md', 'packages/*/README.md']
+    briefTags: [p48-p51, rwd]
+
+  # Wykrywanie osiągnięć w meczach 1v1 i wiadomość `achievement` na żywo (sekcja P50).
+  - id: P50
+    branch: feat/achievements-api
+    title: 'feat: detect achievements in 1v1 matches and send them live'
+    brief: briefs/P50.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    # Nowy typ wiadomości może wymagać poprawki danych testowych frontu; README opisuje wiadomość.
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
+    briefTags: [p48-p51]
+
+  # Osiągnięcia i komentarz do zera w głosie i na ekranie gry, nagrania już w public/audio (sekcja P51).
+  - id: P51
+    branch: feat/achievements-audio-web
+    title: 'feat: announce achievements and comment on zero turns'
+    brief: briefs/P51.md
+    deps: [P50]
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/audio/**', 'packages/web/**']
+    briefTags: [p48-p51, rwd]

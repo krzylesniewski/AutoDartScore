@@ -28,6 +28,38 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-10-26: śmieszny komentarz do tury za zero
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / głos
+- **Co powiedział:** „A jakieś 2-3 śmieszne komentarze do wyniku zero?”
+- **Kontekst:** odczyt wyniku po turze
+- **Status:** zaplanowany (P51, `design/plan-p48-p51.md`)
+- **Uwagi:** dziś po turze gra tylko nagranie sumy (`scores/<suma>.mp3`), żarty mają tylko nagrania busta (`events/bust_1..3.mp3`, `packages/audio/src/announcement.ts`). Autor nagrał dwa komentarze w ElevenLabs (`events/zero_1.mp3`, 6,1 s, i `events/zero_2.mp3`, 4,9 s, w `packages/web/public/audio/pl/`). Decyzje autora 2026-10-26: po sumie 0 gra losowo jeden z komentarzy, przy każdej takiej turze (nie przy buście); najpierw suma, potem komentarz, potem ewentualne osiągnięcia; nagrania zostają w obecnej długości. Nagrania do 100, 120, 140 i 180 okazały się nagraniami pierwszych razy i należą do wpisu o osiągnięciach.
+
+### 2026-10-26: osiągnięcia, np. rekord życiowy z 3 lotek
+- **Zgłosił:** gracze (przekazał autor)
+- **Rodzaj / obszar:** pomysł / ekran gry
+- **Co powiedział:** „Przydałyby się osiągnięcia. Czyli podczas gry jak gracz rzuci swoją życiową wartość z 3 rzutów”
+- **Kontekst:** w trakcie gry
+- **Status:** zaplanowany (P50, P51, `design/plan-p48-p51.md`)
+- **Uwagi:** dziś najwyższa tura, najwyższy checkout i najlepszy leg są liczone tylko w statystykach, po fakcie (`packages/server/src/stats/tally.ts`, `rankings.ts`); w trakcie gry nic nie porównuje wyniku z rekordem gracza. Kierunek: serwer wykrywa osiągnięcia przy zamknięciu tury i lega i wysyła je na żywo (P50), ekran gry pokazuje komunikat z ikoną i tekstem, a głos czyta nagranie po odczycie wartości (P51). Silnik bez zmian. Osiągnięcia w paczce (autor, 2026-10-26): rekord tury z 3 lotek, rekord checkoutu, najkrótszy leg, najdłuższy leg („trochę złośliwości się przyda”), pierwsze 100+, 120+, 140+ i 180. Nagrania autora z ElevenLabs w `packages/web/public/audio/pl/events/` (`achievement_*.mp3`, `first_*.mp3`). Decyzje autora 2026-10-26: tylko mecze 1v1 i tylko profile (goście bez osiągnięć); od drugiej gry profilu, także pierwsze razy; najdłuższy leg z każdego lega gracza, także przegranego; najpierw wartość, potem komentarz do zera, potem osiągnięcia, wszystko po kolei; nagrania w obecnej długości. Odłożone: rekord średniej w legu i Bull na zamknięcie (brak nagrań). Na później: seria wygranych meczów, licznik meczów (10, 50, 100), seria udanych prób w treningu końcówek.
+
+### 2026-10-26: powtórka tej samej końcówki po nieudanej próbie
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / inne (trening końcówek)
+- **Co powiedział:** „Chcę kilka razy próbować jedną końcówkę. Czyli fail, niech nie losuje nowej. Nowa to 3 opcja poniżej”
+- **Kontekst:** trening „Końcówki”, po nieudanej próbie
+- **Status:** zaplanowany (P49, `design/plan-p48-p51.md`)
+- **Uwagi:** dziś każda próba, udana czy nie, losuje nowy cel: `applyCheckoutAttempt` w `packages/engine/src/checkouts.ts` zawsze woła `nextCheckoutTarget`. Kierunek: po „Nie udało się” cel zostaje, a losowanie nowego idzie do osobnego, trzeciego przycisku pod dwoma obecnymi (`CheckoutActions` w `packages/web/src/components/CheckoutPracticePanel.tsx`). „Nowa końcówka” bez próby to nowe zdarzenie w logu (pominięcie), żeby odtworzenie dawało ten sam cel. Decyzje autora 2026-10-26: po „Udało się” losuje się nowa końcówka, po „Nie udało się” zostaje ta sama; „Nowa końcówka” (skrót N) nie liczy się do licznika prób, Cofnij cofa też ją; stare sesje odtwarzają się jak dziś.
+
+### 2026-10-26: brak efektu kliknięcia w treningu końcówek
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** utrudnienie / inne (trening końcówek)
+- **Co powiedział:** „Brakuje efektu kliknięcia w treningu końcówek”
+- **Kontekst:** trening „Końcówki”, przyciski wyniku próby
+- **Status:** zaplanowany (P48, `design/plan-p48-p51.md`)
+- **Uwagi:** przyciski „Udało się”, „Nie udało się” i „Cofnij” w `CheckoutActions` (`packages/web/src/components/CheckoutPracticePanel.tsx`) to zwykłe `<button>` bez stanu wciśnięcia i bez mignięcia, a klawiatura ekranu gry ma oba (`KeypadKey` z `flashOnPress`, P22). Kierunek: ten sam efekt wciśnięcia co na klawiaturze, z tokenów motywu.
+
 ### 2026-10-26: trening „Końcówki”
 - **Zgłosił:** autor
 - **Rodzaj / obszar:** pomysł / kreator
