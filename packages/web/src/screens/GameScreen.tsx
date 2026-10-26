@@ -64,8 +64,9 @@ export function GameScreen({ matchId }: { matchId: string }) {
     sendUndo();
   }
 
+  // Jak skróty klawiatury rzutek: bez połączenia i po końcu sesji klawisze zostają dla przeglądarki.
   useCheckoutShortcuts({
-    enabled: checkoutMode,
+    enabled: checkoutMode && controls.results,
     undoEnabled: controls.undo,
     onSuccess: () => recordAttempt(true),
     onFailure: () => recordAttempt(false),

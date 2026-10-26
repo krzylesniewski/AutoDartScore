@@ -30,7 +30,8 @@ export function useCheckoutShortcuts(options: CheckoutShortcutOptions): void {
         return;
       }
       const shortcut = checkoutShortcut(event);
-      if (!shortcut || isTextField(event.target) || document.querySelector('[role="dialog"]')) {
+      // Klawisz bez akcji zostaje dla przeglądarki, żeby Backspace i Enter na linku albo przycisku działały jak zwykle.
+      if (!shortcut || (shortcut === 'undo' && !current.undoEnabled) || isTextField(event.target) || document.querySelector('[role="dialog"]')) {
         return;
       }
       // Enter na przycisku z fokusem kliknąłby go drugi raz.
@@ -47,9 +48,7 @@ export function useCheckoutShortcuts(options: CheckoutShortcutOptions): void {
           current.onFailure();
           return;
         case 'undo':
-          if (current.undoEnabled) {
-            current.onUndo();
-          }
+          current.onUndo();
           return;
       }
     }

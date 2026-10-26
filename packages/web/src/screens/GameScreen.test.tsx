@@ -923,6 +923,40 @@ describe('checkout practice', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  function pressKey(key: string): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key, cancelable: true });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    return event;
+  }
+
+  it('leaves Backspace to the browser with 0 attempts', () => {
+    connect(fresh);
+    expect(pressKey('Backspace').defaultPrevented).toBe(false);
+    expect(pressKey('Enter').defaultPrevented).toBe(true);
+  });
+
+  it('leaves every key to the browser once the session has ended', async () => {
+    connect(endedState);
+    for (const key of ['Enter', '1', '0', 'Backspace']) {
+      expect(pressKey(key).defaultPrevented).toBe(false);
+    }
+    await flush();
+    expect(calls).toEqual([]);
+  });
+
+  it('leaves every key to the browser while the connection is lost', async () => {
+    const ws = connect(tried);
+    ws.serverClose(1006);
+    expect(screen.getByText('Brak połączenia z serwerem. Łączę ponownie…')).toBeTruthy();
+    for (const key of ['Enter', '1', '0', 'Backspace']) {
+      expect(pressKey(key).defaultPrevented).toBe(false);
+    }
+    await flush();
+    expect(calls).toEqual([]);
+  });
+
   it('sends nothing for a held key, a modifier or Backspace with 0 attempts', async () => {
     connect(fresh);
     fireEvent.keyDown(window, { key: 'Enter', repeat: true });
