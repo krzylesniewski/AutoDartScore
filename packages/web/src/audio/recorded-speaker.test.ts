@@ -6,7 +6,7 @@ class FakeAudio implements ClipAudio {
   currentTime = 0;
   preload = '';
   readonly calls: string[] = [];
-  private readonly errorListeners: (() => void)[] = [];
+  private readonly listeners: Record<'error' | 'ended', (() => void)[]> = { error: [], ended: [] };
 
   constructor(
     readonly src: string,
@@ -26,20 +26,31 @@ class FakeAudio implements ClipAudio {
     this.calls.push('load');
   }
 
-  addEventListener(_type: 'error', listener: () => void): void {
-    this.errorListeners.push(listener);
+  addEventListener(type: 'error' | 'ended', listener: () => void): void {
+    this.listeners[type].push(listener);
   }
 
   fail(): void {
-    for (const listener of this.errorListeners) {
+    for (const listener of this.listeners.error) {
+      listener();
+    }
+  }
+
+  end(): void {
+    for (const listener of this.listeners.ended) {
       listener();
     }
   }
 }
 
-const sto: Announcement = { kind: 'score', text: 'sto', clip: 'scores/100.mp3' };
-const bust: Announcement = { kind: 'bust', text: 'Bust', clip: 'events/bust_1.mp3' };
-const unreachable: Announcement = { kind: 'score', text: 'sto sześćdziesiąt trzy', clip: null };
+const STO = { text: 'sto', clip: 'scores/100.mp3' };
+const TURN_RECORD = { text: 'Nowy rekord tury', clip: 'events/achievement_turn_record.mp3' };
+const FIRST_140 = { text: 'Pierwsze sto czterdzieści', clip: 'events/first_140.mp3' };
+const sto: Announcement = { kind: 'score', parts: [STO] };
+const bust: Announcement = { kind: 'bust', parts: [{ text: 'Bust', clip: 'events/bust_1.mp3' }] };
+const unreachable: Announcement = { kind: 'score', parts: [{ text: 'sto sześćdziesiąt trzy', clip: null }] };
+const twoParts: Announcement = { kind: 'score', parts: [STO, TURN_RECORD] };
+const threeParts: Announcement = { kind: 'score', parts: [{ text: 'sto czterdzieści', clip: 'scores/140.mp3' }, FIRST_140, TURN_RECORD] };
 
 const EVENT_URLS = [
   '/audio/pl/events/bust_1.mp3',
@@ -48,11 +59,21 @@ const EVENT_URLS = [
   '/audio/pl/events/game_shot.mp3',
   '/audio/pl/events/winner_1.mp3',
   '/audio/pl/events/winner_2.mp3',
+  '/audio/pl/events/zero_1.mp3',
+  '/audio/pl/events/zero_2.mp3',
+  '/audio/pl/events/first_100.mp3',
+  '/audio/pl/events/first_120.mp3',
+  '/audio/pl/events/first_140.mp3',
+  '/audio/pl/events/first_180.mp3',
+  '/audio/pl/events/achievement_turn_record.mp3',
+  '/audio/pl/events/achievement_checkout_record.mp3',
+  '/audio/pl/events/achievement_shortest_leg.mp3',
+  '/audio/pl/events/achievement_longest_leg.mp3',
 ];
 
 let created: FakeAudio[];
 let playResult: () => unknown;
-let fallback: { speak: Mock<(text: string) => void>; cancel: Mock<() => void> };
+let fallback: { speak: Mock<(text: string, onDone?: () => void) => void>; cancel: Mock<() => void> };
 let speaker: RecordedSpeaker;
 
 function createAudio(src: string): FakeAudio {
@@ -78,6 +99,31 @@ function deferredRejection(): { promise: Promise<void>; reject: (error: Error) =
   return { promise, reject };
 }
 
+function spokenTexts(): string[] {
+  return fallback.speak.mock.calls.map(([text]) => text);
+}
+
+// Kończy odczyt tekstu o podanym numerze, jak onend wypowiedzi.
+function finishSpeech(index: number): void {
+  const onDone = fallback.speak.mock.calls[index]?.[1];
+  if (!onDone) {
+    throw new Error(`no speech ${index}`);
+  }
+  onDone();
+}
+
+function audioFor(src: string): FakeAudio {
+  const audio = created.find((candidate) => candidate.src === src);
+  if (!audio) {
+    throw new Error(`no element for ${src}`);
+  }
+  return audio;
+}
+
+function played(): string[] {
+  return created.flatMap((audio) => audio.calls.filter((call) => call === 'play').map(() => audio.src));
+}
+
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -85,7 +131,7 @@ function flush(): Promise<void> {
 beforeEach(() => {
   created = [];
   playResult = () => Promise.resolve();
-  fallback = { speak: vi.fn<(text: string) => void>(), cancel: vi.fn<() => void>() };
+  fallback = { speak: vi.fn<(text: string, onDone?: () => void) => void>(), cancel: vi.fn<() => void>() };
   speaker = createRecordedSpeaker(fallback, createAudio);
 });
 
@@ -104,7 +150,7 @@ describe('createRecordedSpeaker', () => {
 
   it('speaks the text at once and creates no element without a clip', () => {
     speaker.speak(unreachable);
-    expect(fallback.speak.mock.calls).toEqual([['sto sześćdziesiąt trzy']]);
+    expect(spokenTexts()).toEqual(['sto sześćdziesiąt trzy']);
     expect(created).toEqual([]);
   });
 
@@ -113,13 +159,13 @@ describe('createRecordedSpeaker', () => {
       throw new Error('play failed');
     };
     speaker.speak(sto);
-    expect(fallback.speak.mock.calls).toEqual([['sto']]);
+    expect(spokenTexts()).toEqual(['sto']);
   });
 
   it('speaks the text when play() returns no promise', () => {
     playResult = () => undefined;
     speaker.speak(sto);
-    expect(fallback.speak.mock.calls).toEqual([['sto']]);
+    expect(spokenTexts()).toEqual(['sto']);
   });
 
   it('speaks the text when play() rejects', async () => {
@@ -127,13 +173,13 @@ describe('createRecordedSpeaker', () => {
     speaker.speak(sto);
     expect(fallback.speak).not.toHaveBeenCalled();
     await flush();
-    expect(fallback.speak.mock.calls).toEqual([['sto']]);
+    expect(spokenTexts()).toEqual(['sto']);
   });
 
   it('speaks the text on an error event and creates a new element on the next use', async () => {
     speaker.speak(sto);
     only().fail();
-    expect(fallback.speak.mock.calls).toEqual([['sto']]);
+    expect(spokenTexts()).toEqual(['sto']);
     speaker.speak(sto);
     await flush();
     expect(created.map((audio) => audio.src)).toEqual(['/audio/pl/scores/100.mp3', '/audio/pl/scores/100.mp3']);
@@ -148,7 +194,7 @@ describe('createRecordedSpeaker', () => {
     only().fail();
     play.reject(new DOMException('not found', 'NotSupportedError'));
     await flush();
-    expect(fallback.speak.mock.calls).toEqual([['sto']]);
+    expect(spokenTexts()).toEqual(['sto']);
   });
 
   it('pauses and rewinds the previous clip before the next one', () => {
@@ -208,7 +254,7 @@ describe('createRecordedSpeaker', () => {
     expect(fallback.cancel).toHaveBeenCalledTimes(1);
   });
 
-  it('preloads exactly the six event clips once', () => {
+  it('preloads exactly the 16 event clips once', () => {
     speaker.preload();
     expect(created.map((audio) => audio.src)).toEqual(EVENT_URLS);
     for (const audio of created) {
@@ -216,8 +262,8 @@ describe('createRecordedSpeaker', () => {
       expect(audio.calls).toEqual(['load']);
     }
     speaker.preload();
-    expect(created).toHaveLength(6);
-    expect(created.flatMap((audio) => audio.calls)).toEqual(Array(6).fill('load'));
+    expect(created).toHaveLength(16);
+    expect(created.flatMap((audio) => audio.calls)).toEqual(Array(16).fill('load'));
   });
 
   it('reuses one element for the same URL', () => {
@@ -229,7 +275,7 @@ describe('createRecordedSpeaker', () => {
   it('plays a preloaded event clip without a new element', () => {
     speaker.preload();
     speaker.speak(bust);
-    expect(created).toHaveLength(6);
+    expect(created).toHaveLength(16);
     expect(created[0]?.calls).toEqual(['load', 'play']);
   });
 
@@ -252,6 +298,116 @@ describe('createRecordedSpeaker', () => {
     const recorded = createRecordedSpeaker(fallback);
     recorded.preload();
     recorded.speak(sto);
-    expect(fallback.speak.mock.calls).toEqual([['sto']]);
+    expect(spokenTexts()).toEqual(['sto']);
+  });
+
+  it('plays two parts in order, the second only after the first ended', async () => {
+    speaker.speak(twoParts);
+    await flush();
+    expect(played()).toEqual(['/audio/pl/scores/100.mp3']);
+    audioFor('/audio/pl/scores/100.mp3').end();
+    await flush();
+    expect(played()).toEqual(['/audio/pl/scores/100.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+    expect(fallback.speak).not.toHaveBeenCalled();
+  });
+
+  it('plays three parts in order, each after the previous ended', async () => {
+    speaker.speak(threeParts);
+    audioFor('/audio/pl/scores/140.mp3').end();
+    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3']);
+    audioFor('/audio/pl/events/first_140.mp3').end();
+    audioFor('/audio/pl/events/achievement_turn_record.mp3').end();
+    await flush();
+    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+    expect(fallback.speak).not.toHaveBeenCalled();
+  });
+
+  it('reads a middle part without a clip, then plays the next clip', () => {
+    speaker.speak({ kind: 'score', parts: [STO, { text: 'Pierwsza setka', clip: null }, TURN_RECORD] });
+    audioFor('/audio/pl/scores/100.mp3').end();
+    expect(spokenTexts()).toEqual(['Pierwsza setka']);
+    expect(played()).toEqual(['/audio/pl/scores/100.mp3']);
+    finishSpeech(0);
+    expect(played()).toEqual(['/audio/pl/scores/100.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+  });
+
+  it('reads a failing middle part, then plays the next clip', () => {
+    speaker.speak(threeParts);
+    audioFor('/audio/pl/scores/140.mp3').end();
+    audioFor('/audio/pl/events/first_140.mp3').fail();
+    expect(spokenTexts()).toEqual(['Pierwsze sto czterdzieści']);
+    finishSpeech(0);
+    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+  });
+
+  it('reads a rejected middle part, then plays the next clip', async () => {
+    speaker.speak(threeParts);
+    playResult = () => Promise.reject(new DOMException('not found', 'NotSupportedError'));
+    audioFor('/audio/pl/scores/140.mp3').end();
+    await flush();
+    expect(spokenTexts()).toEqual(['Pierwsze sto czterdzieści']);
+    playResult = () => Promise.resolve();
+    finishSpeech(0);
+    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+  });
+
+  it('moves on once when a failing part also ends', () => {
+    speaker.speak(threeParts);
+    audioFor('/audio/pl/scores/140.mp3').end();
+    const failing = audioFor('/audio/pl/events/first_140.mp3');
+    failing.fail();
+    failing.end();
+    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3']);
+    finishSpeech(0);
+    finishSpeech(0);
+    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+  });
+
+  it('reads every part in turn without a global Audio', () => {
+    vi.stubGlobal('Audio', undefined);
+    createRecordedSpeaker(fallback).speak(twoParts);
+    expect(spokenTexts()).toEqual(['sto']);
+    finishSpeech(0);
+    expect(spokenTexts()).toEqual(['sto', 'Nowy rekord tury']);
+  });
+
+  it('stops the list on cancel in the middle and ignores a late ended', async () => {
+    speaker.speak(threeParts);
+    audioFor('/audio/pl/scores/140.mp3').end();
+    const middle = audioFor('/audio/pl/events/first_140.mp3');
+    speaker.cancel();
+    expect(middle.calls).toEqual(['play', 'pause']);
+    middle.end();
+    await flush();
+    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3']);
+    expect(fallback.speak).not.toHaveBeenCalled();
+  });
+
+  it('ignores a late onDone after cancel', () => {
+    speaker.speak({ kind: 'score', parts: [{ text: 'Pierwsza setka', clip: null }, TURN_RECORD] });
+    speaker.cancel();
+    finishSpeech(0);
+    expect(created).toEqual([]);
+    expect(spokenTexts()).toEqual(['Pierwsza setka']);
+  });
+
+  it('ignores a late ended of an older announcement', () => {
+    speaker.speak(twoParts);
+    const previous = audioFor('/audio/pl/scores/100.mp3');
+    speaker.speak(bust);
+    previous.end();
+    expect(played()).toEqual(['/audio/pl/scores/100.mp3', '/audio/pl/events/bust_1.mp3']);
+  });
+
+  it('does not fall back on a stale rejection from an earlier part', async () => {
+    const play = deferredRejection();
+    playResult = () => play.promise;
+    speaker.speak(twoParts);
+    playResult = () => Promise.resolve();
+    audioFor('/audio/pl/scores/100.mp3').end();
+    play.reject(new DOMException('interrupted', 'AbortError'));
+    await flush();
+    expect(fallback.speak).not.toHaveBeenCalled();
+    expect(played()).toEqual(['/audio/pl/scores/100.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
   });
 });

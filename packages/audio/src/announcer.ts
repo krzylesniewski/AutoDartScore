@@ -1,4 +1,4 @@
-import type { DomainEvent, LiveMessage } from '@autoscore/schema';
+import type { AchievementKind, DomainEvent, LiveMessage } from '@autoscore/schema';
 import { announcementFor, type Announcement } from './announcement.js';
 import { soundEffectFor, type SoundEffect } from './sound-effect.js';
 
@@ -19,25 +19,36 @@ export interface Announcer {
   stop(): void;
 }
 
-// Serwer wysyła jedną paczkę na rzutkę: throw_registered, zdarzenia domenowe i state_updated z tym samym eventSeq.
+// Serwer wysyła jedną paczkę na rzutkę: throw_registered, zdarzenia domenowe, osiągnięcia i state_updated z tym samym eventSeq.
 // Czytamy dopiero po state_updated, żeby cała paczka dała jeden komunikat. Snapshot po połączeniu ma inny eventSeq
 // niż bufor i nigdy nie jest czytany.
 export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer, random: () => number = Math.random): Announcer {
   let buffer: DomainEvent[] = [];
+  let achievements: AchievementKind[] = [];
   let bufferSeq: number | null = null;
   let speechTimer: ReturnType<typeof setTimeout> | undefined;
 
   function clear(): void {
     buffer = [];
+    achievements = [];
     bufferSeq = null;
   }
 
-  function add(eventSeq: number, event: DomainEvent): void {
+  function startBatch(eventSeq: number): void {
     if (bufferSeq !== eventSeq) {
-      buffer = [];
+      clear();
       bufferSeq = eventSeq;
     }
+  }
+
+  function add(eventSeq: number, event: DomainEvent): void {
+    startBatch(eventSeq);
     buffer.push(event);
+  }
+
+  function addAchievement(eventSeq: number, kind: AchievementKind): void {
+    startBatch(eventSeq);
+    achievements.push(kind);
   }
 
   function silence(): void {
@@ -48,14 +59,16 @@ export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer, random
   }
 
   function flush(eventSeq: number): void {
-    const events = bufferSeq === eventSeq ? buffer : [];
+    const current = bufferSeq === eventSeq;
+    const events = current ? buffer : [];
+    const kinds = current ? achievements : [];
     clear();
     const effect = soundEffectFor(events);
-    const announcement = announcementFor(events, random);
+    const announcement = announcementFor(events, kinds, random);
     if (!effect && !announcement) {
       return;
     }
-    // Nowy komunikat przerywa poprzedni, więc bust i zwycięzca nie czekają w kolejce.
+    // Nowy komunikat przerywa cały poprzedni, więc bust i zwycięzca nie czekają w kolejce.
     silence();
     const delay = effect && effects ? effects.play(effect) : 0;
     if (!announcement) {
@@ -83,7 +96,9 @@ export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer, random
           silence();
           break;
         case 'throw_registered':
+          break;
         case 'achievement':
+          addAchievement(message.eventSeq, message.kind);
           break;
         default:
           add(message.eventSeq, message);

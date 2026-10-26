@@ -5,6 +5,8 @@ class FakeUtterance {
   text: string;
   lang = '';
   voice: SpeechSynthesisVoice | null = null;
+  onend: (() => void) | null = null;
+  onerror: (() => void) | null = null;
 
   constructor(text: string) {
     this.text = text;
@@ -59,6 +61,33 @@ describe('createWebSpeechSpeaker', () => {
     const synthesis = stubSpeech([]);
     createWebSpeechSpeaker().cancel();
     expect(synthesis.cancel).toHaveBeenCalledOnce();
+  });
+
+  it('calls onDone once when the speech ends', () => {
+    const synthesis = stubSpeech([]);
+    const onDone = vi.fn();
+    createWebSpeechSpeaker().speak('sto', onDone);
+    expect(onDone).not.toHaveBeenCalled();
+    spoken(synthesis).onend?.();
+    spoken(synthesis).onend?.();
+    expect(onDone).toHaveBeenCalledOnce();
+  });
+
+  it('calls onDone once when the speech fails', () => {
+    const synthesis = stubSpeech([]);
+    const onDone = vi.fn();
+    createWebSpeechSpeaker().speak('sto', onDone);
+    spoken(synthesis).onerror?.();
+    spoken(synthesis).onend?.();
+    expect(onDone).toHaveBeenCalledOnce();
+  });
+
+  it('calls onDone right away without the Web Speech API', () => {
+    vi.stubGlobal('speechSynthesis', undefined);
+    vi.stubGlobal('SpeechSynthesisUtterance', undefined);
+    const onDone = vi.fn();
+    createWebSpeechSpeaker().speak('sto', onDone);
+    expect(onDone).toHaveBeenCalledOnce();
   });
 
   it('does nothing without the Web Speech API', () => {

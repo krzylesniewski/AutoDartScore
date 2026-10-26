@@ -1,4 +1,4 @@
-import type { LiveMessage, MatchSnapshot } from '@autoscore/schema';
+import type { AchievementKind, LiveMessage, MatchSnapshot } from '@autoscore/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAnnouncer, type Announcement, type Announcer, type Speaker } from './index.js';
 import { afterEach, vi } from 'vitest';
@@ -12,7 +12,7 @@ class FakeSpeaker implements Speaker {
   calls: string[] = [];
 
   speak(announcement: Announcement): void {
-    this.calls.push(`speak:${announcement.clip ?? ''}|${announcement.text}`);
+    this.calls.push(`speak:${announcement.parts.map((part) => `${part.clip ?? ''}|${part.text}`).join(' + ')}`);
   }
 
   cancel(): void {
@@ -61,6 +61,16 @@ const bust = (eventSeq: number): LiveMessage => ({
   turnIndex: 1,
   darts: [{ segment: 20, multiplier: 3 }],
   remaining: 40,
+});
+
+const achievement = (eventSeq: number, kind: AchievementKind): LiveMessage => ({
+  type: 'achievement',
+  matchId: MATCH_ID,
+  eventSeq,
+  playerId: 'anna',
+  kind,
+  value: 140,
+  previous: kind.startsWith('first_') ? null : 100,
 });
 
 function turnBatch(eventSeq: number, total: number): LiveMessage[] {
@@ -112,15 +122,42 @@ describe('createAnnouncer', () => {
     expect(speaker.calls).toEqual(['cancel', 'speak:events/bust_1.mp3|Bust']);
   });
 
-  it('speaks the same with an achievement in the batch', () => {
-    const achievement: LiveMessage = { type: 'achievement', matchId: MATCH_ID, eventSeq: 5, playerId: 'anna', kind: 'turn_record', value: 100, previous: 60 };
-    send([turnCompleted(5, 100), achievement, stateUpdated(5)]);
-    const withAchievement = speaker.calls;
-    speaker = new FakeSpeaker();
-    announcer = createAnnouncer(speaker, undefined, firstVariant);
-    send([turnCompleted(5, 100), stateUpdated(5)]);
-    expect(withAchievement).toEqual(speaker.calls);
-    expect(withAchievement).toEqual(['cancel', 'speak:scores/100.mp3|sto']);
+  it('speaks the achievement parts after the main part', () => {
+    send([throwRegistered(5), turnCompleted(5, 140), achievement(5, 'first_140'), achievement(5, 'turn_record'), stateUpdated(5)]);
+    expect(speaker.calls).toEqual([
+      'cancel',
+      'speak:scores/140.mp3|sto czterdzieści + events/first_140.mp3|Pierwsze sto czterdzieści + events/achievement_turn_record.mp3|Nowy rekord tury',
+    ]);
+  });
+
+  it('speaks the zero comment after zero', () => {
+    send(turnBatch(5, 0));
+    expect(speaker.calls).toEqual(['cancel', 'speak:scores/0.mp3|zero + events/zero_1.mp3|Tarcza wisi trochę wyżej']);
+  });
+
+  it('drops an achievement with another eventSeq', () => {
+    send([achievement(4, 'turn_record'), throwRegistered(5), turnCompleted(5, 100), achievement(6, 'checkout_record'), stateUpdated(5)]);
+    expect(speaker.calls).toEqual([]);
+    send(turnBatch(7, 100));
+    expect(speaker.calls).toEqual(['cancel', 'speak:scores/100.mp3|sto']);
+  });
+
+  it('drops achievements buffered before an event with another eventSeq', () => {
+    send([achievement(4, 'turn_record'), throwRegistered(5), turnCompleted(5, 100), stateUpdated(5)]);
+    expect(speaker.calls).toEqual(['cancel', 'speak:scores/100.mp3|sto']);
+  });
+
+  it('cancels the running announcement on throw_undone', () => {
+    send([turnCompleted(5, 140), achievement(5, 'turn_record'), stateUpdated(5)]);
+    announcer.handle({ type: 'throw_undone', matchId: MATCH_ID, eventSeq: 6, throwId: 't_5' });
+    expect(speaker.calls).toEqual(['cancel', 'speak:scores/140.mp3|sto czterdzieści + events/achievement_turn_record.mp3|Nowy rekord tury', 'cancel']);
+  });
+
+  it('does not cancel the running announcement on a later state_updated without an announcement', () => {
+    send([turnCompleted(5, 140), achievement(5, 'turn_record'), stateUpdated(5)]);
+    send([throwRegistered(6), stateUpdated(6)]);
+    send([throwRegistered(7), stateUpdated(7)]);
+    expect(speaker.calls).toEqual(['cancel', 'speak:scores/140.mp3|sto czterdzieści + events/achievement_turn_record.mp3|Nowy rekord tury']);
   });
 
   it('cancels and drops the buffer on throw_undone', () => {

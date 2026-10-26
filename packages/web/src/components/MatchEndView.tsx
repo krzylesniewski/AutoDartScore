@@ -1,10 +1,12 @@
 import type { CreateMatchRequest, MatchSnapshot, MatchSnapshotPlayer, MatchSummary } from '@autoscore/schema';
 import { useRef, useState, type ReactNode } from 'react';
 import { createMatch } from '../api/client';
+import type { AchievementNotice } from '../api/use-match';
 import { formatAverage } from '../game/format-stat';
 import { durationSeconds, formatDuration, gameElapsedMs } from '../game/leg-clock';
 import { rematchRequest } from '../game/rematch-request';
 import { pl } from '../i18n/pl';
+import { AchievementNotices } from './AchievementNotices';
 import { Avatar } from './Avatar';
 import { EffectsToggle } from './EffectsToggle';
 import { CheckIcon, LockIcon, TrophyIcon, UndoIcon, WarningIcon } from './icons';
@@ -33,6 +35,7 @@ export interface MatchEndViewProps {
   onVoiceChange(next: boolean): void;
   effectsEnabled: boolean;
   onEffectsChange(next: boolean): void;
+  achievements?: readonly AchievementNotice[];
 }
 
 export function MatchEndView({
@@ -49,6 +52,7 @@ export function MatchEndView({
   onVoiceChange,
   effectsEnabled,
   onEffectsChange,
+  achievements = [],
 }: MatchEndViewProps) {
   // Podsumowanie sprzed ostatniej rzutki nie zawiera zamykającej tury, więc czekamy na aktualne.
   const current = summary && summary.eventSeq >= state.eventSeq ? summary : null;
@@ -68,32 +72,38 @@ export function MatchEndView({
           <EffectsToggle enabled={effectsEnabled} onChange={onEffectsChange} />
         </div>
       </header>
-      <main className="grid min-h-0 flex-1 grid-cols-1 content-start gap-(--space-page) overflow-auto p-(--space-page) lg:grid-cols-[1fr_470px]">
-        {(connectionLost || error || undoLocked) && (
-          <div className="flex flex-col gap-3 lg:col-span-2">
-            {connectionLost && <Notice text={pl.connectionLost} />}
-            {error && <Notice text={error} />}
-            {undoLocked && <Notice text={pl.matchLocked} icon={<LockIcon className="text-(--color-accent)" />} />}
-          </div>
-        )}
-        <div className="flex min-w-0 flex-col gap-4">
-          <WinnerCard state={state} winner={winner} loser={loser} />
-          {state.players
-            .filter((player) => player.guest)
-            .map((player) => (
-              <SaveGuest key={player.id} player={player} />
-            ))}
-          {current && current.legs.length > 0 && <LegCards state={state} summary={current} />}
-          {current?.lastLegProgress && <ScoreProgressChart progress={current.lastLegProgress} players={state.players} />}
-        </div>
-        <div className="min-w-0">
-          {current ? (
-            <ComparisonTable summary={current} players={ranked} />
-          ) : (
-            <p className="font-display text-xl text-(--color-text-muted)">{summaryError ? pl.summaryFailed : pl.loading}</p>
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <main className="grid min-h-0 flex-1 grid-cols-1 content-start gap-(--space-page) overflow-auto p-(--space-page) lg:grid-cols-[1fr_470px]">
+          {(connectionLost || error || undoLocked) && (
+            <div className="flex flex-col gap-3 lg:col-span-2">
+              {connectionLost && <Notice text={pl.connectionLost} />}
+              {error && <Notice text={error} />}
+              {undoLocked && <Notice text={pl.matchLocked} icon={<LockIcon className="text-(--color-accent)" />} />}
+            </div>
           )}
+          <div className="flex min-w-0 flex-col gap-4">
+            <WinnerCard state={state} winner={winner} loser={loser} />
+            {state.players
+              .filter((player) => player.guest)
+              .map((player) => (
+                <SaveGuest key={player.id} player={player} />
+              ))}
+            {current && current.legs.length > 0 && <LegCards state={state} summary={current} />}
+            {current?.lastLegProgress && <ScoreProgressChart progress={current.lastLegProgress} players={state.players} />}
+          </div>
+          <div className="min-w-0">
+            {current ? (
+              <ComparisonTable summary={current} players={ranked} />
+            ) : (
+              <p className="font-display text-xl text-(--color-text-muted)">{summaryError ? pl.summaryFailed : pl.loading}</p>
+            )}
+          </div>
+        </main>
+        {/* Nakładka nie przesuwa układu i nie łapie dotyku, więc przyciski zostają klikalne. */}
+        <div role="status" className="pointer-events-none absolute inset-x-0 top-0 z-10 px-(--space-page) pt-(--space-page)">
+          <AchievementNotices notices={achievements} />
         </div>
-      </main>
+      </div>
       <ActionBar state={state} busy={busy} undoLocked={undoLocked} undoCountdown={undoCountdown} onUndo={onUndo} />
     </div>
   );

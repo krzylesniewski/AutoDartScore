@@ -3,6 +3,7 @@ import { LiveAuthMessage } from '@autoscore/schema';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import { ACHIEVEMENT_DURATION_MS } from '../api/use-match';
 import { GameScreen } from './GameScreen';
 
 const MATCH_ID = 'm_42';
@@ -1182,7 +1183,7 @@ describe('voice', () => {
     await vi.waitFor(() => expect(spokenTexts()).toEqual(['sto']));
   });
 
-  it('loads the six event clips on mount', () => {
+  it('loads the 16 event clips on mount', () => {
     connect();
     expect(FakeAudio.loaded).toEqual([
       '/audio/pl/events/bust_1.mp3',
@@ -1191,6 +1192,16 @@ describe('voice', () => {
       '/audio/pl/events/game_shot.mp3',
       '/audio/pl/events/winner_1.mp3',
       '/audio/pl/events/winner_2.mp3',
+      '/audio/pl/events/zero_1.mp3',
+      '/audio/pl/events/zero_2.mp3',
+      '/audio/pl/events/first_100.mp3',
+      '/audio/pl/events/first_120.mp3',
+      '/audio/pl/events/first_140.mp3',
+      '/audio/pl/events/first_180.mp3',
+      '/audio/pl/events/achievement_turn_record.mp3',
+      '/audio/pl/events/achievement_checkout_record.mp3',
+      '/audio/pl/events/achievement_shortest_leg.mp3',
+      '/audio/pl/events/achievement_longest_leg.mp3',
     ]);
     expect(FakeAudio.played).toEqual([]);
   });
@@ -1570,5 +1581,103 @@ describe('frequent hits', () => {
     connect({ ...initial, finished: true, status: 'finished', currentPlayerId: null, winnerId: 'p2' });
     await act(flush);
     expect(frequentCalls).toEqual([]);
+  });
+});
+
+describe('achievements', () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  function achievement(eventSeq: number, overrides: Partial<Extract<LiveMessage, { type: 'achievement' }>> = {}): LiveMessage {
+    return { type: 'achievement', matchId: MATCH_ID, eventSeq, playerId: 'p2', kind: 'turn_record', value: 140, previous: 121, ...overrides };
+  }
+
+  function notices(): string[] {
+    const list = screen.queryByRole('list', { name: 'Osiągnięcia' });
+    return list ? within(list).getAllByRole('listitem').map((item) => item.textContent) : [];
+  }
+
+  it('shows the notice with the player name and the text inside the status overlay', () => {
+    const ws = connect();
+    ws.serverSend(achievement(5));
+    const status = screen.getByRole('status');
+    const list = within(status).getByRole('list', { name: 'Osiągnięcia' });
+    expect(within(list).getByText('Bartek')).toBeTruthy();
+    expect(within(list).getByText('Rekord tury: 140 (było 121)', { exact: false })).toBeTruthy();
+    expect(list.querySelector('svg')).not.toBeNull();
+    expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'pointer-events-none']));
+  });
+
+  it('groups achievements with the same eventSeq and replaces them on a new one', () => {
+    const ws = connect();
+    ws.serverSend(achievement(5, { kind: 'first_140', value: 140, previous: null }));
+    ws.serverSend(achievement(5));
+    expect(notices()).toEqual(['Bartek Pierwsza tura 140+: 140', 'Bartek Rekord tury: 140 (było 121)']);
+    ws.serverSend(achievement(6, { playerId: 'p1', kind: 'checkout_record', value: 121, previous: 100 }));
+    expect(notices()).toEqual(['Anna Rekord zamknięcia: 121 (było 100)']);
+  });
+
+  it('hides the notices after ACHIEVEMENT_DURATION_MS', () => {
+    vi.useFakeTimers();
+    const ws = connect();
+    ws.serverSend(achievement(5));
+    act(() => {
+      vi.advanceTimersByTime(ACHIEVEMENT_DURATION_MS - 1);
+    });
+    expect(notices()).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(notices()).toEqual([]);
+  });
+
+  it('restarts the timer for an achievement in the same group', () => {
+    vi.useFakeTimers();
+    const ws = connect();
+    ws.serverSend(achievement(5, { kind: 'first_140', value: 140, previous: null }));
+    act(() => {
+      vi.advanceTimersByTime(ACHIEVEMENT_DURATION_MS - 1);
+    });
+    ws.serverSend(achievement(5));
+    act(() => {
+      vi.advanceTimersByTime(ACHIEVEMENT_DURATION_MS - 1);
+    });
+    expect(notices()).toHaveLength(2);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(notices()).toEqual([]);
+  });
+
+  it('hides the notices on throw_undone', () => {
+    const ws = connect();
+    ws.serverSend(achievement(5));
+    ws.serverSend({ type: 'throw_undone', matchId: MATCH_ID, eventSeq: 6, throwId: 't_5' });
+    expect(notices()).toEqual([]);
+  });
+
+  it('shows the notice with the voice off', () => {
+    localStorage.setItem('autoscore.voice', 'off');
+    localStorage.setItem('autoscore.effects', 'off');
+    const ws = connect();
+    ws.serverSend(achievement(5));
+    expect(notices()).toEqual(['Bartek Rekord tury: 140 (było 121)']);
+  });
+
+  it('shows the notice on the match end view', () => {
+    const ws = connect({
+      ...initial,
+      finished: true,
+      status: 'finished',
+      currentPlayerId: null,
+      winnerId: 'p2',
+      players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 0, legsWon: 1 })],
+    });
+    expect(screen.getByText('Mecz zakończony')).toBeTruthy();
+    ws.serverSend(achievement(4, { kind: 'shortest_leg', value: 15, previous: 18 }));
+    const status = screen.getByRole('status');
+    expect(within(status).getByRole('list', { name: 'Osiągnięcia' }).textContent).toBe('Bartek Najkrótszy leg: 15 lotek (było 18)');
+    expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'pointer-events-none']));
   });
 });
