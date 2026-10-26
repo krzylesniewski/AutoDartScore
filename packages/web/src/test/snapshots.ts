@@ -1,4 +1,4 @@
-import type { MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
+import type { LegProgress, MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
 
 export function player(id: string, name: string, overrides: Partial<MatchSnapshotPlayer> = {}): MatchSnapshotPlayer {
   return { id, name, avatar: null, color: 1, guest: false, remaining: 501, legsWon: null, place: null, dartsThrownInLeg: 0, ...overrides };
@@ -78,6 +78,20 @@ export function summary(overrides: Partial<MatchSummary> = {}): MatchSummary {
     eventSeq: 0,
     players: [summaryPlayer('p1'), summaryPlayer('p2')],
     legs: [],
+    lastLegProgress: null,
+    ...overrides,
+  };
+}
+
+// Każdy gracz dostaje kolejne punkty z listy pozostałych wyników. Wynik ze znakiem minus oznacza bust.
+export function legProgress(lines: Record<string, readonly number[]>, overrides: Partial<Omit<LegProgress, 'players'>> = {}): LegProgress {
+  return {
+    legIndex: 0,
+    startingScore: 301,
+    players: Object.entries(lines).map(([playerId, scores]) => ({
+      playerId,
+      points: scores.map((score, index) => ({ dart: index + 1, remaining: Math.abs(score), bust: score < 0 })),
+    })),
     ...overrides,
   };
 }

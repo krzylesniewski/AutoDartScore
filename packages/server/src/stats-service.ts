@@ -1,11 +1,12 @@
-import { isGameFinished } from '@autoscore/engine';
-import type { FrequentHitsResponse, HeadToHead, Hit, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
+import { isGameFinished, type GameState } from '@autoscore/engine';
+import type { DomainEvent, FrequentHitsResponse, HeadToHead, Hit, LegProgress, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
 import { HttpError, notFound } from './errors.js';
 import { effectiveThrows, lastActivityAt, lastSeq, replayMatch } from './replay.js';
 import { completedPlayerLegs } from './stats/completed-legs.js';
 import { buildForm, type FormGame } from './stats/form.js';
 import { buildFrequentHits } from './stats/frequent-hits.js';
 import { buildHeadToHead, type HeadToHeadGame } from './stats/head-to-head.js';
+import { buildLegProgress } from './stats/leg-progress.js';
 import { buildRankings } from './stats/rankings.js';
 import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine } from './stats/tally.js';
 import type { Store, StoredMatch } from './store/store.js';
@@ -30,6 +31,18 @@ const FILTER_TYPES: Record<StatsFilter, readonly MatchType[]> = {
   practice: ['practice'],
 };
 
+// Po match_won silnik zostaje na ostatnim legu, a w trwającym meczu po wygranym legu legIndex wskazuje już nowy leg.
+function lastLegProgress(game: GameState, playerIds: readonly string[], events: readonly DomainEvent[]): LegProgress | null {
+  switch (game.type) {
+    case 'match':
+      return buildLegProgress(playerIds, game.state.config.startingScore, game.state.legIndex, events);
+    case 'casual': // zabawa ma zawsze jeden leg
+      return buildLegProgress(playerIds, game.state.config.startingScore, 0, events);
+    case 'practice':
+      return null;
+  }
+}
+
 // Bez kolejki gry, jak GET /matches/:id: tylko czyta log i odtwarza go w silniku.
 export function createStatsService({ store }: Dependencies): StatsService {
   async function replayed(match: StoredMatch) {
@@ -38,6 +51,7 @@ export function createStatsService({ store }: Dependencies): StatsService {
     const playerIds = match.players.map((player) => player.id);
     return {
       seq: lastSeq(log),
+      state,
       finished: isGameFinished(state),
       lastActivityAt: lastActivityAt(log, match),
       playerIds,
@@ -97,7 +111,7 @@ export function createStatsService({ store }: Dependencies): StatsService {
       if (!match) {
         throw notFound(`Match ${matchId}`);
       }
-      const { seq, finished, playerIds, tally } = await replayed(match);
+      const { seq, state, finished, playerIds, events, tally } = await replayed(match);
       return {
         matchId,
         type: match.type,
@@ -105,6 +119,7 @@ export function createStatsService({ store }: Dependencies): StatsService {
         eventSeq: seq,
         players: playerIds.map((playerId) => ({ ...toStatLine(tally.players.get(playerId) ?? EMPTY_TOTALS), playerId })),
         legs: [...tally.legs],
+        lastLegProgress: lastLegProgress(state, playerIds, events),
       };
     },
 

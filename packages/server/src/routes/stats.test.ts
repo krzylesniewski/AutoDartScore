@@ -1,6 +1,6 @@
 import { ApiError, MatchSummary, PlayerStats } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { D, LEG_301, MISS, S, T, abandon, createGame, createPlayers, endPractice, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
+import { D, LEG_301, MISS, S, T, abandon, createGame, createPlayer, createPlayers, endPractice, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
 
 let t: TestApp;
 let anna: string;
@@ -73,6 +73,12 @@ const bartekLeg301 = {
   bestLegDarts: null,
   legsWon: 0,
 };
+
+const point = (dart: number, remaining: number, bust = false) => ({ dart, remaining, bust });
+
+// LEG_301: Anna 180, Bartek trzy pudła, Anna 121 (T20 T17 D5).
+const annaLeg301Points = [point(1, 241), point(2, 181), point(3, 121), point(4, 61), point(5, 10), point(6, 0)];
+const bartekLeg301Points = [point(1, 301), point(2, 301), point(3, 301)];
 
 const noThrows = {
   ...bartekLeg301,
@@ -205,7 +211,83 @@ describe('GET /matches/:id/summary', () => {
           ],
         },
       ],
+      lastLegProgress: {
+        legIndex: 0,
+        startingScore: 301,
+        players: [
+          { playerId: anna, points: annaLeg301Points },
+          { playerId: bartek, points: bartekLeg301Points },
+        ],
+      },
     });
+  });
+
+  it('charts every dart of the LEG_301 match without a bust', async () => {
+    const result = await summary(await playLeg301());
+    expect(result.lastLegProgress?.players).toEqual([
+      { playerId: anna, points: annaLeg301Points },
+      { playerId: bartek, points: bartekLeg301Points },
+    ]);
+    expect(result.lastLegProgress?.players.flatMap((player) => player.points).some((p) => p.bust)).toBe(false);
+  });
+
+  it('marks a mid-turn bust and returns to the score before the turn', async () => {
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 1 });
+    await throwDarts(t.app, id, [T(20), T(20), T(20), MISS, MISS, MISS, S(20), T(20), T(20)]);
+    const result = await summary(id);
+    expect(result.lastLegProgress?.players[0]).toEqual({
+      playerId: anna,
+      points: [point(1, 241), point(2, 181), point(3, 121), point(4, 101), point(5, 41), point(6, 121, true)],
+    });
+  });
+
+  it('drops the undone winning dart from the chart', async () => {
+    const id = await playLeg301();
+    expect((await undo(t.app, id)).statusCode).toBe(200);
+    await throwDarts(t.app, id, [MISS]);
+    const result = await summary(id);
+    expect(result.finished).toBe(false);
+    expect(result.lastLegProgress?.players[0]).toEqual({ playerId: anna, points: [...annaLeg301Points.slice(0, 5), point(6, 10)] });
+  });
+
+  it('charts only the last leg of a best of 3', async () => {
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 3 });
+    // Leg 1 zaczyna Bartek: trzy pudła, potem LEG_301 z Anną na 2:0.
+    await throwDarts(t.app, id, [...LEG_301, MISS, MISS, MISS, ...LEG_301]);
+    const result = await summary(id);
+    expect(result.finished).toBe(true);
+    expect(result.lastLegProgress).toEqual({
+      legIndex: 1,
+      startingScore: 301,
+      players: [
+        { playerId: anna, points: annaLeg301Points },
+        { playerId: bartek, points: [...bartekLeg301Points, point(4, 301), point(5, 301), point(6, 301)] },
+      ],
+    });
+  });
+
+  it('ends each line of a casual game on the last closed dart', async () => {
+    const celina = (await createPlayer(t.app, 'Celina')).id;
+    const { id } = await createGame(t.app, { type: 'casual', playerIds: [anna, bartek, celina], startingScore: 301 });
+    await throwDarts(t.app, id, [T(20), T(20), T(20), T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(17), D(5), T(20), T(17), D(5)]);
+    const result = await summary(id);
+    expect(result.finished).toBe(true);
+    expect(result.lastLegProgress).toEqual({
+      legIndex: 0,
+      startingScore: 301,
+      players: [
+        { playerId: anna, points: annaLeg301Points },
+        { playerId: bartek, points: annaLeg301Points },
+        { playerId: celina, points: bartekLeg301Points },
+      ],
+    });
+  });
+
+  it('gives no chart for Solo 501 and Free run', async () => {
+    expect((await summary(await playSolo501())).lastLegProgress).toBeNull();
+    const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
+    await throwDarts(t.app, id, [T(20), T(20), T(20)]);
+    expect((await summary(id)).lastLegProgress).toBeNull();
   });
 
   it('counts the completed turns of an unfinished match and ignores the open turn', async () => {
@@ -222,7 +304,7 @@ describe('GET /matches/:id/summary', () => {
   it('gives zeros and nulls for a Free run', async () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     await throwDarts(t.app, id, [T(20), T(20), T(20)]);
-    expect(await summary(id)).toEqual({ matchId: id, type: 'practice', finished: false, eventSeq: 3, players: [{ ...noThrows, playerId: anna }], legs: [] });
+    expect(await summary(id)).toEqual({ matchId: id, type: 'practice', finished: false, eventSeq: 3, players: [{ ...noThrows, playerId: anna }], legs: [], lastLegProgress: null });
   });
 
   it('lists the Solo 501 leg', async () => {

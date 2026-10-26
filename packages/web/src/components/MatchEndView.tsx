@@ -9,6 +9,7 @@ import { Avatar } from './Avatar';
 import { EffectsToggle } from './EffectsToggle';
 import { CheckIcon, LockIcon, TrophyIcon, UndoIcon, WarningIcon } from './icons';
 import { SaveGuest, SUMMARY_ROWS } from './MatchSummaryPanel';
+import { ScoreProgressChart } from './ScoreProgressChart';
 import { VoiceToggle } from './VoiceToggle';
 
 const HOME_HREF = '#/';
@@ -83,6 +84,7 @@ export function MatchEndView({
               <SaveGuest key={player.id} player={player} />
             ))}
           {current && current.legs.length > 0 && <LegCards state={state} summary={current} />}
+          {current?.lastLegProgress && <ScoreProgressChart progress={current.lastLegProgress} players={state.players} />}
         </div>
         <div className="min-w-0">
           {current ? (

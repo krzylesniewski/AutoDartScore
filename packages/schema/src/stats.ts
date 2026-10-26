@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { LegWon } from './domain-events.js';
 import { Hit, MISS_SEGMENT, Multiplier, Segment } from './hit.js';
-import { MatchType } from './match.js';
+import { MatchType, StartingScore } from './match.js';
 import { PlayerColor } from './player.js';
 
 // Statystyki liczone na żądanie z logu rzutek. Liczą się tylko zamknięte tury.
@@ -58,6 +58,27 @@ export type MatchSummaryLeg = z.infer<typeof MatchSummaryLeg>;
 export const MatchSummaryPlayer = PlayerStatLine.extend({ playerId: PlayerId });
 export type MatchSummaryPlayer = z.infer<typeof MatchSummaryPlayer>;
 
+// Pozostały wynik gracza po każdej rzutce lega, tylko z zamkniętych tur.
+export const LegProgressPoint = z.object({
+  dart: z.int().min(1), // numer rzutki gracza w legu, od 1, z pudłami i rzutkami tury z bustem
+  remaining: z.int().min(0), // wynik po tej rzutce
+  bust: z.boolean(), // true tylko na rzutce, która dała bust
+});
+export type LegProgressPoint = z.infer<typeof LegProgressPoint>;
+
+export const LegProgressPlayer = z.object({
+  playerId: PlayerId,
+  points: z.array(LegProgressPoint),
+});
+export type LegProgressPlayer = z.infer<typeof LegProgressPlayer>;
+
+export const LegProgress = z.object({
+  legIndex: z.int().min(0),
+  startingScore: StartingScore,
+  players: z.array(LegProgressPlayer), // w kolejności playerIds
+});
+export type LegProgress = z.infer<typeof LegProgress>;
+
 export const MatchSummary = z.object({
   matchId: z.string().min(1),
   type: MatchType,
@@ -65,6 +86,7 @@ export const MatchSummary = z.object({
   eventSeq: z.int().min(0), // seq ostatniego wpisu w logu, jak w MatchSnapshot
   players: z.array(MatchSummaryPlayer), // w kolejności playerIds
   legs: z.array(MatchSummaryLeg), // jeden na leg_won, więc w zabawie lista jest pusta
+  lastLegProgress: LegProgress.nullable(), // null w treningu i gdy ostatni leg nie ma jeszcze zamkniętej tury
 });
 export type MatchSummary = z.infer<typeof MatchSummary>;
 

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { casual, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import { casual, legProgress, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
 import { MatchSummaryPanel } from './MatchSummaryPanel';
 
 function table(): HTMLElement {
@@ -219,5 +219,58 @@ describe('MatchSummaryPanel: saving a guest', () => {
     render(<MatchSummaryPanel state={match} summary={matchSummary} error={false} />);
     expect(screen.queryByRole('button', { name: /Zapisz gracza/ })).toBeNull();
     expect(screen.queryByText('Zapisz gracza')).toBeNull();
+  });
+});
+
+describe('MatchSummaryPanel: score progress chart', () => {
+  const finishedCasual = casual(['Anna', 'Bartek', 'Celina'], {
+    eventSeq: 15,
+    finished: true,
+    currentPlayerId: null,
+    placements: [
+      { playerId: 'p1', place: 1 },
+      { playerId: 'p2', place: 2 },
+      { playerId: 'p3', place: 3 },
+    ],
+  });
+  const progress = legProgress({ p1: [241, 181, 121, 61, 10, 0], p2: [241, 181, 121, 61, 10, 0], p3: [301, 301, 301] });
+  const casualSummary = summary({
+    type: 'casual',
+    finished: true,
+    eventSeq: 15,
+    players: [summaryPlayer('p1'), summaryPlayer('p2'), summaryPlayer('p3')],
+    lastLegProgress: progress,
+  });
+  const solo = snapshot({
+    type: 'practice',
+    practiceMode: 'solo_501',
+    legsToWin: null,
+    eventSeq: 9,
+    finished: true,
+    currentPlayerId: null,
+    winnerId: 'p1',
+    players: [player('p1', 'Anna', { remaining: 0 })],
+  });
+
+  function chart(): HTMLElement | null {
+    return screen.queryByRole('img', { name: /^Zejście z wyniku/ });
+  }
+
+  it('shows the chart of a finished casual game after the summary table', () => {
+    render(<MatchSummaryPanel state={finishedCasual} summary={casualSummary} error={false} />);
+    const shown = chart();
+    expect(shown).not.toBeNull();
+    expect(table().compareDocumentPosition(shown as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows no chart for a casual game without the progress of the last leg', () => {
+    render(<MatchSummaryPanel state={finishedCasual} summary={{ ...casualSummary, lastLegProgress: null }} error={false} />);
+    expect(chart()).toBeNull();
+  });
+
+  it('shows no chart for a finished practice game even with the progress set', () => {
+    const soloSummary = summary({ type: 'practice', finished: true, eventSeq: 9, players: [summaryPlayer('p1')], lastLegProgress: legProgress({ p1: [441, 381] }, { startingScore: 501 }) });
+    render(<MatchSummaryPanel state={solo} summary={soloSummary} error={false} />);
+    expect(chart()).toBeNull();
   });
 });

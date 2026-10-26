@@ -3,7 +3,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatCountdown } from '../game/undo-window';
 import { useUndoWindow } from '../game/use-undo-window';
-import { player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import { pl } from '../i18n/pl';
+import { legProgress, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
 import { LockIcon } from './icons';
 import { MatchEndView, type MatchEndViewProps } from './MatchEndView';
 
@@ -279,5 +280,27 @@ describe('MatchEndView', () => {
     view({ connectionLost: true, error: 'Nie udało się cofnąć rzutki' });
     expect(screen.getByText('Brak połączenia z serwerem. Łączę ponownie…')).toBeTruthy();
     expect(screen.getByText('Nie udało się cofnąć rzutki')).toBeTruthy();
+  });
+});
+
+describe('MatchEndView: score progress chart', () => {
+  const withProgress = summary({ ...current, lastLegProgress: legProgress({ p1: [241, 181], p2: [281, 221] }, { legIndex: 2 }) });
+
+  it('shows the chart of the last leg after the leg cards', () => {
+    view({ summary: withProgress });
+    const legs = screen.getByRole('list', { name: pl.legs });
+    const chart = screen.getByRole('img', { name: /^Zejście z wyniku w legu 3/ });
+    expect(screen.getByRole('heading', { name: 'Leg 3 · zejście z wyniku' })).toBeTruthy();
+    expect(legs.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows no chart without the progress of the last leg', () => {
+    view();
+    expect(screen.queryByRole('img', { name: /^Zejście z wyniku/ })).toBeNull();
+  });
+
+  it('shows no chart from a summary older than the state', () => {
+    view({ summary: { ...withProgress, eventSeq: 8 } });
+    expect(screen.queryByRole('img', { name: /^Zejście z wyniku/ })).toBeNull();
   });
 });

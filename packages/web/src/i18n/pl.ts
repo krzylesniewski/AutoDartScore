@@ -14,6 +14,10 @@ function darts(count: number): string {
   return `${count} ${plural(count, 'rzutka', 'rzutki', 'rzutek')}`;
 }
 
+function lotki(count: number): string {
+  return `${count} ${plural(count, 'lotka', 'lotki', 'lotek')}`;
+}
+
 function games(count: number): string {
   return `${count} ${plural(count, 'gra', 'gry', 'gier')}`;
 }
@@ -309,4 +313,9 @@ export const pl = {
   legTime: (spoken: string) => `Czas lega ${spoken}`,
   sessionTime: (spoken: string) => `Czas sesji ${spoken}`,
   gameTime: (time: string) => `Czas gry ${time}`,
+  scoreProgressHeading: (leg: number) => `Leg ${leg} · zejście z wyniku`,
+  scoreProgressRemaining: 'Pozostało',
+  scoreProgressDarts: 'Lotki',
+  scoreProgressChart: (leg: number, lines: readonly string[]) => `Zejście z wyniku w legu ${leg}: ${lines.join(', ')}`,
+  scoreProgressLine: (name: string, dartCount: number, remaining: number) => `${name} ${lotki(dartCount)} do ${remaining}`,
 } as const;

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { avatarColorClass } from './avatar-color';
+import { avatarColorClass, avatarStrokeClass } from './avatar-color';
 
 // W jsdom new URL(..., import.meta.url) nie daje ścieżki file:, a import ?raw pliku .css zwraca pusty tekst.
 const theme = readFileSync(resolve(import.meta.dirname, '../../../../design/theme.css'), 'utf8');
@@ -35,6 +35,20 @@ describe('avatarColorClass', () => {
 
   it.each([0, 17, -1, 1.5])('falls back to color 1 for %d', (color) => {
     expect(avatarColorClass(color)).toBe('bg-(--color-avatar-1)');
+  });
+});
+
+describe('avatarStrokeClass', () => {
+  it.each([
+    [1, 'stroke-(--color-avatar-1)'],
+    [7, 'stroke-(--color-avatar-7)'],
+    [16, 'stroke-(--color-avatar-16)'],
+  ])('maps color %i to %s', (color, className) => {
+    expect(avatarStrokeClass(color)).toBe(className);
+  });
+
+  it.each([0, 17, -1, 1.5])('falls back to color 1 for %d', (color) => {
+    expect(avatarStrokeClass(color)).toBe('stroke-(--color-avatar-1)');
   });
 });
 

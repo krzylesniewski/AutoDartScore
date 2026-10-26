@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORM_GAMES, FREQUENT_HITS_LIMIT, FrequentHitsResponse, HeadToHead, MIN_LEGS_FOR_AVERAGE, MatchSummary, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsRankings, type PlayerStatLine } from './index.js';
+import { FORM_GAMES, FREQUENT_HITS_LIMIT, FrequentHitsResponse, HeadToHead, LegProgress, LegProgressPoint, MIN_LEGS_FOR_AVERAGE, MatchSummary, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsRankings, type PlayerStatLine } from './index.js';
 
 const line: PlayerStatLine = {
   dartsThrown: 6,
@@ -91,12 +91,53 @@ describe('MatchSummary', () => {
           ],
         },
       ],
+      lastLegProgress: null,
     };
     expect(MatchSummary.parse(summary)).toEqual(summary);
   });
 
+  const progress = {
+    legIndex: 0,
+    startingScore: 301,
+    players: [
+      {
+        playerId: 'p1',
+        points: [
+          { dart: 1, remaining: 241, bust: false },
+          { dart: 2, remaining: 181, bust: false },
+          { dart: 3, remaining: 301, bust: true },
+        ],
+      },
+      { playerId: 'p2', points: [] },
+    ],
+  };
+  const unfinished = { matchId: 'm1', type: 'casual', finished: false, eventSeq: 6, players: [{ ...empty, playerId: 'p1' }], legs: [] };
+
+  it('parses a summary with the progress of the last leg', () => {
+    const summary = { ...unfinished, lastLegProgress: progress };
+    expect(MatchSummary.parse(summary)).toEqual(summary);
+  });
+
+  it('parses a summary without the progress of the last leg', () => {
+    expect(MatchSummary.safeParse({ ...unfinished, lastLegProgress: null }).success).toBe(true);
+  });
+
+  it('requires lastLegProgress', () => {
+    expect(MatchSummary.safeParse(unfinished).success).toBe(false);
+  });
+
+  it('rejects dart 0 and a negative remaining score', () => {
+    expect(LegProgressPoint.safeParse({ dart: 0, remaining: 301, bust: false }).success).toBe(false);
+    expect(LegProgressPoint.safeParse({ dart: 1, remaining: -1, bust: false }).success).toBe(false);
+    expect(LegProgress.safeParse({ ...progress, players: [{ playerId: 'p1', points: [{ dart: 0, remaining: 301, bust: false }] }] }).success).toBe(false);
+  });
+
+  it('rejects a starting score outside 301, 501 and 701', () => {
+    expect(LegProgress.safeParse({ ...progress, startingScore: 401 }).success).toBe(false);
+  });
+
   it('rejects an unknown game type', () => {
-    expect(MatchSummary.safeParse({ matchId: 'm1', type: 'cricket', finished: false, eventSeq: 0, players: [], legs: [] }).success).toBe(false);
+    expect(MatchSummary.safeParse({ matchId: 'm1', type: 'cricket', finished: false, eventSeq: 0, players: [], legs: [], lastLegProgress: null }).success).toBe(false);
   });
 });
 
