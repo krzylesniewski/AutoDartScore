@@ -142,6 +142,7 @@ Adres bezpośredni: `ws://localhost:3000/matches/:id/live`. Przez proxy frontu: 
 
 - Po połączeniu serwer wysyła jedno `state_updated` z bieżącym stanem.
 - Po każdej nowej rzutce: `throw_registered`, potem zdarzenia domenowe, potem `state_updated`. Wszystkie mają ten sam `eventSeq`.
+- W meczu 1v1 po zdarzeniach domenowych, a przed `state_updated`, mogą przyjść wiadomości `achievement` (rekord gracza albo pierwsza tura 100+, 120+, 140+ lub 180), z tym samym `eventSeq`.
 - Po cofnięciu: `throw_undone`, potem `state_updated`. W treningu checkoutów po próbie, pominięciu i cofnięciu tylko `state_updated`.
 - Nieznana gra: serwer zamyka połączenie z kodem 4404.
 

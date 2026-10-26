@@ -83,6 +83,7 @@ export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer, random
           silence();
           break;
         case 'throw_registered':
+        case 'achievement':
           break;
         default:
           add(message.eventSeq, message);

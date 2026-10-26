@@ -69,6 +69,7 @@ describe('LiveMessage', () => {
         { playerId: 'p2', place: 2 },
       ],
     },
+    { type: 'achievement', ...meta, playerId: 'p1', kind: 'turn_record', value: 140, previous: 100 },
   ])('round-trips $type', (message) => {
     expect(LiveMessage.parse(message)).toEqual(message);
   });
@@ -88,6 +89,23 @@ describe('LiveMessage', () => {
   it('rejects a state whose player has no color', () => {
     const players = state.players.map((player) => ({ ...player, color: undefined }));
     expect(LiveMessage.safeParse({ type: 'state_updated', ...meta, state: { ...state, players } }).success).toBe(false);
+  });
+
+  it('parses an achievement without a previous value', () => {
+    const message = { type: 'achievement', ...meta, playerId: 'p1', kind: 'first_180', value: 180, previous: null };
+    expect(LiveMessage.parse(message)).toEqual(message);
+  });
+
+  it('rejects an achievement of an unknown kind', () => {
+    expect(LiveMessage.safeParse({ type: 'achievement', ...meta, playerId: 'p1', kind: 'best_average', value: 60, previous: 50 }).success).toBe(false);
+  });
+
+  it('rejects an achievement with a negative value', () => {
+    expect(LiveMessage.safeParse({ type: 'achievement', ...meta, playerId: 'p1', kind: 'turn_record', value: -1, previous: 0 }).success).toBe(false);
+  });
+
+  it('rejects an achievement without previous', () => {
+    expect(LiveMessage.safeParse({ type: 'achievement', ...meta, playerId: 'p1', kind: 'turn_record', value: 140 }).success).toBe(false);
   });
 
   it('rejects an unknown type', () => {

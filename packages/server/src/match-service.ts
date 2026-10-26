@@ -3,6 +3,7 @@ import {
   HitEvent,
   type AbandonMatchRequest,
   type CreateMatchRequest,
+  type DomainEvent,
   type LiveMessage,
   type MatchListItem,
   type MatchListQuery,
@@ -10,6 +11,7 @@ import {
   type ThrowResult,
   type UndoResult,
 } from '@autoscore/schema';
+import { createAchievementReference } from './achievement-reference.js';
 import { HttpError, invalidRequest, notFound } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
 import {
@@ -26,6 +28,7 @@ import {
 } from './replay.js';
 import type { SerialQueue } from './serial-queue.js';
 import { toSnapshot } from './snapshot.js';
+import { detectAchievements, type DetectedAchievement, type PlayerRecords } from './stats/achievements.js';
 import type { NewMatch, Store, StoredMatch } from './store/store.js';
 
 export interface MatchService {
@@ -53,6 +56,8 @@ interface Dependencies {
 }
 
 export function createMatchService({ store, hub, queue, random, now, matchLockMs }: Dependencies): MatchService {
+  const references = createAchievementReference({ store });
+
   async function requireMatch(id: string): Promise<StoredMatch> {
     const match = await store.findMatch(id);
     if (!match) {
@@ -66,13 +71,14 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     const log = await store.loadLog(match.id);
     const throws = effectiveThrows(log);
     const checkoutSteps = effectiveCheckoutSteps(log);
-    const game = replayMatch(match, throws, checkoutSteps).state;
+    const { state: game, events } = replayMatch(match, throws, checkoutSteps);
     return {
       log,
       throws,
       checkoutSteps,
       seq: lastSeq(log),
       game,
+      events,
       finishedAt: finishedAt(game, throws),
       abandonment: abandonment(log),
       endedAt: practiceEndedAt(log),
@@ -179,6 +185,30 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     });
   }
 
+  // Tylko mecz 1v1 i tylko zapisane profile, które mają już za sobą inny ukończony mecz 1v1.
+  async function achievements(match: StoredMatch, earlierEvents: readonly DomainEvent[], newEvents: readonly DomainEvent[]): Promise<DetectedAchievement[]> {
+    if (match.type !== 'match' || !newEvents.some((event) => event.type === 'turn_completed')) {
+      return [];
+    }
+    const reference = new Map<string, PlayerRecords>();
+    const eligible = new Set<string>();
+    for (const player of match.players) {
+      if (player.guest) {
+        continue;
+      }
+      const { finishedMatches, records } = await references.forPlayer(player.id, match.id);
+      reference.set(player.id, records);
+      if (finishedMatches > 0) {
+        eligible.add(player.id);
+      }
+    }
+    if (eligible.size === 0) {
+      return [];
+    }
+    const playerIds = match.players.map((player) => player.id);
+    return detectAchievements({ reference, earlierEvents, newEvents, playerIds, eligible });
+  }
+
   async function idempotentReply(id: string, eventId: string) {
     const stored = await store.findThrowByEventId(eventId);
     if (!stored) {
@@ -229,7 +259,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           return repeated;
         }
 
-        const { log, throws, game, abandonment, endedAt } = await load(match);
+        const { log, throws, game, events, abandonment, endedAt } = await load(match);
         if (endedAt) {
           throw ended(id);
         }
@@ -237,6 +267,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           throw abandoned(id);
         }
         const applied = applyGameThrow(game, { segment: hit.segment, multiplier: hit.multiplier });
+        const detected = await achievements(match, events, applied.events);
         let appended;
         try {
           appended = await store.appendThrow(hit);
@@ -250,6 +281,9 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         }
 
         const { throw: record, seq } = appended;
+        if (match.type === 'match' && isGameFinished(applied.state)) {
+          references.invalidate();
+        }
         const state = toSnapshot(match, applied.state, seq, {
           abandonment: null,
           endedAt: null,
@@ -262,6 +296,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         hub.publish(id, [
           { type: 'throw_registered', ...meta, throw: record },
           ...applied.events.map((event): LiveMessage => ({ ...event, ...meta })),
+          ...detected.map((achievement): LiveMessage => ({ ...achievement, ...meta })),
           { type: 'state_updated', ...meta, state },
         ]);
         return { statusCode: 201 as const, result: { throw: record, events: [...applied.events], state } };
@@ -279,7 +314,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     undo(id) {
       return queue(id, async () => {
         const match = await requireMatch(id);
-        const { log, throws, checkoutSteps, abandonment, endedAt, finishedAt: finishTime } = await load(match);
+        const { log, throws, checkoutSteps, game: before, abandonment, endedAt, finishedAt: finishTime } = await load(match);
         if (endedAt) {
           throw ended(id);
         }
@@ -306,6 +341,9 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no throw to undo`);
         }
         const seq = await store.appendUndo(id, last.id);
+        if (match.type === 'match' && isGameFinished(before)) {
+          references.invalidate();
+        }
         const game = replayMatch(match, throws).state;
         const state = toSnapshot(match, game, seq, {
           abandonment: null,
