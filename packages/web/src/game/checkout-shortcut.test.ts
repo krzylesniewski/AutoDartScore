@@ -12,16 +12,18 @@ describe('checkoutShortcut', () => {
     ['1', 'success'],
     ['0', 'failure'],
     ['Backspace', 'undo'],
+    ['n', 'skip'],
+    ['N', 'skip'],
   ] as const)('maps %s to %s', (value, expected) => {
     expect(checkoutShortcut(key(value))).toBe(expected);
   });
 
-  it.each(['2', '9', ' ', 'b', 'Escape', 'Tab', 'ArrowDown'])('ignores %s', (value) => {
+  it.each(['2', '9', ' ', 'b', 'm', 'Escape', 'Tab', 'ArrowDown'])('ignores %s', (value) => {
     expect(checkoutShortcut(key(value))).toBeNull();
   });
 
   it.each(['ctrlKey', 'metaKey', 'altKey'] as const)('ignores keys with %s', (modifier) => {
-    for (const value of ['Enter', '1', '0', 'Backspace']) {
+    for (const value of ['Enter', '1', '0', 'Backspace', 'n', 'N']) {
       expect(checkoutShortcut(key(value, { [modifier]: true }))).toBeNull();
     }
   });

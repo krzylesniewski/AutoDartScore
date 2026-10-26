@@ -2,6 +2,7 @@ import type { Hit } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import {
   applyGameCheckoutAttempt,
+  applyGameCheckoutSkip,
   applyGameThrow,
   checkoutTarget,
   countsToStats,
@@ -21,6 +22,7 @@ import {
   replayGame,
   replaySolo501,
   replayX01Match,
+  type CheckoutStep,
   type GameConfig,
   type GameState,
 } from './index.js';
@@ -34,7 +36,16 @@ const matchConfig = { type: 'match', playerIds: ['anna', 'bartek'], startingScor
 const casualConfig = { type: 'casual', playerIds: ['anna', 'bartek'], startingScore: 301, firstPlayerIndex: 0 } satisfies GameConfig;
 const solo501Config = { type: 'practice', practiceMode: 'solo_501', playerId: 'anna' } satisfies GameConfig;
 const freeRunConfig = { type: 'practice', practiceMode: 'free_run', playerId: 'anna' } satisfies GameConfig;
-const checkoutsConfig = { type: 'practice', practiceMode: 'checkouts', playerId: 'anna', range: '2-50', seed: 7 } satisfies GameConfig;
+const checkoutsConfig = {
+  type: 'practice',
+  practiceMode: 'checkouts',
+  playerId: 'anna',
+  range: '2-50',
+  seed: 7,
+  rule: 'repeat_on_miss',
+} satisfies GameConfig;
+const attempt = (success: boolean): CheckoutStep => ({ type: 'attempt', success });
+const skip: CheckoutStep = { type: 'skip' };
 
 // anna kończy leg 301 w drugiej turze (180, potem 121), bartek pudłuje.
 const leg301 = [T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(17), D(5)];
@@ -109,9 +120,9 @@ describe('replayGame', () => {
       events: freeRun.events,
     });
 
-    const results = [true, false, true];
-    const checkouts = replayCheckouts(checkoutsConfig, results);
-    expect(replayGame(checkoutsConfig, [], results)).toEqual({
+    const steps = [attempt(true), skip, attempt(false), attempt(true)];
+    const checkouts = replayCheckouts(checkoutsConfig, steps);
+    expect(replayGame(checkoutsConfig, [], steps)).toEqual({
       state: { type: 'practice', practiceMode: 'checkouts', state: checkouts.state },
       events: checkouts.events,
     });
@@ -126,8 +137,9 @@ describe('replayGame', () => {
     ['casual', casualConfig],
     ['solo_501', solo501Config],
     ['free_run', freeRunConfig],
-  ])('rejects checkout attempts in %s', (_name, config: GameConfig) => {
-    expectEngineError(() => replayGame(config, [], [true]), 'wrong_mode');
+  ])('rejects checkout attempts and skips in %s', (_name, config: GameConfig) => {
+    expectEngineError(() => replayGame(config, [], [attempt(true)]), 'wrong_mode');
+    expectEngineError(() => replayGame(config, [], [skip]), 'wrong_mode');
     expect(replayGame(config, [], [])).toEqual(replayGame(config, []));
   });
 });
@@ -141,8 +153,8 @@ describe('applyGameCheckoutAttempt', () => {
       game = result.state;
     }
     expect(game).toMatchObject({ type: 'practice', practiceMode: 'checkouts' });
-    expect(game).toEqual(replayGame(checkoutsConfig, [], [false, true]).state);
-    expect(game.state).toMatchObject({ target: checkoutTarget(7, '2-50', 2) });
+    expect(game).toEqual(replayGame(checkoutsConfig, [], [attempt(false), attempt(true)]).state);
+    expect(game.state).toMatchObject({ target: checkoutTarget(7, '2-50', 1), draws: 1 });
   });
 
   it.each([
@@ -152,6 +164,26 @@ describe('applyGameCheckoutAttempt', () => {
     ['free_run', freeRunConfig],
   ])('rejects an attempt in %s', (_name, config: GameConfig) => {
     expectEngineError(() => applyGameCheckoutAttempt(createGame(config), true), 'wrong_mode');
+  });
+});
+
+describe('applyGameCheckoutSkip', () => {
+  it('keeps the checkouts wrapper, draws a new target and matches the replay', () => {
+    const start = createGame(checkoutsConfig);
+    const { state: game, events } = applyGameCheckoutSkip(start);
+    expect(events).toEqual([]);
+    expect(game).toMatchObject({ type: 'practice', practiceMode: 'checkouts' });
+    expect(game).toEqual(replayGame(checkoutsConfig, [], [skip]).state);
+    expect(game.state).toMatchObject({ target: checkoutTarget(7, '2-50', 1), draws: 1, skips: 1, attempts: [] });
+  });
+
+  it.each([
+    ['match', matchConfig],
+    ['casual', casualConfig],
+    ['solo_501', solo501Config],
+    ['free_run', freeRunConfig],
+  ])('rejects a skip in %s', (_name, config: GameConfig) => {
+    expectEngineError(() => applyGameCheckoutSkip(createGame(config)), 'wrong_mode');
   });
 });
 
@@ -196,7 +228,7 @@ describe('isGameFinished', () => {
 
   it('never ends checkout practice', () => {
     expect(isGameFinished(createGame(checkoutsConfig))).toBe(false);
-    expect(isGameFinished(replayGame(checkoutsConfig, [], Array.from({ length: 50 }, () => true)).state)).toBe(false);
+    expect(isGameFinished(replayGame(checkoutsConfig, [], Array.from({ length: 50 }, () => attempt(true))).state)).toBe(false);
   });
 });
 
@@ -208,7 +240,7 @@ describe('currentRound', () => {
 
   it('is null in checkout practice', () => {
     expect(currentRound(createGame(checkoutsConfig))).toBeNull();
-    expect(currentRound(replayGame(checkoutsConfig, [], [true, false]).state)).toBeNull();
+    expect(currentRound(replayGame(checkoutsConfig, [], [attempt(true), skip, attempt(false)]).state)).toBeNull();
   });
 
   it.each([
@@ -250,6 +282,6 @@ describe('dartsInCurrentLeg', () => {
 
   it('is 0 in checkout practice', () => {
     expect(dartsInCurrentLeg(createGame(checkoutsConfig))).toBe(0);
-    expect(dartsInCurrentLeg(replayGame(checkoutsConfig, [], [true, false, true]).state)).toBe(0);
+    expect(dartsInCurrentLeg(replayGame(checkoutsConfig, [], [attempt(true), attempt(false), skip, attempt(true)]).state)).toBe(0);
   });
 });

@@ -125,6 +125,14 @@ export function UndoIcon({ className }: IconProps) {
   );
 }
 
+export function ShuffleIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M14 4h6v6l-2.3-2.3L5.4 20 4 18.6 16.3 6.3zM4 5.4L5.4 4l5.2 5.2-1.4 1.4zM13.4 14.8l1.4-1.4 3 3L20 14v6h-6l2.4-2.4z" />
+    </Svg>
+  );
+}
+
 export function LockIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

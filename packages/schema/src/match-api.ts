@@ -82,6 +82,7 @@ export const CheckoutSession = z
     target: CheckoutTarget, // bieżący cel, jeszcze bez próby
     attempts: z.int().min(0),
     successes: z.int().min(0),
+    skips: z.int().min(0), // pominięte cele, nie wliczają się do prób ani historii
     history: z.array(CheckoutAttempt), // zakończone próby w kolejności
   })
   .refine((session) => session.attempts === session.history.length, {
@@ -188,7 +189,7 @@ export const ThrowResult = z.object({
 export type ThrowResult = z.infer<typeof ThrowResult>;
 
 export const UndoResult = z.object({
-  undoneThrowId: z.string().min(1).nullable(), // null, gdy cofnięto próbę checkoutu
+  undoneThrowId: z.string().min(1).nullable(), // null, gdy cofnięto próbę albo pominięcie checkoutu
   state: MatchSnapshot,
 });
 export type UndoResult = z.infer<typeof UndoResult>;

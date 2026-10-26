@@ -1,6 +1,8 @@
 import { CHECKOUT_RANGES, checkoutTarget, MAX_CHECKOUT_SEED } from '@autoscore/engine';
 import { ApiError, LiveMessage, MatchListItem, MatchSnapshot, MatchSummary, UndoResult, type CheckoutRange } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { effectiveCheckoutSteps } from '../replay.js';
+import type { LogEntry } from '../store/store.js';
 import {
   D,
   LEG_301,
@@ -8,6 +10,7 @@ import {
   T,
   abandon,
   checkoutAttempt,
+  checkoutSkip,
   countRows,
   createGame,
   createPlayers,
@@ -56,10 +59,38 @@ async function storedSeed(matchId: string): Promise<number> {
   return row.checkout_seed;
 }
 
+async function storedRule(matchId: string): Promise<string | null> {
+  const row = await t.db.selectFrom('matches').select('checkout_rule').where('id', '=', matchId).executeTakeFirstOrThrow();
+  return row.checkout_rule;
+}
+
 async function attemptOk(matchId: string, success: boolean): Promise<MatchSnapshot> {
   const response = await checkoutAttempt(t.app, matchId, success);
   expect(response.statusCode).toBe(201);
   return MatchSnapshot.parse(response.json());
+}
+
+async function skipOk(matchId: string): Promise<MatchSnapshot> {
+  const response = await checkoutSkip(t.app, matchId);
+  expect(response.statusCode).toBe(201);
+  return MatchSnapshot.parse(response.json());
+}
+
+async function undoOk(matchId: string): Promise<MatchSnapshot> {
+  const response = await undo(t.app, matchId);
+  expect(response.statusCode).toBe(200);
+  const result = UndoResult.parse(response.json());
+  expect(result.undoneThrowId).toBeNull();
+  return result.state;
+}
+
+async function logTypes(matchId: string): Promise<string[]> {
+  return (await logEntries(t.db, matchId)).map((entry) => entry.type);
+}
+
+// Seed i zasada zostają na serwerze, więc żadna odpowiedź nie może ich zdradzić.
+function expectNoSecrets(body: unknown) {
+  expect(JSON.stringify(body)).not.toMatch(/seed|rule|repeat_on_miss|new_each_attempt/i);
 }
 
 async function expectError(response: { statusCode: number; json(): unknown }, statusCode: number, code: string) {
@@ -102,18 +133,27 @@ describe('POST /matches with practiceMode checkouts', () => {
         freeRun: null,
         players: [{ id: anna, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 0 }],
       });
-      expect(state.checkouts).toEqual({ range, target: checkoutTarget(seed, range, 0), attempts: 0, successes: 0, history: [] });
+      expect(state.checkouts).toEqual({ range, target: checkoutTarget(seed, range, 0), attempts: 0, successes: 0, skips: 0, history: [] });
       expect(state.checkouts?.target).toBeGreaterThanOrEqual(min);
       expect(state.checkouts?.target).toBeLessThanOrEqual(max);
       expect(await storedSeed(state.id)).toBe(seed);
-      expect(JSON.stringify(state)).not.toMatch(/seed/i);
+      expect(await storedRule(state.id)).toBe('repeat_on_miss');
+      expectNoSecrets(state);
     }
   });
 
-  it('stores no checkout range or seed for the other modes', async () => {
-    const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
-    const row = await t.db.selectFrom('matches').select(['checkout_range', 'checkout_seed', 'first_player_index']).where('id', '=', id).executeTakeFirstOrThrow();
-    expect(row).toEqual({ checkout_range: null, checkout_seed: null, first_player_index: null });
+  it('stores no checkout range, seed or rule for the other modes', async () => {
+    const games = [
+      { type: 'match', playerIds: [anna, bartek] },
+      { type: 'casual', playerIds: [anna, bartek] },
+      { type: 'practice', practiceMode: 'solo_501', playerIds: [anna] },
+      { type: 'practice', practiceMode: 'free_run', playerIds: [anna] },
+    ];
+    for (const payload of games) {
+      const { id } = await createGame(t.app, payload);
+      const row = await t.db.selectFrom('matches').select(['checkout_range', 'checkout_seed', 'checkout_rule']).where('id', '=', id).executeTakeFirstOrThrow();
+      expect(row).toEqual({ checkout_range: null, checkout_seed: null, checkout_rule: null });
+    }
   });
 
   it.each([
@@ -129,23 +169,24 @@ describe('POST /matches with practiceMode checkouts', () => {
 });
 
 describe('POST /matches/:id/checkout-attempts', () => {
-  it('records attempts and draws the targets from the stored seed', async () => {
+  it('records attempts, keeps the target after a failure and draws from the stored seed after a success', async () => {
     const { id } = await checkouts('51-100');
     const seed = await storedSeed(id);
     const target = (n: number) => checkoutTarget(seed, '51-100', n);
 
-    await attemptOk(id, true);
-    await attemptOk(id, false);
+    expect((await attemptOk(id, true)).checkouts?.target).toBe(target(1));
+    expect((await attemptOk(id, false)).checkouts?.target).toBe(target(1));
     const state = await attemptOk(id, true);
     expect(state.checkouts).toEqual({
       range: '51-100',
-      target: target(3),
+      target: target(2),
       attempts: 3,
       successes: 2,
+      skips: 0,
       history: [
         { target: target(0), success: true },
         { target: target(1), success: false },
-        { target: target(2), success: true },
+        { target: target(1), success: true },
       ],
     });
     expect(state).toMatchObject({ eventSeq: 3, turnIndex: 3, round: null, startedAt: null, legStartedAt: null, currentDarts: [] });
@@ -228,7 +269,7 @@ describe('POST /matches/:id/undo in checkout practice', () => {
   it('removes the last attempt and restores its target', async () => {
     const { id } = await checkouts();
     await attemptOk(id, true);
-    const before = await attemptOk(id, false);
+    const before = await attemptOk(id, true);
     const last = before.checkouts?.history.at(-1);
 
     const response = await undo(t.app, id);
@@ -240,13 +281,14 @@ describe('POST /matches/:id/undo in checkout practice', () => {
       target: last?.target,
       attempts: 1,
       successes: 1,
+      skips: 0,
       history: before.checkouts?.history.slice(0, 1),
     });
     expect(result.state.eventSeq).toBe(3);
     expect(await getMatch(t.app, id)).toEqual(result.state);
     expect((await logEntries(t.db, id)).at(-1)).toEqual({ seq: 3, type: 'checkout_attempt_undone', throw_id: null, player_id: null, reason: null });
 
-    // Po cofnięciu ten sam numer próby dostaje ten sam cel.
+    // Po cofnięciu to samo losowanie daje ten sam cel.
     const again = await attemptOk(id, true);
     expect(again.checkouts?.history).toEqual([...(before.checkouts?.history.slice(0, 1) ?? []), { target: last?.target, success: true }]);
     expect(again.checkouts?.target).toBe(before.checkouts?.target);
@@ -270,12 +312,186 @@ describe('POST /matches/:id/undo in checkout practice', () => {
     expect(LiveMessage.parse(messages[1])).toEqual({ type: 'state_updated', matchId: id, eventSeq: 2, state: response.json().state });
   });
 
-  it('answers 409 nothing_to_undo without attempts', async () => {
+  it('answers 409 nothing_to_undo without attempts or skips', async () => {
     const { id } = await checkouts();
     await expectError(await undo(t.app, id), 409, 'nothing_to_undo');
     await attemptOk(id, true);
-    expect((await undo(t.app, id)).statusCode).toBe(200);
+    await skipOk(id);
+    await undoOk(id);
+    await undoOk(id);
     await expectError(await undo(t.app, id), 409, 'nothing_to_undo');
+    expect(await logTypes(id)).toEqual(['checkout_attempt', 'checkout_skipped', 'checkout_skip_undone', 'checkout_attempt_undone']);
+  });
+
+  it('removes a skip and restores the previous target', async () => {
+    const { id } = await checkouts();
+    const seed = await storedSeed(id);
+    const before = await attemptOk(id, false);
+    const skipped = await skipOk(id);
+    expect(skipped.checkouts?.target).toBe(checkoutTarget(seed, '2-50', 1));
+
+    const state = await undoOk(id);
+    expect(state.checkouts).toEqual(before.checkouts);
+    expect(state.eventSeq).toBe(3);
+    expect(await getMatch(t.app, id)).toEqual(state);
+    expect((await logEntries(t.db, id)).at(-1)).toEqual({ seq: 3, type: 'checkout_skip_undone', throw_id: null, player_id: null, reason: null });
+    expectNoSecrets(state);
+  });
+
+  it('undoes a mixed sequence step by step in reverse order', async () => {
+    const { id } = await checkouts();
+    const seed = await storedSeed(id);
+    const target = (n: number) => checkoutTarget(seed, '2-50', n);
+
+    const first = await attemptOk(id, false);
+    const skipped = await skipOk(id);
+    const second = await attemptOk(id, false);
+    expect(second.checkouts).toEqual({
+      range: '2-50',
+      target: target(1),
+      attempts: 2,
+      successes: 0,
+      skips: 1,
+      history: [
+        { target: target(0), success: false },
+        { target: target(1), success: false },
+      ],
+    });
+
+    expect((await undoOk(id)).checkouts).toEqual(skipped.checkouts);
+    const back = await undoOk(id);
+    expect(back.checkouts).toEqual(first.checkouts);
+    expect(back.checkouts?.target).toBe(target(0));
+    expect(await logTypes(id)).toEqual([
+      'checkout_attempt',
+      'checkout_skipped',
+      'checkout_attempt',
+      'checkout_attempt_undone',
+      'checkout_skip_undone',
+    ]);
+  });
+
+  it('undoes a skip with no attempts', async () => {
+    const { id } = await checkouts();
+    const start = await getMatch(t.app, id);
+    await skipOk(id);
+    const state = await undoOk(id);
+    expect(state.checkouts).toEqual(start.checkouts);
+    expect(await logTypes(id)).toEqual(['checkout_skipped', 'checkout_skip_undone']);
+  });
+});
+
+describe('POST /matches/:id/checkout-skips', () => {
+  it('draws a new target and leaves attempts, successes and history unchanged', async () => {
+    const { id } = await checkouts('51-100');
+    const seed = await storedSeed(id);
+    const target = (n: number) => checkoutTarget(seed, '51-100', n);
+    const before = await attemptOk(id, true);
+
+    const state = await skipOk(id);
+    expect(state.checkouts).toEqual({ ...before.checkouts, target: target(2), skips: 1 });
+    expect(state.checkouts?.target).not.toBe(before.checkouts?.target);
+    expect(state).toMatchObject({ eventSeq: 2, turnIndex: 1, status: 'in_progress' });
+    expect(await getMatch(t.app, id)).toEqual(state);
+    expect(await logTypes(id)).toEqual(['checkout_attempt', 'checkout_skipped']);
+    expect(await countRows(t.db, 'throws')).toBe(0);
+    expectNoSecrets(state);
+  });
+
+  it('counts draws from successes and skips but not from failures', async () => {
+    const { id } = await checkouts();
+    const seed = await storedSeed(id);
+    const target = (n: number) => checkoutTarget(seed, '2-50', n);
+    expect((await attemptOk(id, false)).checkouts?.target).toBe(target(0));
+    expect((await skipOk(id)).checkouts?.target).toBe(target(1));
+    expect((await attemptOk(id, false)).checkouts?.target).toBe(target(1));
+    expect((await attemptOk(id, true)).checkouts?.target).toBe(target(2));
+    const state = await skipOk(id);
+    expect(state.checkouts).toMatchObject({ target: target(3), attempts: 3, successes: 1, skips: 2 });
+  });
+
+  it('ignores any body', async () => {
+    const { id } = await checkouts();
+    const response = await t.app.inject({ method: 'POST', url: `/matches/${id}/checkout-skips`, headers: { 'content-type': 'application/json' }, payload: '{bad' });
+    expect(response.statusCode).toBe(201);
+    expect(MatchSnapshot.parse(response.json()).checkouts?.skips).toBe(1);
+  });
+
+  it('publishes only state_updated', async () => {
+    const { id } = await checkouts();
+    const messages: unknown[] = [];
+    const socket: TestSocket = await t.app.injectWS(`/matches/${id}/live`, {}, {
+      onInit(ws: TestSocket) {
+        ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+      },
+    });
+    sockets.push(socket);
+    await vi.waitFor(() => expect(messages).toHaveLength(1));
+
+    const state = await skipOk(id);
+    await vi.waitFor(() => expect(messages).toHaveLength(2));
+    expect(LiveMessage.parse(messages[1])).toEqual({ type: 'state_updated', matchId: id, eventSeq: 1, state });
+    await skipOk(id);
+    await vi.waitFor(() => expect(messages).toHaveLength(3));
+    expect(messages.map((message) => (message as { type: string }).type)).toEqual(['state_updated', 'state_updated', 'state_updated']);
+  });
+
+  it('answers 404 for an unknown match', async () => {
+    await expectError(await checkoutSkip(t.app, 'missing'), 404, 'not_found');
+  });
+
+  it('answers 409 not_checkouts in a 1v1 match and a Free run', async () => {
+    const match = await createGame(t.app, { type: 'match', playerIds: [anna, bartek] });
+    const freeRun = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
+    for (const { id } of [match, freeRun]) {
+      await expectError(await checkoutSkip(t.app, id), 409, 'not_checkouts');
+      expect(await logEntries(t.db, id)).toEqual([]);
+    }
+  });
+
+  it('answers 409 practice_ended after the session ended', async () => {
+    const { id } = await checkouts();
+    await attemptOk(id, false);
+    expect((await endPractice(t.app, id)).statusCode).toBe(200);
+    await expectError(await checkoutSkip(t.app, id), 409, 'practice_ended');
+    expect((await getMatch(t.app, id)).checkouts).toMatchObject({ attempts: 1, skips: 0 });
+  });
+
+  it('answers 409 match_abandoned in an abandoned session', async () => {
+    const { id } = await checkouts();
+    expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
+    await expectError(await checkoutSkip(t.app, id), 409, 'match_abandoned');
+    expect((await getMatch(t.app, id)).checkouts).toMatchObject({ skips: 0 });
+  });
+});
+
+describe('effectiveCheckoutSteps', () => {
+  const at = '2026-10-26T12:00:00.000Z';
+  function log(entries: readonly LogEntry[]) {
+    return { entries, throws: new Map() };
+  }
+
+  it('keeps attempts and skips in log order and pops them on undo', () => {
+    expect(
+      effectiveCheckoutSteps(
+        log([
+          { seq: 1, type: 'checkout_attempt', success: false, createdAt: at },
+          { seq: 2, type: 'checkout_skipped', createdAt: at },
+          { seq: 3, type: 'checkout_attempt', success: true, createdAt: at },
+          { seq: 4, type: 'checkout_attempt_undone', createdAt: at },
+          { seq: 5, type: 'checkout_skipped', createdAt: at },
+        ]),
+      ),
+    ).toEqual([{ type: 'attempt', success: false }, { type: 'skip' }, { type: 'skip' }]);
+  });
+
+  it.each([
+    ['an attempt undo after a skip', [{ seq: 1, type: 'checkout_skipped', createdAt: at }, { seq: 2, type: 'checkout_attempt_undone', createdAt: at }]],
+    ['a skip undo after an attempt', [{ seq: 1, type: 'checkout_attempt', success: true, createdAt: at }, { seq: 2, type: 'checkout_skip_undone', createdAt: at }]],
+    ['an attempt undo without steps', [{ seq: 1, type: 'checkout_attempt_undone', createdAt: at }]],
+    ['a skip undo without steps', [{ seq: 1, type: 'checkout_skip_undone', createdAt: at }]],
+  ] satisfies [string, LogEntry[]][])('throws on %s', (_name, entries) => {
+    expect(() => effectiveCheckoutSteps(log(entries))).toThrow(/^Corrupt log: /);
   });
 });
 
@@ -290,6 +506,15 @@ describe('POST /matches/:id/end in checkout practice', () => {
     const state = MatchSnapshot.parse(response.json());
     expect(state).toMatchObject({ status: 'ended', finished: false, currentPlayerId: anna, checkouts: before.checkouts });
     expect(state.endedAt).not.toBeNull();
+  });
+
+  it('answers 409 nothing_to_end with only skips', async () => {
+    const { id } = await checkouts();
+    await skipOk(id);
+    await skipOk(id);
+    await expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
+    await attemptOk(id, false);
+    expect((await endPractice(t.app, id)).statusCode).toBe(200);
   });
 
   it('answers 409 nothing_to_end after every attempt is undone', async () => {
@@ -313,7 +538,7 @@ describe('GET /matches with checkout practice', () => {
       expect(items.find((item) => item.id === id)).toMatchObject({ practiceMode: 'checkouts', status: 'in_progress', checkouts: state.checkouts });
       expect(items.find((item) => item.id === freeRun.id)?.checkouts).toBeNull();
     }
-    expect(JSON.stringify((await listMatches(t.app)).json())).not.toMatch(/seed/i);
+    expectNoSecrets((await listMatches(t.app)).json());
   });
 
   it('drops an ended session from the unfinished list', async () => {
@@ -335,6 +560,7 @@ describe('GET /matches/:id/summary for checkout practice', () => {
     const summary = MatchSummary.parse(response.json());
     expect(summary).toMatchObject({ matchId: id, type: 'practice', finished: false, eventSeq: 2, legs: [], lastLegProgress: null });
     expect(summary.checkouts).toEqual(state.checkouts);
+    expectNoSecrets(summary);
   });
 });
 

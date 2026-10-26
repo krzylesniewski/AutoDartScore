@@ -2,6 +2,7 @@ import type { CheckoutRange } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import {
   applyCheckoutAttempt,
+  applyCheckoutSkip,
   CHECKOUT_RANGES,
   checkoutTarget,
   createCheckouts,
@@ -9,12 +10,16 @@ import {
   MAX_CHECKOUT_SEED,
   nextCheckoutTarget,
   replayCheckouts,
+  type CheckoutRule,
+  type CheckoutStep,
   type CheckoutsConfig,
   type CheckoutsState,
 } from './index.js';
 
 const RANGES: readonly CheckoutRange[] = ['2-50', '51-100'];
-const config: CheckoutsConfig = { playerId: 'anna', range: '51-100', seed: 123_456_789 };
+const RULES: readonly CheckoutRule[] = ['new_each_attempt', 'repeat_on_miss'];
+const config: CheckoutsConfig = { playerId: 'anna', range: '51-100', seed: 123_456_789, rule: 'new_each_attempt' };
+const repeatConfig: CheckoutsConfig = { ...config, rule: 'repeat_on_miss' };
 
 function expectEngineError(fn: () => unknown, code: EngineError['code']) {
   try {
@@ -46,6 +51,27 @@ function attemptAll(state: CheckoutsState, results: readonly boolean[]) {
   return { state: current, events };
 }
 
+function attempts(results: readonly boolean[]): CheckoutStep[] {
+  return results.map((success) => ({ type: 'attempt', success }));
+}
+
+function stepAll(state: CheckoutsState, steps: readonly CheckoutStep[]) {
+  let current = state;
+  const states = [];
+  const events = [];
+  for (const step of steps) {
+    const result = step.type === 'attempt' ? applyCheckoutAttempt(current, step.success) : applyCheckoutSkip(current);
+    current = result.state;
+    states.push(current);
+    events.push(...result.events);
+  }
+  return { state: current, events, states };
+}
+
+const SKIP: CheckoutStep = { type: 'skip' };
+const HIT: CheckoutStep = { type: 'attempt', success: true };
+const MISS: CheckoutStep = { type: 'attempt', success: false };
+
 describe('checkoutTarget', () => {
   it.each(RANGES)('gives the same targets for the same seed in %s', (range) => {
     expect(sequence(42, range, 50)).toEqual(sequence(42, range, 50));
@@ -69,7 +95,7 @@ describe('checkoutTarget', () => {
   it('equals the n-th target reached step by step and through the replay', () => {
     const targets = sequence(config.seed, config.range, 30);
     const results = Array.from({ length: 29 }, (_, index) => index % 3 === 0);
-    const { state } = replayCheckouts(config, results);
+    const { state } = replayCheckouts(config, attempts(results));
     for (let n = 0; n < targets.length; n += 1) {
       expect(checkoutTarget(config.seed, config.range, n)).toBe(targets[n]);
     }
@@ -134,8 +160,15 @@ describe('nextCheckoutTarget', () => {
 });
 
 describe('createCheckouts', () => {
-  it('starts with target 0 and no attempts', () => {
-    expect(createCheckouts(config)).toEqual({ config, target: checkoutTarget(config.seed, config.range, 0), attempts: [] });
+  it.each(RULES)('starts with target 0, no draws, no skips and no attempts under %s', (rule) => {
+    const ruled = { ...config, rule };
+    expect(createCheckouts(ruled)).toEqual({
+      config: ruled,
+      target: checkoutTarget(config.seed, config.range, 0),
+      draws: 0,
+      skips: 0,
+      attempts: [],
+    });
   });
 
   it.each([
@@ -144,12 +177,49 @@ describe('createCheckouts', () => {
     ['a negative seed', { ...config, seed: -1 }],
     ['a seed above the maximum', { ...config, seed: MAX_CHECKOUT_SEED + 1 }],
     ['a fractional seed', { ...config, seed: 0.5 }],
+    ['an unknown rule', { ...config, rule: 'repeat_forever' as CheckoutRule }],
+    ['a missing rule', { ...config, rule: undefined as unknown as CheckoutRule }],
   ])('rejects %s', (_name, bad) => {
     expectEngineError(() => createCheckouts(bad), 'invalid_config');
   });
 });
 
 describe('applyCheckoutAttempt', () => {
+  it('draws after every attempt under new_each_attempt, so attempt n has target n', () => {
+    const results = [false, false, true, false, true, true, false];
+    const { state } = attemptAll(createCheckouts(config), results);
+    state.attempts.forEach((attempt, n) => {
+      expect(attempt.target).toBe(checkoutTarget(config.seed, config.range, n));
+    });
+    expect(state.draws).toBe(results.length);
+    expect(state.target).toBe(checkoutTarget(config.seed, config.range, results.length));
+  });
+
+  it('keeps the target and draws after a failure under repeat_on_miss', () => {
+    const start = createCheckouts(repeatConfig);
+    const { state } = applyCheckoutAttempt(start, false);
+    expect(state.target).toBe(start.target);
+    expect(state.draws).toBe(0);
+    expect(state.attempts).toEqual([{ target: start.target, success: false }]);
+  });
+
+  it('keeps the same target over several failures in a row under repeat_on_miss', () => {
+    const start = createCheckouts(repeatConfig);
+    const { state } = attemptAll(start, [false, false, false, false]);
+    expect(state.attempts.every((attempt) => attempt.target === start.target)).toBe(true);
+    expect(state.target).toBe(start.target);
+    expect(state.draws).toBe(0);
+  });
+
+  it('draws a new target after a success under repeat_on_miss', () => {
+    const { state } = attemptAll(createCheckouts(repeatConfig), [false, false, true]);
+    const first = checkoutTarget(config.seed, config.range, 0);
+    expect(state.attempts.map((attempt) => attempt.target)).toEqual([first, first, first]);
+    expect(state.draws).toBe(1);
+    expect(state.target).toBe(checkoutTarget(config.seed, config.range, 1));
+    expect(state.target).not.toBe(first);
+  });
+
   it('records successes and failures in order and draws the next target', () => {
     const targets = sequence(config.seed, config.range, 5);
     const { state, events } = attemptAll(createCheckouts(config), [true, false, false, true]);
@@ -173,13 +243,52 @@ describe('applyCheckoutAttempt', () => {
   });
 });
 
+describe('applyCheckoutSkip', () => {
+  it.each(RULES)('draws a new target without an attempt under %s', (rule) => {
+    const start = applyCheckoutAttempt(createCheckouts({ ...config, rule }), false).state;
+    const { state, events } = applyCheckoutSkip(start);
+    expect(events).toEqual([]);
+    expect(state.skips).toBe(1);
+    expect(state.draws).toBe(start.draws + 1);
+    expect(state.target).not.toBe(start.target);
+    expect(state.target).toBe(checkoutTarget(config.seed, config.range, state.draws));
+    expect(state.attempts).toEqual(start.attempts);
+  });
+
+  it('does not mutate the previous state', () => {
+    const start = createCheckouts(repeatConfig);
+    const snapshot = structuredClone(start);
+    applyCheckoutSkip(start);
+    expect(start).toEqual(snapshot);
+  });
+});
+
 describe('replayCheckouts', () => {
   it('produces the same state and events as applying attempts one by one', () => {
     const results = [false, true, true, false, true];
-    expect(replayCheckouts(config, results)).toEqual(attemptAll(createCheckouts(config), results));
+    expect(replayCheckouts(config, attempts(results))).toEqual(attemptAll(createCheckouts(config), results));
   });
 
-  it('gives the starting state for no attempts', () => {
+  it.each(RULES)('gives the same state as applying mixed steps one by one under %s', (rule) => {
+    const ruled = { ...config, rule };
+    const steps = [MISS, MISS, SKIP, HIT, MISS, SKIP, SKIP, MISS, HIT, HIT, MISS];
+    const { state, events, states } = stepAll(createCheckouts(ruled), steps);
+    expect(replayCheckouts(ruled, steps)).toEqual({ state, events });
+    for (const step of states) {
+      expect(step.target).toBe(checkoutTarget(config.seed, config.range, step.draws));
+    }
+    expect(state.skips).toBe(3);
+    expect(state.attempts).toHaveLength(8);
+  });
+
+  it('counts draws from successes and skips under repeat_on_miss', () => {
+    const { state } = replayCheckouts(repeatConfig, [MISS, SKIP, MISS, HIT, MISS, SKIP]);
+    expect(state.draws).toBe(3);
+    expect(state.target).toBe(checkoutTarget(config.seed, config.range, 3));
+    expect(state.attempts.map((attempt) => attempt.target)).toEqual([0, 1, 1, 2].map((n) => checkoutTarget(config.seed, config.range, n)));
+  });
+
+  it('gives the starting state for no steps', () => {
     expect(replayCheckouts(config, [])).toEqual({ state: createCheckouts(config), events: [] });
   });
 });

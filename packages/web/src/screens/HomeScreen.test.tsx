@@ -324,7 +324,7 @@ describe('HomeScreen: new game form', () => {
       ['Typ', 'Trening'],
       ['Tryb', 'Końcówki'],
       ['Przedział', '51-100'],
-      ['Zasady', 'Jedna tura na końcówkę, udało się albo nie'],
+      ['Zasady', 'Po pudle ta sama końcówka, nowa po trafieniu albo pominięciu'],
     ]);
   });
 
@@ -391,7 +391,7 @@ describe('HomeScreen: new game form', () => {
     fireEvent.click(button('Końcówki'));
     fireEvent.click(button('51-100'));
     fireEvent.click(button('Anna'));
-    expect(within(startBar()).getByText('Końcówki · 51-100 · Jedna tura na końcówkę, udało się albo nie')).toBeTruthy();
+    expect(within(startBar()).getByText('Końcówki · 51-100 · Po pudle ta sama końcówka, nowa po trafieniu albo pominięciu')).toBeTruthy();
     fireEvent.click(button('Start gry'));
 
     await vi.waitFor(() => expect(window.location.hash).toBe('#/matches/m_7'));

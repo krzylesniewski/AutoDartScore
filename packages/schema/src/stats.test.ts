@@ -128,7 +128,7 @@ describe('MatchSummary', () => {
   });
 
   it('parses a checkout practice summary', () => {
-    const checkouts = { range: '2-50', target: 17, attempts: 2, successes: 1, history: [{ target: 40, success: true }, { target: 3, success: false }] };
+    const checkouts = { range: '2-50', target: 17, attempts: 2, successes: 1, skips: 0, history: [{ target: 40, success: true }, { target: 3, success: false }] };
     const summary = { ...unfinished, type: 'practice', lastLegProgress: null, checkouts };
     expect(MatchSummary.parse(summary)).toEqual(summary);
   });
@@ -138,7 +138,7 @@ describe('MatchSummary', () => {
   });
 
   it('rejects a checkout session with inconsistent counts', () => {
-    const checkouts = { range: '2-50', target: 17, attempts: 1, successes: 1, history: [{ target: 40, success: false }] };
+    const checkouts = { range: '2-50', target: 17, attempts: 1, successes: 1, skips: 0, history: [{ target: 40, success: false }] };
     expect(MatchSummary.safeParse({ ...unfinished, lastLegProgress: null, checkouts }).success).toBe(false);
   });
 

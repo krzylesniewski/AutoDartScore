@@ -1,6 +1,6 @@
 import type { ShortcutKeyEvent } from './keypad-shortcut';
 
-export type CheckoutShortcut = 'success' | 'failure' | 'undo';
+export type CheckoutShortcut = 'success' | 'failure' | 'skip' | 'undo';
 
 // Ctrl, Cmd i Alt zostają dla przeglądarki i systemu, jak w skrótach klawiatury rzutek.
 export function checkoutShortcut(event: ShortcutKeyEvent): CheckoutShortcut | null {
@@ -13,6 +13,9 @@ export function checkoutShortcut(event: ShortcutKeyEvent): CheckoutShortcut | nu
       return 'success';
     case '0':
       return 'failure';
+    case 'n':
+    case 'N':
+      return 'skip';
     case 'Backspace':
       return 'undo';
     default:

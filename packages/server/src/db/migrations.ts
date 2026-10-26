@@ -7,6 +7,10 @@ interface LifecycleMigrationTables {
   match_events_next: { match_id: string; seq: number; type: string; throw_id: string | null; player_id: string | null; reason: string | null; created_at: string };
 }
 
+interface CheckoutRuleMigrationTables {
+  matches: { practice_mode: string | null; checkout_rule: string | null };
+}
+
 // Przebudowa tabeli zamiast ALTER COLUMN, bo SQLite nie umie zdjąć NOT NULL z kolumny.
 async function rebuildMatchEvents(db: Kysely<LifecycleMigrationTables>): Promise<void> {
   await db.schema
@@ -129,6 +133,14 @@ const migrations: Record<string, Migration> = {
       await db.schema.alterTable('matches').addColumn('checkout_range', 'text').execute();
       await db.schema.alterTable('matches').addColumn('checkout_seed', 'integer').execute();
       await db.schema.alterTable('match_events').addColumn('success', 'integer').execute();
+    },
+  },
+  // Sesje zapisane wcześniej losowały cel po każdej próbie i muszą odtwarzać się tak samo.
+  '0006_checkout_rule': {
+    async up(db: Kysely<unknown>) {
+      const typed = db as Kysely<CheckoutRuleMigrationTables>;
+      await typed.schema.alterTable('matches').addColumn('checkout_rule', 'text').execute();
+      await typed.updateTable('matches').set({ checkout_rule: 'new_each_attempt' }).where('practice_mode', '=', 'checkouts').execute();
     },
   },
 };

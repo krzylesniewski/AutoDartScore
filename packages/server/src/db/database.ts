@@ -21,6 +21,7 @@ export interface MatchesTable {
   counts_to_stats: number;
   checkout_range: string | null; // tylko w treningu checkoutów
   checkout_seed: number | null; // tylko w treningu checkoutów, od 0 do MAX_CHECKOUT_SEED
+  checkout_rule: string | null; // tylko w treningu checkoutów, CheckoutRule z silnika
   created_at: string;
 }
 
@@ -50,10 +51,13 @@ export type MatchEventType =
   | 'match_resumed'
   | 'practice_ended'
   | 'checkout_attempt'
-  | 'checkout_attempt_undone';
+  | 'checkout_attempt_undone'
+  | 'checkout_skipped'
+  | 'checkout_skip_undone';
 
 // Log gry: tylko dopisywanie. Stan meczu wynika z odtworzenia wpisów w kolejności seq.
 // throw_id mają tylko throw i undo, player_id i reason tylko match_abandoned, success (0 albo 1) tylko checkout_attempt.
+// checkout_attempt_undone cofa ostatnią próbę, a checkout_skip_undone ostatnie pominięcie (checkout_skipped).
 export interface MatchEventsTable {
   match_id: string;
   seq: number;

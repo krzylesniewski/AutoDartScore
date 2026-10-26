@@ -1,6 +1,14 @@
 import type { Hit, MatchType, PracticeMode } from '@autoscore/schema';
 import { applyCasualThrow, createCasualMatch, replayCasualMatch, type CasualMatchConfig, type CasualMatchState } from './casual-match.js';
-import { applyCheckoutAttempt, createCheckouts, replayCheckouts, type CheckoutsConfig, type CheckoutsState } from './checkouts.js';
+import {
+  applyCheckoutAttempt,
+  applyCheckoutSkip,
+  createCheckouts,
+  replayCheckouts,
+  type CheckoutStep,
+  type CheckoutsConfig,
+  type CheckoutsState,
+} from './checkouts.js';
 import { EngineError } from './errors.js';
 import { applyFreeRunThrow, createFreeRun, replayFreeRun, type FreeRunConfig, type FreeRunState } from './free-run.js';
 import { applySolo501Throw, createSolo501, replaySolo501, type Solo501Config, type Solo501State } from './solo-501.js';
@@ -92,14 +100,22 @@ export function applyGameCheckoutAttempt(game: GameState, success: boolean): App
   return { state: { ...game, state }, events };
 }
 
-// Trening checkoutów odtwarza się z wyników prób, każdy inny tryb z trafień.
-export function replayGame(config: GameConfig, hits: readonly Hit[], checkoutResults: readonly boolean[] = []): ApplyResult<GameState> {
+export function applyGameCheckoutSkip(game: GameState): ApplyResult<GameState> {
+  if (game.type !== 'practice' || game.practiceMode !== 'checkouts') {
+    throw wrongMode('Only checkout practice takes skips');
+  }
+  const { state, events } = applyCheckoutSkip(game.state);
+  return { state: { ...game, state }, events };
+}
+
+// Trening checkoutów odtwarza się z prób i pominięć, każdy inny tryb z trafień.
+export function replayGame(config: GameConfig, hits: readonly Hit[], checkoutSteps: readonly CheckoutStep[] = []): ApplyResult<GameState> {
   const checkouts = config.type === 'practice' && config.practiceMode === 'checkouts';
   if (checkouts && hits.length > 0) {
     throw wrongMode('Checkout practice takes attempts, not throws');
   }
-  if (!checkouts && checkoutResults.length > 0) {
-    throw wrongMode('Only checkout practice takes attempts');
+  if (!checkouts && checkoutSteps.length > 0) {
+    throw wrongMode('Only checkout practice takes attempts and skips');
   }
   switch (config.type) {
     case 'match': {
@@ -121,7 +137,7 @@ export function replayGame(config: GameConfig, hits: readonly Hit[], checkoutRes
           return { state: { type: config.type, practiceMode: config.practiceMode, state }, events };
         }
         case 'checkouts': {
-          const { state, events } = replayCheckouts(config, checkoutResults);
+          const { state, events } = replayCheckouts(config, checkoutSteps);
           return { state: { type: config.type, practiceMode: config.practiceMode, state }, events };
         }
       }

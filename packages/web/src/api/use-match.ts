@@ -3,7 +3,7 @@ import type { Hit, HitEvent, LiveAuthMessage, MatchSnapshot } from '@autoscore/s
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
 import { liveSocketUrl } from './api-url';
-import { API_BASE, ApiRequestError, abandonMatch, endPractice, postCheckoutAttempt, postThrow, resumeMatch, undo } from './client';
+import { API_BASE, ApiRequestError, abandonMatch, endPractice, postCheckoutAttempt, postCheckoutSkip, postThrow, resumeMatch, undo } from './client';
 import { newEventId } from './event-id';
 import { handleUnauthorized, readToken } from './session';
 
@@ -47,6 +47,7 @@ export interface UseMatch {
   sendResume(): void;
   sendEndPractice(): void;
   sendCheckoutAttempt(success: boolean): void;
+  sendCheckoutSkip(): void;
 }
 
 function liveUrl(matchId: string): string {
@@ -326,5 +327,33 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     [matchId, enqueue, acceptState],
   );
 
-  return { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt };
+  const sendCheckoutSkip = useCallback(() => {
+    enqueue(async () => {
+      try {
+        const state = await postCheckoutSkip(matchId);
+        setError(null);
+        acceptState(state);
+      } catch {
+        setError(pl.checkoutSkipFailed);
+      }
+    });
+  }, [matchId, enqueue, acceptState]);
+
+  return {
+    state,
+    lastTurn,
+    banner,
+    error,
+    busy,
+    connection,
+    notFound,
+    sendHit,
+    sendRestMiss,
+    sendUndo,
+    sendAbandon,
+    sendResume,
+    sendEndPractice,
+    sendCheckoutAttempt,
+    sendCheckoutSkip,
+  };
 }

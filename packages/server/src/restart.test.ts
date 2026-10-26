@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { S, T, abandon, checkoutAttempt, createGame, createPlayers, endPractice, getMatch, setup, throwDarts, undo } from './test-helpers.js';
+import { S, T, abandon, checkoutAttempt, checkoutSkip, createGame, createPlayers, endPractice, getMatch, setup, throwDarts, undo } from './test-helpers.js';
 
 let dir: string;
 beforeEach(async () => {
@@ -93,6 +93,39 @@ describe('restart', () => {
       expect(after).toEqual(before);
       expect(after.checkouts).toMatchObject({ range: '51-100', attempts: 3, successes: 1 });
       expect(after.checkouts?.history.map((attempt) => attempt.success)).toEqual([true, false, false]);
+    } finally {
+      await second.close();
+    }
+  });
+
+  it('keeps the checkout attempts, skips and undos after reopening the file database', async () => {
+    const path = join(dir, 'games.sqlite');
+    const first = await setup({ path, random: () => 0.456 });
+    const [anna] = await createPlayers(first.app, 1);
+    const { id } = await createGame(first.app, { type: 'practice', practiceMode: 'checkouts', playerIds: [anna], checkoutRange: '2-50' });
+    const steps = [
+      () => checkoutAttempt(first.app, id, false),
+      () => checkoutSkip(first.app, id),
+      () => checkoutAttempt(first.app, id, true),
+      () => checkoutSkip(first.app, id),
+      () => undo(first.app, id),
+      () => checkoutAttempt(first.app, id, false),
+      () => undo(first.app, id),
+      () => checkoutSkip(first.app, id),
+      () => checkoutAttempt(first.app, id, false),
+    ];
+    for (const step of steps) {
+      expect((await step()).statusCode).toBeLessThan(300);
+    }
+    const before = await getMatch(first.app, id);
+    await first.close();
+
+    const second = await setup({ path, random: () => 0.987 });
+    try {
+      const after = await getMatch(second.app, id);
+      expect(after).toEqual(before);
+      expect(after.checkouts).toMatchObject({ range: '2-50', attempts: 3, successes: 1, skips: 2 });
+      expect(after.checkouts?.history.map((attempt) => attempt.success)).toEqual([false, true, false]);
     } finally {
       await second.close();
     }

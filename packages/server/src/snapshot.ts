@@ -8,13 +8,14 @@ type Progress = Pick<MatchSnapshot, 'currentPlayerId' | 'legIndex' | 'turnIndex'
   readonly perPlayer: (player: Player, index: number) => Pick<MatchSnapshotPlayer, 'remaining' | 'legsWon' | 'place' | 'dartsThrownInLeg'>;
 };
 
-// Bez ziarna, żeby klient nie mógł wyliczyć kolejnych celów.
+// Bez ziarna i zasady, żeby klient nie mógł wyliczyć kolejnych celów.
 export function checkoutSession(state: CheckoutsState): CheckoutSession {
   return {
     range: state.config.range,
     target: state.target,
     attempts: state.attempts.length,
     successes: state.attempts.filter((attempt) => attempt.success).length,
+    skips: state.skips,
     history: [...state.attempts],
   };
 }

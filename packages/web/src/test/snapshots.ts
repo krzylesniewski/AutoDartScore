@@ -39,8 +39,19 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
 }
 
 // Liczniki wynikają z historii, tak jak wymaga schemat.
-export function checkoutSession(history: readonly CheckoutAttempt[] = [], overrides: Partial<Pick<CheckoutSession, 'range' | 'target'>> = {}): CheckoutSession {
-  return { range: '2-50', target: 40, attempts: history.length, successes: history.filter((attempt) => attempt.success).length, history: [...history], ...overrides };
+export function checkoutSession(
+  history: readonly CheckoutAttempt[] = [],
+  overrides: Partial<Pick<CheckoutSession, 'range' | 'target' | 'skips'>> = {},
+): CheckoutSession {
+  return {
+    range: '2-50',
+    target: 40,
+    attempts: history.length,
+    successes: history.filter((attempt) => attempt.success).length,
+    skips: 0,
+    history: [...history],
+    ...overrides,
+  };
 }
 
 // Kolejne próby z podanych wyników, na celach 2, 3, 4 i dalej.

@@ -20,9 +20,9 @@ describe('setupLine', () => {
   });
 
   it('describes checkout practice with its range', () => {
-    expect(setupLine({ ...INITIAL_SETUP, type: 'practice', practiceMode: 'checkouts' })).toBe('Końcówki · 2-50 · Jedna tura na końcówkę, udało się albo nie');
+    expect(setupLine({ ...INITIAL_SETUP, type: 'practice', practiceMode: 'checkouts' })).toBe('Końcówki · 2-50 · Po pudle ta sama końcówka, nowa po trafieniu albo pominięciu');
     expect(setupLine({ ...INITIAL_SETUP, type: 'practice', practiceMode: 'checkouts', checkoutRange: '51-100' })).toBe(
-      'Końcówki · 51-100 · Jedna tura na końcówkę, udało się albo nie',
+      'Końcówki · 51-100 · Po pudle ta sama końcówka, nowa po trafieniu albo pominięciu',
     );
   });
 });

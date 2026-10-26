@@ -21,11 +21,13 @@ export function checkoutPracticeName(session: CheckoutSession | null): string {
 
 export interface CheckoutControls {
   readonly results: boolean;
+  readonly skip: boolean;
   readonly undo: boolean;
 }
 
-// Wynik próby wymaga połączenia, bo cel losuje serwer. Cofnij potrzebuje próby do cofnięcia.
+// Wynik próby i nowa końcówka wymagają połączenia, bo cel losuje serwer. Cofnij potrzebuje próby albo pominięcia do cofnięcia.
 export function checkoutControls(game: Pick<MatchSnapshot, 'status' | 'checkouts'>, connected: boolean): CheckoutControls {
   const inProgress = game.status === 'in_progress';
-  return { results: inProgress && connected, undo: inProgress && (game.checkouts?.attempts ?? 0) > 0 };
+  const steps = (game.checkouts?.attempts ?? 0) + (game.checkouts?.skips ?? 0);
+  return { results: inProgress && connected, skip: inProgress && connected, undo: inProgress && steps > 0 };
 }

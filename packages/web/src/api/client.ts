@@ -152,3 +152,7 @@ export function postCheckoutAttempt(matchId: string, success: boolean): Promise<
   const body: CheckoutAttemptRequest = { success };
   return request(`/matches/${encodeURIComponent(matchId)}/checkout-attempts`, MatchSnapshot, postJson(body));
 }
+
+export function postCheckoutSkip(matchId: string): Promise<MatchSnapshot> {
+  return request(`/matches/${encodeURIComponent(matchId)}/checkout-skips`, MatchSnapshot, { method: 'POST' });
+}

@@ -914,6 +914,82 @@ describe('checkout practice', () => {
     expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
   });
 
+  describe('Nowa końcówka', () => {
+    const skipUrl = `/api/matches/${MATCH_ID}/checkout-skips`;
+    const skippedTried = checkoutPractice(checkoutSession(checkoutHistory([true]), { target: 77, range: '51-100', skips: 1 }), { id: MATCH_ID, eventSeq: 3 });
+    const skippedFresh = checkoutPractice(checkoutSession([], { target: 77, range: '51-100', skips: 1 }), { id: MATCH_ID, eventSeq: 2 });
+
+    function recentRows(): string[] {
+      const recent = screen.getByRole('region', { name: 'Ostatnie próby' });
+      return within(recent)
+        .queryAllByRole('listitem')
+        .map((row) => row.textContent ?? '');
+    }
+
+    it('posts once without a body on a click and on N', async () => {
+      respond = async () => json(201, skippedFresh);
+      connect(fresh);
+      tap('Nowa końcówka');
+      await vi.waitFor(() => expect(calls).toHaveLength(1));
+      await flush();
+      fireEvent.keyDown(window, { key: 'n' });
+      await vi.waitFor(() => expect(calls).toHaveLength(2));
+      await flush();
+      expect(calls).toEqual([
+        { url: skipUrl, body: undefined },
+        { url: skipUrl, body: undefined },
+      ]);
+    });
+
+    it('sends one request for a double click', async () => {
+      const pending: (() => void)[] = [];
+      respond = () => new Promise((resolve) => pending.push(() => resolve(json(201, skippedFresh))));
+      connect(fresh);
+      tap('Nowa końcówka');
+      tap('Nowa końcówka');
+      fireEvent.keyDown(window, { key: 'N' });
+      await vi.waitFor(() => expect(calls).toHaveLength(1));
+      pending.shift()?.();
+      await flush();
+      await flush();
+      expect(calls).toEqual([{ url: skipUrl, body: undefined }]);
+    });
+
+    it('shows the new target and keeps the counter and the recent attempts', async () => {
+      respond = async () => json(201, skippedTried);
+      connect(tried);
+      const card = screen.getByRole('region', { name: 'Końcówka' });
+      expect(within(card).getByText('1 z 1 · 100%')).toBeTruthy();
+      const rowsBefore = recentRows();
+      expect(rowsBefore).toHaveLength(1);
+
+      tap('Nowa końcówka');
+      expect(await within(card).findByText('77')).toBeTruthy();
+      expect(within(card).getByText('1 z 1 · 100%')).toBeTruthy();
+      expect(recentRows()).toEqual(rowsBefore);
+    });
+
+    it('enables Cofnij after a skip with no attempts', async () => {
+      respond = async (call) => (call.url.endsWith('/undo') ? json(200, { undoneThrowId: null, state: { ...fresh, eventSeq: 3 } }) : json(201, skippedFresh));
+      connect(fresh);
+      const undoButton = screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement;
+      expect(undoButton.disabled).toBe(true);
+      tap('Nowa końcówka');
+      await vi.waitFor(() => expect(undoButton.disabled).toBe(false));
+      expect(within(screen.getByRole('region', { name: 'Końcówka' })).getByText('0 z 0 · —')).toBeTruthy();
+      tap('Cofnij');
+      await vi.waitFor(() => expect(calls).toHaveLength(2));
+      expect(calls[1]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+    });
+
+    it('shows a failed skip', async () => {
+      respond = async () => json(500, { error: 'internal', message: 'boom' });
+      connect(fresh);
+      tap('Nowa końcówka');
+      expect(await screen.findByText('Nie udało się wylosować nowej końcówki')).toBeTruthy();
+    });
+  });
+
   it('prevents the default action of a handled key', () => {
     connect(fresh);
     const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
@@ -939,7 +1015,7 @@ describe('checkout practice', () => {
 
   it('leaves every key to the browser once the session has ended', async () => {
     connect(endedState);
-    for (const key of ['Enter', '1', '0', 'Backspace']) {
+    for (const key of ['Enter', '1', '0', 'n', 'Backspace']) {
       expect(pressKey(key).defaultPrevented).toBe(false);
     }
     await flush();
@@ -950,7 +1026,7 @@ describe('checkout practice', () => {
     const ws = connect(tried);
     ws.serverClose(1006);
     expect(screen.getByText('Brak połączenia z serwerem. Łączę ponownie…')).toBeTruthy();
-    for (const key of ['Enter', '1', '0', 'Backspace']) {
+    for (const key of ['Enter', '1', '0', 'n', 'Backspace']) {
       expect(pressKey(key).defaultPrevented).toBe(false);
     }
     await flush();
@@ -963,6 +1039,8 @@ describe('checkout practice', () => {
     fireEvent.keyDown(window, { key: '1', ctrlKey: true });
     fireEvent.keyDown(window, { key: '0', metaKey: true });
     fireEvent.keyDown(window, { key: 'Enter', altKey: true });
+    fireEvent.keyDown(window, { key: 'n', repeat: true });
+    fireEvent.keyDown(window, { key: 'N', ctrlKey: true });
     fireEvent.keyDown(window, { key: 'Backspace' });
     await flush();
     expect(calls).toEqual([]);
@@ -971,7 +1049,7 @@ describe('checkout practice', () => {
   it('sends nothing while the end practice dialog is open', async () => {
     connect(tried);
     tap('Zakończ trening');
-    for (const key of ['Enter', '1', '0', 'Backspace']) {
+    for (const key of ['Enter', '1', '0', 'n', 'Backspace']) {
       fireEvent.keyDown(window, { key });
     }
     await flush();

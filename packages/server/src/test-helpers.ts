@@ -96,6 +96,10 @@ export function checkoutAttempt(app: FastifyInstance, matchId: string, success: 
   return app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-attempts`, payload: { success } });
 }
 
+export function checkoutSkip(app: FastifyInstance, matchId: string) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-skips` });
+}
+
 export function abandon(app: FastifyInstance, matchId: string, payload: object) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/abandon`, payload });
 }

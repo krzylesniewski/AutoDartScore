@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Insertable, Kysely, Selectable } from 'kysely';
+import type { CheckoutRule } from '@autoscore/engine';
 import type { CheckoutRange, CreatePlayerRequest, MatchType, Player, PracticeMode, ThrowRecord, UpdatePlayerRequest } from '@autoscore/schema';
 import type { Database, MatchEventsTable, MatchesTable, PlayerChangesTable, PlayersTable, ThrowsTable } from '../db/database.js';
 import { playerNameTaken } from '../errors.js';
@@ -19,6 +20,7 @@ export interface StoredMatch {
   readonly countsToStats: boolean;
   readonly checkoutRange: CheckoutRange | null;
   readonly checkoutSeed: number | null; // nie wychodzi poza serwer
+  readonly checkoutRule: CheckoutRule | null; // nie wychodzi poza serwer
   readonly createdAt: string;
   readonly players: readonly Player[]; // w kolejności position
 }
@@ -30,7 +32,7 @@ export type LogEntry =
   | { readonly seq: number; readonly type: 'match_abandoned'; readonly playerId: string; readonly reason: string | null; readonly createdAt: string }
   | { readonly seq: number; readonly type: 'match_resumed' | 'practice_ended'; readonly createdAt: string }
   | { readonly seq: number; readonly type: 'checkout_attempt'; readonly success: boolean; readonly createdAt: string }
-  | { readonly seq: number; readonly type: 'checkout_attempt_undone'; readonly createdAt: string };
+  | { readonly seq: number; readonly type: 'checkout_attempt_undone' | 'checkout_skipped' | 'checkout_skip_undone'; readonly createdAt: string };
 
 export interface MatchLog {
   readonly entries: readonly LogEntry[];
@@ -61,6 +63,8 @@ export interface Store {
   appendPracticeEnd(matchId: string): Promise<number>;
   appendCheckoutAttempt(matchId: string, success: boolean): Promise<number>;
   appendCheckoutUndo(matchId: string): Promise<number>;
+  appendCheckoutSkip(matchId: string): Promise<number>;
+  appendCheckoutSkipUndo(matchId: string): Promise<number>;
 }
 
 function now(): string {
@@ -118,6 +122,7 @@ function toMatch(row: Selectable<MatchesTable>, players: readonly Player[]): Sto
     countsToStats: row.counts_to_stats === 1,
     checkoutRange: row.checkout_range as CheckoutRange | null,
     checkoutSeed: row.checkout_seed,
+    checkoutRule: row.checkout_rule as CheckoutRule | null,
     createdAt: row.created_at,
     players,
   };
@@ -140,6 +145,8 @@ function toLogEntry(row: Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'th
     case 'match_resumed':
     case 'practice_ended':
     case 'checkout_attempt_undone':
+    case 'checkout_skipped':
+    case 'checkout_skip_undone':
       return { seq, type, createdAt };
     case 'checkout_attempt':
       if (row.success === null) {
@@ -317,6 +324,7 @@ export function createStore(db: Kysely<Database>): Store {
             counts_to_stats: match.countsToStats ? 1 : 0,
             checkout_range: match.checkoutRange,
             checkout_seed: match.checkoutSeed,
+            checkout_rule: match.checkoutRule,
             created_at: now(),
           })
           .execute();
@@ -429,6 +437,14 @@ export function createStore(db: Kysely<Database>): Store {
 
     appendCheckoutUndo(matchId) {
       return appendLifecycle(matchId, { type: 'checkout_attempt_undone' });
+    },
+
+    appendCheckoutSkip(matchId) {
+      return appendLifecycle(matchId, { type: 'checkout_skipped' });
+    },
+
+    appendCheckoutSkipUndo(matchId) {
+      return appendLifecycle(matchId, { type: 'checkout_skip_undone' });
     },
   };
 }
