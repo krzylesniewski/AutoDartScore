@@ -603,7 +603,8 @@ prs:
     priority: 60
     effort: { brief: high, implement: high, verify: high }
     changeset: none
-    scope: ['packages/engine/**', 'packages/schema/**', 'packages/server/**']
+    # Nowe pole snapshotu wymaga poprawki danych testowych frontu; README opisuje nowy tryb i endpoint.
+    scope: ['packages/engine/**', 'packages/schema/**', 'packages/server/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
     briefTags: [p46-p47]
 
   - id: P47
