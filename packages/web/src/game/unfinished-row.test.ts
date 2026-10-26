@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { player, snapshot } from '../test/snapshots';
+import { checkoutHistory, checkoutPractice, checkoutSession, player, snapshot } from '../test/snapshots';
 import { unfinishedRow } from './unfinished-row';
 
 describe('unfinishedRow', () => {
@@ -46,5 +46,16 @@ describe('unfinishedRow', () => {
       freeRun: { dartsThrown: 22, totalPoints: 500, average: 68.18 },
     });
     expect(unfinishedRow(game)).toEqual({ title: 'Trening: Free run', detail: 'Anna · 22 rzutki', state: '68,18' });
+  });
+
+  it('shows the successes, attempts and percent of checkout practice', () => {
+    const results = [true, true, false, true, false, true, false, true, false, true, true, false];
+    const game = checkoutPractice(checkoutSession(checkoutHistory(results), { range: '2-50' }));
+    expect(unfinishedRow(game)).toEqual({ title: 'Trening: Końcówki 2-50', detail: 'Anna · 7/12', state: '58%' });
+  });
+
+  it('shows 0/0 and no percent before the first checkout attempt', () => {
+    const game = checkoutPractice(checkoutSession([], { range: '51-100' }));
+    expect(unfinishedRow(game)).toEqual({ title: 'Trening: Końcówki 51-100', detail: 'Anna · 0/0', state: '—' });
   });
 });

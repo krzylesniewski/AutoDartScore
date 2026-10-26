@@ -74,8 +74,9 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
           {pl.statusAbandoned}
         </span>
       )}
-      {/* Od lg kolejka stoi nad zegarem, bo w jednym wierszu pasek nie mieści się przy 1024 px. */}
-      {state && !state.finished && (
+      {/* Od lg kolejka stoi nad zegarem, bo w jednym wierszu pasek nie mieści się przy 1024 px.
+          Trening końcówek nie ma kolejek, a zegar stałby na 0:00, bo serwer nie podaje legStartedAt. */}
+      {state && !state.finished && state.practiceMode !== 'checkouts' && (
         <div className="flex items-center gap-2 font-display text-(length:--text-button) font-semibold whitespace-nowrap tabular-nums sm:gap-3 lg:order-2 lg:flex-col lg:items-start lg:gap-0 lg:text-[16px] lg:leading-tight xl:text-(length:--text-button)">
           {state.round !== null && <Round round={state.round} />}
           <LegClock state={state} />
@@ -155,7 +156,7 @@ function chips(state: MatchSnapshot): string[] {
     labels.push(pl.typeCasual);
   }
   if (state.type === 'practice') {
-    labels.push(state.practiceMode === 'solo_501' ? pl.solo501 : pl.freeRun);
+    labels.push(...practiceChips(state));
   }
   if (state.type !== 'practice' && state.startingScore !== null) {
     labels.push(String(state.startingScore));
@@ -167,4 +168,15 @@ function chips(state: MatchSnapshot): string[] {
     labels.push(pl.bestOfOption(state.legsToWin * 2 - 1));
   }
   return labels;
+}
+
+function practiceChips(state: MatchSnapshot): string[] {
+  switch (state.practiceMode) {
+    case 'solo_501':
+      return [pl.solo501];
+    case 'checkouts':
+      return state.checkouts ? [pl.checkoutPractice, state.checkouts.range] : [pl.checkoutPractice];
+    default:
+      return [pl.freeRun];
+  }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { listItem, player } from '../test/snapshots';
+import { checkoutHistory, checkoutSession, listItem, player } from '../test/snapshots';
 import { historyRow } from './history-row';
 
 const now = new Date(2026, 9, 18, 21, 0);
@@ -62,6 +62,34 @@ describe('historyRow', () => {
       updatedAt: new Date(2026, 9, 17, 19, 0).toISOString(),
     });
     expect(historyRow(game, now)).toEqual({ type: 'Trening · Free run', result: 'Anna · 12 rzutek · średnia 45,00', status: 'ended', statusLabel: 'Zakończony', date: 'wczoraj' });
+  });
+
+  it('gives the successes, attempts and percent of ended checkout practice', () => {
+    const results = [true, true, false, true, false, true, false, true, false, true, true, false];
+    const game = listItem({
+      type: 'practice',
+      practiceMode: 'checkouts',
+      startingScore: null,
+      legsToWin: null,
+      status: 'ended',
+      players: [player('p1', 'Anna', { remaining: null })],
+      checkouts: checkoutSession(checkoutHistory(results), { range: '2-50' }),
+      endedAt: '2026-10-17T19:00:00.000Z',
+      updatedAt: new Date(2026, 9, 17, 19, 0).toISOString(),
+    });
+    expect(historyRow(game, now)).toEqual({ type: 'Trening · Końcówki 2-50', result: 'Anna · 7/12 · 58%', status: 'ended', statusLabel: 'Zakończony', date: 'wczoraj' });
+  });
+
+  it('gives 0/0 and no percent before the first checkout attempt', () => {
+    const game = listItem({
+      type: 'practice',
+      practiceMode: 'checkouts',
+      startingScore: null,
+      legsToWin: null,
+      players: [player('p1', 'Anna', { remaining: null })],
+      checkouts: checkoutSession([], { range: '2-50' }),
+    });
+    expect(historyRow(game, now)).toMatchObject({ type: 'Trening · Końcówki 2-50', result: 'Anna · 0/0 · —' });
   });
 
   it('marks a game in progress', () => {

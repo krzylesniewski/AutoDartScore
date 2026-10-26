@@ -160,6 +160,7 @@ export function HomeScreen() {
           onStartingScoreChange={(startingScore) => setSetup((current) => ({ ...current, startingScore }))}
           onBestOfChange={(bestOf) => setSetup((current) => ({ ...current, bestOf }))}
           onPracticeModeChange={(practiceMode) => setSetup((current) => ({ ...current, practiceMode }))}
+          onCheckoutRangeChange={(checkoutRange) => setSetup((current) => ({ ...current, checkoutRange }))}
           onNewPlayer={() => setCreatingPlayer(true)}
         />
         <div className="flex shrink-0 flex-col gap-4 lg:min-h-0 lg:w-85 xl:w-110">

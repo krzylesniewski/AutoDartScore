@@ -133,8 +133,10 @@ interface CheckoutHintProps {
 }
 
 const checkoutCard = `flex flex-1 flex-col items-end justify-center gap-1 lg:grid lg:h-20 lg:grid-cols-[minmax(0,1fr)_auto] lg:content-center lg:items-center lg:gap-x-4 lg:gap-y-0 lg:px-5 ${ownCard}`;
-const checkoutChip =
-  'rounded-(--radius-chip) bg-(--color-accent) px-3 py-1 font-display text-[clamp(28px,8cqi,44px)] leading-none font-bold whitespace-nowrap text-(--color-on-accent) lg:col-start-2 lg:row-start-1 lg:px-5';
+// Akcentowy chip z trasą zamknięcia, wspólny z treningiem końcówek.
+export const ROUTE_CHIP =
+  'rounded-(--radius-chip) bg-(--color-accent) px-3 py-1 font-display text-[clamp(28px,8cqi,44px)] leading-none font-bold whitespace-nowrap text-(--color-on-accent) lg:px-5';
+const checkoutChip = `${ROUTE_CHIP} lg:col-start-2 lg:row-start-1`;
 
 function CheckoutHint({ state, onCheckout, disabled }: CheckoutHintProps) {
   const player = state.players.find((candidate) => candidate.id === state.currentPlayerId);

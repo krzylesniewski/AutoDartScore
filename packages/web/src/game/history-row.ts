@@ -1,6 +1,7 @@
 import type { MatchListItem } from '@autoscore/schema';
 import { pl } from '../i18n/pl';
 import { formatActivity } from './activity-date';
+import { checkoutPracticeName, formatCheckoutPercent } from './checkout-practice';
 import { formatAverage } from './format-stat';
 
 export type HistoryStatus = 'finished' | 'in_progress' | 'abandoned' | 'ended';
@@ -13,7 +14,7 @@ export interface HistoryRow {
   readonly date: string;
 }
 
-type Game = Pick<MatchListItem, 'type' | 'practiceMode' | 'startingScore' | 'status' | 'players' | 'winnerId' | 'placements' | 'freeRun' | 'updatedAt'>;
+type Game = Pick<MatchListItem, 'type' | 'practiceMode' | 'startingScore' | 'status' | 'players' | 'winnerId' | 'placements' | 'freeRun' | 'checkouts' | 'updatedAt'>;
 
 function typeLabel(game: Game): string {
   const startingScore = game.startingScore ?? 0;
@@ -22,6 +23,9 @@ function typeLabel(game: Game): string {
   }
   if (game.type === 'casual') {
     return pl.historyTypeCasual(startingScore);
+  }
+  if (game.practiceMode === 'checkouts') {
+    return pl.historyTypePractice(checkoutPracticeName(game.checkouts));
   }
   return pl.historyTypePractice(game.practiceMode === 'solo_501' ? pl.solo501 : pl.freeRun);
 }
@@ -47,6 +51,10 @@ function result(game: Game): string {
   }
   if (game.practiceMode === 'solo_501') {
     return first?.name ?? '';
+  }
+  if (game.practiceMode === 'checkouts') {
+    const counts = { attempts: game.checkouts?.attempts ?? 0, successes: game.checkouts?.successes ?? 0 };
+    return pl.checkoutResult(first?.name ?? '', counts.successes, counts.attempts, formatCheckoutPercent(counts));
   }
   return pl.freeRunResult(first?.name ?? '', game.freeRun?.dartsThrown ?? 0, formatAverage(game.freeRun?.average ?? null));
 }

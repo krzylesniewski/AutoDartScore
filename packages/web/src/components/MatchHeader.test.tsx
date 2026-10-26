@@ -1,7 +1,7 @@
 import type { MatchSnapshot } from '@autoscore/schema';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { casual, player, snapshot } from '../test/snapshots';
+import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot } from '../test/snapshots';
 import { MatchHeader } from './MatchHeader';
 
 describe('MatchHeader', () => {
@@ -34,6 +34,31 @@ describe('MatchHeader', () => {
     render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
     expect(screen.getByText('Free run')).toBeTruthy();
     expect(screen.queryByText('Double-out')).toBeNull();
+  });
+
+  it('shows Końcówki and the range without Double-out, round or clock in checkout practice', () => {
+    const state = checkoutPractice(checkoutSession([], { range: '51-100' }), { startedAt: '2026-10-21T18:00:00.000Z' });
+    render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+    const chips = screen.getAllByRole('listitem').map((chip) => chip.textContent);
+    expect(chips).toEqual(['Końcówki', '51-100']);
+    expect(screen.queryByText('Double-out')).toBeNull();
+    expect(screen.queryByText(/^Kolejka/)).toBeNull();
+    expect(screen.queryByRole('timer')).toBeNull();
+  });
+
+  it('offers Zakończ trening in checkout practice only after the first attempt', () => {
+    const onEndPractice = vi.fn();
+    const { unmount } = render(
+      <MatchHeader state={checkoutPractice()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={onEndPractice} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
+    unmount();
+
+    const tried = checkoutPractice(checkoutSession(checkoutHistory([false])));
+    render(<MatchHeader state={tried} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} onEndPractice={onEndPractice} />);
+    expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Zakończ trening' }));
+    expect(onEndPractice).toHaveBeenCalled();
   });
 
   it('keeps the voice toggle without a state', () => {

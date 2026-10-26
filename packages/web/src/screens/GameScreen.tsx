@@ -5,6 +5,8 @@ import { useMatch } from '../api/use-match';
 import { useMatchSummary } from '../api/use-match-summary';
 import { useAnnouncer } from '../audio/use-announcer';
 import { AbandonDialog } from '../components/AbandonDialog';
+import { CheckoutActions, CheckoutRecentAttempts, CheckoutTargetCard } from '../components/CheckoutPracticePanel';
+import { CheckoutPracticeSummary } from '../components/CheckoutPracticeSummary';
 import { EndPracticeDialog } from '../components/EndPracticeDialog';
 import { EventBanner } from '../components/EventBanner';
 import { Keypad } from '../components/Keypad';
@@ -15,7 +17,9 @@ import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
 import { LockIcon, WarningIcon } from '../components/icons';
+import { useCheckoutShortcuts } from '../components/use-checkout-shortcuts';
 import { canEndPractice } from '../game/can-end-practice';
+import { checkoutControls } from '../game/checkout-practice';
 import { checkoutRoute } from '../game/checkout-route';
 import { formatCountdown } from '../game/undo-window';
 import { useUndoWindow } from '../game/use-undo-window';
@@ -28,15 +32,46 @@ const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
-  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice } = useMatch(matchId, audio.onLiveMessage);
+  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt } = useMatch(
+    matchId,
+    audio.onLiveMessage,
+  );
   // Zabawa i trening potrzebują podsumowania dopiero po końcu gry. Free run nigdy się nie kończy.
   const stats = useMatchSummary(matchId, state?.eventSeq ?? null, state !== null && (state.type === 'match' || state.finished));
-  const frequentHits = useFrequentHits(state && !state.finished ? state.currentPlayerId : null);
+  const checkoutMode = state?.practiceMode === 'checkouts';
+  // Trening końcówek nie ma klawiatury, więc podpowiedzi trafień są zbędne.
+  const frequentHits = useFrequentHits(state && !state.finished && !checkoutMode ? state.currentPlayerId : null);
   const [abandoning, setAbandoning] = useState(false);
   const closeDialog = useCallback(() => setAbandoning(false), []);
   const [ending, setEnding] = useState(false);
   const closeEndDialog = useCallback(() => setEnding(false), []);
   const undoWindow = useUndoWindow(state);
+  const checkouts = checkoutMode ? state.checkouts : null;
+  const controls = state ? checkoutControls(state, connection === 'open') : { results: false, undo: false };
+
+  // Jak w enterCheckout: w trakcie komendy widoczny cel jest nieaktualny, więc skrót niczego nie wysyła.
+  function recordAttempt(success: boolean): void {
+    if (busy || !controls.results) {
+      return;
+    }
+    sendCheckoutAttempt(success);
+  }
+
+  function undoAttempt(): void {
+    if (busy || !controls.undo) {
+      return;
+    }
+    sendUndo();
+  }
+
+  // Jak skróty klawiatury rzutek: bez połączenia i po końcu sesji klawisze zostają dla przeglądarki.
+  useCheckoutShortcuts({
+    enabled: checkoutMode && controls.results,
+    undoEnabled: controls.undo,
+    onSuccess: () => recordAttempt(true),
+    onFailure: () => recordAttempt(false),
+    onUndo: undoAttempt,
+  });
 
   if (notFound) {
     return (
@@ -121,9 +156,10 @@ export function GameScreen({ matchId }: { matchId: string }) {
           <div className="flex flex-col gap-4">
             {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
             {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
+            {checkouts && <CheckoutRecentAttempts session={checkouts} />}
           </div>
           <div className="contents lg:relative lg:flex lg:flex-col lg:gap-3">
-            {state && (
+            {state && !checkoutMode && (
               <TurnPanel
                 state={state}
                 lastTurn={lastTurn}
@@ -134,6 +170,13 @@ export function GameScreen({ matchId }: { matchId: string }) {
                 onCheckout={enterCheckout}
                 checkoutDisabled={keypadDisabled}
               />
+            )}
+            {checkouts && !ended && <CheckoutTargetCard session={checkouts} />}
+            {/* Od lg komunikat o końcu treningu leży na górze prawej kolumny, więc podsumowanie zaczyna się pod nim. */}
+            {checkouts && ended && (
+              <div className="lg:mt-15">
+                <CheckoutPracticeSummary session={checkouts} />
+              </div>
             )}
             {/* TurnPanel zostaje po końcu gry, żeby Cofnij poprawiło źle wpisaną zwycięską rzutkę. */}
             {state?.finished && <MatchSummaryPanel state={state} summary={stats.summary} error={stats.error} />}
@@ -160,7 +203,16 @@ export function GameScreen({ matchId }: { matchId: string }) {
                   </Notice>
                 )}
               </div>
-              {!state?.finished && (
+              {checkouts && !ended && (
+                <CheckoutActions
+                  resultsDisabled={!controls.results}
+                  undoDisabled={!controls.undo}
+                  busy={busy}
+                  onResult={recordAttempt}
+                  onUndo={undoAttempt}
+                />
+              )}
+              {!state?.finished && !checkoutMode && (
                 <Keypad
                   onHit={sendHit}
                   onRestMiss={sendRestMiss}

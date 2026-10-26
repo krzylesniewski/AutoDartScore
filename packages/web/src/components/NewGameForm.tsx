@@ -1,4 +1,4 @@
-import type { BestOf, MatchType, Player, PracticeMode, StartingScore } from '@autoscore/schema';
+import type { BestOf, CheckoutRange, MatchType, Player, PracticeMode, StartingScore } from '@autoscore/schema';
 import { useId, type ReactNode } from 'react';
 import { PLAYER_COUNT, type GameSetup } from '../game/game-setup';
 import { pl } from '../i18n/pl';
@@ -14,7 +14,10 @@ const TYPES: readonly { value: MatchType; label: string; description: string; Ic
 const PRACTICE_MODES: readonly { value: PracticeMode; label: string }[] = [
   { value: 'free_run', label: pl.freeRun },
   { value: 'solo_501', label: pl.solo501 },
+  { value: 'checkouts', label: pl.checkoutPractice },
 ];
+
+const CHECKOUT_RANGES: readonly CheckoutRange[] = ['2-50', '51-100'];
 
 const STARTING_SCORES: readonly StartingScore[] = [301, 501, 701];
 const BEST_OF: readonly BestOf[] = [1, 3, 5];
@@ -32,6 +35,7 @@ export interface NewGameFormProps {
   onStartingScoreChange(value: StartingScore): void;
   onBestOfChange(value: BestOf): void;
   onPracticeModeChange(value: PracticeMode): void;
+  onCheckoutRangeChange(value: CheckoutRange): void;
   onNewPlayer(): void;
 }
 
@@ -132,6 +136,15 @@ export function NewGameForm(props: NewGameFormProps) {
             {PRACTICE_MODES.map((option) => (
               <Segment key={option.value} selected={setup.practiceMode === option.value} onSelect={() => props.onPracticeModeChange(option.value)}>
                 {option.label}
+              </Segment>
+            ))}
+          </Segmented>
+        )}
+        {setup.type === 'practice' && setup.practiceMode === 'checkouts' && (
+          <Segmented legend={pl.checkoutRange} description={pl.checkoutRangeHint}>
+            {CHECKOUT_RANGES.map((value) => (
+              <Segment key={value} selected={setup.checkoutRange === value} onSelect={() => props.onCheckoutRangeChange(value)}>
+                {value}
               </Segment>
             ))}
           </Segmented>
