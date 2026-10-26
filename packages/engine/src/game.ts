@@ -1,5 +1,7 @@
 import type { Hit, MatchType, PracticeMode } from '@autoscore/schema';
 import { applyCasualThrow, createCasualMatch, replayCasualMatch, type CasualMatchConfig, type CasualMatchState } from './casual-match.js';
+import { applyCheckoutAttempt, createCheckouts, replayCheckouts, type CheckoutsConfig, type CheckoutsState } from './checkouts.js';
+import { EngineError } from './errors.js';
 import { applyFreeRunThrow, createFreeRun, replayFreeRun, type FreeRunConfig, type FreeRunState } from './free-run.js';
 import { applySolo501Throw, createSolo501, replaySolo501, type Solo501Config, type Solo501State } from './solo-501.js';
 import {
@@ -18,18 +20,25 @@ type Casual = Extract<MatchType, 'casual'>;
 type Practice = Extract<MatchType, 'practice'>;
 type Solo501 = Extract<PracticeMode, 'solo_501'>;
 type FreeRun = Extract<PracticeMode, 'free_run'>;
+type Checkouts = Extract<PracticeMode, 'checkouts'>;
 
 export type GameConfig =
   | (X01MatchConfig & { readonly type: Match })
   | (CasualMatchConfig & { readonly type: Casual })
   | (Solo501Config & { readonly type: Practice; readonly practiceMode: Solo501 })
-  | (FreeRunConfig & { readonly type: Practice; readonly practiceMode: FreeRun });
+  | (FreeRunConfig & { readonly type: Practice; readonly practiceMode: FreeRun })
+  | (CheckoutsConfig & { readonly type: Practice; readonly practiceMode: Checkouts });
 
 export type GameState =
   | { readonly type: Match; readonly state: X01MatchState }
   | { readonly type: Casual; readonly state: CasualMatchState }
   | { readonly type: Practice; readonly practiceMode: Solo501; readonly state: Solo501State }
-  | { readonly type: Practice; readonly practiceMode: FreeRun; readonly state: FreeRunState };
+  | { readonly type: Practice; readonly practiceMode: FreeRun; readonly state: FreeRunState }
+  | { readonly type: Practice; readonly practiceMode: Checkouts; readonly state: CheckoutsState };
+
+function wrongMode(message: string): EngineError {
+  return new EngineError('wrong_mode', message);
+}
 
 export function createGame(config: GameConfig): GameState {
   switch (config.type) {
@@ -38,9 +47,14 @@ export function createGame(config: GameConfig): GameState {
     case 'casual':
       return { type: config.type, state: createCasualMatch(config) };
     case 'practice':
-      return config.practiceMode === 'solo_501'
-        ? { type: config.type, practiceMode: config.practiceMode, state: createSolo501(config) }
-        : { type: config.type, practiceMode: config.practiceMode, state: createFreeRun(config) };
+      switch (config.practiceMode) {
+        case 'solo_501':
+          return { type: config.type, practiceMode: config.practiceMode, state: createSolo501(config) };
+        case 'free_run':
+          return { type: config.type, practiceMode: config.practiceMode, state: createFreeRun(config) };
+        case 'checkouts':
+          return { type: config.type, practiceMode: config.practiceMode, state: createCheckouts(config) };
+      }
   }
 }
 
@@ -54,18 +68,39 @@ export function applyGameThrow(game: GameState, hit: Hit): ApplyResult<GameState
       const { state, events } = applyCasualThrow(game.state, hit);
       return { state: { ...game, state }, events };
     }
-    case 'practice': {
-      if (game.practiceMode === 'solo_501') {
-        const { state, events } = applySolo501Throw(game.state, hit);
-        return { state: { ...game, state }, events };
+    case 'practice':
+      switch (game.practiceMode) {
+        case 'solo_501': {
+          const { state, events } = applySolo501Throw(game.state, hit);
+          return { state: { ...game, state }, events };
+        }
+        case 'free_run': {
+          const { state, events } = applyFreeRunThrow(game.state, hit);
+          return { state: { ...game, state }, events };
+        }
+        case 'checkouts':
+          throw wrongMode('Checkout practice takes attempts, not throws');
       }
-      const { state, events } = applyFreeRunThrow(game.state, hit);
-      return { state: { ...game, state }, events };
-    }
   }
 }
 
-export function replayGame(config: GameConfig, hits: readonly Hit[]): ApplyResult<GameState> {
+export function applyGameCheckoutAttempt(game: GameState, success: boolean): ApplyResult<GameState> {
+  if (game.type !== 'practice' || game.practiceMode !== 'checkouts') {
+    throw wrongMode('Only checkout practice takes attempts');
+  }
+  const { state, events } = applyCheckoutAttempt(game.state, success);
+  return { state: { ...game, state }, events };
+}
+
+// Trening checkoutów odtwarza się z wyników prób, każdy inny tryb z trafień.
+export function replayGame(config: GameConfig, hits: readonly Hit[], checkoutResults: readonly boolean[] = []): ApplyResult<GameState> {
+  const checkouts = config.type === 'practice' && config.practiceMode === 'checkouts';
+  if (checkouts && hits.length > 0) {
+    throw wrongMode('Checkout practice takes attempts, not throws');
+  }
+  if (!checkouts && checkoutResults.length > 0) {
+    throw wrongMode('Only checkout practice takes attempts');
+  }
   switch (config.type) {
     case 'match': {
       const { state, events } = replayX01Match(config, hits);
@@ -75,14 +110,21 @@ export function replayGame(config: GameConfig, hits: readonly Hit[]): ApplyResul
       const { state, events } = replayCasualMatch(config, hits);
       return { state: { type: config.type, state }, events };
     }
-    case 'practice': {
-      if (config.practiceMode === 'solo_501') {
-        const { state, events } = replaySolo501(config, hits);
-        return { state: { type: config.type, practiceMode: config.practiceMode, state }, events };
+    case 'practice':
+      switch (config.practiceMode) {
+        case 'solo_501': {
+          const { state, events } = replaySolo501(config, hits);
+          return { state: { type: config.type, practiceMode: config.practiceMode, state }, events };
+        }
+        case 'free_run': {
+          const { state, events } = replayFreeRun(config, hits);
+          return { state: { type: config.type, practiceMode: config.practiceMode, state }, events };
+        }
+        case 'checkouts': {
+          const { state, events } = replayCheckouts(config, checkoutResults);
+          return { state: { type: config.type, practiceMode: config.practiceMode, state }, events };
+        }
       }
-      const { state, events } = replayFreeRun(config, hits);
-      return { state: { type: config.type, practiceMode: config.practiceMode, state }, events };
-    }
   }
 }
 
@@ -93,12 +135,30 @@ export function isGameFinished(game: GameState): boolean {
     case 'casual':
       return game.state.finished;
     case 'practice':
-      return game.practiceMode === 'solo_501' && game.state.finished;
+      switch (game.practiceMode) {
+        case 'solo_501':
+          return game.state.finished;
+        case 'free_run':
+        case 'checkouts':
+          return false;
+      }
   }
 }
 
 export function countsToStats(config: GameConfig): boolean {
-  return !(config.type === 'practice' && config.practiceMode === 'free_run');
+  switch (config.type) {
+    case 'match':
+    case 'casual':
+      return true;
+    case 'practice':
+      switch (config.practiceMode) {
+        case 'solo_501':
+          return true;
+        case 'free_run':
+        case 'checkouts':
+          return false;
+      }
+  }
 }
 
 // Kolejka rzucającego w bieżącym legu, liczona od 1. W Solo 501 jest jeden gracz i jeden leg, więc turnIndex to już licznik jego tur.
@@ -112,7 +172,13 @@ export function currentRound(game: GameState): number | null {
     case 'casual':
       return (game.state.turnsInLeg[game.state.currentPlayerIndex] ?? 0) + 1;
     case 'practice':
-      return game.practiceMode === 'solo_501' ? game.state.turnIndex + 1 : null;
+      switch (game.practiceMode) {
+        case 'solo_501':
+          return game.state.turnIndex + 1;
+        case 'free_run':
+        case 'checkouts':
+          return null;
+      }
   }
 }
 
@@ -123,6 +189,12 @@ export function dartsInCurrentLeg(game: GameState): number {
     case 'casual':
       return game.state.dartsThrownInLeg.reduce((sum, darts) => sum + darts, 0);
     case 'practice':
-      return game.state.dartsThrown;
+      switch (game.practiceMode) {
+        case 'solo_501':
+        case 'free_run':
+          return game.state.dartsThrown;
+        case 'checkouts':
+          return 0;
+      }
   }
 }

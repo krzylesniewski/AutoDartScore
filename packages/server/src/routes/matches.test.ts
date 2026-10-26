@@ -48,6 +48,7 @@ describe('POST /matches', () => {
       winnerId: null,
       placements: [],
       freeRun: null,
+      checkouts: null,
     });
     expect(state.players.map((player) => [player.id, player.remaining, player.legsWon, player.place])).toEqual([
       [anna, 301, 0, null],
@@ -71,6 +72,7 @@ describe('POST /matches', () => {
       startingScore: null,
       countsToStats: false,
       freeRun: { dartsThrown: 0, totalPoints: 0, average: 0 },
+      checkouts: null,
     });
     expect(remaining(freeRun)).toEqual([null]);
   });
@@ -294,6 +296,7 @@ describe('practice', () => {
       turnIndex: 3,
       currentDarts: [{ segment: 20, multiplier: 1 }],
       freeRun: { dartsThrown: 10, totalPoints: 200, average: 60 },
+      checkouts: null,
     });
     expect(state.players[0]).toMatchObject({ remaining: null, dartsThrownInLeg: 10 });
   });

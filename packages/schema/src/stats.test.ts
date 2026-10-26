@@ -92,6 +92,7 @@ describe('MatchSummary', () => {
         },
       ],
       lastLegProgress: null,
+      checkouts: null,
     };
     expect(MatchSummary.parse(summary)).toEqual(summary);
   });
@@ -111,7 +112,7 @@ describe('MatchSummary', () => {
       { playerId: 'p2', points: [] },
     ],
   };
-  const unfinished = { matchId: 'm1', type: 'casual', finished: false, eventSeq: 6, players: [{ ...empty, playerId: 'p1' }], legs: [] };
+  const unfinished = { matchId: 'm1', type: 'casual', finished: false, eventSeq: 6, players: [{ ...empty, playerId: 'p1' }], legs: [], checkouts: null };
 
   it('parses a summary with the progress of the last leg', () => {
     const summary = { ...unfinished, lastLegProgress: progress };
@@ -126,6 +127,21 @@ describe('MatchSummary', () => {
     expect(MatchSummary.safeParse(unfinished).success).toBe(false);
   });
 
+  it('parses a checkout practice summary', () => {
+    const checkouts = { range: '2-50', target: 17, attempts: 2, successes: 1, history: [{ target: 40, success: true }, { target: 3, success: false }] };
+    const summary = { ...unfinished, type: 'practice', lastLegProgress: null, checkouts };
+    expect(MatchSummary.parse(summary)).toEqual(summary);
+  });
+
+  it('requires checkouts', () => {
+    expect(MatchSummary.safeParse({ ...unfinished, lastLegProgress: null, checkouts: undefined }).success).toBe(false);
+  });
+
+  it('rejects a checkout session with inconsistent counts', () => {
+    const checkouts = { range: '2-50', target: 17, attempts: 1, successes: 1, history: [{ target: 40, success: false }] };
+    expect(MatchSummary.safeParse({ ...unfinished, lastLegProgress: null, checkouts }).success).toBe(false);
+  });
+
   it('rejects dart 0 and a negative remaining score', () => {
     expect(LegProgressPoint.safeParse({ dart: 0, remaining: 301, bust: false }).success).toBe(false);
     expect(LegProgressPoint.safeParse({ dart: 1, remaining: -1, bust: false }).success).toBe(false);
@@ -137,7 +153,7 @@ describe('MatchSummary', () => {
   });
 
   it('rejects an unknown game type', () => {
-    expect(MatchSummary.safeParse({ matchId: 'm1', type: 'cricket', finished: false, eventSeq: 0, players: [], legs: [], lastLegProgress: null }).success).toBe(false);
+    expect(MatchSummary.safeParse({ matchId: 'm1', type: 'cricket', finished: false, eventSeq: 0, players: [], legs: [], lastLegProgress: null, checkouts: null }).success).toBe(false);
   });
 });
 

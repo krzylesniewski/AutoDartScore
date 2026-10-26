@@ -1,4 +1,4 @@
-export type EngineErrorCode = 'invalid_config' | 'invalid_hit' | 'match_finished';
+export type EngineErrorCode = 'invalid_config' | 'invalid_hit' | 'match_finished' | 'wrong_mode';
 
 export class EngineError extends Error {
   constructor(

@@ -45,6 +45,7 @@ function item(overrides: Partial<MatchListItem>): MatchListItem {
     legIndex: 0,
     players: [player('p1', 'Anna', { remaining: 321, legsWon: 0 }), player('p2', 'Bartek', { remaining: 140, legsWon: 0 })],
     freeRun: null,
+    checkouts: null,
     winnerId: null,
     placements: [],
     endedAt: null,

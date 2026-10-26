@@ -1,12 +1,23 @@
-import { currentRound, freeRunAverage, isGameFinished, SOLO_501_STARTING_SCORE, type GameState } from '@autoscore/engine';
-import type { Abandonment, MatchSnapshot, MatchSnapshotPlayer, MatchStatus, Player } from '@autoscore/schema';
+import { currentRound, freeRunAverage, isGameFinished, SOLO_501_STARTING_SCORE, type CheckoutsState, type GameState } from '@autoscore/engine';
+import type { Abandonment, CheckoutSession, MatchSnapshot, MatchSnapshotPlayer, MatchStatus, Player } from '@autoscore/schema';
 import type { GameTimes } from './replay.js';
 import type { StoredMatch } from './store/store.js';
 
-type Progress = Pick<MatchSnapshot, 'currentPlayerId' | 'legIndex' | 'turnIndex' | 'currentDarts' | 'winnerId' | 'placements' | 'freeRun'> & {
+type Progress = Pick<MatchSnapshot, 'currentPlayerId' | 'legIndex' | 'turnIndex' | 'currentDarts' | 'winnerId' | 'placements' | 'freeRun' | 'checkouts'> & {
   readonly startingScore: number | null;
   readonly perPlayer: (player: Player, index: number) => Pick<MatchSnapshotPlayer, 'remaining' | 'legsWon' | 'place' | 'dartsThrownInLeg'>;
 };
+
+// Bez ziarna, żeby klient nie mógł wyliczyć kolejnych celów.
+export function checkoutSession(state: CheckoutsState): CheckoutSession {
+  return {
+    range: state.config.range,
+    target: state.target,
+    attempts: state.attempts.length,
+    successes: state.attempts.filter((attempt) => attempt.success).length,
+    history: [...state.attempts],
+  };
+}
 
 function progress(game: GameState, finished: boolean): Progress {
   switch (game.type) {
@@ -22,6 +33,7 @@ function progress(game: GameState, finished: boolean): Progress {
         winnerId: state.winnerIndex === null ? null : playerIds[state.winnerIndex],
         placements: [],
         freeRun: null,
+        checkouts: null,
         perPlayer: (_player, index) => ({
           remaining: state.remaining[index] ?? null,
           legsWon: state.legsWon[index] ?? null,
@@ -41,6 +53,7 @@ function progress(game: GameState, finished: boolean): Progress {
         winnerId: null,
         placements: [...state.placements],
         freeRun: null,
+        checkouts: null,
         perPlayer: (player, index) => ({
           remaining: state.remaining[index] ?? null,
           legsWon: null,
@@ -49,34 +62,54 @@ function progress(game: GameState, finished: boolean): Progress {
         }),
       };
     }
-    case 'practice': {
-      if (game.practiceMode === 'solo_501') {
-        const { state } = game;
-        return {
-          startingScore: SOLO_501_STARTING_SCORE,
-          currentPlayerId: finished ? null : state.config.playerId,
-          legIndex: 0,
-          turnIndex: state.turnIndex,
-          currentDarts: [...state.currentDarts],
-          winnerId: finished ? state.config.playerId : null,
-          placements: [],
-          freeRun: null,
-          perPlayer: () => ({ remaining: state.remaining, legsWon: null, place: null, dartsThrownInLeg: state.dartsThrown }),
-        };
+    case 'practice':
+      switch (game.practiceMode) {
+        case 'solo_501': {
+          const { state } = game;
+          return {
+            startingScore: SOLO_501_STARTING_SCORE,
+            currentPlayerId: finished ? null : state.config.playerId,
+            legIndex: 0,
+            turnIndex: state.turnIndex,
+            currentDarts: [...state.currentDarts],
+            winnerId: finished ? state.config.playerId : null,
+            placements: [],
+            freeRun: null,
+            checkouts: null,
+            perPlayer: () => ({ remaining: state.remaining, legsWon: null, place: null, dartsThrownInLeg: state.dartsThrown }),
+          };
+        }
+        case 'free_run': {
+          const { state } = game;
+          return {
+            startingScore: null,
+            currentPlayerId: state.config.playerId,
+            legIndex: 0,
+            turnIndex: state.turnIndex,
+            currentDarts: [...state.currentDarts],
+            winnerId: null,
+            placements: [],
+            freeRun: { dartsThrown: state.dartsThrown, totalPoints: state.totalPoints, average: freeRunAverage(state) },
+            checkouts: null,
+            perPlayer: () => ({ remaining: null, legsWon: null, place: null, dartsThrownInLeg: state.dartsThrown }),
+          };
+        }
+        case 'checkouts': {
+          const { state } = game;
+          return {
+            startingScore: null,
+            currentPlayerId: state.config.playerId,
+            legIndex: 0,
+            turnIndex: state.attempts.length,
+            currentDarts: [],
+            winnerId: null,
+            placements: [],
+            freeRun: null,
+            checkouts: checkoutSession(state),
+            perPlayer: () => ({ remaining: null, legsWon: null, place: null, dartsThrownInLeg: 0 }),
+          };
+        }
       }
-      const { state } = game;
-      return {
-        startingScore: null,
-        currentPlayerId: state.config.playerId,
-        legIndex: 0,
-        turnIndex: state.turnIndex,
-        currentDarts: [...state.currentDarts],
-        winnerId: null,
-        placements: [],
-        freeRun: { dartsThrown: state.dartsThrown, totalPoints: state.totalPoints, average: freeRunAverage(state) },
-        perPlayer: () => ({ remaining: null, legsWon: null, place: null, dartsThrownInLeg: state.dartsThrown }),
-      };
-    }
   }
 }
 

@@ -1,17 +1,22 @@
 import type { Hit } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import {
+  applyGameCheckoutAttempt,
   applyGameThrow,
+  checkoutTarget,
   countsToStats,
   createCasualMatch,
+  createCheckouts,
   createFreeRun,
   createGame,
   createSolo501,
   createX01Match,
   currentRound,
   dartsInCurrentLeg,
+  EngineError,
   isGameFinished,
   replayCasualMatch,
+  replayCheckouts,
   replayFreeRun,
   replayGame,
   replaySolo501,
@@ -29,10 +34,22 @@ const matchConfig = { type: 'match', playerIds: ['anna', 'bartek'], startingScor
 const casualConfig = { type: 'casual', playerIds: ['anna', 'bartek'], startingScore: 301, firstPlayerIndex: 0 } satisfies GameConfig;
 const solo501Config = { type: 'practice', practiceMode: 'solo_501', playerId: 'anna' } satisfies GameConfig;
 const freeRunConfig = { type: 'practice', practiceMode: 'free_run', playerId: 'anna' } satisfies GameConfig;
+const checkoutsConfig = { type: 'practice', practiceMode: 'checkouts', playerId: 'anna', range: '2-50', seed: 7 } satisfies GameConfig;
 
 // anna kończy leg 301 w drugiej turze (180, potem 121), bartek pudłuje.
 const leg301 = [T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(17), D(5)];
 const nineDarter = [T(20), T(20), T(20), T(20), T(20), T(20), T(20), T(19), D(12)];
+
+function expectEngineError(fn: () => unknown, code: EngineError['code']) {
+  try {
+    fn();
+  } catch (error) {
+    expect(error).toBeInstanceOf(EngineError);
+    expect((error as EngineError).code).toBe(code);
+    return;
+  }
+  throw new Error(`Expected EngineError ${code}`);
+}
 
 function throwAll(game: GameState, hits: readonly Hit[]) {
   let current = game;
@@ -51,6 +68,7 @@ describe('countsToStats', () => {
     ['casual', casualConfig, true],
     ['solo_501', solo501Config, true],
     ['free_run', freeRunConfig, false],
+    ['checkouts', checkoutsConfig, false],
   ])('%s counts to stats: %s', (_name, config: GameConfig, expected) => {
     expect(countsToStats(config)).toBe(expected);
   });
@@ -62,6 +80,7 @@ describe('createGame', () => {
     expect(createGame(casualConfig)).toEqual({ type: 'casual', state: createCasualMatch(casualConfig) });
     expect(createGame(solo501Config)).toEqual({ type: 'practice', practiceMode: 'solo_501', state: createSolo501(solo501Config) });
     expect(createGame(freeRunConfig)).toEqual({ type: 'practice', practiceMode: 'free_run', state: createFreeRun(freeRunConfig) });
+    expect(createGame(checkoutsConfig)).toEqual({ type: 'practice', practiceMode: 'checkouts', state: createCheckouts(checkoutsConfig) });
   });
 
   it('keeps the full config in the mode state', () => {
@@ -89,6 +108,50 @@ describe('replayGame', () => {
       state: { type: 'practice', practiceMode: 'free_run', state: freeRun.state },
       events: freeRun.events,
     });
+
+    const results = [true, false, true];
+    const checkouts = replayCheckouts(checkoutsConfig, results);
+    expect(replayGame(checkoutsConfig, [], results)).toEqual({
+      state: { type: 'practice', practiceMode: 'checkouts', state: checkouts.state },
+      events: checkouts.events,
+    });
+  });
+
+  it('rejects throws in checkout practice', () => {
+    expectEngineError(() => replayGame(checkoutsConfig, [T(20)]), 'wrong_mode');
+  });
+
+  it.each([
+    ['match', matchConfig],
+    ['casual', casualConfig],
+    ['solo_501', solo501Config],
+    ['free_run', freeRunConfig],
+  ])('rejects checkout attempts in %s', (_name, config: GameConfig) => {
+    expectEngineError(() => replayGame(config, [], [true]), 'wrong_mode');
+    expect(replayGame(config, [], [])).toEqual(replayGame(config, []));
+  });
+});
+
+describe('applyGameCheckoutAttempt', () => {
+  it('keeps the checkouts wrapper and matches the replay', () => {
+    let game = createGame(checkoutsConfig);
+    for (const success of [false, true]) {
+      const result = applyGameCheckoutAttempt(game, success);
+      expect(result.events).toEqual([]);
+      game = result.state;
+    }
+    expect(game).toMatchObject({ type: 'practice', practiceMode: 'checkouts' });
+    expect(game).toEqual(replayGame(checkoutsConfig, [], [false, true]).state);
+    expect(game.state).toMatchObject({ target: checkoutTarget(7, '2-50', 2) });
+  });
+
+  it.each([
+    ['match', matchConfig],
+    ['casual', casualConfig],
+    ['solo_501', solo501Config],
+    ['free_run', freeRunConfig],
+  ])('rejects an attempt in %s', (_name, config: GameConfig) => {
+    expectEngineError(() => applyGameCheckoutAttempt(createGame(config), true), 'wrong_mode');
   });
 });
 
@@ -103,6 +166,10 @@ describe('applyGameThrow', () => {
     const stepwise = throwAll(createGame(config), hits);
     expect(stepwise.state).toMatchObject(wrapper);
     expect(stepwise).toEqual(replayGame(config, hits));
+  });
+
+  it('rejects a throw in checkout practice', () => {
+    expectEngineError(() => applyGameThrow(createGame(checkoutsConfig), T(20)), 'wrong_mode');
   });
 });
 
@@ -126,12 +193,22 @@ describe('isGameFinished', () => {
     expect(isGameFinished(createGame(freeRunConfig))).toBe(false);
     expect(isGameFinished(replayGame(freeRunConfig, nineDarter).state)).toBe(false);
   });
+
+  it('never ends checkout practice', () => {
+    expect(isGameFinished(createGame(checkoutsConfig))).toBe(false);
+    expect(isGameFinished(replayGame(checkoutsConfig, [], Array.from({ length: 50 }, () => true)).state)).toBe(false);
+  });
 });
 
 describe('currentRound', () => {
   it('is null in Free run', () => {
     expect(currentRound(createGame(freeRunConfig))).toBeNull();
     expect(currentRound(replayGame(freeRunConfig, nineDarter).state)).toBeNull();
+  });
+
+  it('is null in checkout practice', () => {
+    expect(currentRound(createGame(checkoutsConfig))).toBeNull();
+    expect(currentRound(replayGame(checkoutsConfig, [], [true, false]).state)).toBeNull();
   });
 
   it.each([
@@ -169,5 +246,10 @@ describe('dartsInCurrentLeg', () => {
     expect(dartsInCurrentLeg(createGame(solo501Config))).toBe(0);
     expect(dartsInCurrentLeg(replayGame(solo501Config, nineDarter).state)).toBe(9);
     expect(dartsInCurrentLeg(replayGame(freeRunConfig, nineDarter.slice(0, 4)).state)).toBe(4);
+  });
+
+  it('is 0 in checkout practice', () => {
+    expect(dartsInCurrentLeg(createGame(checkoutsConfig))).toBe(0);
+    expect(dartsInCurrentLeg(replayGame(checkoutsConfig, [], [true, false, true]).state)).toBe(0);
   });
 });

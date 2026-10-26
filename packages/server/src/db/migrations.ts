@@ -123,6 +123,14 @@ const migrations: Record<string, Migration> = {
       await db.schema.alterTable('player_changes').addColumn('color', 'integer').execute();
     },
   },
+  // Zakres i ziarno losowania celów treningu checkoutów oraz wynik próby w logu. Stare wiersze dostają null.
+  '0005_checkout_practice': {
+    async up(db: Kysely<unknown>) {
+      await db.schema.alterTable('matches').addColumn('checkout_range', 'text').execute();
+      await db.schema.alterTable('matches').addColumn('checkout_seed', 'integer').execute();
+      await db.schema.alterTable('match_events').addColumn('success', 'integer').execute();
+    },
+  },
 };
 
 const provider: MigrationProvider = {

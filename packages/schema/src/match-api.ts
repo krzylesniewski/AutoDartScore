@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { DomainEvent } from './domain-events.js';
 import { Hit, HitSource, Multiplier, Segment } from './hit.js';
-import { BestOf, MatchStatus, MatchType, Placement, PracticeMode, StartingScore } from './match.js';
+import { BestOf, CheckoutAttempt, CheckoutRange, MatchStatus, MatchType, Placement, PracticeMode, StartingScore } from './match.js';
 import { PlayerColor } from './player.js';
 
 const PlayerId = z.string().min(1);
@@ -24,11 +24,21 @@ export const CreateMatchRequest = z.discriminatedUnion('type', [
     playerIds: z.array(PlayerId).min(2).max(4).refine(distinct, distinctPlayers),
     startingScore: StartingScore.default(301),
   }),
-  z.object({
-    type: z.literal('practice'),
-    practiceMode: PracticeMode,
-    playerIds: z.tuple([PlayerId]),
-  }),
+  z
+    .object({
+      type: z.literal('practice'),
+      practiceMode: PracticeMode,
+      playerIds: z.tuple([PlayerId]),
+      checkoutRange: CheckoutRange.optional(),
+    })
+    .superRefine((request, ctx) => {
+      if (request.practiceMode === 'checkouts' && request.checkoutRange === undefined) {
+        ctx.addIssue({ code: 'custom', message: 'Checkout practice needs a checkout range', path: ['checkoutRange'] });
+      }
+      if (request.practiceMode !== 'checkouts' && request.checkoutRange !== undefined) {
+        ctx.addIssue({ code: 'custom', message: 'Only checkout practice takes a checkout range', path: ['checkoutRange'] });
+      }
+    }),
 ]);
 export type CreateMatchRequest = z.infer<typeof CreateMatchRequest>;
 
@@ -62,6 +72,27 @@ export const MatchSnapshotPlayer = z.object({
   dartsThrownInLeg: z.int().min(0),
 });
 export type MatchSnapshotPlayer = z.infer<typeof MatchSnapshotPlayer>;
+
+const CheckoutTarget = z.int().min(2).max(100);
+
+// Postęp treningu checkoutów. Ziarno losowania zostaje na serwerze.
+export const CheckoutSession = z
+  .object({
+    range: CheckoutRange,
+    target: CheckoutTarget, // bieżący cel, jeszcze bez próby
+    attempts: z.int().min(0),
+    successes: z.int().min(0),
+    history: z.array(CheckoutAttempt), // zakończone próby w kolejności
+  })
+  .refine((session) => session.attempts === session.history.length, {
+    message: 'Attempts must match the history length',
+    path: ['attempts'],
+  })
+  .refine((session) => session.successes === session.history.filter((attempt) => attempt.success).length, {
+    message: 'Successes must match the successful attempts in the history',
+    path: ['successes'],
+  });
+export type CheckoutSession = z.infer<typeof CheckoutSession>;
 
 export const Abandonment = z.object({
   playerId: PlayerId,
@@ -105,6 +136,7 @@ export const MatchSnapshot = z.object({
       average: z.number().min(0),
     })
     .nullable(),
+  checkouts: CheckoutSession.nullable(), // tylko w treningu checkoutów
 });
 export type MatchSnapshot = z.infer<typeof MatchSnapshot>;
 
@@ -122,6 +154,7 @@ export const MatchListItem = MatchSnapshot.pick({
   legIndex: true,
   players: true,
   freeRun: true,
+  checkouts: true,
   winnerId: true,
   placements: true,
   endedAt: true,
@@ -142,6 +175,11 @@ export const AbandonMatchRequest = z.object({
 });
 export type AbandonMatchRequest = z.infer<typeof AbandonMatchRequest>;
 
+export const CheckoutAttemptRequest = z.object({
+  success: z.boolean(),
+});
+export type CheckoutAttemptRequest = z.infer<typeof CheckoutAttemptRequest>;
+
 export const ThrowResult = z.object({
   throw: ThrowRecord,
   events: z.array(DomainEvent), // tylko zdarzenia wywołane tą rzutką
@@ -150,7 +188,7 @@ export const ThrowResult = z.object({
 export type ThrowResult = z.infer<typeof ThrowResult>;
 
 export const UndoResult = z.object({
-  undoneThrowId: z.string().min(1),
+  undoneThrowId: z.string().min(1).nullable(), // null, gdy cofnięto próbę checkoutu
   state: MatchSnapshot,
 });
 export type UndoResult = z.infer<typeof UndoResult>;

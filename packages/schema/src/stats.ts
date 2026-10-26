@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LegWon } from './domain-events.js';
 import { Hit, MISS_SEGMENT, Multiplier, Segment } from './hit.js';
+import { CheckoutSession } from './match-api.js';
 import { MatchType, StartingScore } from './match.js';
 import { PlayerColor } from './player.js';
 
@@ -87,6 +88,7 @@ export const MatchSummary = z.object({
   players: z.array(MatchSummaryPlayer), // w kolejności playerIds
   legs: z.array(MatchSummaryLeg), // jeden na leg_won, więc w zabawie lista jest pusta
   lastLegProgress: LegProgress.nullable(), // null w treningu i gdy ostatni leg nie ma jeszcze zamkniętej tury
+  checkouts: CheckoutSession.nullable(), // tylko w treningu checkoutów
 });
 export type MatchSummary = z.infer<typeof MatchSummary>;
 

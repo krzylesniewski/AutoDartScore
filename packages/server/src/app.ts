@@ -21,7 +21,7 @@ import { createStore } from './store/store.js';
 
 export interface AppOptions {
   readonly db: Kysely<Database>;
-  readonly random?: () => number; // losowanie, kto zaczyna. Domyślnie Math.random
+  readonly random?: () => number; // losowanie, kto zaczyna, i ziarna celów treningu checkoutów. Domyślnie Math.random
   readonly logger?: boolean;
   readonly auth?: AuthConfig | null;
   readonly corsOrigins?: readonly string[] | null;

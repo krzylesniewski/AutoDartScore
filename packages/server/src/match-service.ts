@@ -1,4 +1,4 @@
-import { applyGameThrow, countsToStats, createGame, isGameFinished } from '@autoscore/engine';
+import { applyGameThrow, countsToStats, createGame, isGameFinished, MAX_CHECKOUT_SEED } from '@autoscore/engine';
 import {
   HitEvent,
   type AbandonMatchRequest,
@@ -12,7 +12,18 @@ import {
 } from '@autoscore/schema';
 import { HttpError, invalidRequest, notFound } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
-import { abandonment, effectiveThrows, finishedAt, gameConfig, gameTimes, lastActivityAt, lastSeq, practiceEndedAt, replayMatch } from './replay.js';
+import {
+  abandonment,
+  effectiveCheckoutAttempts,
+  effectiveThrows,
+  finishedAt,
+  gameConfig,
+  gameTimes,
+  lastActivityAt,
+  lastSeq,
+  practiceEndedAt,
+  replayMatch,
+} from './replay.js';
 import type { SerialQueue } from './serial-queue.js';
 import { toSnapshot } from './snapshot.js';
 import type { NewMatch, Store, StoredMatch } from './store/store.js';
@@ -21,6 +32,7 @@ export interface MatchService {
   create(request: CreateMatchRequest): Promise<MatchSnapshot>;
   get(id: string): Promise<MatchSnapshot>;
   registerThrow(id: string, body: unknown): Promise<{ statusCode: 200 | 201; result: ThrowResult }>;
+  registerCheckoutAttempt(id: string, success: boolean): Promise<MatchSnapshot>;
   undo(id: string): Promise<UndoResult>;
   abandon(id: string, request: AbandonMatchRequest): Promise<MatchSnapshot>;
   resume(id: string): Promise<MatchSnapshot>;
@@ -52,10 +64,12 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
   async function load(match: StoredMatch) {
     const log = await store.loadLog(match.id);
     const throws = effectiveThrows(log);
-    const game = replayMatch(match, throws).state;
+    const attempts = effectiveCheckoutAttempts(log);
+    const game = replayMatch(match, throws, attempts).state;
     return {
       log,
       throws,
+      attempts,
       seq: lastSeq(log),
       game,
       finishedAt: finishedAt(game, throws),
@@ -87,6 +101,10 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     return new HttpError(409, 'match_locked', `Match ${id} is locked`);
   }
 
+  function isCheckouts(match: StoredMatch): boolean {
+    return match.type === 'practice' && match.practiceMode === 'checkouts';
+  }
+
   function publishState(id: string, state: MatchSnapshot): void {
     hub.publish(id, [{ type: 'state_updated', matchId: id, eventSeq: state.eventSeq, state }]);
   }
@@ -104,6 +122,8 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           startingScore: request.startingScore,
           legsToWin: (request.bestOf + 1) / 2,
           firstPlayerIndex: draw(request.playerIds.length),
+          checkoutRange: null,
+          checkoutSeed: null,
           playerIds: request.playerIds,
         };
       case 'casual':
@@ -113,17 +133,24 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           startingScore: request.startingScore,
           legsToWin: null,
           firstPlayerIndex: draw(request.playerIds.length),
+          checkoutRange: null,
+          checkoutSeed: null,
           playerIds: request.playerIds,
         };
-      case 'practice':
+      case 'practice': {
+        // Jedno losowanie na sesję. Kolejne cele silnik wylicza z ziarna, więc odtworzenie logu daje te same cele.
+        const checkouts = request.practiceMode === 'checkouts';
         return {
           type: request.type,
           practiceMode: request.practiceMode,
           startingScore: null,
           legsToWin: null,
           firstPlayerIndex: null,
+          checkoutRange: checkouts ? (request.checkoutRange ?? null) : null,
+          checkoutSeed: checkouts ? Math.min(Math.floor(random() * (MAX_CHECKOUT_SEED + 1)), MAX_CHECKOUT_SEED) : null,
           playerIds: request.playerIds,
         };
+      }
     }
   }
 
@@ -161,6 +188,9 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     registerThrow(id, body) {
       return queue(id, async () => {
         const match = await requireMatch(id);
+        if (isCheckouts(match)) {
+          throw new HttpError(409, 'throws_not_allowed', `Match ${id} is a checkout practice and takes attempts, not throws`);
+        }
         const parsed = HitEvent.safeParse(body);
         if (!parsed.success) {
           throw invalidRequest(parsed.error.issues);
@@ -213,15 +243,45 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
       });
     },
 
-    undo(id) {
+    registerCheckoutAttempt(id, success) {
       return queue(id, async () => {
         const match = await requireMatch(id);
-        const { log, throws, abandonment, endedAt, finishedAt: finishTime } = await load(match);
+        if (!isCheckouts(match)) {
+          throw new HttpError(409, 'not_checkouts', `Match ${id} is not a checkout practice`);
+        }
+        const { abandonment, endedAt } = await load(match);
         if (endedAt) {
           throw ended(id);
         }
         if (abandonment) {
           throw abandoned(id);
+        }
+        await store.appendCheckoutAttempt(id, success);
+        const state = await snapshot(match);
+        publishState(id, state);
+        return state;
+      });
+    },
+
+    undo(id) {
+      return queue(id, async () => {
+        const match = await requireMatch(id);
+        const { log, throws, attempts, abandonment, endedAt, finishedAt: finishTime } = await load(match);
+        if (endedAt) {
+          throw ended(id);
+        }
+        if (abandonment) {
+          throw abandoned(id);
+        }
+        // Cofnięcie próby przywraca jej cel jako bieżący, bo cel numer n zależy tylko od ziarna i n.
+        if (isCheckouts(match)) {
+          if (attempts.length === 0) {
+            throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no checkout attempt to undo`);
+          }
+          await store.appendCheckoutUndo(id);
+          const state = await snapshot(match);
+          publishState(id, state);
+          return { undoneThrowId: null, state };
         }
         // >=, żeby blokada 0 minut działała od razu, także w tej samej milisekundzie co rzutka kończąca grę.
         if (finishTime !== null && now() >= Date.parse(finishTime) + matchLockMs) {
@@ -292,7 +352,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (match.type !== 'practice') {
           throw new HttpError(409, 'not_practice', `Match ${id} is not a practice session`);
         }
-        const { game, throws, abandonment, endedAt } = await load(match);
+        const { game, throws, attempts, abandonment, endedAt } = await load(match);
         if (endedAt) {
           throw ended(id);
         }
@@ -302,7 +362,10 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (abandonment) {
           throw abandoned(id);
         }
-        if (throws.length === 0) {
+        if (isCheckouts(match) && attempts.length === 0) {
+          throw new HttpError(409, 'nothing_to_end', `Match ${id} has no checkout attempt yet`);
+        }
+        if (!isCheckouts(match) && throws.length === 0) {
           throw new HttpError(409, 'nothing_to_end', `Match ${id} has no throw yet`);
         }
         await store.appendPracticeEnd(id);
@@ -326,7 +389,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (query.status === 'unfinished' && (state.status === 'finished' || state.status === 'ended')) {
           continue;
         }
-        const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, currentPlayerId, legIndex, players, freeRun, winnerId, placements } = state;
+        const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements } = state;
         items.push({
           id,
           type,
@@ -340,6 +403,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           legIndex,
           players,
           freeRun,
+          checkouts,
           winnerId,
           placements,
           endedAt,

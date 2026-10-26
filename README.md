@@ -6,7 +6,7 @@ AUTO Score automatycznie liczy wynik w darcie. Dziś trafienia wpisuje się ręc
 
 Działa na `main`:
 
-- typy gier: mecz 1v1 (X01), zabawa dla 2-4 graczy z rankingiem miejsc, trening (Free run i Solo 501),
+- typy gier: mecz 1v1 (X01), zabawa dla 2-4 graczy z rankingiem miejsc, trening (Free run i Solo 501, a trening checkoutów na razie tylko przez API),
 - kreator nowej gry: typ gry, lista graczy, dodawanie gracza (imię, avatar emoji, kolor, gość), punkty startowe, liczba legów w meczu 1v1 i tryb treningu,
 - ekran gry: pasek wyników, trzy sloty rzutek, suma tury, podpowiedź zamknięcia, klawiatura (1-20, 25, Miss, S/D/T) i przycisk „Cofnij”,
 - stan na żywo przez WebSocket, z ponownym połączeniem po zerwaniu,
@@ -77,14 +77,15 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 | `POST` | `/matches` | Nowa gra (`CreateMatchRequest`, rodzaj w polu `type`). Odpowiedź 201 z `MatchSnapshot`. |
 | `GET` | `/matches/:id` | Bieżący stan gry (`MatchSnapshot`). |
 | `POST` | `/matches/:id/throws` | Rzutka (`HitEvent`). Odpowiedź 201 z `{ throw, events, state }`. |
-| `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki. Body jest ignorowane. Odpowiedź 200 z `{ undoneThrowId, state }`. W zakończonej grze działa do `editableUntil` ze stanu gry (`finishedAt` plus `AUTOSCORE_MATCH_LOCK_MINUTES`), potem daje 409 `match_locked`. |
+| `POST` | `/matches/:id/checkout-attempts` | Próba w treningu checkoutów (`CheckoutAttemptRequest`: `{ success }`). Odpowiedź 201 z `MatchSnapshot` z kolejnym celem w `checkouts`. Inna gra daje 409 `not_checkouts`, zakończony trening 409 `practice_ended`, a porzucony 409 `match_abandoned`. |
+| `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki. Body jest ignorowane. Odpowiedź 200 z `{ undoneThrowId, state }`. W zakończonej grze działa do `editableUntil` ze stanu gry (`finishedAt` plus `AUTOSCORE_MATCH_LOCK_MINUTES`), potem daje 409 `match_locked`. W treningu checkoutów cofa ostatnią próbę, przywraca jej cel i zwraca `undoneThrowId: null`. |
 | WebSocket | `/matches/:id/live` | Strumień stanu i zdarzeń jednej gry. |
 
 Rodzaje gry w `POST /matches`:
 
 - `match`: dokładnie 2 różnych graczy w `playerIds`, `startingScore` 301, 501 lub 701 (domyślnie 301), `bestOf` 1, 3 lub 5 (domyślnie 1),
 - `casual`: 2-4 różnych graczy i `startingScore` (domyślnie 301),
-- `practice`: `practiceMode` `free_run` albo `solo_501` i jeden gracz.
+- `practice`: `practiceMode` `free_run`, `solo_501` albo `checkouts` i jeden gracz. `checkouts` wymaga `checkoutRange` (`2-50` albo `51-100`), a inne tryby go nie przyjmują.
 
 ### Zdarzenie trafienia (`HitEvent`)
 
@@ -124,8 +125,10 @@ Każdy błąd ma postać `{ "error": "<kod>", "message": "<opis>" }` (`ApiError`
 | `match_mismatch` | 400 | `matchId` w body różni się od `:id` w adresie. |
 | `not_found` | 404 | Nieznana gra (GET, rzutka, cofnięcie) albo nieznana ścieżka. |
 | `match_finished` | 409 | Rzutka po końcu gry. |
+| `throws_not_allowed` | 409 | Rzutka w treningu checkoutów. Ten tryb przyjmuje tylko próby. |
+| `not_checkouts` | 409 | Próba checkoutu w grze, która nie jest treningiem checkoutów. |
 | `event_id_conflict` | 409 | `eventId` jest już użyty w innej grze. |
-| `nothing_to_undo` | 409 | W logu nie ma rzutki do cofnięcia. |
+| `nothing_to_undo` | 409 | W logu nie ma rzutki do cofnięcia, a w treningu checkoutów próby. |
 | `player_name_taken` | 409 | Imię zajęte przez innego zapisanego, niezarchiwizowanego gracza. Wielkość liter i nadmiarowe spacje się nie liczą. |
 | `match_locked` | 409 | Cofnięcie w zakończonej grze po `editableUntil`. Serwer nic nie zapisuje. |
 | `internal_error` | 500 | Nieoczekiwany błąd serwera. |
@@ -138,7 +141,7 @@ Adres bezpośredni: `ws://localhost:3000/matches/:id/live`. Przez proxy frontu: 
 
 - Po połączeniu serwer wysyła jedno `state_updated` z bieżącym stanem.
 - Po każdej nowej rzutce: `throw_registered`, potem zdarzenia domenowe, potem `state_updated`. Wszystkie mają ten sam `eventSeq`.
-- Po cofnięciu: `throw_undone`, potem `state_updated`.
+- Po cofnięciu: `throw_undone`, potem `state_updated`. W treningu checkoutów po próbie i po jej cofnięciu tylko `state_updated`.
 - Nieznana gra: serwer zamyka połączenie z kodem 4404.
 
 Zdarzenia domenowe: `turn_completed`, `bust`, `leg_won`, `match_won`, `player_finished`, `casual_finished`. Pełna unia wiadomości to `LiveMessage`.
@@ -214,7 +217,7 @@ CI uruchamia te same trzy checki: `test`, `typecheck` i `lint`.
 - Punkty startowe: 301, 501 lub 701 (domyślnie 301).
 - Mecz 1v1: best of 1, 3 lub 5 legów (domyślnie 1). Pierwszego rzucającego losuje serwer, kolejne legi zaczynają gracze na przemian.
 - Zabawa dla 2-4 graczy: kto zamknie leg, zajmuje kolejne miejsce i wypada z kolejki. Ostatni grający dostaje ostatnie miejsce.
-- Trening: Free run to swobodne rzucanie bez końca, które nie liczy się do statystyk. Solo 501 to zejście z 501 do zera na zasadach X01.
+- Trening: Free run to swobodne rzucanie bez końca, które nie liczy się do statystyk. Solo 501 to zejście z 501 do zera na zasadach X01. Trening checkoutów losuje cel z zakresu `2-50` albo `51-100`, nigdy ten sam dwa razy z rzędu. Gracz ma jedną próbę na cel i zgłasza, czy zamknął. Sesja nie liczy się do statystyk.
 
 Pełne zasady są w [CLAUDE.md](CLAUDE.md).
 

@@ -1,7 +1,8 @@
 import { isGameFinished, type GameState } from '@autoscore/engine';
 import type { DomainEvent, FrequentHitsResponse, HeadToHead, Hit, LegProgress, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
 import { HttpError, notFound } from './errors.js';
-import { effectiveThrows, lastActivityAt, lastSeq, replayMatch } from './replay.js';
+import { effectiveCheckoutAttempts, effectiveThrows, lastActivityAt, lastSeq, replayMatch } from './replay.js';
+import { checkoutSession } from './snapshot.js';
 import { completedPlayerLegs } from './stats/completed-legs.js';
 import { buildForm, type FormGame } from './stats/form.js';
 import { buildFrequentHits } from './stats/frequent-hits.js';
@@ -47,7 +48,7 @@ function lastLegProgress(game: GameState, playerIds: readonly string[], events: 
 export function createStatsService({ store }: Dependencies): StatsService {
   async function replayed(match: StoredMatch) {
     const log = await store.loadLog(match.id);
-    const { state, events } = replayMatch(match, effectiveThrows(log));
+    const { state, events } = replayMatch(match, effectiveThrows(log), effectiveCheckoutAttempts(log));
     const playerIds = match.players.map((player) => player.id);
     return {
       seq: lastSeq(log),
@@ -120,6 +121,7 @@ export function createStatsService({ store }: Dependencies): StatsService {
         players: playerIds.map((playerId) => ({ ...toStatLine(tally.players.get(playerId) ?? EMPTY_TOTALS), playerId })),
         legs: [...tally.legs],
         lastLegProgress: lastLegProgress(state, playerIds, events),
+        checkouts: state.type === 'practice' && state.practiceMode === 'checkouts' ? checkoutSession(state.state) : null,
       };
     },
 

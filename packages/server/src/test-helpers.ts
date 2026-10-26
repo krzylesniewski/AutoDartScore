@@ -92,6 +92,10 @@ export function undo(app: FastifyInstance, matchId: string) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/undo` });
 }
 
+export function checkoutAttempt(app: FastifyInstance, matchId: string, success: boolean) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-attempts`, payload: { success } });
+}
+
 export function abandon(app: FastifyInstance, matchId: string, payload: object) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/abandon`, payload });
 }
