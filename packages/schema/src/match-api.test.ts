@@ -3,6 +3,8 @@ import {
   AbandonMatchRequest,
   ApiError,
   BestOf,
+  CheckoutAttemptRequest,
+  CheckoutSession,
   CreateMatchRequest,
   HealthResponse,
   MatchListItem,
@@ -84,6 +86,27 @@ describe('CreateMatchRequest', () => {
     expect(CreateMatchRequest.safeParse(value).success).toBe(false);
   });
 
+  it.each(['2-50', '51-100'])('accepts checkout practice with the range %s', (checkoutRange) => {
+    const request = { type: 'practice', practiceMode: 'checkouts', playerIds: ['p1'], checkoutRange };
+    expect(CreateMatchRequest.parse(request)).toEqual(request);
+  });
+
+  it('rejects checkout practice without a range', () => {
+    const result = CreateMatchRequest.safeParse({ type: 'practice', practiceMode: 'checkouts', playerIds: ['p1'] });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([['checkoutRange']]);
+  });
+
+  it.each(['free_run', 'solo_501'])('rejects a checkout range in practice %s', (practiceMode) => {
+    const result = CreateMatchRequest.safeParse({ type: 'practice', practiceMode, playerIds: ['p1'], checkoutRange: '2-50' });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([['checkoutRange']]);
+  });
+
+  it('rejects an unknown checkout range', () => {
+    expect(CreateMatchRequest.safeParse({ type: 'practice', practiceMode: 'checkouts', playerIds: ['p1'], checkoutRange: '0-50' }).success).toBe(false);
+  });
+
   it.each([
     ['startingScore 401', { type: 'match', playerIds: ['p1', 'p2'], startingScore: 401 }],
     ['bestOf 2', { type: 'match', playerIds: ['p1', 'p2'], bestOf: 2 }],
@@ -139,7 +162,58 @@ const snapshot = {
   winnerId: null,
   placements: [],
   freeRun: null,
+  checkouts: null,
 };
+
+const checkoutSession = {
+  range: '51-100',
+  target: 81,
+  attempts: 2,
+  successes: 1,
+  history: [
+    { target: 100, success: false },
+    { target: 64, success: true },
+  ],
+};
+
+describe('CheckoutSession', () => {
+  it('accepts a session and one without attempts', () => {
+    expect(CheckoutSession.parse(checkoutSession)).toEqual(checkoutSession);
+    const fresh = { range: '2-50', target: 2, attempts: 0, successes: 0, history: [] };
+    expect(CheckoutSession.parse(fresh)).toEqual(fresh);
+  });
+
+  it.each([
+    ['more attempts than the history', { ...checkoutSession, attempts: 3 }],
+    ['fewer attempts than the history', { ...checkoutSession, attempts: 1 }],
+    ['more successes than in the history', { ...checkoutSession, successes: 2 }],
+    ['fewer successes than in the history', { ...checkoutSession, successes: 0 }],
+    ['an unknown range', { ...checkoutSession, range: '0-50' }],
+    ['target 1', { ...checkoutSession, target: 1 }],
+    ['target 101', { ...checkoutSession, target: 101 }],
+  ])('rejects %s', (_name, value) => {
+    expect(CheckoutSession.safeParse(value).success).toBe(false);
+  });
+
+  it('does not carry a seed', () => {
+    expect(CheckoutSession.parse({ ...checkoutSession, seed: 42 })).toEqual(checkoutSession);
+  });
+});
+
+describe('CheckoutAttemptRequest', () => {
+  it('accepts a success and a failure', () => {
+    expect(CheckoutAttemptRequest.parse({ success: true })).toEqual({ success: true });
+    expect(CheckoutAttemptRequest.parse({ success: false })).toEqual({ success: false });
+  });
+
+  it.each([
+    ['an empty body', {}],
+    ['a string', { success: 'true' }],
+    ['a number', { success: 1 }],
+  ])('rejects %s', (_name, value) => {
+    expect(CheckoutAttemptRequest.safeParse(value).success).toBe(false);
+  });
+});
 
 describe('ThrowRecord', () => {
   it('accepts a stored throw', () => {
@@ -169,6 +243,25 @@ describe('MatchSnapshot', () => {
       freeRun: { dartsThrown: 3, totalPoints: 100, average: 100 },
     };
     expect(MatchSnapshot.parse(freeRun)).toEqual(freeRun);
+  });
+
+  it('accepts a checkout practice snapshot', () => {
+    const checkouts = {
+      ...snapshot,
+      type: 'practice',
+      practiceMode: 'checkouts',
+      startingScore: null,
+      legsToWin: null,
+      countsToStats: false,
+      round: null,
+      startedAt: null,
+      legStartedAt: null,
+      turnIndex: 2,
+      currentDarts: [],
+      players: [{ id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 0 }],
+      checkouts: checkoutSession,
+    };
+    expect(MatchSnapshot.parse(checkouts)).toEqual(checkouts);
   });
 
   it('rejects a negative eventSeq', () => {
@@ -276,7 +369,7 @@ describe('AbandonMatchRequest', () => {
 
 describe('MatchListItem and MatchListQuery', () => {
   it('parses a list item', () => {
-    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, winnerId, placements, endedAt } = snapshot;
+    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements, endedAt } = snapshot;
     const item = {
       id,
       type,
@@ -290,6 +383,7 @@ describe('MatchListItem and MatchListQuery', () => {
       legIndex,
       players,
       freeRun,
+      checkouts,
       winnerId,
       placements,
       endedAt,
@@ -299,9 +393,34 @@ describe('MatchListItem and MatchListQuery', () => {
     expect(MatchListItem.safeParse({ ...item, updatedAt: undefined }).success).toBe(false);
   });
 
+  it('parses a checkout practice list item', () => {
+    const { id, createdAt, status, abandonment, legIndex, winnerId, placements, endedAt } = snapshot;
+    const item = {
+      id,
+      type: 'practice',
+      practiceMode: 'checkouts',
+      startingScore: null,
+      legsToWin: null,
+      createdAt,
+      status,
+      abandonment,
+      currentPlayerId: 'p1',
+      legIndex,
+      players: [{ id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 0 }],
+      freeRun: null,
+      checkouts: checkoutSession,
+      winnerId,
+      placements,
+      endedAt,
+      updatedAt: '2026-10-15T18:31:00.000Z',
+    };
+    expect(MatchListItem.parse(item)).toEqual(item);
+    expect(MatchListItem.safeParse({ ...item, checkouts: undefined }).success).toBe(false);
+  });
+
   it('requires the result fields', () => {
-    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, winnerId, placements, endedAt } = snapshot;
-    const item = { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, winnerId, placements, endedAt, updatedAt: '2026-10-15T18:31:00.000Z' };
+    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements, endedAt } = snapshot;
+    const item = { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements, endedAt, updatedAt: '2026-10-15T18:31:00.000Z' };
     expect(MatchListItem.safeParse({ ...item, winnerId: undefined }).success).toBe(false);
     expect(MatchListItem.safeParse({ ...item, placements: undefined }).success).toBe(false);
     expect(MatchListItem.safeParse({ ...item, endedAt: undefined }).success).toBe(false);
@@ -325,6 +444,11 @@ describe('ThrowResult and UndoResult', () => {
     const events = [{ type: 'turn_completed', playerId: 'p1', legIndex: 0, turnIndex: 0, darts: [{ segment: 20, multiplier: 3 }], total: 60, remaining: 241 }];
     expect(ThrowResult.parse({ throw: throwRecord, events, state: snapshot })).toEqual({ throw: throwRecord, events, state: snapshot });
     expect(UndoResult.parse({ undoneThrowId: 't1', state: snapshot })).toEqual({ undoneThrowId: 't1', state: snapshot });
+  });
+
+  it('accept an undo of a checkout attempt without a throw id', () => {
+    expect(UndoResult.parse({ undoneThrowId: null, state: snapshot })).toEqual({ undoneThrowId: null, state: snapshot });
+    expect(UndoResult.safeParse({ undoneThrowId: '', state: snapshot }).success).toBe(false);
   });
 });
 

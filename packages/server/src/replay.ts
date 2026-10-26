@@ -19,6 +19,19 @@ export function effectiveThrows(log: MatchLog): ThrowRecord[] {
   return throws;
 }
 
+// Wyniki prób checkoutu, które nadal się liczą: każde cofnięcie zdejmuje ostatnią z nich.
+export function effectiveCheckoutAttempts(log: MatchLog): boolean[] {
+  const attempts: boolean[] = [];
+  for (const entry of log.entries) {
+    if (entry.type === 'checkout_attempt') {
+      attempts.push(entry.success);
+    } else if (entry.type === 'checkout_attempt_undone' && attempts.pop() === undefined) {
+      throw new Error(`Corrupt log: checkout_attempt_undone at seq ${entry.seq} without an effective attempt`);
+    }
+  }
+  return attempts;
+}
+
 // Silnik odrzuca rzutki po końcu gry, więc ostatnia liczona rzutka zakończonej gry to ta, która ją zakończyła.
 export function finishedAt(game: GameState, throws: readonly ThrowRecord[]): string | null {
   return isGameFinished(game) ? (throws.at(-1)?.receivedAt ?? null) : null;
@@ -136,17 +149,29 @@ export function gameConfig(match: MatchSetup): GameConfig {
       };
     case 'practice': {
       const playerId = required(playerIds[0] ?? null, 'player 0', match.id);
-      return required(match.practiceMode, 'practice_mode', match.id) === 'solo_501'
-        ? { type: 'practice', practiceMode: 'solo_501', playerId }
-        : { type: 'practice', practiceMode: 'free_run', playerId };
+      const practiceMode = required(match.practiceMode, 'practice_mode', match.id);
+      switch (practiceMode) {
+        case 'solo_501':
+        case 'free_run':
+          return { type: 'practice', practiceMode, playerId };
+        case 'checkouts':
+          return {
+            type: 'practice',
+            practiceMode,
+            playerId,
+            range: required(match.checkoutRange, 'checkout_range', match.id),
+            seed: required(match.checkoutSeed, 'checkout_seed', match.id),
+          };
+      }
     }
   }
 }
 
 // Stan gry zawsze z odtworzenia logu, bez osobnej pamięci podręcznej stanu.
-export function replayMatch(match: StoredMatch, throws: readonly ThrowRecord[]): ApplyResult<GameState> {
+export function replayMatch(match: StoredMatch, throws: readonly ThrowRecord[], attempts: readonly boolean[] = []): ApplyResult<GameState> {
   return replayGame(
     gameConfig(match),
     throws.map(({ segment, multiplier }) => ({ segment, multiplier })),
+    attempts,
   );
 }

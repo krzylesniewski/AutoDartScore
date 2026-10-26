@@ -13,11 +13,16 @@ Kontrakt projektu: schematy Zod i typy TypeScript wspólne dla wszystkich pakiet
 
 Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (50 pkt, liczy się jako double), a 25×3 jest odrzucane.
 
-`match.ts`: `MatchType` (`match`, `casual`, `practice`), `PracticeMode` (`free_run`, `solo_501`), `StartingScore` (301, 501, 701), `BestOf` (1, 3, 5), `Placement`, `MatchStatus` (`in_progress`, `abandoned`, `ended`, `finished`).
+`match.ts`: `MatchType` (`match`, `casual`, `practice`), `PracticeMode` (`free_run`, `solo_501`, `checkouts`), `CheckoutRange` (`2-50`, `51-100`), `CheckoutAttempt` (`{ target, success }`), `StartingScore` (301, 501, 701), `BestOf` (1, 3, 5), `Placement`, `MatchStatus` (`in_progress`, `abandoned`, `ended`, `finished`).
 
 `player.ts`: `Player`, `CreatePlayerRequest`.
 
-`match-api.ts`: `CreateMatchRequest`, `ThrowRecord`, `MatchSnapshot`, `MatchSnapshotPlayer`, `Abandonment`, `AbandonMatchRequest`, `MatchListQuery`, `MatchListItem`, `ThrowResult`, `UndoResult`, `ApiError`, `HealthResponse`.
+`match-api.ts`: `CreateMatchRequest`, `ThrowRecord`, `MatchSnapshot`, `MatchSnapshotPlayer`, `CheckoutSession`, `Abandonment`, `AbandonMatchRequest`, `MatchListQuery`, `MatchListItem`, `CheckoutAttemptRequest`, `ThrowResult`, `UndoResult`, `ApiError`, `HealthResponse`.
+
+- `CreateMatchRequest` dla treningu `checkouts` wymaga `checkoutRange`, a dla innych trybów go odrzuca.
+- `CheckoutSession` to postęp treningu checkoutów: `range`, bieżący `target`, `attempts`, `successes` i `history` (zakończone próby w kolejności). Liczniki muszą zgadzać się z historią. Ziarna losowania nie ma w żadnej odpowiedzi.
+- `MatchSnapshot`, `MatchListItem` i `MatchSummary` mają pole `checkouts` z `CheckoutSession`, `null` poza treningiem checkoutów.
+- `UndoResult.undoneThrowId` jest `null`, gdy cofnięto próbę checkoutu.
 
 `domain-events.ts`: `DomainEvent`, unia zdarzeń `TurnCompleted`, `Bust`, `LegWon`, `MatchWon`, `PlayerFinished`, `CasualFinished`.
 

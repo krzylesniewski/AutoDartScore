@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Insertable, Kysely, Selectable } from 'kysely';
-import type { CreatePlayerRequest, MatchType, Player, PracticeMode, ThrowRecord, UpdatePlayerRequest } from '@autoscore/schema';
+import type { CheckoutRange, CreatePlayerRequest, MatchType, Player, PracticeMode, ThrowRecord, UpdatePlayerRequest } from '@autoscore/schema';
 import type { Database, MatchEventsTable, MatchesTable, PlayerChangesTable, PlayersTable, ThrowsTable } from '../db/database.js';
 import { playerNameTaken } from '../errors.js';
 import { defaultPlayerColor } from './player-color.js';
@@ -17,6 +17,8 @@ export interface StoredMatch {
   readonly legsToWin: number | null;
   readonly firstPlayerIndex: number | null;
   readonly countsToStats: boolean;
+  readonly checkoutRange: CheckoutRange | null;
+  readonly checkoutSeed: number | null; // nie wychodzi poza serwer
   readonly createdAt: string;
   readonly players: readonly Player[]; // w kolejności position
 }
@@ -26,7 +28,9 @@ export type NewMatch = Omit<StoredMatch, 'id' | 'createdAt' | 'players'> & { rea
 export type LogEntry =
   | { readonly seq: number; readonly type: 'throw' | 'undo'; readonly throwId: string; readonly createdAt: string }
   | { readonly seq: number; readonly type: 'match_abandoned'; readonly playerId: string; readonly reason: string | null; readonly createdAt: string }
-  | { readonly seq: number; readonly type: 'match_resumed' | 'practice_ended'; readonly createdAt: string };
+  | { readonly seq: number; readonly type: 'match_resumed' | 'practice_ended'; readonly createdAt: string }
+  | { readonly seq: number; readonly type: 'checkout_attempt'; readonly success: boolean; readonly createdAt: string }
+  | { readonly seq: number; readonly type: 'checkout_attempt_undone'; readonly createdAt: string };
 
 export interface MatchLog {
   readonly entries: readonly LogEntry[];
@@ -55,6 +59,8 @@ export interface Store {
   appendAbandon(matchId: string, playerId: string, reason: string | null): Promise<number>;
   appendResume(matchId: string): Promise<number>;
   appendPracticeEnd(matchId: string): Promise<number>;
+  appendCheckoutAttempt(matchId: string, success: boolean): Promise<number>;
+  appendCheckoutUndo(matchId: string): Promise<number>;
 }
 
 function now(): string {
@@ -110,12 +116,14 @@ function toMatch(row: Selectable<MatchesTable>, players: readonly Player[]): Sto
     legsToWin: row.legs_to_win,
     firstPlayerIndex: row.first_player_index,
     countsToStats: row.counts_to_stats === 1,
+    checkoutRange: row.checkout_range as CheckoutRange | null,
+    checkoutSeed: row.checkout_seed,
     createdAt: row.created_at,
     players,
   };
 }
 
-function toLogEntry(row: Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'throw_id' | 'player_id' | 'reason' | 'created_at'>): LogEntry {
+function toLogEntry(row: Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'throw_id' | 'player_id' | 'reason' | 'success' | 'created_at'>): LogEntry {
   const { seq, type, created_at: createdAt } = row;
   switch (type) {
     case 'throw':
@@ -131,7 +139,13 @@ function toLogEntry(row: Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'th
       return { seq, type, playerId: row.player_id, reason: row.reason, createdAt };
     case 'match_resumed':
     case 'practice_ended':
+    case 'checkout_attempt_undone':
       return { seq, type, createdAt };
+    case 'checkout_attempt':
+      if (row.success === null) {
+        throw new Error(`Corrupt log: checkout_attempt at seq ${seq} has no success`);
+      }
+      return { seq, type, success: row.success === 1, createdAt };
   }
 }
 
@@ -189,7 +203,7 @@ export function createStore(db: Kysely<Database>): Store {
     return withProfiles(rows);
   }
 
-  function appendLifecycle(matchId: string, entry: Pick<Insertable<MatchEventsTable>, 'type' | 'player_id' | 'reason'>): Promise<number> {
+  function appendLifecycle(matchId: string, entry: Pick<Insertable<MatchEventsTable>, 'type' | 'player_id' | 'reason' | 'success'>): Promise<number> {
     return db.transaction().execute(async (trx) => {
       const seq = await nextSeq(trx, matchId);
       await trx.insertInto('match_events').values({ match_id: matchId, seq, ...entry, created_at: now() }).execute();
@@ -301,6 +315,8 @@ export function createStore(db: Kysely<Database>): Store {
             legs_to_win: match.legsToWin,
             first_player_index: match.firstPlayerIndex,
             counts_to_stats: match.countsToStats ? 1 : 0,
+            checkout_range: match.checkoutRange,
+            checkout_seed: match.checkoutSeed,
             created_at: now(),
           })
           .execute();
@@ -346,7 +362,7 @@ export function createStore(db: Kysely<Database>): Store {
     async loadLog(matchId) {
       const entries = await db
         .selectFrom('match_events')
-        .select(['seq', 'type', 'throw_id', 'player_id', 'reason', 'created_at'])
+        .select(['seq', 'type', 'throw_id', 'player_id', 'reason', 'success', 'created_at'])
         .where('match_id', '=', matchId)
         .orderBy('seq')
         .execute();
@@ -405,6 +421,14 @@ export function createStore(db: Kysely<Database>): Store {
 
     appendPracticeEnd(matchId) {
       return appendLifecycle(matchId, { type: 'practice_ended' });
+    },
+
+    appendCheckoutAttempt(matchId, success) {
+      return appendLifecycle(matchId, { type: 'checkout_attempt', success: success ? 1 : 0 });
+    },
+
+    appendCheckoutUndo(matchId) {
+      return appendLifecycle(matchId, { type: 'checkout_attempt_undone' });
     },
   };
 }

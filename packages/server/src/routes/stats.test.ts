@@ -219,6 +219,7 @@ describe('GET /matches/:id/summary', () => {
           { playerId: bartek, points: bartekLeg301Points },
         ],
       },
+      checkouts: null,
     });
   });
 
@@ -304,7 +305,7 @@ describe('GET /matches/:id/summary', () => {
   it('gives zeros and nulls for a Free run', async () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     await throwDarts(t.app, id, [T(20), T(20), T(20)]);
-    expect(await summary(id)).toEqual({ matchId: id, type: 'practice', finished: false, eventSeq: 3, players: [{ ...noThrows, playerId: anna }], legs: [], lastLegProgress: null });
+    expect(await summary(id)).toEqual({ matchId: id, type: 'practice', finished: false, eventSeq: 3, players: [{ ...noThrows, playerId: anna }], legs: [], lastLegProgress: null, checkouts: null });
   });
 
   it('lists the Solo 501 leg', async () => {

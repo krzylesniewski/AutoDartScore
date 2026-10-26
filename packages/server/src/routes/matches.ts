@@ -1,4 +1,4 @@
-import { AbandonMatchRequest, CreateMatchRequest, MatchListQuery } from '@autoscore/schema';
+import { AbandonMatchRequest, CheckoutAttemptRequest, CreateMatchRequest, MatchListQuery } from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import { invalidRequest } from '../errors.js';
 import type { MatchService } from '../match-service.js';
@@ -29,6 +29,14 @@ export async function matchRoutes(app: FastifyInstance, service: MatchService): 
   app.post<MatchParams>('/matches/:id/throws', async (request, reply) => {
     const { statusCode, result } = await service.registerThrow(request.params.id, request.body);
     return reply.code(statusCode).send(result);
+  });
+
+  app.post<MatchParams>('/matches/:id/checkout-attempts', async (request, reply) => {
+    const parsed = CheckoutAttemptRequest.safeParse(request.body);
+    if (!parsed.success) {
+      throw invalidRequest(parsed.error.issues);
+    }
+    return reply.code(201).send(await service.registerCheckoutAttempt(request.params.id, parsed.data.success));
   });
 
   app.post<MatchParams>('/matches/:id/abandon', async (request) => {

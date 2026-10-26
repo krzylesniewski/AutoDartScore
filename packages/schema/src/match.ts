@@ -4,8 +4,18 @@ import { z } from 'zod';
 export const MatchType = z.enum(['match', 'casual', 'practice']);
 export type MatchType = z.infer<typeof MatchType>;
 
-export const PracticeMode = z.enum(['free_run', 'solo_501']);
+export const PracticeMode = z.enum(['free_run', 'solo_501', 'checkouts']);
 export type PracticeMode = z.infer<typeof PracticeMode>;
+
+// Zakres losowanych wyników w treningu checkoutów.
+export const CheckoutRange = z.enum(['2-50', '51-100']);
+export type CheckoutRange = z.infer<typeof CheckoutRange>;
+
+export const CheckoutAttempt = z.object({
+  target: z.int().min(2).max(100),
+  success: z.boolean(),
+});
+export type CheckoutAttempt = z.infer<typeof CheckoutAttempt>;
 
 export const Placement = z.object({
   playerId: z.string().min(1),

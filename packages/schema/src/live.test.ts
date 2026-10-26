@@ -35,6 +35,7 @@ const state = {
   winnerId: null,
   placements: [],
   freeRun: null,
+  checkouts: null,
 };
 
 const throwRecord = {

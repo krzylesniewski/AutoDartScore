@@ -23,6 +23,7 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
     winnerId: null,
     placements: [],
     freeRun: null,
+    checkouts: null,
     status: overrides.finished ? 'finished' : 'in_progress',
     abandonment: null,
     endedAt: null,
@@ -79,6 +80,7 @@ export function summary(overrides: Partial<MatchSummary> = {}): MatchSummary {
     players: [summaryPlayer('p1'), summaryPlayer('p2')],
     legs: [],
     lastLegProgress: null,
+    checkouts: null,
     ...overrides,
   };
 }
@@ -110,6 +112,7 @@ export function listItem(overrides: Partial<MatchListItem> = {}): MatchListItem 
     legIndex: 0,
     players: [player('p1', 'Anna', { legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })],
     freeRun: null,
+    checkouts: null,
     winnerId: null,
     placements: [],
     endedAt: null,

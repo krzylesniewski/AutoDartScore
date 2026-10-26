@@ -19,6 +19,8 @@ export interface MatchesTable {
   legs_to_win: number | null;
   first_player_index: number | null;
   counts_to_stats: number;
+  checkout_range: string | null; // tylko w treningu checkoutów
+  checkout_seed: number | null; // tylko w treningu checkoutów, od 0 do MAX_CHECKOUT_SEED
   created_at: string;
 }
 
@@ -41,10 +43,17 @@ export interface ThrowsTable {
   received_at: string;
 }
 
-export type MatchEventType = 'throw' | 'undo' | 'match_abandoned' | 'match_resumed' | 'practice_ended';
+export type MatchEventType =
+  | 'throw'
+  | 'undo'
+  | 'match_abandoned'
+  | 'match_resumed'
+  | 'practice_ended'
+  | 'checkout_attempt'
+  | 'checkout_attempt_undone';
 
 // Log gry: tylko dopisywanie. Stan meczu wynika z odtworzenia wpisów w kolejności seq.
-// throw_id mają tylko throw i undo, player_id i reason tylko match_abandoned.
+// throw_id mają tylko throw i undo, player_id i reason tylko match_abandoned, success (0 albo 1) tylko checkout_attempt.
 export interface MatchEventsTable {
   match_id: string;
   seq: number;
@@ -52,6 +61,7 @@ export interface MatchEventsTable {
   throw_id: string | null;
   player_id: string | null;
   reason: string | null;
+  success: number | null;
   created_at: string;
 }
 

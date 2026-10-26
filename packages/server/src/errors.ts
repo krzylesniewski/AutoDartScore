@@ -34,6 +34,7 @@ const engineStatus = {
   invalid_hit: [400, 'invalid_request'],
   invalid_config: [400, 'invalid_config'],
   match_finished: [409, 'match_finished'],
+  wrong_mode: [409, 'wrong_mode'],
 } as const;
 
 function isClientError(error: unknown): error is { statusCode: number; message: string } {
