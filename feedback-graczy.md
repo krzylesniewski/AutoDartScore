@@ -28,12 +28,20 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-10-26: trening „Końcówki”
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / kreator
+- **Co powiedział:** „W sekcji nowa gra, trening, przygotuj nowy tryb gry: końcówki. I tam powinna się losować końcówka lega w dwóch przedziałach: 0-50 i 51-100. I podczas treningu zaznaczam, czy mi się udało, czy nie. Jest to trening per osoba”
+- **Kontekst:** kreator gry, trening jednego gracza
+- **Status:** zaplanowany (P46-P47, `design/plan-p46-p47.md`)
+- **Uwagi:** dziś trening ma tylko Free run i Solo 501 (`PracticeMode` w `packages/schema/src/match.ts`). Silnik nie losuje, więc serwer losuje ziarno przy tworzeniu gry, a silnik wylicza z niego kolejne końcówki deterministycznie (ta sama końcówka po odświeżeniu i na drugim ekranie). Wynik próby to nowe zdarzenie w logu. Decyzje autora 2026-10-26: przedział wybierany w kreatorze (2-50 albo 51-100, od 2, bo 0 i 1 nie da się zamknąć); jedna tura (3 lotki) na końcówkę, bez wpisywania lotek; przyciski „Udało się” i „Nie udało się”; sesja bez limitu do „Zakończ trening”, z licznikiem prób i procentem udanych; nie wchodzi do statystyk X01.
+
 ### 2026-10-26: wykres zejścia z wyniku na podsumowaniu gry
 - **Zgłosił:** autor
 - **Rodzaj / obszar:** pomysł / statystyki
 - **Co powiedział:** „Nowy wykres na widoku zakończonej gry/podsumowanie. Pod Leg 1 wykres, na którym są stan punktów, a na poziomej ilość lotek. Chcę zobaczyć, jak szybko schodzimy z wyniku”
 - **Kontekst:** podsumowanie zakończonej gry, pod kartą lega („Leg 1”)
-- **Status:** zaplanowany (P45, `design/plan-p45.md`)
+- **Status:** zrobiony (P45, PR #51, `design/plan-p45.md`)
 - **Uwagi:** dziś zakończony mecz 1v1 pokazuje `MatchEndView` (`packages/web/src/components/MatchEndView.tsx`) z kartami legów (`LegCards`), a zakończona zabawa `MatchSummaryPanel`. Oba biorą dane z `GET /matches/:id/summary` (`MatchSummary` w `packages/schema/src/stats.ts`, liczone w `packages/server/src/stats-service.ts` i `stats/tally.ts` ze zdarzeń domenowych). Podsumowanie nie ma przebiegu wyniku. Kierunek: `MatchSummary` rozszerzone o przebieg ostatniego lega (wynik każdego gracza po każdej lotce, z oznaczeniem bustu), liczony na serwerze przez odtworzenie zdarzeń, i wykres SVG na froncie bez nowej biblioteki (wzór: `FormChart`). Zakończona gra otwarta z Historii trafia do tych samych widoków. Decyzje autora 2026-10-26: wszyscy gracze lega na jednym wykresie, każdy swoją linią (kolor awatara plus legenda z imieniem); oś pionowa to pozostały wynik, oś pozioma to dokładna liczba lotek, punkt po każdej lotce; przy buście linia wraca do wyniku sprzed tury, ze znacznikiem „Bust”; wykres tylko dla ostatniego lega; mecz 1v1 i zabawa tak, trening (Solo 501 i Free run) bez wykresu. Opis także w `auto-score-dart-pomysly.md` (sekcja „Wykres zejścia z wyniku na podsumowaniu gry”).
 
 ### 2026-10-22: podpowiedź zamknięcia z T1 zamiast pojedynczej 3

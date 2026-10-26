@@ -93,6 +93,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p45.md
       kind: markdown
       tag: p45
+    # Tylko dla PR-ów z briefTags: [p46-p47].
+    - title: P46-P47, trening „Końcówki” (losowana końcówka z przedziału 2-50 lub 51-100, udało się albo nie; wiążące dla P46-P47, każdy PR tylko swoja sekcja)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p46-p47.md
+      kind: markdown
+      tag: p46-p47
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -588,3 +593,26 @@ prs:
     changeset: none
     scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**']
     briefTags: [p45, rwd]
+
+  # Pomysł autora 2026-10-26 (feedback-graczy.md, design/plan-p46-p47.md). Trening „Końcówki”:
+  # tryb, losowanie i próby w silniku i API (sekcja P46), potem kreator i ekran treningu (sekcja P47).
+  - id: P46
+    branch: feat/practice-checkouts-api
+    title: 'feat: add the checkout practice mode to the engine and API'
+    brief: briefs/P46.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/engine/**', 'packages/schema/**', 'packages/server/**']
+    briefTags: [p46-p47]
+
+  - id: P47
+    branch: feat/web-practice-checkouts
+    title: 'feat(web): checkout practice in the game wizard and practice screen'
+    brief: briefs/P47.md
+    deps: [P46]
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p46-p47, rwd]
