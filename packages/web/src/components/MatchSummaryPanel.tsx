@@ -5,6 +5,7 @@ import { formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../ga
 import { durationSeconds, formatDuration, gameElapsedMs } from '../game/leg-clock';
 import { pl } from '../i18n/pl';
 import { CheckIcon, TrophyIcon, WarningIcon } from './icons';
+import { ScoreProgressChart } from './ScoreProgressChart';
 
 const NEW_GAME_HREF = '#/';
 
@@ -56,6 +57,7 @@ export function MatchSummaryPanel({ state, summary, error }: MatchSummaryPanelPr
           <SaveGuest key={player.id} player={player} />
         ))}
       {current ? <SummaryTable state={state} summary={current} /> : <p className="text-(--color-text-muted)">{error ? pl.summaryFailed : pl.loading}</p>}
+      {state.type === 'casual' && current?.lastLegProgress && <ScoreProgressChart progress={current.lastLegProgress} players={state.players} />}
       {current && current.legs.length > 0 && <LegList summary={current} name={name} />}
       <a href={NEW_GAME_HREF} className={link}>
         {pl.newGame}
