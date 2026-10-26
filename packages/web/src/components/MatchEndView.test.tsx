@@ -127,6 +127,29 @@ describe('MatchEndView', () => {
     expect(columns).toEqual([within(table).getByRole('columnheader', { name: 'Bartek' }), within(table).getByRole('columnheader', { name: 'Anna' })]);
   });
 
+  it('shows the achievement notices in a status overlay that keeps the buttons clickable', () => {
+    const props = view({
+      achievements: [
+        {
+          playerName: 'Bartek',
+          achievement: { type: 'achievement', matchId: 'm_1', eventSeq: 9, playerId: 'p2', kind: 'checkout_record', value: 121, previous: 100 },
+        },
+      ],
+    });
+    const status = screen.getByRole('status');
+    expect(within(status).getByRole('list', { name: pl.achievements }).textContent).toBe('Bartek Rekord zamknięcia: 121 (było 100)');
+    expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'pointer-events-none']));
+    expect(status.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['relative', 'flex-1']));
+    expect(status.parentElement?.contains(screen.getByRole('main'))).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: pl.undo }));
+    expect(props.onUndo).toHaveBeenCalledOnce();
+  });
+
+  it('keeps an empty status overlay without achievements', () => {
+    view();
+    expect(screen.getByRole('status').textContent).toBe('');
+  });
+
   it("gives the avatars the players' own colors, not the list position", () => {
     const players = [player('p1', 'Anna', { legsWon: 1, avatar: '🦊', color: 12 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯', color: 7 })];
     view({ state: { ...finished, players } });

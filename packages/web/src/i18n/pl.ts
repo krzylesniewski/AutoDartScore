@@ -30,6 +30,11 @@ function wonLegs(count: number): string {
   return `${count} ${plural(count, 'wygranego lega', 'wygranych legów', 'wygranych legów')}`;
 }
 
+// Serwer wysyła previous null tylko dla first_*, ale typ go dopuszcza, więc rekord bez poprzedniej wartości nie pokazuje nawiasu.
+function previousRecord(previous: number | null): string {
+  return previous === null ? '' : ` (było ${previous})`;
+}
+
 // Wszystkie teksty widoczne dla użytkownika.
 export const pl = {
   newGame: 'Nowa gra',
@@ -346,4 +351,11 @@ export const pl = {
   checkoutDetail: (name: string, successes: number, attempts: number) => `${name} · ${successes}/${attempts}`,
   checkoutResult: (name: string, successes: number, attempts: number, percent: string) => `${name} · ${successes}/${attempts} · ${percent}`,
   scoreProgressLine: (name: string, dartCount: number, remaining: number) => `${name} ${lotki(dartCount)} do ${remaining}`,
+  achievements: 'Osiągnięcia',
+  achievementTurnRecord: (value: number, previous: number | null) => `Rekord tury: ${value}${previousRecord(previous)}`,
+  achievementCheckoutRecord: (value: number, previous: number | null) => `Rekord zamknięcia: ${value}${previousRecord(previous)}`,
+  achievementShortestLeg: (value: number, previous: number | null) => `Najkrótszy leg: ${lotki(value)}${previousRecord(previous)}`,
+  achievementLongestLeg: (value: number, previous: number | null) => `Najdłuższy leg: ${lotki(value)}${previousRecord(previous)}`,
+  achievementFirstTurn: (threshold: number, value: number) => `Pierwsza tura ${threshold}+: ${value}`,
+  achievementFirst180: 'Pierwsze 180!',
 } as const;

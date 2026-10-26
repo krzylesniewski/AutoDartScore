@@ -31,7 +31,7 @@ const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
-  const { state, lastTurn, banner, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt, sendCheckoutSkip } = useMatch(
+  const { state, lastTurn, banner, achievements, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt, sendCheckoutSkip } = useMatch(
     matchId,
     audio.onLiveMessage,
   );
@@ -129,6 +129,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
         onVoiceChange={audio.setVoiceEnabled}
         effectsEnabled={audio.effectsEnabled}
         onEffectsChange={audio.setEffectsEnabled}
+        achievements={achievements}
       />
     );
   }
@@ -224,7 +225,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
               )}
             </div>
             {/* Baner jest poza dokiem. Wiszący nad przypiętym dokiem zasłaniałby Cofnij po przewinięciu na dół. */}
-            <EventBanner banner={banner} />
+            <EventBanner banner={banner} achievements={achievements} />
           </div>
         </main>
       </div>

@@ -1,5 +1,5 @@
 import { LiveMessage, MISS_SEGMENT } from '@autoscore/schema';
-import type { Hit, HitEvent, LiveAuthMessage, MatchSnapshot } from '@autoscore/schema';
+import type { Achievement, Hit, HitEvent, LiveAuthMessage, MatchSnapshot } from '@autoscore/schema';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
 import { liveSocketUrl } from './api-url';
@@ -11,6 +11,7 @@ export const MATCH_NOT_FOUND_CLOSE_CODE = 4404;
 export const UNAUTHORIZED_CLOSE_CODE = 4401;
 export const RECONNECT_DELAY_MS = 1000;
 export const BANNER_DURATION_MS = 2500;
+export const ACHIEVEMENT_DURATION_MS = 5000;
 export const KEYPAD_SOURCE = 'keypad';
 
 const DARTS_PER_TURN = 3;
@@ -32,10 +33,16 @@ export interface Banner {
   readonly place: number | null;
 }
 
+export interface AchievementNotice {
+  readonly achievement: Achievement;
+  readonly playerName: string;
+}
+
 export interface UseMatch {
   readonly state: MatchSnapshot | null;
   readonly lastTurn: LastTurn | null;
   readonly banner: Banner | null;
+  readonly achievements: readonly AchievementNotice[];
   readonly error: string | null;
   readonly busy: boolean;
   readonly connection: Connection;
@@ -83,6 +90,7 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
   const [state, setState] = useState<MatchSnapshot | null>(null);
   const [lastTurn, setLastTurn] = useState<LastTurn | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
+  const [achievements, setAchievements] = useState<readonly AchievementNotice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [connection, setConnection] = useState<Connection>('connecting');
@@ -90,6 +98,8 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
 
   const stateRef = useRef<MatchSnapshot | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const achievementTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const achievementSeq = useRef<number | null>(null);
   const commands = useRef<Promise<void>>(Promise.resolve());
   const queued = useRef(0);
   const sequence = useRef(0);
@@ -115,6 +125,25 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     clearTimeout(bannerTimer.current);
     setBanner(next);
     bannerTimer.current = setTimeout(() => setBanner(null), BANNER_DURATION_MS);
+  }, []);
+
+  // Osiągnięcia jednej rzutki mają wspólny eventSeq i pokazują się razem. Osiągnięcie z kolejnej rzutki zastępuje grupę.
+  // Działa niezależnie od announcera, więc komunikat widać także przy wyłączonym głosie i efektach.
+  const showAchievement = useCallback((next: AchievementNotice) => {
+    const sameGroup = achievementSeq.current === next.achievement.eventSeq;
+    achievementSeq.current = next.achievement.eventSeq;
+    setAchievements((current) => (sameGroup ? [...current, next] : [next]));
+    clearTimeout(achievementTimer.current);
+    achievementTimer.current = setTimeout(() => {
+      achievementSeq.current = null;
+      setAchievements([]);
+    }, ACHIEVEMENT_DURATION_MS);
+  }, []);
+
+  const clearAchievements = useCallback(() => {
+    clearTimeout(achievementTimer.current);
+    achievementSeq.current = null;
+    setAchievements([]);
   }, []);
 
   useEffect(() => {
@@ -143,6 +172,12 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
           break;
         case 'player_finished':
           showBanner({ kind: 'win', playerName: playerName(message.playerId), place: message.place });
+          break;
+        case 'achievement':
+          showAchievement({ achievement: message, playerName: playerName(message.playerId) });
+          break;
+        case 'throw_undone':
+          clearAchievements();
           break;
         default:
           break;
@@ -191,9 +226,10 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
       disposed = true;
       clearTimeout(reconnectTimer);
       clearTimeout(bannerTimer.current);
+      clearTimeout(achievementTimer.current);
       socket?.close();
     };
-  }, [matchId, acceptState, showBanner]);
+  }, [matchId, acceptState, showBanner, showAchievement, clearAchievements]);
 
   // Komendy idą po kolei, więc szybkie stuknięcia docierają w kolejności stuknięć.
   // Błąd jednej komendy nie blokuje następnych.
@@ -343,6 +379,7 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     state,
     lastTurn,
     banner,
+    achievements,
     error,
     busy,
     connection,
