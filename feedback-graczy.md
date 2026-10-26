@@ -28,6 +28,14 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-10-26: wykres zejścia z wyniku na podsumowaniu gry
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / statystyki
+- **Co powiedział:** „Nowy wykres na widoku zakończonej gry/podsumowanie. Pod Leg 1 wykres, na którym są stan punktów, a na poziomej ilość lotek. Chcę zobaczyć, jak szybko schodzimy z wyniku”
+- **Kontekst:** podsumowanie zakończonej gry, pod kartą lega („Leg 1”)
+- **Status:** zaplanowany (P45, `design/plan-p45.md`)
+- **Uwagi:** dziś zakończony mecz 1v1 pokazuje `MatchEndView` (`packages/web/src/components/MatchEndView.tsx`) z kartami legów (`LegCards`), a zakończona zabawa `MatchSummaryPanel`. Oba biorą dane z `GET /matches/:id/summary` (`MatchSummary` w `packages/schema/src/stats.ts`, liczone w `packages/server/src/stats-service.ts` i `stats/tally.ts` ze zdarzeń domenowych). Podsumowanie nie ma przebiegu wyniku. Kierunek: `MatchSummary` rozszerzone o przebieg ostatniego lega (wynik każdego gracza po każdej lotce, z oznaczeniem bustu), liczony na serwerze przez odtworzenie zdarzeń, i wykres SVG na froncie bez nowej biblioteki (wzór: `FormChart`). Zakończona gra otwarta z Historii trafia do tych samych widoków. Decyzje autora 2026-10-26: wszyscy gracze lega na jednym wykresie, każdy swoją linią (kolor awatara plus legenda z imieniem); oś pionowa to pozostały wynik, oś pozioma to dokładna liczba lotek, punkt po każdej lotce; przy buście linia wraca do wyniku sprzed tury, ze znacznikiem „Bust”; wykres tylko dla ostatniego lega; mecz 1v1 i zabawa tak, trening (Solo 501 i Free run) bez wykresu. Opis także w `auto-score-dart-pomysly.md` (sekcja „Wykres zejścia z wyniku na podsumowaniu gry”).
+
 ### 2026-10-22: podpowiedź zamknięcia z T1 zamiast pojedynczej 3
 - **Zgłosił:** gracze (przekazał autor)
 - **Rodzaj / obszar:** utrudnienie / ekran gry

@@ -88,6 +88,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p43-p44.md
       kind: markdown
       tag: p43-p44
+    # Tylko dla PR-ów z briefTags: [p45].
+    - title: P45, wykres zejścia z wyniku w ostatnim legu na podsumowaniu gry (wiążący dla P45)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p45.md
+      kind: markdown
+      tag: p45
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -571,3 +576,15 @@ prs:
     changeset: none
     scope: ['packages/web/**']
     briefTags: [p43-p44]
+
+  # Pomysł autora 2026-10-26 (feedback-graczy.md, design/plan-p45.md). Wykres pozostałego wyniku
+  # od liczby lotek w ostatnim legu, na podsumowaniu meczu 1v1 i zabawy.
+  - id: P45
+    branch: feat/score-progress-chart
+    title: 'feat: chart the remaining score per dart in the last leg summary'
+    brief: briefs/P45.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**']
+    briefTags: [p45, rwd]
