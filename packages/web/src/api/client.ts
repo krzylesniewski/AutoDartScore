@@ -1,4 +1,4 @@
-import { ApiError, CameraCalibration, FrequentHitsResponse, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
+import { ApiError, CameraCalibration, FrequentHitsResponse, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, ReviewResult, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
 import type {
   AbandonMatchRequest,
   CheckoutAttemptRequest,
@@ -10,6 +10,7 @@ import type {
   MatchListQuery,
   StatsFilter,
   UpdatePlayerRequest,
+  VerifyThrowRequest,
 } from '@autoscore/schema';
 import { resolveApiBase } from './api-url';
 import { handleUnauthorized, readToken } from './session';
@@ -201,4 +202,12 @@ export function getCameraCalibration(cameraId: string): Promise<CameraCalibratio
 
 export function saveCameraCalibration(cameraId: string, calibration: CameraCalibration): Promise<CameraCalibration> {
   return request(cameraPath(cameraId, 'calibration'), CameraCalibration, { ...postJson(calibration), method: 'PUT' });
+}
+
+export function flagThrow(matchId: string, throwId: string): Promise<ReviewResult> {
+  return request(`/matches/${encodeURIComponent(matchId)}/throws/${encodeURIComponent(throwId)}/flag`, ReviewResult, { method: 'POST' });
+}
+
+export function verifyThrow(matchId: string, throwId: string, hit: VerifyThrowRequest): Promise<ReviewResult> {
+  return request(`/matches/${encodeURIComponent(matchId)}/throws/${encodeURIComponent(throwId)}/verify`, ReviewResult, postJson(hit));
 }

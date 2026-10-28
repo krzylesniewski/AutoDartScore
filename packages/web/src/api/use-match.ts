@@ -3,7 +3,7 @@ import type { Achievement, Hit, HitEvent, LiveAuthMessage, MatchSnapshot } from 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
 import { liveSocketUrl } from './api-url';
-import { API_BASE, ApiRequestError, abandonMatch, endPractice, postCheckoutAttempt, postCheckoutSkip, postThrow, resumeMatch, undo } from './client';
+import { API_BASE, ApiRequestError, abandonMatch, endPractice, flagThrow, postCheckoutAttempt, postCheckoutSkip, postThrow, resumeMatch, undo, verifyThrow } from './client';
 import { newEventId } from './event-id';
 import { handleUnauthorized, readToken } from './session';
 
@@ -50,6 +50,8 @@ export interface UseMatch {
   sendHit(hit: Hit): void;
   sendRestMiss(): void;
   sendUndo(): void;
+  sendFlag(throwId: string): void;
+  sendVerify(throwId: string, hit: Hit): void;
   sendAbandon(playerId: string, reason: string | null): void;
   sendResume(): void;
   sendEndPractice(): void;
@@ -84,6 +86,10 @@ function keypadHit(matchId: string, sequence: number, hit: Hit): HitEvent {
     confidence: 1,
     detectedAt: new Date().toISOString(),
   };
+}
+
+function conflictCode(caught: unknown): string | null {
+  return caught instanceof ApiRequestError && caught.status === 409 ? caught.code : null;
 }
 
 export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage) => void): UseMatch {
@@ -179,6 +185,15 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
         case 'throw_undone':
           clearAchievements();
           break;
+        // Oznaczona przez gracza rzutka przestaje się liczyć. Oznaczenie systemowe dotyczy nowej rzutki z kamery i nie zdejmuje komunikatu o poprzedniej.
+        case 'throw_flagged':
+          if (message.throw.review?.flaggedBy === 'player') {
+            clearAchievements();
+          }
+          break;
+        // Nowy stan i zdarzenia domenowe przychodzą w tej samej paczce.
+        case 'throw_verified':
+          break;
         default:
           break;
       }
@@ -252,8 +267,8 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
           const result = await postThrow(matchId, event);
           setError(null);
           acceptState(result.state);
-        } catch {
-          setError(pl.throwFailed);
+        } catch (caught) {
+          setError(conflictCode(caught) === 'turn_pending' ? pl.turnFullAwaitingReview : pl.throwFailed);
         }
       });
     },
@@ -263,14 +278,15 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
   // Stan z chwili kliknięcia. Gdy wcześniejsze stuknięcie albo Cofnij z kolejki zamknęło lub zmieniło turę, nic nie idzie.
   const sendRestMiss = useCallback(() => {
     const clicked = stateRef.current;
-    if (!clicked) {
+    // Przy rzutce do weryfikacji currentDarts nie zawiera czekających rzutek, więc pudła przepełniłyby turę.
+    if (!clicked || clicked.awaitingReview) {
       return;
     }
     const playerId = clicked.currentPlayerId;
     const dartsAtClick = clicked.currentDarts.length;
     enqueue(async () => {
       const start = stateRef.current;
-      if (!start || start.finished || start.status !== 'in_progress' || start.currentPlayerId !== playerId || start.currentDarts.length < dartsAtClick) {
+      if (!start || start.awaitingReview || start.finished || start.status !== 'in_progress' || start.currentPlayerId !== playerId || start.currentDarts.length < dartsAtClick) {
         return;
       }
       let darts = start.currentDarts.length;
@@ -303,11 +319,43 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
         setError(null);
         acceptState(result.state);
       } catch (caught) {
-        const code = caught instanceof ApiRequestError && caught.status === 409 ? caught.code : null;
+        const code = conflictCode(caught);
         setError(code === 'nothing_to_undo' ? pl.nothingToUndo : code === 'match_locked' ? pl.matchLocked : pl.undoFailed);
       }
     });
   }, [matchId, enqueue, acceptState]);
+
+  const sendFlag = useCallback(
+    (throwId: string) => {
+      enqueue(async () => {
+        try {
+          const result = await flagThrow(matchId, throwId);
+          setError(null);
+          acceptState(result.state);
+        } catch (caught) {
+          setError(conflictCode(caught) === 'match_locked' ? pl.matchLocked : pl.flagFailed);
+        }
+      });
+    },
+    [matchId, enqueue, acceptState],
+  );
+
+  const sendVerify = useCallback(
+    (throwId: string, hit: Hit) => {
+      enqueue(async () => {
+        try {
+          const result = await verifyThrow(matchId, throwId, hit);
+          setError(null);
+          acceptState(result.state);
+        } catch (caught) {
+          const code = conflictCode(caught);
+          // throw_not_pending: rzutkę rozstrzygnął już inny ekran.
+          setError(code === 'throw_not_pending' ? pl.throwAlreadyResolved : code === 'match_locked' ? pl.matchLocked : pl.verifyFailed);
+        }
+      });
+    },
+    [matchId, enqueue, acceptState],
+  );
 
   const sendAbandon = useCallback(
     (playerId: string, reason: string | null) => {
@@ -387,6 +435,8 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     sendHit,
     sendRestMiss,
     sendUndo,
+    sendFlag,
+    sendVerify,
     sendAbandon,
     sendResume,
     sendEndPractice,
