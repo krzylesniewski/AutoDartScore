@@ -32,6 +32,11 @@ Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (
 
 `live.ts`: `LiveMessage`, unia wiadomości WebSocket. Obejmuje `StateUpdated`, `ThrowRegistered`, `ThrowUndone`, `Achievement` (rodzaj z `AchievementKind`, `value` i `previous`, które jest `null` tylko dla `first_*`) i zdarzenia domenowe, każde z polami `matchId` i `eventSeq`.
 
+`camera.ts`:
+
+- `ImagePoint`: `{ x, y }` w pikselach obrazu, początek w lewym górnym rogu, y w dół, wartości ułamkowe dozwolone,
+- `CameraCalibration`: `imageWidth`, `imageHeight` (dodatnie liczby całkowite) i `points`, dokładnie cztery punkty wewnątrz obrazu. Punkty leżą na zewnętrznej krawędzi pierścienia double, na granicach 5|20, 13|6, 17|3 i 8|11, w tej kolejności.
+
 ## Testy
 
 ```sh

@@ -245,6 +245,9 @@ importers:
 
   packages/vision:
     dependencies:
+      '@autoscore/schema':
+        specifier: workspace:*
+        version: link:../schema
       jpeg-js:
         specifier: ^0.4.4
         version: 0.4.4

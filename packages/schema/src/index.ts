@@ -6,3 +6,4 @@ export * from './match-api.js';
 export * from './live.js';
 export * from './stats.js';
 export * from './auth.js';
+export * from './camera.js';
