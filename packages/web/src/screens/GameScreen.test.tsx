@@ -53,13 +53,27 @@ class FakeAudio {
   static played: string[] = [];
   static loaded: string[] = [];
   static playResult: () => Promise<void> = () => Promise.resolve();
+  static instances: FakeAudio[] = [];
   readonly src: string;
   currentTime = 0;
   preload = '';
+  private readonly listeners: { type: string; listener: () => void }[] = [];
 
   constructor(src: string) {
     this.src = src;
     FakeAudio.created.push(src);
+    FakeAudio.instances.push(this);
+  }
+
+  // Koniec nagrania nie przychodzi sam, więc test wywołuje go, żeby speaker zagrał następną część.
+  static end(src: string): void {
+    for (const audio of FakeAudio.instances.filter((instance) => instance.src === src)) {
+      for (const { type, listener } of audio.listeners) {
+        if (type === 'ended') {
+          listener();
+        }
+      }
+    }
   }
 
   play(): Promise<void> {
@@ -73,7 +87,9 @@ class FakeAudio {
     FakeAudio.loaded.push(this.src);
   }
 
-  addEventListener(): void {}
+  addEventListener(type: string, listener: () => void): void {
+    this.listeners.push({ type, listener });
+  }
 }
 
 interface Call {
@@ -141,6 +157,7 @@ beforeEach(() => {
   FakeAudio.created = [];
   FakeAudio.played = [];
   FakeAudio.loaded = [];
+  FakeAudio.instances = [];
   FakeAudio.playResult = () => Promise.resolve();
   vi.stubGlobal('WebSocket', FakeWebSocket);
   vi.stubGlobal('Audio', FakeAudio);
@@ -1148,6 +1165,33 @@ describe('voice', () => {
     sendTurn(ws);
     expect(FakeAudio.played).toEqual(['/audio/pl/scores/100.mp3']);
     await flush();
+    expect(speak).not.toHaveBeenCalled();
+  });
+
+  function sendZeroTurn(ws: FakeWebSocket): void {
+    const miss = { segment: 0, multiplier: 0 } as const;
+    sendBatch(ws, { type: 'turn_completed', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [miss, miss, miss], total: 0, remaining: 437 });
+  }
+
+  it('says only zero after a 0-point turn by default', async () => {
+    const ws = connect();
+    sendZeroTurn(ws);
+    expect(FakeAudio.played).toEqual(['/audio/pl/scores/0.mp3']);
+    await flush();
+    FakeAudio.end('/audio/pl/scores/0.mp3');
+    await flush();
+    expect(FakeAudio.played).toEqual(['/audio/pl/scores/0.mp3']);
+    expect(speak).not.toHaveBeenCalled();
+  });
+
+  it('plays a zero comment after zero when zero comments are on', async () => {
+    localStorage.setItem('autoscore.zeroComments', 'on');
+    const ws = connect();
+    sendZeroTurn(ws);
+    await flush();
+    FakeAudio.end('/audio/pl/scores/0.mp3');
+    await flush();
+    expect(FakeAudio.played).toEqual(['/audio/pl/scores/0.mp3', expect.stringMatching(/^\/audio\/pl\/events\/zero_[12]\.mp3$/)]);
     expect(speak).not.toHaveBeenCalled();
   });
 

@@ -7,6 +7,7 @@ import { createWebSpeechSpeaker } from './web-speech-speaker';
 
 export const VOICE_STORAGE_KEY = 'autoscore.voice';
 export const EFFECTS_STORAGE_KEY = 'autoscore.effects';
+export const ZERO_COMMENTS_STORAGE_KEY = 'autoscore.zeroComments';
 
 export interface UseAnnouncer {
   readonly voiceEnabled: boolean;
@@ -49,6 +50,19 @@ export function writeEffectsEnabled(enabled: boolean): void {
   writeEnabled(EFFECTS_STORAGE_KEY, enabled);
 }
 
+// Komentarze do zera są domyślnie wyłączone, więc tylko zapisane 'on' je włącza.
+export function readZeroCommentsEnabled(): boolean {
+  try {
+    return localStorage.getItem(ZERO_COMMENTS_STORAGE_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+
+export function writeZeroCommentsEnabled(enabled: boolean): void {
+  writeEnabled(ZERO_COMMENTS_STORAGE_KEY, enabled);
+}
+
 interface AudioOutput {
   readonly announcer: Announcer;
   readonly speech: RecordedSpeaker;
@@ -67,6 +81,7 @@ export function useAnnouncer(): UseAnnouncer {
     const speech = createRecordedSpeaker(createWebSpeechSpeaker());
     const player = createWebAudioEffectPlayer();
     // Przełączniki sprawdzamy w chwili wywołania, więc announcer powstaje raz. Wyłączone efekty zwracają 0, żeby głos nie czekał.
+    // Komentarze do zera zmienia się tylko w Ustawieniach, więc czytamy je z localStorage przy każdym komunikacie.
     const announcer = createAnnouncer(
       {
         speak(announcement) {
@@ -86,6 +101,8 @@ export function useAnnouncer(): UseAnnouncer {
           player.stop();
         },
       },
+      Math.random,
+      { zeroComments: readZeroCommentsEnabled },
     );
     audio.current = { announcer, speech, player };
   }

@@ -358,4 +358,7 @@ export const pl = {
   achievementLongestLeg: (value: number, previous: number | null) => `Najdłuższy leg: ${lotki(value)}${previousRecord(previous)}`,
   achievementFirstTurn: (threshold: number, value: number) => `Pierwsza tura ${threshold}+: ${value}`,
   achievementFirst180: 'Pierwsze 180!',
+  zeroComments: 'Komentarze do zera',
+  zeroCommentsOn: 'włączone',
+  zeroCommentsOff: 'wyłączone',
 } as const;
