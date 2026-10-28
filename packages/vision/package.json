@@ -7,11 +7,14 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "eval": "node --import jiti/register src/eval-cli.ts"
   },
   "dependencies": {
     "@autoscore/schema": "workspace:*",
-    "jpeg-js": "^0.4.4"
+    "jiti": "^2.7.0",
+    "jpeg-js": "^0.4.4",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "vitest": "^5.0.4"
