@@ -28,6 +28,14 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-10-28: wyłączanie komentarzy do tury za zero w ustawieniach
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / głos
+- **Co powiedział:** „Zmiana w wymaganiach. Komunikaty przy wynikach 0 z trzech lotek w każdym trybie gry powinny mieć opcję wyłączenia ich w settingsach”
+- **Kontekst:** wszystkie typy gier, w których czytana jest suma tury
+- **Status:** zaplanowany (P52, `design/plan-p52.md`)
+- **Uwagi:** zmiana wymagań względem P51 (PR #59), który miał w „Poza zakresem” „ustawienie wyłączające same komentarze”. Dziś komentarz dokleja `announcementFor` w `packages/audio/src/announcement.ts` (warunek `main.kind === 'score'` i suma 0, losowo `zero_1`/`zero_2`), bez żadnego przełącznika; da się go uciszyć tylko wyłączając cały głos. Kierunek: nowy przełącznik „Komentarze do zera” w sekcji dźwięku na ekranie „Ustawienia” (`SettingsScreen.tsx`, obok `VoiceToggle` i `EffectsToggle`), zapis per urządzenie w localStorage jak głos i efekty (`use-announcer.ts`, np. klucz `autoscore.zeroComments`), a `announcementFor` dostaje opcję pomijającą komentarz. Suma 0 i osiągnięcia czytane dalej. Decyzje autora 2026-10-28: komentarze domyślnie wyłączone (brak wpisu w localStorage oznacza wyłączone, inaczej niż przy głosie i efektach); przy wyłączonym głosie przełącznik jest nieaktywny.
+
 ### 2026-10-26: śmieszny komentarz do tury za zero
 - **Zgłosił:** autor
 - **Rodzaj / obszar:** pomysł / głos
