@@ -9,7 +9,7 @@ import {
 } from '../audio/use-announcer';
 import { AppNav } from '../components/AppNav';
 import { EffectsToggle } from '../components/EffectsToggle';
-import { GridIcon, RingIcon } from '../components/icons';
+import { GridIcon, RingIcon, TargetIcon } from '../components/icons';
 import { VoiceToggle } from '../components/VoiceToggle';
 import { ZeroCommentsToggle } from '../components/ZeroCommentsToggle';
 import { readKeypadLayout, writeKeypadLayout, type KeypadLayout } from '../game/keypad-layout';
@@ -100,6 +100,18 @@ export function SettingsScreen() {
             <EffectsToggle enabled={effects} onChange={changeEffects} />
             <ZeroCommentsToggle enabled={zeroComments} disabled={!voice} onChange={changeZeroComments} />
           </div>
+        </section>
+        <section aria-labelledby={`${group}-camera`} className="flex flex-col gap-2.5">
+          <h2 id={`${group}-camera`} className={sectionTitle}>
+            {pl.settingsCamera}
+          </h2>
+          <a
+            href="#/settings/calibration"
+            className="flex min-h-12 w-fit items-center gap-2 rounded-(--radius-chip) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface-button) px-4 text-(length:--text-button) text-(--color-text)"
+          >
+            <TargetIcon />
+            {pl.calibration}
+          </a>
         </section>
       </main>
     </div>

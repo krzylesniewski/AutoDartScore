@@ -1,4 +1,4 @@
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAnnouncer } from '../audio/use-announcer';
 import { Keypad } from '../components/Keypad';
@@ -55,6 +55,14 @@ describe('SettingsScreen', () => {
     expect(screen.getByText('Zapisane na tym urządzeniu')).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Klawiatura' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Dźwięk' })).toBeTruthy();
+  });
+
+  it('links to the camera calibration in the Kamera section', () => {
+    render(<SettingsScreen />);
+    const section = screen.getByRole('region', { name: 'Kamera' });
+    const link = within(section).getByRole('link', { name: 'Kalibracja kamery' });
+    expect(link.getAttribute('href')).toBe('#/settings/calibration');
+    expect(link.className).toContain('min-h-12');
   });
 
   it('marks the settings page in the nav', () => {
