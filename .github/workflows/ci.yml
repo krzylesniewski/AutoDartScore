@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # feat/camera: gałąź integracyjna etapu 2; bramka rolloutu wymaga zielonego CI na jej commitach.
+    branches: [main, feat/camera]
   pull_request:
 
 concurrency:
