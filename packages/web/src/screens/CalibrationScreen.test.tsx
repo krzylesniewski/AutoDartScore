@@ -232,6 +232,25 @@ describe('CalibrationScreen in camera mode', () => {
     expect(screen.queryByRole('img', { name: 'Klatka z kamery' })).toBeNull();
   });
 
+  it('shows the frame and a calibration error when only the saved calibration fails', async () => {
+    routes['GET /api/cameras/camera-1/calibration'] = () => json(500, { error: 'internal_error', message: 'Internal server error' });
+    render(<CalibrationScreen />);
+    await loadImage();
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('Nie udało się pobrać zapisanej kalibracji');
+    expect(alert.textContent).not.toContain('Nie udało się pobrać klatki z kamery');
+    expect(marker(1)).toBeNull();
+    tap(taps[0]!);
+    expect(marker(1)).toEqual(percent(taps[0]!));
+  });
+
+  it('shows the snapshot error when the frame fails', async () => {
+    routes['GET /api/cameras/camera-1/snapshot'] = () => json(500, { error: 'internal_error', message: 'Internal server error' });
+    render(<CalibrationScreen />);
+    expect((await screen.findByRole('alert')).textContent).toContain('Nie udało się pobrać klatki z kamery');
+    expect(screen.queryByRole('img', { name: 'Klatka z kamery' })).toBeNull();
+  });
+
   it('prefills the saved calibration for a frame of the same size', async () => {
     routes['GET /api/cameras/camera-1/calibration'] = () => json(200, saved);
     render(<CalibrationScreen />);

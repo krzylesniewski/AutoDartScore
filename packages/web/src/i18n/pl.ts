@@ -372,6 +372,7 @@ export const pl = {
   calibrationLoading: 'Wczytywanie klatki…',
   calibrationNoSnapshot: 'Brak klatki z kamery. Na komputerze z kamerą uruchom „pnpm --filter @autoscore/vision snapshot” albo przełącz na plik JPEG.',
   calibrationLoadFailed: 'Nie udało się pobrać klatki z kamery',
+  calibrationSavedLoadFailed: 'Nie udało się pobrać zapisanej kalibracji. Ustaw punkty od nowa albo odśwież klatkę.',
   calibrationImageFailed: 'Nie udało się wczytać obrazu',
   calibrationPickFile: 'Wybierz plik JPEG',
   calibrationNoFile: 'Wybierz zdjęcie tarczy w formacie JPEG.',

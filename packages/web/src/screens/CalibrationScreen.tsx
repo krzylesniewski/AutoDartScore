@@ -15,7 +15,7 @@ type Source = 'camera' | 'file';
 
 type CameraFrame =
   | { status: 'loading' }
-  | { status: 'ready'; snapshot: Blob; saved: CameraCalibration | null }
+  | { status: 'ready'; snapshot: Blob; saved: CameraCalibration | null; savedFailed: boolean }
   | { status: 'missing' }
   | { status: 'error' };
 
@@ -86,10 +86,15 @@ export function CalibrationScreen() {
     }
     let cancelled = false;
     setFrame({ status: 'loading' });
-    Promise.all([getCameraSnapshot(DEFAULT_CAMERA_ID), getCameraCalibration(DEFAULT_CAMERA_ID)]).then(
-      ([snapshot, saved]) => {
+    // Bez zapisanej kalibracji klatka dalej się nadaje, więc jej błąd nie blokuje ekranu, tylko wyłącza wypełnienie punktów.
+    const saved = getCameraCalibration(DEFAULT_CAMERA_ID).then(
+      (value) => ({ value, failed: false }),
+      () => ({ value: null, failed: true }),
+    );
+    Promise.all([getCameraSnapshot(DEFAULT_CAMERA_ID), saved]).then(
+      ([snapshot, { value, failed }]) => {
         if (!cancelled) {
-          setFrame(snapshot === null ? { status: 'missing' } : { status: 'ready', snapshot, saved });
+          setFrame(snapshot === null ? { status: 'missing' } : { status: 'ready', snapshot, saved: value, savedFailed: failed });
         }
       },
       () => {
@@ -208,6 +213,11 @@ export function CalibrationScreen() {
             {source === 'camera' && frame.status === 'error' && (
               <div role="alert">
                 <Notice text={pl.calibrationLoadFailed} />
+              </div>
+            )}
+            {source === 'camera' && frame.status === 'ready' && frame.savedFailed && (
+              <div role="alert">
+                <Notice text={pl.calibrationSavedLoadFailed} />
               </div>
             )}
             {source === 'file' && file === null && <p className="text-(--color-text-muted)">{pl.calibrationNoFile}</p>}
