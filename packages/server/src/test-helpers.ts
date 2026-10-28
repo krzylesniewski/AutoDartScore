@@ -138,3 +138,15 @@ export async function logEntries(db: Kysely<Database>, matchId: string) {
 export function remaining(state: MatchSnapshot): (number | null)[] {
   return state.players.map((player) => player.remaining);
 }
+
+export function flagThrow(app: FastifyInstance, matchId: string, throwId: string) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/throws/${throwId}/flag` });
+}
+
+export function verifyThrow(app: FastifyInstance, matchId: string, throwId: string, [segment, multiplier]: Dart) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/throws/${throwId}/verify`, payload: { segment, multiplier } });
+}
+
+export function reviewQueue(app: FastifyInstance, matchId: string) {
+  return app.inject({ method: 'GET', url: `/matches/${matchId}/review-queue` });
+}

@@ -42,6 +42,7 @@ export interface ThrowsTable {
   confidence: number;
   detected_at: string;
   received_at: string;
+  review: string | null; // HitReview jako JSON, tylko gdy trafienie je miało
 }
 
 export type MatchEventType =
@@ -53,10 +54,14 @@ export type MatchEventType =
   | 'checkout_attempt'
   | 'checkout_attempt_undone'
   | 'checkout_skipped'
-  | 'checkout_skip_undone';
+  | 'checkout_skip_undone'
+  | 'throw_flagged'
+  | 'throw_verified';
 
 // Log gry: tylko dopisywanie. Stan meczu wynika z odtworzenia wpisów w kolejności seq.
-// throw_id mają tylko throw i undo, player_id i reason tylko match_abandoned, success (0 albo 1) tylko checkout_attempt.
+// throw_id mają throw, undo, throw_flagged i throw_verified. player_id ma tylko match_abandoned, a reason match_abandoned
+// i throw_flagged. success (0 albo 1) ma tylko checkout_attempt. actor (system albo player) mają throw_flagged i throw_verified,
+// a segment i multiplier (wartość po weryfikacji) tylko throw_verified.
 // checkout_attempt_undone cofa ostatnią próbę, a checkout_skip_undone ostatnie pominięcie (checkout_skipped).
 export interface MatchEventsTable {
   match_id: string;
@@ -66,6 +71,9 @@ export interface MatchEventsTable {
   player_id: string | null;
   reason: string | null;
   success: number | null;
+  segment: number | null;
+  multiplier: number | null;
+  actor: string | null;
   created_at: string;
 }
 

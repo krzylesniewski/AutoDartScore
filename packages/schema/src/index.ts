@@ -1,4 +1,5 @@
 export * from './hit.js';
+export * from './review.js';
 export * from './domain-events.js';
 export * from './match.js';
 export * from './player.js';

@@ -2,7 +2,24 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { S, T, abandon, checkoutAttempt, checkoutSkip, createGame, createPlayers, endPractice, getMatch, setup, throwDarts, undo } from './test-helpers.js';
+import {
+  S,
+  T,
+  abandon,
+  checkoutAttempt,
+  checkoutSkip,
+  createGame,
+  createPlayers,
+  endPractice,
+  getMatch,
+  hitEvent,
+  postThrow,
+  reviewQueue,
+  setup,
+  throwDarts,
+  undo,
+  verifyThrow,
+} from './test-helpers.js';
 
 let dir: string;
 beforeEach(async () => {
@@ -28,6 +45,40 @@ describe('restart', () => {
       const after = await getMatch(second.app, id);
       expect(after).toEqual(before);
       expect(after).toMatchObject({ eventSeq: 6, currentPlayerId: bartek, currentDarts: [{ segment: 1, multiplier: 1 }] });
+    } finally {
+      await second.close();
+    }
+  });
+
+  it('keeps a pending throw pending after reopening the file database', async () => {
+    const path = join(dir, 'games.sqlite');
+    const first = await setup({ path });
+    const [anna, bartek] = await createPlayers(first.app, 2);
+    const { id } = await createGame(first.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301 });
+    await throwDarts(first.app, id, [T(20), T(20), T(20), S(1)]);
+    const review = { reason: 'near_wire', candidates: [{ segment: 5, multiplier: 1, probability: 0.48 }], frames: { before: 'a.jpg', after: 'b.jpg' }, tip: { x: 4, y: 2 } };
+    const pending = await postThrow(first.app, id, hitEvent(id, S(20), { confidence: 0.4, review } as object));
+    expect(pending.statusCode).toBe(201);
+    await throwDarts(first.app, id, [S(3)]);
+    const before = await getMatch(first.app, id);
+    const queue = (await reviewQueue(first.app, id)).json();
+    await first.close();
+
+    const second = await setup({ path });
+    try {
+      const after = await getMatch(second.app, id);
+      expect(after).toEqual(before);
+      expect(after).toMatchObject({ awaitingReview: true, currentPlayerId: bartek, currentDarts: [{ segment: 1, multiplier: 1 }] });
+      expect(after.lastTurnThrows.map((entry) => [entry.status, entry.scoring])).toEqual([
+        ['confirmed', 'counted'],
+        ['pending', 'waiting'],
+        ['confirmed', 'waiting'],
+      ]);
+      expect((await reviewQueue(second.app, id)).json()).toEqual(queue);
+
+      const verified = await verifyThrow(second.app, id, pending.json().throw.id, S(5));
+      expect(verified.statusCode).toBe(200);
+      expect(verified.json().events).toMatchObject([{ type: 'turn_completed', playerId: bartek, total: 9 }]);
     } finally {
       await second.close();
     }

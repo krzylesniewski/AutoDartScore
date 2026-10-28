@@ -13,6 +13,7 @@ export interface ServerConfig {
   readonly corsOrigins: readonly string[] | null;
   readonly webDir: string | null;
   readonly matchLockMinutes: number;
+  readonly pendingConfidence: number;
 }
 
 const MIN_TOKEN_SECRET_LENGTH = 32;
@@ -29,6 +30,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     corsOrigins: parseCorsOrigins(env.AUTOSCORE_CORS_ORIGIN),
     webDir: parseWebDir(env.AUTOSCORE_WEB_DIR),
     matchLockMinutes: parseMatchLockMinutes(env.AUTOSCORE_MATCH_LOCK_MINUTES),
+    pendingConfidence: parsePendingConfidence(env.AUTOSCORE_PENDING_CONFIDENCE),
   };
 }
 
@@ -52,6 +54,18 @@ function parseMatchLockMinutes(value: string | undefined): number {
     throw new Error(`Invalid AUTOSCORE_MATCH_LOCK_MINUTES: ${value}`);
   }
   return minutes;
+}
+
+// Rzutka z pewnością poniżej progu czeka na weryfikację. 0 wyłącza weryfikację, 1 wysyła do niej każdą niepewną rzutkę.
+function parsePendingConfidence(value: string | undefined): number {
+  if (value === undefined || value === '') {
+    return 0.8;
+  }
+  const threshold = Number(value);
+  if (!/^\d+(\.\d+)?$/.test(value) || threshold > 1) {
+    throw new Error(`Invalid AUTOSCORE_PENDING_CONFIDENCE: ${value}`);
+  }
+  return threshold;
 }
 
 // Ścieżka względna liczy się od katalogu roboczego, pod systemd to packages/server.

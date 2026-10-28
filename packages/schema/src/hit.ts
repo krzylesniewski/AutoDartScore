@@ -32,6 +32,44 @@ export type Hit = z.infer<typeof Hit>;
 export const HitSource = z.string().min(1); // np. "keypad", "simulator", "camera-1"
 export type HitSource = z.infer<typeof HitSource>;
 
+export const ReviewReason = z.enum(['low_confidence', 'near_wire', 'detector_disagreement', 'occlusion', 'manual']);
+export type ReviewReason = z.infer<typeof ReviewReason>;
+
+// Możliwy odczyt rzutki z prawdopodobieństwem od detektora.
+export const ReviewCandidate = z
+  .object({
+    segment: Segment,
+    multiplier: Multiplier,
+    probability: z.number().min(0).max(1),
+  })
+  .refine((candidate) => Hit.safeParse(candidate).success, {
+    message: 'Invalid segment and multiplier combination',
+    path: ['multiplier'],
+  });
+export type ReviewCandidate = z.infer<typeof ReviewCandidate>;
+
+// Ścieżka względna wobec katalogu klatek, bez wyjścia poza niego.
+const FramePath = z
+  .string()
+  .min(1)
+  .refine((value) => !value.startsWith('/') && !value.split(/[\\/]/).includes('..'), { message: 'Frame path must be relative and stay inside the frames directory' });
+
+export const ReviewFrames = z.object({ before: FramePath, after: FramePath });
+export type ReviewFrames = z.infer<typeof ReviewFrames>;
+
+// Czubek rzutki na klatce, w pikselach obrazu.
+export const ReviewTip = z.object({ x: z.number().min(0), y: z.number().min(0) });
+export type ReviewTip = z.infer<typeof ReviewTip>;
+
+// Powód weryfikacji od detektora. manual zostaje dla oznaczenia przez gracza.
+export const HitReview = z.object({
+  reason: ReviewReason.exclude(['manual']),
+  candidates: z.array(ReviewCandidate).max(10).default([]),
+  frames: ReviewFrames.optional(),
+  tip: ReviewTip.optional(),
+});
+export type HitReview = z.infer<typeof HitReview>;
+
 // Zdarzenie trafienia wysyłane do API przez dowolne źródło.
 // eventId zapewnia idempotencję: ponowne wysłanie tego samego zdarzenia nie dubluje rzutki.
 export const HitEvent = z.object({
@@ -43,6 +81,7 @@ export const HitEvent = z.object({
   multiplier: Multiplier,
   confidence: z.number().min(0).max(1),
   detectedAt: z.iso.datetime(),
+  review: HitReview.optional(),
 }).refine((event) => Hit.safeParse(event).success, {
   message: 'Invalid segment and multiplier combination',
   path: ['multiplier'],

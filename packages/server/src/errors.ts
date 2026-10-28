@@ -35,6 +35,10 @@ const engineStatus = {
   invalid_config: [400, 'invalid_config'],
   match_finished: [409, 'match_finished'],
   wrong_mode: [409, 'wrong_mode'],
+  turn_pending: [409, 'turn_pending'],
+  throw_not_flaggable: [409, 'throw_not_flaggable'],
+  throw_already_pending: [409, 'throw_already_pending'],
+  throw_not_pending: [409, 'throw_not_pending'],
 } as const;
 
 function isClientError(error: unknown): error is { statusCode: number; message: string } {

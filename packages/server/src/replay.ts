@@ -1,31 +1,14 @@
 import {
   dartsInCurrentLeg,
-  isGameFinished,
   replayGame,
-  type ApplyResult,
+  replayThrowLog,
   type CheckoutStep,
   type GameConfig,
   type GameState,
+  type ThrowLogStep,
 } from '@autoscore/engine';
-import { StartingScore, type Abandonment, type MatchSnapshot, type ThrowRecord } from '@autoscore/schema';
-import type { MatchLog, StoredMatch } from './store/store.js';
-
-// Rzutki, które nadal się liczą: każdy wpis undo zdejmuje ostatnią z nich. Porzucenie, wznowienie i koniec treningu nie zmieniają rzutek.
-export function effectiveThrows(log: MatchLog): ThrowRecord[] {
-  const throws: ThrowRecord[] = [];
-  for (const entry of log.entries) {
-    if (entry.type === 'throw') {
-      const record = log.throws.get(entry.throwId);
-      if (!record) {
-        throw new Error(`Corrupt log: throw ${entry.throwId} at seq ${entry.seq} is missing`);
-      }
-      throws.push(record);
-    } else if (entry.type === 'undo' && throws.pop()?.id !== entry.throwId) {
-      throw new Error(`Corrupt log: undo at seq ${entry.seq} does not match the last effective throw`);
-    }
-  }
-  return throws;
-}
+import { StartingScore, type Abandonment, type DomainEvent, type MatchSnapshot, type ReviewedThrow, type ThrowRecord, type ThrowReview } from '@autoscore/schema';
+import type { LogEntry, MatchLog, StoredMatch } from './store/store.js';
 
 // Próby i pominięcia checkoutu, które nadal się liczą, w kolejności z logu. Każde cofnięcie zdejmuje ostatni krok,
 // który musi być tego samego rodzaju co cofnięcie.
@@ -43,11 +26,6 @@ export function effectiveCheckoutSteps(log: MatchLog): CheckoutStep[] {
     }
   }
   return steps;
-}
-
-// Silnik odrzuca rzutki po końcu gry, więc ostatnia liczona rzutka zakończonej gry to ta, która ją zakończyła.
-export function finishedAt(game: GameState, throws: readonly ThrowRecord[]): string | null {
-  return isGameFinished(game) ? (throws.at(-1)?.receivedAt ?? null) : null;
 }
 
 // Otwarte porzucenie albo null, gdy gra nie jest porzucona.
@@ -181,11 +159,106 @@ export function gameConfig(match: MatchSetup): GameConfig {
   }
 }
 
-// Stan gry zawsze z odtworzenia logu, bez osobnej pamięci podręcznej stanu.
-export function replayMatch(match: StoredMatch, throws: readonly ThrowRecord[], checkoutSteps: readonly CheckoutStep[] = []): ApplyResult<GameState> {
-  return replayGame(
-    gameConfig(match),
-    throws.map(({ segment, multiplier }) => ({ segment, multiplier })),
-    checkoutSteps,
-  );
+type LoggedStep = { readonly step: ThrowLogStep; readonly entry: LogEntry };
+
+// Kroki silnika z wpisów logu, każdy razem z wpisem, z którego powstał.
+function throwLogSteps(log: MatchLog): LoggedStep[] {
+  const steps: LoggedStep[] = [];
+  for (const entry of log.entries) {
+    switch (entry.type) {
+      case 'throw': {
+        const record = log.throws.get(entry.throwId);
+        if (!record) {
+          throw new Error(`Corrupt log: throw ${entry.throwId} at seq ${entry.seq} is missing`);
+        }
+        steps.push({ step: { type: 'throw', throwId: entry.throwId, hit: { segment: record.segment, multiplier: record.multiplier } }, entry });
+        break;
+      }
+      case 'undo':
+        steps.push({ step: { type: 'undo', throwId: entry.throwId }, entry });
+        break;
+      case 'throw_flagged':
+        steps.push({ step: { type: 'flag', throwId: entry.throwId }, entry });
+        break;
+      case 'throw_verified':
+        steps.push({ step: { type: 'verify', throwId: entry.throwId, hit: entry.hit }, entry });
+        break;
+      default:
+        break;
+    }
+  }
+  return steps;
+}
+
+// Ostatnie oznaczenie każdej rzutki i weryfikacja po nim. Kandydaci, klatki i czubek pochodzą z trafienia.
+function throwReviews(log: MatchLog): Map<string, ThrowReview> {
+  const reviews = new Map<string, ThrowReview>();
+  for (const entry of log.entries) {
+    if (entry.type === 'throw_flagged') {
+      const { candidates = [], frames, tip } = log.throws.get(entry.throwId)?.review ?? {};
+      reviews.set(entry.throwId, {
+        reason: entry.reason,
+        flaggedBy: entry.actor,
+        candidates,
+        ...(frames === undefined ? {} : { frames }),
+        ...(tip === undefined ? {} : { tip }),
+        resolved: null,
+      });
+    } else if (entry.type === 'throw_verified') {
+      const review = reviews.get(entry.throwId);
+      if (review) {
+        reviews.set(entry.throwId, { ...review, resolved: { ...entry.hit, by: entry.actor, at: entry.createdAt } });
+      }
+    }
+  }
+  return reviews;
+}
+
+export interface MatchReplay {
+  readonly game: GameState;
+  readonly events: readonly DomainEvent[];
+  readonly counted: readonly ThrowRecord[]; // w kolejności, w jakiej silnik je policzył
+  readonly throws: readonly ReviewedThrow[]; // rzutki niecofnięte, w kolejności z logu
+  readonly lastTurnThrows: readonly ReviewedThrow[];
+  readonly awaitingReview: boolean;
+  readonly finishedAt: string | null; // createdAt wpisu, po którym gra się zakończyła
+}
+
+// Stan gry zawsze z odtworzenia logu, bez osobnej pamięci podręcznej stanu. extra to kroki jeszcze niezapisane:
+// pozwalają sprawdzić komendę w silniku przed zapisem, ale nie mają wpisu, więc finishedAt po nich jest null.
+export function replayLog(match: StoredMatch, log: MatchLog, extra: readonly ThrowLogStep[] = []): MatchReplay {
+  const config = gameConfig(match);
+  const logged = throwLogSteps(log);
+  const replay = replayThrowLog(config, [...logged.map(({ step }) => step), ...extra]);
+  const checkoutSteps = effectiveCheckoutSteps(log);
+  const { state: game, events } = checkoutSteps.length > 0 ? replayGame(config, [], checkoutSteps) : replay;
+  const reviews = throwReviews(log);
+  const views = new Map<string, ReviewedThrow>();
+  for (const { throwId, value, scoring, pending } of replay.throws) {
+    const stored = log.throws.get(throwId);
+    if (!stored) {
+      continue; // rzutka z extra, jeszcze bez zapisu
+    }
+    views.set(throwId, {
+      id: throwId,
+      sequence: stored.sequence,
+      source: stored.source,
+      confidence: stored.confidence,
+      reading: { segment: stored.segment, multiplier: stored.multiplier },
+      value,
+      status: pending ? 'pending' : 'confirmed',
+      scoring,
+      review: reviews.get(throwId) ?? null,
+    });
+  }
+  const finishedStep = replay.finishedAtStep === null ? undefined : logged[replay.finishedAtStep];
+  return {
+    game,
+    events,
+    counted: replay.counted.flatMap((throwId) => log.throws.get(throwId) ?? []),
+    throws: [...views.values()],
+    lastTurnThrows: replay.lastTurn.flatMap((throwId) => views.get(throwId) ?? []),
+    awaitingReview: replay.throws.some((entry) => entry.scoring === 'waiting'),
+    finishedAt: finishedStep?.entry.createdAt ?? null,
+  };
 }

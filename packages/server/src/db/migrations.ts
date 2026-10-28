@@ -143,6 +143,15 @@ const migrations: Record<string, Migration> = {
       await typed.updateTable('matches').set({ checkout_rule: 'new_each_attempt' }).where('practice_mode', '=', 'checkouts').execute();
     },
   },
+  // Powód weryfikacji od detektora przy rzutce oraz oznaczenia i weryfikacje w logu. Stare wiersze dostają null.
+  '0007_throw_review': {
+    async up(db: Kysely<unknown>) {
+      await db.schema.alterTable('throws').addColumn('review', 'text').execute();
+      await db.schema.alterTable('match_events').addColumn('segment', 'integer').execute();
+      await db.schema.alterTable('match_events').addColumn('multiplier', 'integer').execute();
+      await db.schema.alterTable('match_events').addColumn('actor', 'text').execute();
+    },
+  },
 };
 
 const provider: MigrationProvider = {

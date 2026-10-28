@@ -12,6 +12,7 @@ const app = await buildApp({
   corsOrigins: config.corsOrigins,
   webDir: config.webDir,
   matchLockMinutes: config.matchLockMinutes,
+  pendingConfidence: config.pendingConfidence,
 });
 
 async function shutdown(): Promise<void> {
