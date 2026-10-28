@@ -59,3 +59,16 @@ pnpm --filter @autoscore/web test
 ```
 
 Vitest w środowisku jsdom z Testing Library. Konfiguracja jest w bloku `test` w `vite.config.ts`, a przygotowanie środowiska w `src/test-setup.ts`.
+
+## Katalog komponentów (describe-me)
+
+Katalog pokazuje stany komponentów zapisane z testów Vitesta, klatka po klatce, oraz zakładkę Foundations z tokenami motywu. Na razie nagrywane są tylko `Scoreboard`, `Keypad` i `MatchEndView`.
+
+```sh
+pnpm --filter @autoscore/web test   # zapisuje dane do packages/web/.describe-me/
+pnpm run docs                       # przeglądarka katalogu na http://localhost:6006
+```
+
+Sam `pnpm docs` uruchamia wbudowaną komendę pnpm, dlatego potrzebny jest `pnpm run docs`. Statyczną kopię katalogu zapisuje `pnpm --filter @autoscore/web docs:build` do `packages/web/describe-me-dist/`. Oba katalogi są tylko lokalne, git je ignoruje i nic ich nie publikuje.
+
+Nowy komponent trafia do katalogu po dopisaniu jego pliku testów do `include` w `describeMe()` w `vite.config.ts`. Tokeny w Foundations pochodzą z `src/theme.css`, który nagrywane testy importują same.
