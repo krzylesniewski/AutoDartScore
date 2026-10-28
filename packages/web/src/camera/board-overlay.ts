@@ -32,7 +32,8 @@ function format(value: number): string {
   return String(Math.round(value * 100) / 100);
 }
 
-// null, gdy punkty nie wyznaczają homografii albo część tarczy leży za horyzontem obrazu.
+// null tylko wtedy, gdy homografia rzuci błąd: brak homografii albo punkt odwzorowany w nieskończoność (w = 0).
+// Punktów za horyzontem kamery (w o przeciwnym znaku) nie sprawdzamy, więc punkty w złej kolejności mogą dać wynik z wywróconą siatką.
 export function boardOverlay(calibration: CameraCalibration): BoardOverlay | null {
   try {
     const toImage = invertHomography(calibrationHomography(calibration));
