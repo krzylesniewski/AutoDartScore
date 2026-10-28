@@ -158,12 +158,51 @@ describe('SettingsScreen', () => {
     expect(toggle('Efekty dźwiękowe').getAttribute('aria-pressed')).toBe('false');
   });
 
+  it('turns zero comments off by default and stores on and off', () => {
+    render(<SettingsScreen />);
+    expect(toggle('Komentarze do zera').getAttribute('aria-pressed')).toBe('false');
+    expect(toggle('Komentarze do zera').textContent).toContain('wyłączone');
+
+    fireEvent.click(toggle('Komentarze do zera'));
+    expect(toggle('Komentarze do zera').getAttribute('aria-pressed')).toBe('true');
+    expect(toggle('Komentarze do zera').textContent).toContain('włączone');
+    expect(localStorage.getItem('autoscore.zeroComments')).toBe('on');
+
+    fireEvent.click(toggle('Komentarze do zera'));
+    expect(toggle('Komentarze do zera').getAttribute('aria-pressed')).toBe('false');
+    expect(localStorage.getItem('autoscore.zeroComments')).toBe('off');
+  });
+
+  it('disables zero comments while the voice is stored off', () => {
+    localStorage.setItem('autoscore.voice', 'off');
+    localStorage.setItem('autoscore.zeroComments', 'on');
+    render(<SettingsScreen />);
+    expect(toggle('Komentarze do zera').hasAttribute('disabled')).toBe(true);
+    expect(toggle('Komentarze do zera').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('keeps the stored zero comments choice when the voice goes off and on', () => {
+    render(<SettingsScreen />);
+    fireEvent.click(toggle('Komentarze do zera'));
+
+    fireEvent.click(toggle('Głos'));
+    expect(toggle('Komentarze do zera').hasAttribute('disabled')).toBe(true);
+    expect(toggle('Komentarze do zera').getAttribute('aria-pressed')).toBe('true');
+    expect(localStorage.getItem('autoscore.zeroComments')).toBe('on');
+
+    fireEvent.click(toggle('Głos'));
+    expect(toggle('Komentarze do zera').hasAttribute('disabled')).toBe(false);
+    expect(toggle('Komentarze do zera').getAttribute('aria-pressed')).toBe('true');
+    expect(localStorage.getItem('autoscore.zeroComments')).toBe('on');
+  });
+
   it('shows the defaults and still changes on screen when localStorage throws', () => {
     blockStorage();
     render(<SettingsScreen />);
     expect(radio('Koło').checked).toBe(true);
     expect(toggle('Głos').getAttribute('aria-pressed')).toBe('true');
     expect(toggle('Efekty dźwiękowe').getAttribute('aria-pressed')).toBe('true');
+    expect(toggle('Komentarze do zera').getAttribute('aria-pressed')).toBe('false');
 
     fireEvent.click(radio('Siatka'));
     fireEvent.click(toggle('Głos'));

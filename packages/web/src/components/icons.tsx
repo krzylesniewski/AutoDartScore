@@ -109,6 +109,22 @@ export function EffectsOffIcon({ className }: IconProps) {
   );
 }
 
+export function CommentIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 3h16a2 2 0 012 2v11a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2zm3 5v2h10V8zm0 4v2h7v-2z" />
+    </Svg>
+  );
+}
+
+export function CommentOffIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M3.27 2L2 3.27l1.73 1.73A2 2 0 004 5v17l4-4h7.73l5 5L22 21.73zM20 3H7.83l13.92 13.92A2 2 0 0022 16V5a2 2 0 00-2-2z" />
+    </Svg>
+  );
+}
+
 export function TargetIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

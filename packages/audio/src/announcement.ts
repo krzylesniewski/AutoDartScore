@@ -91,21 +91,26 @@ function mainPart(events: readonly DomainEvent[], random: () => number): { kind:
   return null;
 }
 
+export interface AnnouncementOptions {
+  readonly zeroComments?: boolean;
+}
+
 // Jedna rzutka daje najwyżej jeden komunikat. Zwycięzca i game shot zastępują sumę tury, którą zamknęli.
-// Po głównym odczycie idzie komentarz do zerowej tury, a potem po jednej części na rodzaj osiągnięcia.
+// Po głównym odczycie idzie komentarz do zerowej tury, tylko z opcją zeroComments, a potem po jednej części na rodzaj osiągnięcia.
 // Nagrania osiągnięć nie mają imienia, więc dwa longest_leg z jednego lega dają jedną część.
 // random zwraca liczbę z [0, 1) i wybiera wariant nagrania.
 export function announcementFor(
   events: readonly DomainEvent[],
   achievements: readonly AchievementKind[],
   random: () => number,
+  options: AnnouncementOptions = {},
 ): Announcement | null {
   const main = mainPart(events, random);
   if (!main) {
     return null;
   }
   const parts: [AnnouncementPart, ...AnnouncementPart[]] = [main.part];
-  if (main.kind === 'score' && events.some((event) => event.type === 'turn_completed' && event.total === 0)) {
+  if (options.zeroComments === true && main.kind === 'score' && events.some((event) => event.type === 'turn_completed' && event.total === 0)) {
     parts.push(pick(ZERO_VARIANTS, random));
   }
   for (const kind of ACHIEVEMENT_ORDER) {

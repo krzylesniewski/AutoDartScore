@@ -1,9 +1,17 @@
 import { useId, useState, type ReactNode } from 'react';
-import { readEffectsEnabled, readVoiceEnabled, writeEffectsEnabled, writeVoiceEnabled } from '../audio/use-announcer';
+import {
+  readEffectsEnabled,
+  readVoiceEnabled,
+  readZeroCommentsEnabled,
+  writeEffectsEnabled,
+  writeVoiceEnabled,
+  writeZeroCommentsEnabled,
+} from '../audio/use-announcer';
 import { AppNav } from '../components/AppNav';
 import { EffectsToggle } from '../components/EffectsToggle';
 import { GridIcon, RingIcon } from '../components/icons';
 import { VoiceToggle } from '../components/VoiceToggle';
+import { ZeroCommentsToggle } from '../components/ZeroCommentsToggle';
 import { readKeypadLayout, writeKeypadLayout, type KeypadLayout } from '../game/keypad-layout';
 import { pl } from '../i18n/pl';
 
@@ -20,6 +28,7 @@ export function SettingsScreen() {
   const [layout, setLayout] = useState<KeypadLayout>(readKeypadLayout);
   const [voice, setVoice] = useState(readVoiceEnabled);
   const [effects, setEffects] = useState(readEffectsEnabled);
+  const [zeroComments, setZeroComments] = useState(readZeroCommentsEnabled);
 
   function changeLayout(next: KeypadLayout): void {
     writeKeypadLayout(next);
@@ -34,6 +43,11 @@ export function SettingsScreen() {
   function changeEffects(next: boolean): void {
     writeEffectsEnabled(next);
     setEffects(next);
+  }
+
+  function changeZeroComments(next: boolean): void {
+    writeZeroCommentsEnabled(next);
+    setZeroComments(next);
   }
 
   return (
@@ -84,6 +98,7 @@ export function SettingsScreen() {
           <div className="flex flex-wrap gap-2.5">
             <VoiceToggle enabled={voice} onChange={changeVoice} />
             <EffectsToggle enabled={effects} onChange={changeEffects} />
+            <ZeroCommentsToggle enabled={zeroComments} disabled={!voice} onChange={changeZeroComments} />
           </div>
         </section>
       </main>

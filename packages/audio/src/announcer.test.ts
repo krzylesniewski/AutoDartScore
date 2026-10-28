@@ -131,8 +131,28 @@ describe('createAnnouncer', () => {
   });
 
   it('speaks the zero comment after zero', () => {
+    announcer = createAnnouncer(speaker, undefined, firstVariant, { zeroComments: () => true });
     send(turnBatch(5, 0));
     expect(speaker.calls).toEqual(['cancel', 'speak:scores/0.mp3|zero + events/zero_1.mp3|Tarcza wisi trochę wyżej']);
+  });
+
+  it('speaks only zero without options', () => {
+    send(turnBatch(5, 0));
+    expect(speaker.calls).toEqual(['cancel', 'speak:scores/0.mp3|zero']);
+  });
+
+  it('reads the zeroComments getter at each flush', () => {
+    let zeroComments = false;
+    announcer = createAnnouncer(speaker, undefined, firstVariant, { zeroComments: () => zeroComments });
+    send(turnBatch(5, 0));
+    zeroComments = true;
+    send(turnBatch(6, 0));
+    expect(speaker.calls).toEqual([
+      'cancel',
+      'speak:scores/0.mp3|zero',
+      'cancel',
+      'speak:scores/0.mp3|zero + events/zero_1.mp3|Tarcza wisi trochę wyżej',
+    ]);
   });
 
   it('drops an achievement with another eventSeq', () => {

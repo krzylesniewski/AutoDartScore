@@ -1,6 +1,6 @@
 import type { AchievementKind, Bust, CasualFinished, DomainEvent, Hit, LegWon, MatchWon, PlayerFinished, TurnCompleted } from '@autoscore/schema';
 import { describe, expect, it, vi } from 'vitest';
-import { ACHIEVEMENT_CLIPS, announcementFor, EVENT_CLIPS, spokenNumber } from './index.js';
+import { ACHIEVEMENT_CLIPS, announcementFor, EVENT_CLIPS, spokenNumber, type AnnouncementOptions } from './index.js';
 
 const T20: Hit = { segment: 20, multiplier: 3 };
 const D20: Hit = { segment: 20, multiplier: 2 };
@@ -67,18 +67,28 @@ describe('announcementFor', () => {
     expect(announcementFor([turn(100)], [], first)).toEqual({ kind: 'score', parts: [{ text: 'sto', clip: 'scores/100.mp3' }] });
   });
 
+  it.each<[string, AnnouncementOptions | undefined]>([
+    ['without options', undefined],
+    ['with zeroComments false', { zeroComments: false }],
+  ])('plays only zero after three misses %s', (_name, options) => {
+    expect(announcementFor([turn(0, [MISS, MISS, MISS])], [], first, options)).toEqual({
+      kind: 'score',
+      parts: [{ text: 'zero', clip: 'scores/0.mp3' }],
+    });
+  });
+
   it.each([
     [0, { text: 'Tarcza wisi trochę wyżej', clip: 'events/zero_1.mp3' }],
     [0.999, { text: 'Następnym razem będzie lepiej', clip: 'events/zero_2.mp3' }],
-  ])('plays zero after three misses, then a comment for random %s', (value, comment) => {
-    expect(announcementFor([turn(0, [MISS, MISS, MISS])], [], () => value)).toEqual({
+  ])('plays zero after three misses, then a comment for random %s with zeroComments', (value, comment) => {
+    expect(announcementFor([turn(0, [MISS, MISS, MISS])], [], () => value, { zeroComments: true })).toEqual({
       kind: 'score',
       parts: [{ text: 'zero', clip: 'scores/0.mp3' }, comment],
     });
   });
 
-  it('adds no zero comment to a bust', () => {
-    expect(announcementFor([bust], [], first)).toEqual({ kind: 'bust', parts: [{ text: 'Bust', clip: 'events/bust_1.mp3' }] });
+  it.each([true, false])('adds no zero comment to a bust with zeroComments %s', (zeroComments) => {
+    expect(announcementFor([bust], [], first, { zeroComments })).toEqual({ kind: 'bust', parts: [{ text: 'Bust', clip: 'events/bust_1.mp3' }] });
   });
 
   it('plays the 180 clip', () => {
@@ -95,8 +105,15 @@ describe('announcementFor', () => {
 
   it('picks the main variant before the zero variant', () => {
     const random = vi.fn(() => 0);
-    announcementFor([turn(0, [MISS, MISS, MISS])], ['turn_record'], random);
+    announcementFor([turn(0, [MISS, MISS, MISS])], ['turn_record'], random, { zeroComments: true });
     expect(random).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call random for a zero turn without zeroComments', () => {
+    const random = vi.fn(() => 0);
+    announcementFor([turn(0, [MISS, MISS, MISS])], ['turn_record'], random);
+    announcementFor([turn(0, [MISS, MISS, MISS])], [], random, { zeroComments: false });
+    expect(random).not.toHaveBeenCalled();
   });
 
   it('does not call random for a plain turn or a game shot', () => {
@@ -152,6 +169,24 @@ describe('announcementFor with achievements', () => {
     expect(announcementFor(events, ['checkout_record', 'first_100'], first)).toEqual({
       kind: 'winner',
       parts: [{ text: 'Zwycięzca', clip: 'events/winner_1.mp3' }, achievement('first_100'), achievement('checkout_record')],
+    });
+  });
+
+  it('reads the achievement right after zero without zeroComments', () => {
+    expect(announcementFor([turn(0, [MISS, MISS, MISS])], ['shortest_leg'], first)).toEqual({
+      kind: 'score',
+      parts: [{ text: 'zero', clip: 'scores/0.mp3' }, achievement('shortest_leg')],
+    });
+  });
+
+  it('reads the achievement after the zero comment with zeroComments', () => {
+    expect(announcementFor([turn(0, [MISS, MISS, MISS])], ['shortest_leg'], first, { zeroComments: true })).toEqual({
+      kind: 'score',
+      parts: [
+        { text: 'zero', clip: 'scores/0.mp3' },
+        { text: 'Tarcza wisi trochę wyżej', clip: 'events/zero_1.mp3' },
+        achievement('shortest_leg'),
+      ],
     });
   });
 

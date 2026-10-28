@@ -19,10 +19,20 @@ export interface Announcer {
   stop(): void;
 }
 
+// Getter czytamy przy każdym komunikacie, więc zmiana ustawienia działa bez tworzenia announcera od nowa.
+export interface AnnouncerOptions {
+  readonly zeroComments?: () => boolean;
+}
+
 // Serwer wysyła jedną paczkę na rzutkę: throw_registered, zdarzenia domenowe, osiągnięcia i state_updated z tym samym eventSeq.
 // Czytamy dopiero po state_updated, żeby cała paczka dała jeden komunikat. Snapshot po połączeniu ma inny eventSeq
 // niż bufor i nigdy nie jest czytany.
-export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer, random: () => number = Math.random): Announcer {
+export function createAnnouncer(
+  speaker: Speaker,
+  effects?: EffectPlayer,
+  random: () => number = Math.random,
+  options: AnnouncerOptions = {},
+): Announcer {
   let buffer: DomainEvent[] = [];
   let achievements: AchievementKind[] = [];
   let bufferSeq: number | null = null;
@@ -64,7 +74,7 @@ export function createAnnouncer(speaker: Speaker, effects?: EffectPlayer, random
     const kinds = current ? achievements : [];
     clear();
     const effect = soundEffectFor(events);
-    const announcement = announcementFor(events, kinds, random);
+    const announcement = announcementFor(events, kinds, random, { zeroComments: options.zeroComments?.() ?? false });
     if (!effect && !announcement) {
       return;
     }
