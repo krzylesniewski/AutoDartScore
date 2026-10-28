@@ -28,12 +28,20 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-10-28: zakładka „Overall” ze statystykami wszystkich graczy razem
+- **Zgłosił:** gracze (przekazał autor)
+- **Rodzaj / obszar:** pomysł / statystyki
+- **Co powiedział:** „W settingsach nowa zakładka overall. I tam liczba lotek całkowita, średnia z 3 całkowita. I może statystyki kto jest powyżej, a kto poniżej”
+- **Kontekst:** podsumowanie wszystkich gier, nie jednego gracza
+- **Status:** zaplanowany (P53, `design/plan-p53.md`)
+- **Uwagi:** dziś ranking (`#/stats`, `buildRankings` w `packages/server/src/stats/rankings.ts`, `StatsRankings` w `packages/schema/src/stats.ts`) ma już łączną liczbę gier i legów oraz średnią na 3 rzutki każdego gracza (z ukończonych legów, ranking od `MIN_LEGS_FOR_AVERAGE` legów, filtr po typie gry). Brakuje łącznej liczby lotek, łącznej średniej wszystkich graczy i porównania z nią. Kierunek: serwer liczy z tej samej tabeli rzutek (zasada: statystyki z rzutek, nie z liczników) i tym samym filtrem `countsToStats` oraz typem gry; front pokazuje zakładkę z kafelkami i listą graczy podzieloną na „powyżej średniej” i „poniżej średniej”, z różnicą (np. „+4,2”) pokazaną liczbą i znakiem, a nie samym kolorem. Propozycje Claude do tej zakładki: łączne punkty, gry i legi; łączna liczba 180, 140+, 100+ i 60+; łączny % doubli; najczęstsze trafienie wszystkich graczy (jest już `buildFrequentHits` dla jednego gracza w `frequent-hits.ts`); rekordy wszech czasów (najwyższe zakończenie, najkrótszy leg, najwyższa tura) w skrócie z linkiem do rankingu; gracz z największą liczbą lotek („najbardziej zapracowany”); wykres łącznej średniej w czasie (wzór `FormChart`). Decyzje autora 2026-10-28: zakładka „Overall” na ekranie Statystyki, na prawo od „Trening” w przełączniku typu gier (Wszystkie / Mecze 1v1 / Zabawa / Trening / Overall; w zgłoszeniu „settingsy” oznaczały ten przełącznik); średnia ogólna to średnia ze średnich graczy (każdy gracz waży tyle samo); do porównania powyżej/poniżej wchodzą wszyscy gracze, także poniżej progu legów rankingu; na razie z propozycji Claude tylko liczba lotek każdego gracza. Do potwierdzenia przy planowaniu: Overall liczy wszystkie gry wliczane do statystyk razem (jak „Wszystkie”, bez Free run), a gracz bez ukończonego lega nie ma średniej i nie wchodzi do porównania.
+
 ### 2026-10-28: wyłączanie komentarzy do tury za zero w ustawieniach
 - **Zgłosił:** autor
 - **Rodzaj / obszar:** pomysł / głos
 - **Co powiedział:** „Zmiana w wymaganiach. Komunikaty przy wynikach 0 z trzech lotek w każdym trybie gry powinny mieć opcję wyłączenia ich w settingsach”
 - **Kontekst:** wszystkie typy gier, w których czytana jest suma tury
-- **Status:** zaplanowany (P52, `design/plan-p52.md`)
+- **Status:** zrobiony (P52, PR #62)
 - **Uwagi:** zmiana wymagań względem P51 (PR #59), który miał w „Poza zakresem” „ustawienie wyłączające same komentarze”. Dziś komentarz dokleja `announcementFor` w `packages/audio/src/announcement.ts` (warunek `main.kind === 'score'` i suma 0, losowo `zero_1`/`zero_2`), bez żadnego przełącznika; da się go uciszyć tylko wyłączając cały głos. Kierunek: nowy przełącznik „Komentarze do zera” w sekcji dźwięku na ekranie „Ustawienia” (`SettingsScreen.tsx`, obok `VoiceToggle` i `EffectsToggle`), zapis per urządzenie w localStorage jak głos i efekty (`use-announcer.ts`, np. klucz `autoscore.zeroComments`), a `announcementFor` dostaje opcję pomijającą komentarz. Suma 0 i osiągnięcia czytane dalej. Decyzje autora 2026-10-28: komentarze domyślnie wyłączone (brak wpisu w localStorage oznacza wyłączone, inaczej niż przy głosie i efektach); przy wyłączonym głosie przełącznik jest nieaktywny.
 
 ### 2026-10-26: śmieszny komentarz do tury za zero
