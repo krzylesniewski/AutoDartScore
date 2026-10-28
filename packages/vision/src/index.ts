@@ -13,3 +13,4 @@ export * from './baseline-detector.js';
 export * from './evaluation.js';
 export * from './run-evaluation.js';
 export * from './detectors.js';
+export * from './snapshot.js';

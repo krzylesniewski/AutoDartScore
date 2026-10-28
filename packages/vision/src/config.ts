@@ -7,15 +7,39 @@ export type CameraConfig =
   | { readonly kind: 'video'; readonly path: string }
   | { readonly kind: 'avfoundation'; readonly name: string };
 
+export interface ApiConfig {
+  readonly url: string; // bez końcowego /
+  readonly password: string | null;
+}
+
 export interface VisionConfig {
   readonly camera: CameraConfig;
+  readonly api: ApiConfig;
 }
 
 // Nazwa z ffmpeg -f avfoundation -list_devices true -i "". Sufiks :none wyłącza dźwięk.
 const DEFAULT_CAMERA_NAME = 'HD Pro Webcam C920:none';
 
+// Ta sama zmienna i wartość domyślna co w proxy Vite.
+const DEFAULT_API_URL = 'http://localhost:3000';
+
 export function loadConfig(env: NodeJS.ProcessEnv): VisionConfig {
-  return { camera: parseCamera(env.AUTOSCORE_CAMERA_VIDEO, env.AUTOSCORE_CAMERA_NAME) };
+  return {
+    camera: parseCamera(env.AUTOSCORE_CAMERA_VIDEO, env.AUTOSCORE_CAMERA_NAME),
+    // Bez trim, jak na serwerze, bo spacje mogą być częścią hasła.
+    api: { url: parseApiUrl(env.AUTOSCORE_API_URL), password: env.AUTOSCORE_PASSWORD || null },
+  };
+}
+
+function parseApiUrl(value: string | undefined): string {
+  const trimmed = (value ?? '').trim();
+  if (trimmed === '') {
+    return DEFAULT_API_URL;
+  }
+  if (!URL.canParse(trimmed) || !['http:', 'https:'].includes(new URL(trimmed).protocol)) {
+    throw new Error(`Invalid AUTOSCORE_API_URL: ${JSON.stringify(trimmed)}`);
+  }
+  return trimmed.replace(/\/+$/, '');
 }
 
 // Nagranie zastępuje kamerę, więc wygrywa z AUTOSCORE_CAMERA_NAME.

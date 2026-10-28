@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CameraCalibration } from './index.js';
+import { CameraCalibration, CameraId, DEFAULT_CAMERA_ID } from './index.js';
 
 const valid = {
   imageWidth: 1920,
@@ -60,5 +60,27 @@ describe('CameraCalibration', () => {
     ['-Infinity y', { x: 100, y: Number.NEGATIVE_INFINITY }],
   ])('rejects %s', (_, point) => {
     expect(CameraCalibration.safeParse(withPoint(3, point)).success).toBe(false);
+  });
+});
+
+describe('CameraId', () => {
+  it.each(['camera-1', 'c', '0', 'usb-cam-2', 'a'.repeat(32)])('accepts %j', (id) => {
+    expect(CameraId.safeParse(id).success).toBe(true);
+  });
+
+  it.each([
+    ['an empty id', ''],
+    ['uppercase', 'Camera-1'],
+    ['a slash', 'camera/1'],
+    ['a leading dash', '-camera'],
+    ['a space', 'camera 1'],
+    ['33 characters', 'a'.repeat(33)],
+  ])('rejects %s', (_, id) => {
+    expect(CameraId.safeParse(id).success).toBe(false);
+  });
+
+  it('accepts the default camera id', () => {
+    expect(DEFAULT_CAMERA_ID).toBe('camera-1');
+    expect(CameraId.parse(DEFAULT_CAMERA_ID)).toBe('camera-1');
   });
 });

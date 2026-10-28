@@ -89,6 +89,23 @@ export interface PlayerChangesTable {
   created_at: string;
 }
 
+// Kalibracje kamer: tylko dopisywanie. Aktualna ma najwyższy seq. Punkty w kolejności CameraCalibration.
+export interface CameraCalibrationsTable {
+  camera_id: string;
+  seq: number;
+  image_width: number;
+  image_height: number;
+  p1_x: number;
+  p1_y: number;
+  p2_x: number;
+  p2_y: number;
+  p3_x: number;
+  p3_y: number;
+  p4_x: number;
+  p4_y: number;
+  created_at: string;
+}
+
 export interface Database {
   players: PlayersTable;
   player_changes: PlayerChangesTable;
@@ -96,6 +113,7 @@ export interface Database {
   match_players: MatchPlayersTable;
   throws: ThrowsTable;
   match_events: MatchEventsTable;
+  camera_calibrations: CameraCalibrationsTable;
 }
 
 export function openDatabase(path: string): Kysely<Database> {

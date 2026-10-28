@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { onUnauthorized } from './api/session';
 import { GameScreen } from './screens/GameScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
@@ -9,7 +9,10 @@ import { StatsScreen } from './screens/StatsScreen';
 
 const HOME = '#/';
 
-type Route = { screen: 'home' } | { screen: 'game'; matchId: string } | { screen: 'stats'; playerId: string | null } | { screen: 'history' } | { screen: 'settings' } | null;
+// Osobny plik w buildzie: ekran otwiera się rzadko, a z nim główny pakiet przekraczał próg ostrzeżenia Vite (500 kB).
+const CalibrationScreen = lazy(() => import('./screens/CalibrationScreen').then((module) => ({ default: module.CalibrationScreen })));
+
+type Route = { screen: 'home' } | { screen: 'game'; matchId: string } | { screen: 'stats'; playerId: string | null } | { screen: 'history' } | { screen: 'settings' } | { screen: 'calibration' } | null;
 
 function parseRoute(hash: string): Route {
   if (hash === '' || hash === '#' || hash === HOME) {
@@ -24,6 +27,9 @@ function parseRoute(hash: string): Route {
   }
   if (hash === '#/settings') {
     return { screen: 'settings' };
+  }
+  if (hash === '#/settings/calibration') {
+    return { screen: 'calibration' };
   }
   if (hash === '#/stats') {
     return { screen: 'stats', playerId: null };
@@ -68,6 +74,13 @@ export function App() {
   }
   if (route?.screen === 'settings') {
     return <SettingsScreen />;
+  }
+  if (route?.screen === 'calibration') {
+    return (
+      <Suspense fallback={null}>
+        <CalibrationScreen />
+      </Suspense>
+    );
   }
   if (route?.screen === 'stats') {
     return <StatsScreen playerId={route.playerId} />;

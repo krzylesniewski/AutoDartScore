@@ -37,7 +37,7 @@ Każdy wpis w `AUTOSCORE_CORS_ORIGIN` musi być samym originem: schemat, host i 
 - `POST /auth/login` z `{ "password": "…" }` zwraca `{ "token": "…", "expiresAt": "…" }`. Trasa istnieje tylko z ustawionym hasłem, inaczej odpowiada 404. Złe hasło daje 401 `invalid_password`, a niepoprawne body 400.
 - Po 10 nieudanych logowaniach w ciągu minuty serwer odpowiada 429 `too_many_attempts` z nagłówkiem `Retry-After` w sekundach, nawet na poprawne hasło. Limit jest wspólny dla całego serwera i trzymany w pamięci.
 - Z ustawionym hasłem każde inne żądanie HTTP, także do nieznanej trasy, wymaga nagłówka `Authorization: Bearer <token>`. Bez niego albo z nieważnym tokenem odpowiedź to 401 `unauthorized`. `OPTIONS` oraz `GET` i `HEAD` do plików frontu (niżej) nie wymagają tokenu, a WebSocket uwierzytelnia się pierwszą wiadomością (niżej).
-- Z ustawionym `AUTOSCORE_CORS_ORIGIN` tylko wymienione originy dostają `Access-Control-Allow-Origin`, także na odpowiedzi 401. Preflight dopuszcza metody `GET`, `HEAD`, `POST` i `PATCH` oraz nagłówki `Authorization` i `Content-Type`.
+- Z ustawionym `AUTOSCORE_CORS_ORIGIN` tylko wymienione originy dostają `Access-Control-Allow-Origin`, także na odpowiedzi 401. Preflight dopuszcza metody `GET`, `HEAD`, `POST`, `PATCH` i `PUT` oraz nagłówki `Authorization` i `Content-Type`.
 
 ```sh
 curl -s -X POST https://api.example/auth/login -H 'content-type: application/json' -d '{"password":"…"}'
@@ -66,9 +66,25 @@ Nagłówek `Cache-Control`:
 - `/audio/*`: `public, max-age=604800`,
 - pozostałe pliki: `no-cache`.
 
-Trasy API mają pierwszeństwo. Plik, którego pierwszy segment ścieżki pokrywa się z trasą API (`health`, `auth`, `players`, `matches`, `stats`), jest pomijany z ostrzeżeniem w logu. Pliki frontu ładują się bez tokenu, żeby przeglądarka dostała ekran logowania. API dalej wymaga tokenu, a brakujący plik daje bez tokenu 401, z tokenem 404.
+Trasy API mają pierwszeństwo. Plik, którego pierwszy segment ścieżki pokrywa się z trasą API (`health`, `auth`, `players`, `matches`, `stats`, `cameras`), jest pomijany z ostrzeżeniem w logu. Pliki frontu ładują się bez tokenu, żeby przeglądarka dostała ekran logowania. API dalej wymaga tokenu, a brakujący plik daje bez tokenu 401, z tokenem 404.
 
 Gdy w katalogu nie ma czytelnego `index.html`, także gdy katalog nie istnieje, serwer nie wstaje z błędem `Missing index.html in AUTOSCORE_WEB_DIR: <katalog>`.
+
+## Kamery
+
+Trasy dla kalibracji kamery. `cameraId` to małe litery, cyfry i `-`, od 1 do 32 znaków, zaczyna się literą albo cyfrą (`CameraId` z `@autoscore/schema`). Inny daje 400 `invalid_request` na każdej z tras. Z ustawionym hasłem wszystkie wymagają tokenu, także `GET` klatki, więc front pobiera ją przez `fetch`, a nie przez `<img src>`.
+
+- `PUT /cameras/:cameraId/snapshot` z `content-type: image/jpeg` zapisuje ostatnią klatkę i odpowiada 204. Limit body to 8 MiB, większe daje 400 `invalid_request`. Body, które nie zaczyna się od `FF D8 FF` (także puste albo JSON), daje 400 `invalid_request` („Body is not a JPEG image”).
+- `GET /cameras/:cameraId/snapshot` zwraca te same bajty z `content-type: image/jpeg` i `cache-control: no-store`. Klatka jest tylko w pamięci procesu, po jednej na kamerę. Po restarcie serwera trasa daje 404 `not_found`, dopóki `vision` nie wyśle nowej.
+- `PUT /cameras/:cameraId/calibration` z `CameraCalibration` w JSON zapisuje kalibrację i odpowiada 200 z zapisanym obiektem. Serwer sprawdza tylko schemat (rozmiar obrazu i 4 punkty w jego granicach). Punkty, które nie wyznaczają homografii, blokuje front.
+- `GET /cameras/:cameraId/calibration` zwraca ostatnią zapisaną kalibrację albo 404 `not_found`.
+
+Kalibracje są w tabeli `camera_calibrations` (migracja `0008_camera_calibrations`) i tylko dopisywane, jak zmiany profilu w `player_changes`. Każdy zapis dostaje kolejny `seq` dla tej kamery, a aktualna kalibracja to wiersz z najwyższym `seq`. Punkty są w osobnych kolumnach `p1_x` … `p4_y` (`real`), bez JSON.
+
+```sh
+curl -s -X PUT localhost:3000/cameras/camera-1/snapshot -H 'content-type: image/jpeg' --data-binary @frame.jpg
+curl -s -o frame.jpg localhost:3000/cameras/camera-1/snapshot
+```
 
 ## Zamknięcie zakończonej gry
 
@@ -87,7 +103,7 @@ Stan gry podaje też `round` (kolejka rzucającego w bieżącym legu, liczona od
 - `src/config.ts`: `loadConfig`, czyli odczyt zmiennych środowiskowych.
 - `src/errors.ts`: mapowanie błędów na `ApiError` i kody HTTP.
 - `src/auth/`: `credentials.ts` (tokeny HMAC i porównanie hasła), `login-limiter.ts` (limit nieudanych logowań), `access.ts` (CORS i sprawdzanie tokenu przed trasami).
-- `src/routes/`: `health.ts` (`GET /health`), `web-app.ts` (pliki frontu z `AUTOSCORE_WEB_DIR`), `auth.ts` (`POST /auth/login`), `players.ts` (utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu), `matches.ts` (gry, lista gier z filtrami `status`, `playerId` i `type`, rzutki, oznaczenie i weryfikacja rzutki, kolejka weryfikacji, próby i pominięcia checkoutu, cofnięcie, porzucenie, wznowienie i zakończenie treningu), `live.ts` (WebSocket z wiadomością `auth` i pingiem), `stats.ts` (statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, `GET /players/:id/frequent-hits`, podsumowanie meczu i ranking graczy).
+- `src/routes/`: `health.ts` (`GET /health`), `web-app.ts` (pliki frontu z `AUTOSCORE_WEB_DIR`), `auth.ts` (`POST /auth/login`), `players.ts` (utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu), `matches.ts` (gry, lista gier z filtrami `status`, `playerId` i `type`, rzutki, oznaczenie i weryfikacja rzutki, kolejka weryfikacji, próby i pominięcia checkoutu, cofnięcie, porzucenie, wznowienie i zakończenie treningu), `live.ts` (WebSocket z wiadomością `auth` i pingiem), `cameras.ts` (klatka i kalibracja kamery, z własnym parserem `image/jpeg`), `stats.ts` (statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, `GET /players/:id/frequent-hits`, podsumowanie meczu i ranking graczy).
 - `src/match-service.ts`: komendy gry (utworzenie, rzutka, oznaczenie i weryfikacja rzutki, kolejka weryfikacji, próba i pominięcie checkoutu, cofnięcie, porzucenie, wznowienie, zakończenie treningu, lista, subskrypcja).
 - `src/replay.ts`: `replayLog`, czyli odtworzenie stanu w silniku z rzutek, oznaczeń, weryfikacji i cofnięć, z rzutkami jako `ReviewedThrow` i czasem zakończenia gry. Do tego próby i pominięcia checkoutu, które się liczą, stan porzucenia i czas zakończenia treningu.
 - `src/snapshot.ts`: budowa `MatchSnapshot` ze stanu silnika.
@@ -96,6 +112,7 @@ Stan gry podaje też `round` (kolejka rzucającego w bieżącym legu, liczona od
 - `src/live-hub.ts`: rozsyłanie wiadomości do subskrybentów jednej gry.
 - `src/serial-queue.ts`: kolejka komend per gra.
 - `src/store/store.ts`: warstwa dostępu do danych.
+- `src/store/camera-store.ts`: zapis i odczyt kalibracji kamer.
 - `src/db/`: połączenie z bazą, adapter `node:sqlite`, migracje.
 
 ## Testy

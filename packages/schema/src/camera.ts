@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+// Ta sama wartość trafia jako source do HitEvent z kamery.
+export const CameraId = z.string().regex(/^[a-z0-9][a-z0-9-]{0,31}$/);
+export type CameraId = z.infer<typeof CameraId>;
+
+// MVP ma jedną kamerę, więc front i vision używają tej stałej zamiast zmiennej środowiskowej.
+export const DEFAULT_CAMERA_ID = 'camera-1';
+
 // Piksele obrazu z kamery: początek w lewym górnym rogu, y w dół, wartości ułamkowe dozwolone.
 export const ImagePoint = z.object({ x: z.number(), y: z.number() });
 export type ImagePoint = z.infer<typeof ImagePoint>;

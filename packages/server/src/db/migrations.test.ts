@@ -10,7 +10,7 @@ describe('migrateToLatest', () => {
     await migrateToLatest(db);
     await migrateToLatest(db);
     const tables = await db.introspection.getTables();
-    expect(tables.map((table) => table.name).sort()).toEqual(['match_events', 'match_players', 'matches', 'player_changes', 'players', 'throws']);
+    expect(tables.map((table) => table.name).sort()).toEqual(['camera_calibrations', 'match_events', 'match_players', 'matches', 'player_changes', 'players', 'throws']);
     await db.destroy();
   });
 
@@ -178,6 +178,31 @@ describe('migrateToLatest', () => {
       await app.close();
       await db.destroy();
     }
+  });
+
+  it('adds camera_calibrations to a database migrated to 0007_throw_review', async () => {
+    const db = openDatabase(':memory:');
+    await migrateTo(db, '0007_throw_review');
+    expect((await db.introspection.getTables()).map((table) => table.name)).not.toContain('camera_calibrations');
+
+    await migrateToLatest(db);
+    const table = (await db.introspection.getTables()).find((candidate) => candidate.name === 'camera_calibrations');
+    expect(table?.columns.map((column) => [column.name, column.dataType])).toEqual([
+      ['camera_id', 'TEXT'],
+      ['seq', 'INTEGER'],
+      ['image_width', 'INTEGER'],
+      ['image_height', 'INTEGER'],
+      ['p1_x', 'REAL'],
+      ['p1_y', 'REAL'],
+      ['p2_x', 'REAL'],
+      ['p2_y', 'REAL'],
+      ['p3_x', 'REAL'],
+      ['p3_y', 'REAL'],
+      ['p4_x', 'REAL'],
+      ['p4_y', 'REAL'],
+      ['created_at', 'TEXT'],
+    ]);
+    await db.destroy();
   });
 
   it('keeps the old checkout rule for sessions written under 0005_checkout_practice', async () => {
