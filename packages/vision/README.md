@@ -1,6 +1,6 @@
 # @autoscore/vision
 
-Źródła klatek, geometria tarczy i ewaluacja detekcji. Pakiet czyta obraz z kamery, z nagrania albo z plików JPEG w `/fixtures` i zwraca go w jednym formacie `Frame`. Ma też model tarczy w mm i homografię z obrazu na płaską tarczę. Detekcja to na razie baseline, który odróżnia zmianę po rzucie od szumu, ale nie odczytuje segmentu. Pakiet nie wysyła jeszcze niczego do API.
+Źródła klatek, geometria tarczy i ewaluacja detekcji. Pakiet czyta obraz z kamery, z nagrania albo z plików JPEG w `/fixtures` i zwraca go w jednym formacie `Frame`. Ma też model tarczy w mm i homografię z obrazu na płaską tarczę. Detekcja to na razie baseline, który odróżnia zmianę po rzucie od szumu, ale nie odczytuje segmentu. Komenda `snapshot` wysyła jedną klatkę do serwera, żeby skalibrować kamerę na ekranie „Kalibracja kamery”. Trafień pakiet jeszcze nie wysyła.
 
 ## Wymagania i ograniczenia
 
@@ -29,11 +29,14 @@
 - `VideoFileSource(path, { ffmpegPath?, ffprobePath? })`: klatki z nagrania. Najpierw ffprobe czyta rozmiar i pts klatek pierwszego strumienia wideo, potem ffmpeg dekoduje je do RGB24. Klatki przychodzą tak szybko, jak ffmpeg dekoduje, bez odtwarzania w czasie rzeczywistym. Brak pliku albo plik nieczytelny daje błąd ze ścieżką.
 - `AvFoundationSource(name, { ffmpegPath?, now? })`: kamera w macOS przez `-f avfoundation`, 1920×1080, `uyvy422`, `-framerate 30.000030`. Kamerę wybiera nazwa, bo indeksy AVFoundation zmieniają się po restarcie. Nazwa trafia do ffmpeg jako jeden argument, bez powłoki. `avFoundationArgs(name)` zwraca pełną listę argumentów ffmpeg.
 - `readJpegFrame(filePath, timestamp = 0)`: dekoduje JPEG (na przykład z `/fixtures`) do `Frame` w czystym JS (`jpeg-js`), bez natywnych bindingów.
-- `loadConfig(env)` i `createCameraSource(config, platform?)`: konfiguracja ze zmiennych środowiskowych i źródło do niej dopasowane. AVFoundation poza macOS daje błąd z podpowiedzią, żeby użyć `AUTOSCORE_CAMERA_VIDEO`.
+- `encodeJpegFrame(frame, quality = 90)`: koduje `Frame` do JPEG (`Uint8Array`) w czystym JS. `jpeg-js` koduje tylko RGBA, więc klatka dostaje kanał alfa 255.
+- `loadConfig(env)` i `createCameraSource(config, platform?)`: konfiguracja ze zmiennych środowiskowych (`camera` i `api`) i źródło do niej dopasowane. AVFoundation poza macOS daje błąd z podpowiedzią, żeby użyć `AUTOSCORE_CAMERA_VIDEO`.
+- `captureFrame(source, { settleMs })`: pierwsza klatka co najmniej `settleMs` po pierwszej klatce źródła. Gdy źródło skończy się wcześniej, zwraca ostatnią, a bez żadnej klatki rzuca `Camera gave no frame`. Zawsze zamyka źródło. Czas oczekiwania pomija ciemne pierwsze klatki kamery na żywo.
+- `sendSnapshot({ api, cameraId, jpeg, fetch? })`: z hasłem najpierw `POST /auth/login`, potem `PUT /cameras/:cameraId/snapshot` z `content-type: image/jpeg` i tokenem. Złe hasło daje `Login failed: invalid AUTOSCORE_PASSWORD`, inna odpowiedź spoza 2xx daje błąd ze statusem HTTP i kodem `error` z serwera, a brak połączenia `Cannot reach the server at <adres>: <przyczyna>`. Hasło nigdy nie trafia do komunikatu.
 
 ## Geometria tarczy
 
-`board.ts`, `homography.ts` i `calibration.ts` to czysty TypeScript bez `node:*` i bez OpenCV. Importują tylko `@autoscore/schema` i siebie nawzajem, więc zadziałają też w przeglądarce.
+`board.ts`, `homography.ts` i `calibration.ts` to czysty TypeScript bez `node:*` i bez OpenCV. Importują tylko `@autoscore/schema` i siebie nawzajem, więc działają też w przeglądarce. Przeglądarka importuje je przez `@autoscore/vision/geometry` (`src/geometry.ts`), bo główny eksport `@autoscore/vision` ciągnie też źródła klatek z `node:child_process`.
 
 Współrzędne:
 
@@ -63,6 +66,31 @@ Tarcza (BDO/WDF, `BOARD_RADII`, promień w mm):
 - `Homography`: macierz 3×3 wierszami. Skala jest dowolna, więc porównuje się odwzorowane punkty, a nie elementy macierzy.
 
 Kalibracja: `CameraCalibration` z `@autoscore/schema` ma rozmiar obrazu i cztery punkty na zewnętrznej krawędzi pierścienia double, na granicach 5|20, 13|6, 17|3 i 8|11, w tej kolejności (góra, prawo, dół, lewo tarczy w jej własnej orientacji). Kamera patrzy z boku i pod kątem, więc o orientacji decyduje kolejność punktów. `CALIBRATION_BOARD_POINTS` to te same punkty na tarczy (r = 170, kąty 351°, 81°, 171° i 261°). `calibrationHomography(calibration)` zwraca homografię obraz → tarcza. Tarcza → obraz to `invertHomography` jej wyniku.
+
+## Klatka do kalibracji
+
+```sh
+pnpm --filter @autoscore/vision snapshot
+```
+
+Komenda czyta konfigurację, bierze jedną klatkę ze źródła, koduje ją do JPEG i wysyła do serwera jako klatkę kamery `camera-1` (`DEFAULT_CAMERA_ID` z `@autoscore/schema`). Z kamery na żywo czeka 2 s od pierwszej klatki, z nagrania bierze pierwszą. Po sukcesie wypisuje jedną linię, np. `Snapshot sent to http://localhost:3000: 1920x1080, 412345 bytes`. Błąd trafia na stderr, a proces kończy się kodem 1. Kamerę na żywo uruchamia człowiek w Terminalu, bo to on dostaje zgodę macOS na kamerę.
+
+Na ekranie „Kalibracja kamery” w trybie „Plik JPEG” można pobrać `calibration.json` do `fixtures/<sesja>/`. Plik to obiekt `CameraCalibration` bez zmian, sformatowany z wcięciem 2 spacji:
+
+```json
+{
+  "imageWidth": 1920,
+  "imageHeight": 1080,
+  "points": [
+    { "x": 1001, "y": 374 },
+    { "x": 870, "y": 787 },
+    { "x": 365, "y": 747 },
+    { "x": 551, "y": 296 }
+  ]
+}
+```
+
+Punkty leżą na zewnętrznej krawędzi pierścienia double na granicach 5|20, 13|6, 17|3 i 8|11, w tej kolejności, w pikselach obrazu.
 
 ## Ewaluacja
 
@@ -115,6 +143,8 @@ Ograniczenie: baseline nie widzi wyjmowania lotek. Spike rozpoznawał je po dłu
 |---|---|---|
 | `AUTOSCORE_CAMERA_NAME` | `HD Pro Webcam C920:none` | Nazwa kamery w AVFoundation. Sufiks `:none` oznacza brak dźwięku. Pusta wartość daje domyślną. Znak sterujący (na przykład nowa linia) daje błąd `Invalid AUTOSCORE_CAMERA_NAME`. |
 | `AUTOSCORE_CAMERA_VIDEO` | brak | Nagranie zamiast kamery. Gdy jest ustawione, wygrywa z `AUTOSCORE_CAMERA_NAME`. Ścieżka względna liczy się od katalogu roboczego, pod `pnpm --filter` to `packages/vision`. |
+| `AUTOSCORE_API_URL` | `http://localhost:3000` | Adres serwera, ta sama zmienna co w proxy Vite. Musi być adresem `http:` albo `https:`. Końcowy `/` jest obcinany. Inna wartość daje błąd `Invalid AUTOSCORE_API_URL`. |
+| `AUTOSCORE_PASSWORD` | brak | Hasło serwera. Z nim `snapshot` najpierw się loguje. Pusta wartość oznacza brak hasła. Wartość jest brana bez obcinania spacji, jak na serwerze. |
 
 Listę nazw kamer w macOS pokazuje `ffmpeg -f avfoundation -list_devices true -i ""`.
 

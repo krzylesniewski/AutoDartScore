@@ -58,11 +58,12 @@ Konfiguracja idzie przez zmienne środowiskowe.
 | `PORT` | `3000` | Port serwera API. |
 | `HOST` | `0.0.0.0` | Adres nasłuchu serwera. Domyślny pozwala połączyć się z innych urządzeń w sieci. |
 | `DATABASE_PATH` | `autoscore.sqlite` | Ścieżka pliku SQLite, względna wobec katalogu, w którym działa proces serwera. |
-| `AUTOSCORE_API_URL` | `http://localhost:3000` | Adres serwera, na który proxy Vite przekazuje `/api`. |
+| `AUTOSCORE_API_URL` | `http://localhost:3000` | Adres serwera, na który proxy Vite przekazuje `/api`. Czyta go też pakiet `vision`, gdy wysyła klatkę z kamery. Musi być adresem `http:` albo `https:`, inaczej `vision` kończy pracę z błędem `Invalid AUTOSCORE_API_URL`. |
 | `AUTOSCORE_MATCH_LOCK_MINUTES` | `5` | Ile minut po wpisie kończącym grę (rzutce albo weryfikacji) da się jeszcze cofać, oznaczać i weryfikować rzutki. `0` zamyka grę od razu. Wartość spoza samych cyfr albo większa niż `525600` (rok) zatrzymuje start z błędem `Invalid AUTOSCORE_MATCH_LOCK_MINUTES`. |
 | `AUTOSCORE_PENDING_CONFIDENCE` | `0.8` | Rzutka z `confidence` poniżej tego progu czeka na weryfikację. Liczba dziesiętna od `0` do `1`, na przykład `0.75`. Inna wartość zatrzymuje start z błędem `Invalid AUTOSCORE_PENDING_CONFIDENCE`. |
 | `AUTOSCORE_CAMERA_NAME` | `HD Pro Webcam C920:none` | Nazwa kamery w AVFoundation (macOS) dla pakietu `vision`. Kamerę wybieramy po nazwie, bo indeksy zmieniają się po restarcie. |
 | `AUTOSCORE_CAMERA_VIDEO` | brak | Nagranie wideo zamiast kamery w pakiecie `vision`. Wygrywa z `AUTOSCORE_CAMERA_NAME`. Ścieżka względna liczy się od katalogu, w którym działa proces. |
+| `AUTOSCORE_PASSWORD` (`vision`) | brak | Hasło, którym pakiet `vision` loguje się do serwera (`POST /auth/login`) przed wysłaniem klatki. Ustaw to samo hasło co na serwerze. Puste albo brak oznacza wysyłkę bez logowania. |
 
 `PORT` musi składać się z samych cyfr i nie przekraczać 65535. Inaczej serwer kończy pracę przy starcie z błędem `Invalid PORT`. Po zmianie `PORT` ustaw `AUTOSCORE_API_URL` na ten sam port, na przykład:
 
@@ -88,6 +89,12 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 | `POST` | `/matches/:id/checkout-skips` | Pominięcie celu w treningu checkoutów: nowy cel bez próby. Body jest ignorowane. Odpowiedź 201 z `MatchSnapshot`, w którym `attempts`, `successes` i `history` się nie zmieniają, a `skips` rośnie o 1. Błędy jak przy próbie, nieznana gra daje 404 `not_found`. |
 | `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki, także rzutki do weryfikacji albo rzutki, która się nie liczy. Body jest ignorowane. Odpowiedź 200 z `{ undoneThrowId, state }`. W zakończonej grze działa do `editableUntil` ze stanu gry (`finishedAt` plus `AUTOSCORE_MATCH_LOCK_MINUTES`), potem daje 409 `match_locked`. W treningu checkoutów cofa ostatnią próbę albo ostatnie pominięcie, przywraca poprzedni cel i zwraca `undoneThrowId: null`. |
 | WebSocket | `/matches/:id/live` | Strumień stanu i zdarzeń jednej gry. |
+| `PUT` | `/cameras/:cameraId/snapshot` | Ostatnia klatka z kamery jako JPEG (`content-type: image/jpeg`, do 8 MiB). Odpowiedź 204. Body, które nie jest JPEG-iem, daje 400 `invalid_request`. Serwer trzyma klatkę tylko w pamięci. |
+| `GET` | `/cameras/:cameraId/snapshot` | Ostatnia klatka (`image/jpeg`, `cache-control: no-store`). 404 `not_found`, dopóki kamera nic nie wysłała od startu serwera. |
+| `PUT` | `/cameras/:cameraId/calibration` | Zapis kalibracji (`CameraCalibration`: rozmiar obrazu i 4 punkty). Odpowiedź 200 z zapisaną kalibracją. Każdy zapis to nowy wiersz, nic nie jest nadpisywane. |
+| `GET` | `/cameras/:cameraId/calibration` | Ostatnio zapisana kalibracja. 404 `not_found`, gdy jej nie ma. |
+
+`cameraId` to małe litery, cyfry i `-` (do 32 znaków), inny daje 400 `invalid_request`. MVP ma jedną kamerę, `camera-1`.
 
 Rodzaje gry w `POST /matches`:
 
@@ -212,14 +219,21 @@ packages/
   server/   API REST i WebSocket, log zdarzeń w SQLite
   web/      front React (ekran gry, kreator, klawiatura)
   audio/    głos i efekty dźwiękowe z wiadomości na żywo
-  vision/   źródła klatek, geometria tarczy, homografia i ewaluacja detekcji
+  vision/   źródła klatek, geometria tarczy, homografia, ewaluacja detekcji i wysyłka klatki do kalibracji
 design/     tokeny motywu i makiety
 spikes/     eksperymenty z kamerą, poza buildem i lintem
 fixtures/   klatki z tarczy z oznaczonym wynikiem, zestaw testowy detekcji
 rollout/    manifest planu PR-ów
 ```
 
-Pakiet `vision` ma źródła klatek, geometrię tarczy, homografię z obrazu na tarczę i ewaluację detekcji na zestawie z `fixtures/`. Detektor to na razie baseline, który nie odczytuje segmentu. Odczyt trafień dojdzie w kolejnych krokach etapu 2.
+Pakiet `vision` ma źródła klatek, geometrię tarczy, homografię z obrazu na tarczę, ewaluację detekcji na zestawie z `fixtures/` i komendę, która wysyła jedną klatkę do kalibracji. Detektor to na razie baseline, który nie odczytuje segmentu. Odczyt trafień dojdzie w kolejnych krokach etapu 2.
+
+### Kalibracja kamery
+
+1. Uruchom serwer (`pnpm dev` albo `pnpm --filter @autoscore/server start`).
+2. Na komputerze z kamerą wyślij jedną klatkę: `pnpm --filter @autoscore/vision snapshot`. Kamerę na żywo uruchamia człowiek, bo zgodę na kamerę w macOS dostaje Terminal. Przy innym porcie serwera albo z hasłem ustaw `AUTOSCORE_API_URL` i `AUTOSCORE_PASSWORD`.
+3. Otwórz Ustawienia → Kalibracja kamery i dotknij 4 punktów na zewnętrznej krawędzi pierścienia double, w kolejności z ekranu. Lupa pod palcem pomaga trafić w drut, a siatka segmentów na obrazie pokazuje, czy punkty pasują.
+4. Zapisz kalibrację. Tryb „Plik JPEG” wczytuje zdjęcie z dysku i pobiera `calibration.json` dla sesji w `/fixtures`, bez zapisu na serwerze.
 
 README pakietów: [engine](packages/engine/README.md), [schema](packages/schema/README.md), [server](packages/server/README.md), [web](packages/web/README.md), [audio](packages/audio/README.md), [vision](packages/vision/README.md).
 
