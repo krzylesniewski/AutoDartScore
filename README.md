@@ -193,14 +193,14 @@ packages/
   server/   API REST i WebSocket, log zdarzeń w SQLite
   web/      front React (ekran gry, kreator, klawiatura)
   audio/    głos i efekty dźwiękowe z wiadomości na żywo
-  vision/   źródła klatek z kamery, nagrania i plików JPEG (bez detekcji)
+  vision/   źródła klatek, geometria tarczy i homografia (bez detekcji)
 design/     tokeny motywu i makiety
 spikes/     eksperymenty z kamerą, poza buildem i lintem
 fixtures/   klatki z tarczy z oznaczonym wynikiem, zestaw testowy detekcji
 rollout/    manifest planu PR-ów
 ```
 
-Pakiet `vision` ma na razie tylko źródła klatek. Detekcja dojdzie w kolejnych krokach etapu 2.
+Pakiet `vision` ma na razie źródła klatek, geometrię tarczy i homografię z obrazu na tarczę. Detekcja dojdzie w kolejnych krokach etapu 2.
 
 README pakietów: [engine](packages/engine/README.md), [schema](packages/schema/README.md), [server](packages/server/README.md), [web](packages/web/README.md), [audio](packages/audio/README.md), [vision](packages/vision/README.md).
 

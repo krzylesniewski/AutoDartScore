@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@autoscore/schema": "workspace:*",
     "jpeg-js": "^0.4.4"
   },
   "devDependencies": {

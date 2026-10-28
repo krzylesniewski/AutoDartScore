@@ -1,6 +1,6 @@
 # @autoscore/vision
 
-Źródła klatek dla detekcji. Pakiet czyta obraz z kamery, z nagrania albo z plików JPEG w `/fixtures` i zwraca go w jednym formacie `Frame`. Nie ma jeszcze detekcji i nie wysyła niczego do API.
+Źródła klatek i geometria tarczy dla detekcji. Pakiet czyta obraz z kamery, z nagrania albo z plików JPEG w `/fixtures` i zwraca go w jednym formacie `Frame`. Ma też model tarczy w mm i homografię z obrazu na płaską tarczę. Nie ma jeszcze detekcji i nie wysyła niczego do API.
 
 ## Wymagania i ograniczenia
 
@@ -30,6 +30,39 @@
 - `AvFoundationSource(name, { ffmpegPath?, now? })`: kamera w macOS przez `-f avfoundation`, 1920×1080, `uyvy422`, `-framerate 30.000030`. Kamerę wybiera nazwa, bo indeksy AVFoundation zmieniają się po restarcie. Nazwa trafia do ffmpeg jako jeden argument, bez powłoki. `avFoundationArgs(name)` zwraca pełną listę argumentów ffmpeg.
 - `readJpegFrame(filePath, timestamp = 0)`: dekoduje JPEG (na przykład z `/fixtures`) do `Frame` w czystym JS (`jpeg-js`), bez natywnych bindingów.
 - `loadConfig(env)` i `createCameraSource(config, platform?)`: konfiguracja ze zmiennych środowiskowych i źródło do niej dopasowane. AVFoundation poza macOS daje błąd z podpowiedzią, żeby użyć `AUTOSCORE_CAMERA_VIDEO`.
+
+## Geometria tarczy
+
+`board.ts`, `homography.ts` i `calibration.ts` to czysty TypeScript bez `node:*` i bez OpenCV. Importują tylko `@autoscore/schema` i siebie nawzajem, więc zadziałają też w przeglądarce.
+
+Współrzędne:
+
+- tarcza: mm, środek w (0, 0), x w prawo, y w górę. Kąt liczony zgodnie z ruchem wskazówek zegara od góry,
+- obraz: piksele, początek w lewym górnym rogu, y w dół.
+
+Oba układy używają typu `Point` (`{ x, y }`), zgodnego z `ImagePoint` z `@autoscore/schema`.
+
+Tarcza (BDO/WDF, `BOARD_RADII`, promień w mm):
+
+| Obszar | Promień r | Trafienie |
+|---|---|---|
+| Bull | 0 ≤ r ≤ 6.35 | 25×2 |
+| Outer Bull | 6.35 < r ≤ 15.9 | 25×1 |
+| Single wewnętrzny | 15.9 < r < 99 | S×1 |
+| Treble | 99 ≤ r ≤ 107 | S×3 |
+| Single zewnętrzny | 107 < r < 162 | S×1 |
+| Double | 162 ≤ r ≤ 170 | S×2 |
+| Miss | r > 170 | 0×0 |
+
+`BOARD_SEGMENTS` to segmenty zgodnie z ruchem wskazówek zegara od góry: 20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5. Każdy ma 18°, a 20 jest wyśrodkowane na górze. Punkt dokładnie na drucie promieniowym należy do segmentu zgodnie z ruchem wskazówek zegara.
+
+- `scorePoint(point)`: punkt na tarczy w mm daje `{ hit, wireDistance }`. `hit` to `Hit` z `@autoscore/schema`. `wireDistance` to odległość w mm do najbliższego drutu: jednego z sześciu okręgów albo jednego z 20 drutów promieniowych, które biegną od r = 15.9 do r = 170. Miss też ma `wireDistance`. Współrzędna nieskończona albo `NaN` daje błąd.
+- `computeHomography(from, to)`: homografia z czterech par punktów (DLT z normalizacją Hartleya). Błąd, gdy trzy z czterech punktów w którymkolwiek zbiorze leżą na jednej prostej (także przy powtórzonym punkcie), gdy układ równań jest osobliwy albo gdy współrzędna nie jest skończona.
+- `applyHomography(h, point)`: odwzorowuje punkt. Błąd, gdy punkt trafia w nieskończoność (w = 0).
+- `invertHomography(h)`: odwrotna homografia. Błąd dla macierzy osobliwej.
+- `Homography`: macierz 3×3 wierszami. Skala jest dowolna, więc porównuje się odwzorowane punkty, a nie elementy macierzy.
+
+Kalibracja: `CameraCalibration` z `@autoscore/schema` ma rozmiar obrazu i cztery punkty na zewnętrznej krawędzi pierścienia double, na granicach 5|20, 13|6, 17|3 i 8|11, w tej kolejności (góra, prawo, dół, lewo tarczy w jej własnej orientacji). Kamera patrzy z boku i pod kątem, więc o orientacji decyduje kolejność punktów. `CALIBRATION_BOARD_POINTS` to te same punkty na tarczy (r = 170, kąty 351°, 81°, 171° i 261°). `calibrationHomography(calibration)` zwraca homografię obraz → tarcza. Tarcza → obraz to `invertHomography` jej wyniku.
 
 ## Konfiguracja
 

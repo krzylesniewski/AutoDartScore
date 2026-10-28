@@ -4,3 +4,6 @@ export * from './video-file-source.js';
 export * from './av-foundation-source.js';
 export * from './config.js';
 export * from './jpeg-frame.js';
+export * from './board.js';
+export * from './homography.js';
+export * from './calibration.js';
