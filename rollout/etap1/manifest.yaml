@@ -103,6 +103,11 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p48-p51.md
       kind: markdown
       tag: p48-p51
+    # Tylko dla PR-ów z briefTags: [p52].
+    - title: P52, wyłączanie komentarzy do tury za zero w ustawieniach (wiążący dla P52)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p52.md
+      kind: markdown
+      tag: p52
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -670,3 +675,14 @@ prs:
     changeset: none
     scope: ['packages/audio/**', 'packages/web/**']
     briefTags: [p48-p51, rwd]
+
+  # Zmiana wymagań 2026-10-28 (feedback-graczy.md, design/plan-p52.md): przełącznik komentarzy do zera, domyślnie wyłączony.
+  - id: P52
+    branch: feat/zero-comments-setting
+    title: 'feat: add a setting to turn zero-turn comments on, off by default'
+    brief: briefs/P52.md
+    priority: 60
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/audio/**', 'packages/web/**']
+    briefTags: [p52, rwd]
