@@ -1,5 +1,5 @@
 import { isGameFinished } from '@autoscore/engine';
-import { effectiveThrows, replayMatch } from './replay.js';
+import { replayLog } from './replay.js';
 import { buildRecords, EMPTY_RECORDS, mergeRecords, type PlayerRecords } from './stats/achievements.js';
 import type { Store } from './store/store.js';
 
@@ -33,7 +33,7 @@ export function createAchievementReference({ store }: Dependencies): Achievement
       if (!match) {
         continue;
       }
-      const { state, events } = replayMatch(match, effectiveThrows(await store.loadLog(matchId)));
+      const { game: state, events } = replayLog(match, await store.loadLog(matchId));
       // Porzucona gra nigdy nie jest ukończona, więc też tu odpada.
       if (!isGameFinished(state)) {
         continue;

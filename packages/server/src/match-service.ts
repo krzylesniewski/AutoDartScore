@@ -1,4 +1,4 @@
-import { applyGameThrow, countsToStats, createGame, isGameFinished, MAX_CHECKOUT_SEED } from '@autoscore/engine';
+import { countsToStats, createGame, isGameFinished, MAX_CHECKOUT_SEED, type GameState, type ThrowLogStep } from '@autoscore/engine';
 import {
   HitEvent,
   type AbandonMatchRequest,
@@ -8,24 +8,17 @@ import {
   type MatchListItem,
   type MatchListQuery,
   type MatchSnapshot,
+  type ReviewedThrow,
+  type ReviewQueue,
+  type ReviewResult,
   type ThrowResult,
   type UndoResult,
+  type VerifyThrowRequest,
 } from '@autoscore/schema';
 import { createAchievementReference } from './achievement-reference.js';
 import { HttpError, invalidRequest, notFound } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
-import {
-  abandonment,
-  effectiveCheckoutSteps,
-  effectiveThrows,
-  finishedAt,
-  gameConfig,
-  gameTimes,
-  lastActivityAt,
-  lastSeq,
-  practiceEndedAt,
-  replayMatch,
-} from './replay.js';
+import { abandonment, effectiveCheckoutSteps, gameConfig, gameTimes, lastActivityAt, lastSeq, practiceEndedAt, replayLog } from './replay.js';
 import type { SerialQueue } from './serial-queue.js';
 import { toSnapshot } from './snapshot.js';
 import { detectAchievements, type DetectedAchievement, type PlayerRecords } from './stats/achievements.js';
@@ -38,6 +31,9 @@ export interface MatchService {
   registerCheckoutAttempt(id: string, success: boolean): Promise<MatchSnapshot>;
   registerCheckoutSkip(id: string): Promise<MatchSnapshot>;
   undo(id: string): Promise<UndoResult>;
+  flag(id: string, throwId: string): Promise<ReviewResult>;
+  verify(id: string, throwId: string, hit: VerifyThrowRequest): Promise<ReviewResult>;
+  reviewQueue(id: string): Promise<ReviewQueue>;
   abandon(id: string, request: AbandonMatchRequest): Promise<MatchSnapshot>;
   resume(id: string): Promise<MatchSnapshot>;
   endPractice(id: string): Promise<MatchSnapshot>;
@@ -52,10 +48,14 @@ interface Dependencies {
   readonly queue: SerialQueue;
   readonly random: () => number;
   readonly now: () => number;
-  readonly matchLockMs: number; // tyle po rzutce kończącej grę da się jeszcze cofać
+  readonly matchLockMs: number; // tyle po wpisie kończącym grę da się jeszcze cofać, oznaczać i weryfikować rzutki
+  readonly pendingConfidence: number; // rzutka z mniejszą pewnością czeka na weryfikację
 }
 
-export function createMatchService({ store, hub, queue, random, now, matchLockMs }: Dependencies): MatchService {
+// Tymczasowy identyfikator rzutki sprawdzanej w silniku przed zapisem. Serwer nadaje rzutkom UUID, więc nie koliduje.
+const UNSAVED_THROW_ID = 'unsaved';
+
+export function createMatchService({ store, hub, queue, random, now, matchLockMs, pendingConfidence }: Dependencies): MatchService {
   const references = createAchievementReference({ store });
 
   async function requireMatch(id: string): Promise<StoredMatch> {
@@ -69,27 +69,34 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
   // Stan zawsze z odtworzenia logu.
   async function load(match: StoredMatch) {
     const log = await store.loadLog(match.id);
-    const throws = effectiveThrows(log);
-    const checkoutSteps = effectiveCheckoutSteps(log);
-    const { state: game, events } = replayMatch(match, throws, checkoutSteps);
-    return {
+    const replay = replayLog(match, log);
+    const { game, events, counted, throws, finishedAt, lastTurnThrows, awaitingReview } = replay;
+    const seq = lastSeq(log);
+    const loaded = {
       log,
       throws,
-      checkoutSteps,
-      seq: lastSeq(log),
+      checkoutSteps: effectiveCheckoutSteps(log),
+      seq,
       game,
       events,
-      finishedAt: finishedAt(game, throws),
+      finishedAt,
       abandonment: abandonment(log),
       endedAt: practiceEndedAt(log),
       updatedAt: lastActivityAt(log, match),
-      times: gameTimes(log, throws, game),
+      times: gameTimes(log, counted, game),
     };
+    const state = toSnapshot(
+      match,
+      game,
+      seq,
+      { abandonment: loaded.abandonment, endedAt: loaded.endedAt, finishedAt, lockMs: matchLockMs, ...loaded.times },
+      { lastTurnThrows, awaitingReview },
+    );
+    return { ...loaded, state };
   }
 
   async function snapshot(match: StoredMatch): Promise<MatchSnapshot> {
-    const { game, seq, abandonment, endedAt, finishedAt, times } = await load(match);
-    return toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, ...times });
+    return (await load(match)).state;
   }
 
   function abandoned(id: string): HttpError {
@@ -106,6 +113,10 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
 
   function locked(id: string): HttpError {
     return new HttpError(409, 'match_locked', `Match ${id} is locked`);
+  }
+
+  function throwsNotAllowed(id: string): HttpError {
+    return new HttpError(409, 'throws_not_allowed', `Match ${id} is a checkout practice and takes attempts, not throws`);
   }
 
   function isCheckouts(match: StoredMatch): boolean {
@@ -221,6 +232,70 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     return { statusCode: 200 as const, result: { throw: stored, events: [], state: await snapshot(await requireMatch(id)) } };
   }
 
+  // >=, żeby blokada 0 minut działała od razu, także w tej samej milisekundzie co wpis kończący grę.
+  function checkLock(id: string, finishTime: string | null): void {
+    if (finishTime !== null && now() >= Date.parse(finishTime) + matchLockMs) {
+      throw locked(id);
+    }
+  }
+
+  // Rekordy z ukończonych meczów 1v1 zależą od tego, czy gra jest zakończona.
+  function invalidateReferences(match: StoredMatch, before: GameState, after: GameState): void {
+    if (match.type === 'match' && isGameFinished(before) !== isGameFinished(after)) {
+      references.invalidate();
+    }
+  }
+
+  function reviewed(throws: readonly ReviewedThrow[], throwId: string): ReviewedThrow {
+    const found = throws.find((entry) => entry.id === throwId);
+    if (!found) {
+      throw new Error(`Throw ${throwId} is missing after the replay`);
+    }
+    return found;
+  }
+
+  // Oznaczenie i weryfikacja: te same warunki co cofnięcie, a resztę sprawdza silnik przed zapisem.
+  function reviewCommand(
+    id: string,
+    throwId: string,
+    step: ThrowLogStep,
+    append: () => Promise<{ seq: number; type: 'throw_flagged' | 'throw_verified' }>,
+  ): Promise<ReviewResult> {
+    return queue(id, async () => {
+      const match = await requireMatch(id);
+      if (isCheckouts(match)) {
+        throw throwsNotAllowed(id);
+      }
+      const before = await load(match);
+      if (!before.log.throws.has(throwId)) {
+        throw notFound(`Throw ${throwId}`);
+      }
+      if (before.endedAt) {
+        throw ended(id);
+      }
+      if (before.abandonment) {
+        throw abandoned(id);
+      }
+      checkLock(id, before.finishedAt);
+      replayLog(match, before.log, [step]);
+      const { seq, type } = await append();
+      const after = await load(match);
+      // Oznaczenie tylko zdejmuje rzutki z gry, a weryfikacja tylko dopisuje policzone, więc nowe zdarzenia są na końcu.
+      const events = type === 'throw_verified' ? after.events.slice(before.events.length) : [];
+      const detected = await achievements(match, before.events, events);
+      invalidateReferences(match, before.game, after.game);
+      const record = reviewed(after.throws, throwId);
+      const meta = { matchId: id, eventSeq: seq };
+      hub.publish(id, [
+        { type, ...meta, throw: record },
+        ...events.map((event): LiveMessage => ({ ...event, ...meta })),
+        ...detected.map((achievement): LiveMessage => ({ ...achievement, ...meta })),
+        { type: 'state_updated', ...meta, state: after.state },
+      ]);
+      return { throw: record, events: [...events], state: after.state };
+    });
+  }
+
   return {
     async create(request) {
       const found = await store.findPlayers(request.playerIds);
@@ -244,7 +319,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
       return queue(id, async () => {
         const match = await requireMatch(id);
         if (isCheckouts(match)) {
-          throw new HttpError(409, 'throws_not_allowed', `Match ${id} is a checkout practice and takes attempts, not throws`);
+          throw throwsNotAllowed(id);
         }
         const parsed = HitEvent.safeParse(body);
         if (!parsed.success) {
@@ -259,18 +334,22 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           return repeated;
         }
 
-        const { log, throws, game, events, abandonment, endedAt } = await load(match);
-        if (endedAt) {
+        const before = await load(match);
+        if (before.endedAt) {
           throw ended(id);
         }
-        if (abandonment) {
+        if (before.abandonment) {
           throw abandoned(id);
         }
-        const applied = applyGameThrow(game, { segment: hit.segment, multiplier: hit.multiplier });
-        const detected = await achievements(match, events, applied.events);
+        const flag = hit.confidence < pendingConfidence ? { reason: hit.review?.reason ?? 'low_confidence', actor: 'system' as const } : null;
+        const steps: ThrowLogStep[] = [{ type: 'throw', throwId: UNSAVED_THROW_ID, hit: { segment: hit.segment, multiplier: hit.multiplier } }];
+        if (flag) {
+          steps.push({ type: 'flag', throwId: UNSAVED_THROW_ID });
+        }
+        replayLog(match, before.log, steps); // błąd silnika, np. turn_pending, przerywa komendę przed zapisem
         let appended;
         try {
-          appended = await store.appendThrow(hit);
+          appended = await store.appendThrow(hit, flag);
         } catch (error) {
           // Ten sam eventId mógł równolegle trafić do innej gry. Wtedy decyduje zapisana rzutka.
           const raced = await idempotentReply(id, hit.eventId);
@@ -281,25 +360,19 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         }
 
         const { throw: record, seq } = appended;
-        if (match.type === 'match' && isGameFinished(applied.state)) {
-          references.invalidate();
-        }
-        const state = toSnapshot(match, applied.state, seq, {
-          abandonment: null,
-          endedAt: null,
-          finishedAt: isGameFinished(applied.state) ? record.receivedAt : null,
-          lockMs: matchLockMs,
-          // Gra nie jest porzucona, więc dopisany wpis rzutki nie zmienia żadnej przerwy i wystarczy log sprzed zapisu.
-          ...gameTimes(log, [...throws, record], applied.state),
-        });
+        const after = await load(match);
+        const events = after.events.slice(before.events.length);
+        const detected = await achievements(match, before.events, events);
+        invalidateReferences(match, before.game, after.game);
         const meta = { matchId: id, eventSeq: seq };
         hub.publish(id, [
           { type: 'throw_registered', ...meta, throw: record },
-          ...applied.events.map((event): LiveMessage => ({ ...event, ...meta })),
+          ...(flag ? [{ type: 'throw_flagged' as const, ...meta, throw: reviewed(after.throws, record.id) }] : []),
+          ...events.map((event): LiveMessage => ({ ...event, ...meta })),
           ...detected.map((achievement): LiveMessage => ({ ...achievement, ...meta })),
-          { type: 'state_updated', ...meta, state },
+          { type: 'state_updated', ...meta, state: after.state },
         ]);
-        return { statusCode: 201 as const, result: { throw: record, events: [...applied.events], state } };
+        return { statusCode: 201 as const, result: { throw: record, events: [...events], state: after.state } };
       });
     },
 
@@ -314,7 +387,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     undo(id) {
       return queue(id, async () => {
         const match = await requireMatch(id);
-        const { log, throws, checkoutSteps, game: before, abandonment, endedAt, finishedAt: finishTime } = await load(match);
+        const { throws, checkoutSteps, game: before, abandonment, endedAt, finishedAt: finishTime } = await load(match);
         if (endedAt) {
           throw ended(id);
         }
@@ -332,33 +405,40 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           publishState(id, state);
           return { undoneThrowId: null, state };
         }
-        // >=, żeby blokada 0 minut działała od razu, także w tej samej milisekundzie co rzutka kończąca grę.
-        if (finishTime !== null && now() >= Date.parse(finishTime) + matchLockMs) {
-          throw locked(id);
-        }
-        const last = throws.pop();
+        checkLock(id, finishTime);
+        const last = throws.at(-1);
         if (!last) {
           throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no throw to undo`);
         }
         const seq = await store.appendUndo(id, last.id);
-        if (match.type === 'match' && isGameFinished(before)) {
-          references.invalidate();
-        }
-        const game = replayMatch(match, throws).state;
-        const state = toSnapshot(match, game, seq, {
-          abandonment: null,
-          endedAt: null,
-          finishedAt: finishedAt(game, throws),
-          lockMs: matchLockMs,
-          ...gameTimes(log, throws, game),
-        });
+        const after = await load(match);
+        invalidateReferences(match, before, after.game);
         const meta = { matchId: id, eventSeq: seq };
         hub.publish(id, [
           { type: 'throw_undone', ...meta, throwId: last.id },
-          { type: 'state_updated', ...meta, state },
+          { type: 'state_updated', ...meta, state: after.state },
         ]);
-        return { undoneThrowId: last.id, state };
+        return { undoneThrowId: last.id, state: after.state };
       });
+    },
+
+    flag(id, throwId) {
+      return reviewCommand(id, throwId, { type: 'flag', throwId }, async () => {
+        const seq = await store.appendFlag(id, throwId, 'manual', 'player');
+        return { seq, type: 'throw_flagged' as const };
+      });
+    },
+
+    verify(id, throwId, hit) {
+      return reviewCommand(id, throwId, { type: 'verify', throwId, hit }, async () => {
+        const seq = await store.appendVerify(id, throwId, hit, 'player');
+        return { seq, type: 'throw_verified' as const };
+      });
+    },
+
+    async reviewQueue(id) {
+      const { seq, throws } = await load(await requireMatch(id));
+      return { matchId: id, eventSeq: seq, throws: throws.filter((entry) => entry.status === 'pending') };
     },
 
     abandon(id, request) {
@@ -437,8 +517,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (query.playerId !== undefined && !match.players.some((player) => player.id === query.playerId)) {
           continue;
         }
-        const { game, seq, abandonment, endedAt, finishedAt, updatedAt, times } = await load(match);
-        const state = toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, ...times });
+        const { abandonment, endedAt, updatedAt, state } = await load(match);
         if (query.status === 'unfinished' && (state.status === 'finished' || state.status === 'ended')) {
           continue;
         }

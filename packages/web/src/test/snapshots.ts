@@ -34,6 +34,8 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
     legStartedAt: null,
     pausedMs: 0,
     legPausedMs: 0,
+    lastTurnThrows: [],
+    awaitingReview: false,
     ...overrides,
   };
 }

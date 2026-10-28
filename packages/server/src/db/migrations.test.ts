@@ -56,9 +56,9 @@ describe('migrateToLatest', () => {
     await migrateToLatest(db);
     const rows = await db.selectFrom('match_events').selectAll().orderBy('seq').execute();
     expect(rows).toEqual([
-      { match_id: 'm1', seq: 1, type: 'throw', throw_id: 't1', player_id: null, reason: null, success: null, created_at: createdAt },
-      { match_id: 'm1', seq: 2, type: 'throw', throw_id: 't2', player_id: null, reason: null, success: null, created_at: createdAt },
-      { match_id: 'm1', seq: 3, type: 'undo', throw_id: 't2', player_id: null, reason: null, success: null, created_at: createdAt },
+      { match_id: 'm1', seq: 1, type: 'throw', throw_id: 't1', player_id: null, reason: null, success: null, segment: null, multiplier: null, actor: null, created_at: createdAt },
+      { match_id: 'm1', seq: 2, type: 'throw', throw_id: 't2', player_id: null, reason: null, success: null, segment: null, multiplier: null, actor: null, created_at: createdAt },
+      { match_id: 'm1', seq: 3, type: 'undo', throw_id: 't2', player_id: null, reason: null, success: null, segment: null, multiplier: null, actor: null, created_at: createdAt },
     ]);
 
     const app = await buildApp({ db });
@@ -242,6 +242,72 @@ describe('migrateToLatest', () => {
       expect(failed.statusCode).toBe(201);
       expect(failed.json().checkouts).toMatchObject({ target: target(4), attempts: 4 });
       expect(failed.json().checkouts.history.at(-1)).toEqual({ target: target(3), success: false });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('reads the throws and log entries written before 0007_throw_review with null in the new columns', async () => {
+    const db = openDatabase(':memory:');
+    await migrateTo(db, '0006_checkout_rule');
+    const createdAt = '2026-10-15T18:30:00.000Z';
+    await db
+      .insertInto('players')
+      .values([
+        { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: 0, created_at: createdAt },
+        { id: 'p2', name: 'Bartek', avatar: null, color: 2, guest: 0, created_at: createdAt },
+      ])
+      .execute();
+    await db
+      .insertInto('matches')
+      .values({ id: 'm1', type: 'match', practice_mode: null, starting_score: 301, legs_to_win: 1, first_player_index: 0, counts_to_stats: 1, created_at: createdAt })
+      .execute();
+    await db
+      .insertInto('match_players')
+      .values([
+        { match_id: 'm1', player_id: 'p1', position: 0 },
+        { match_id: 'm1', player_id: 'p2', position: 1 },
+      ])
+      .execute();
+    const dart = { match_id: 'm1', source: 'camera-1', sequence: 0, confidence: 0.4, detected_at: createdAt, received_at: createdAt };
+    await db
+      .insertInto('throws')
+      .values([
+        { ...dart, id: 't1', event_id: '4b8e7a61-2c0f-4f5e-9d1a-6c3b2a1f0e9d', segment: 20, multiplier: 3 },
+        { ...dart, id: 't2', event_id: '5c9f8b72-3d1a-4a6f-8e2b-7d4c3b2a1f0e', segment: 19, multiplier: 1 },
+      ])
+      .execute();
+    await db
+      .insertInto('match_events')
+      .values([
+        { match_id: 'm1', seq: 1, type: 'throw', throw_id: 't1', created_at: createdAt },
+        { match_id: 'm1', seq: 2, type: 'throw', throw_id: 't2', created_at: createdAt },
+        { match_id: 'm1', seq: 3, type: 'match_abandoned', player_id: 'p2', reason: 'koniec', created_at: createdAt },
+      ])
+      .execute();
+
+    await migrateToLatest(db);
+    expect(await db.selectFrom('throws').select(['id', 'review']).orderBy('id').execute()).toEqual([
+      { id: 't1', review: null },
+      { id: 't2', review: null },
+    ]);
+    expect(await db.selectFrom('match_events').select(['seq', 'segment', 'multiplier', 'actor']).orderBy('seq').execute()).toEqual([
+      { seq: 1, segment: null, multiplier: null, actor: null },
+      { seq: 2, segment: null, multiplier: null, actor: null },
+      { seq: 3, segment: null, multiplier: null, actor: null },
+    ]);
+
+    // Stara rzutka z niską pewnością była już policzona i taka zostaje.
+    const app = await buildApp({ db });
+    try {
+      const response = await app.inject({ method: 'GET', url: '/matches/m1' });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ eventSeq: 3, status: 'abandoned', currentDarts: [{ segment: 20, multiplier: 3 }, { segment: 19, multiplier: 1 }], awaitingReview: false });
+      expect(response.json().lastTurnThrows.map((entry: { status: string; scoring: string; review: unknown }) => [entry.status, entry.scoring, entry.review])).toEqual([
+        ['confirmed', 'counted', null],
+        ['confirmed', 'counted', null],
+      ]);
     } finally {
       await app.close();
       await db.destroy();

@@ -29,7 +29,8 @@ export interface AppOptions {
   readonly liveAuthTimeoutMs?: number;
   readonly livePingIntervalMs?: number;
   readonly webDir?: string | null; // katalog zbudowanego frontu. null wyłącza serwowanie plików
-  readonly matchLockMinutes?: number; // ile minut po ostatniej rzutce da się cofać w zakończonej grze. Domyślnie 5
+  readonly matchLockMinutes?: number; // ile minut po wpisie kończącym grę da się cofać, oznaczać i weryfikować rzutki. Domyślnie 5
+  readonly pendingConfidence?: number; // rzutka z mniejszą pewnością czeka na weryfikację. Domyślnie 0.8
 }
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
@@ -67,6 +68,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     random: options.random ?? Math.random,
     now,
     matchLockMs: (options.matchLockMinutes ?? 5) * 60_000,
+    pendingConfidence: options.pendingConfidence ?? 0.8,
   });
   healthRoutes(app);
   if (auth !== null) {

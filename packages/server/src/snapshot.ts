@@ -1,5 +1,5 @@
 import { currentRound, freeRunAverage, isGameFinished, SOLO_501_STARTING_SCORE, type CheckoutsState, type GameState } from '@autoscore/engine';
-import type { Abandonment, CheckoutSession, MatchSnapshot, MatchSnapshotPlayer, MatchStatus, Player } from '@autoscore/schema';
+import type { Abandonment, CheckoutSession, MatchSnapshot, MatchSnapshotPlayer, MatchStatus, Player, ReviewedThrow } from '@autoscore/schema';
 import type { GameTimes } from './replay.js';
 import type { StoredMatch } from './store/store.js';
 
@@ -131,12 +131,18 @@ export interface SnapshotTimes extends GameTimes {
   readonly lockMs: number;
 }
 
+export interface SnapshotReview {
+  readonly lastTurnThrows: readonly ReviewedThrow[];
+  readonly awaitingReview: boolean;
+}
+
 // Porzucona gra i zakończony trening zachowują rzucającego i rzutki tury, żeby podgląd pokazywał stan z chwili przerwania.
 export function toSnapshot(
   match: StoredMatch,
   game: GameState,
   eventSeq: number,
   { abandonment, endedAt, finishedAt, lockMs, startedAt, legStartedAt, pausedMs, legPausedMs }: SnapshotTimes,
+  { lastTurnThrows, awaitingReview }: SnapshotReview,
 ): MatchSnapshot {
   const finished = isGameFinished(game);
   const { perPlayer, startingScore, ...rest } = progress(game, finished);
@@ -169,5 +175,7 @@ export function toSnapshot(
       guest: player.guest,
       ...perPlayer(player, index),
     })),
+    lastTurnThrows: [...lastTurnThrows],
+    awaitingReview,
   };
 }

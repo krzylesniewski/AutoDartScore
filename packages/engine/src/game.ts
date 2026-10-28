@@ -214,3 +214,20 @@ export function dartsInCurrentLeg(game: GameState): number {
       }
   }
 }
+
+// Rzutki otwartej tury. Trening checkoutów nie ma rzutek.
+export function openTurnDarts(game: GameState): readonly Hit[] {
+  switch (game.type) {
+    case 'match':
+    case 'casual':
+      return game.state.currentDarts;
+    case 'practice':
+      switch (game.practiceMode) {
+        case 'solo_501':
+        case 'free_run':
+          return game.state.currentDarts;
+        case 'checkouts':
+          return [];
+      }
+  }
+}

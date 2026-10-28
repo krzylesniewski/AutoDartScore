@@ -36,6 +36,8 @@ const state = {
   placements: [],
   freeRun: null,
   checkouts: null,
+  lastTurnThrows: [],
+  awaitingReview: false,
 };
 
 const throwRecord = {
@@ -51,11 +53,30 @@ const throwRecord = {
   receivedAt: '2026-10-15T18:30:12.400Z',
 };
 
+const reviewedThrow = {
+  id: 't3',
+  sequence: 2,
+  source: 'camera-1',
+  confidence: 0.5,
+  reading: { segment: 20, multiplier: 1 },
+  value: { segment: 5, multiplier: 1 },
+  status: 'confirmed',
+  scoring: 'counted',
+  review: {
+    reason: 'near_wire',
+    flaggedBy: 'system',
+    candidates: [{ segment: 5, multiplier: 1, probability: 0.48 }],
+    resolved: { segment: 5, multiplier: 1, by: 'player', at: '2026-10-15T18:31:00.000Z' },
+  },
+};
+
 describe('LiveMessage', () => {
   it.each([
     { type: 'state_updated', ...meta, state },
     { type: 'throw_registered', ...meta, throw: throwRecord },
     { type: 'throw_undone', ...meta, throwId: 't3' },
+    { type: 'throw_flagged', ...meta, throw: { ...reviewedThrow, value: reviewedThrow.reading, status: 'pending', scoring: 'waiting', review: { ...reviewedThrow.review, resolved: null } } },
+    { type: 'throw_verified', ...meta, throw: reviewedThrow },
     { type: 'turn_completed', ...meta, playerId: 'p1', legIndex: 0, turnIndex: 0, darts, total: 20, remaining: 281 },
     { type: 'bust', ...meta, playerId: 'p1', legIndex: 0, turnIndex: 4, darts, remaining: 16 },
     { type: 'leg_won', ...meta, playerId: 'p1', legIndex: 0, checkout: 40, dartsThrown: 15 },
@@ -109,6 +130,6 @@ describe('LiveMessage', () => {
   });
 
   it('rejects an unknown type', () => {
-    expect(LiveMessage.safeParse({ type: 'throw_flagged', ...meta, throwId: 't1' }).success).toBe(false);
+    expect(LiveMessage.safeParse({ type: 'throw_corrected', ...meta, throwId: 't1' }).success).toBe(false);
   });
 });
