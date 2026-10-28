@@ -1,4 +1,4 @@
-import type { HeadToHead, MatchListItem, Player, PlayerFormPoint, PlayerStats, RankingEntry, StatsRankings } from '@autoscore/schema';
+import type { HeadToHead, MatchListItem, Player, PlayerFormPoint, PlayerStats, RankingEntry, StatsOverall, StatsRankings } from '@autoscore/schema';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listItem, player, statLine } from '../test/snapshots';
@@ -73,10 +73,23 @@ const rankingsFixture: StatsRankings = {
   highestTurn: [entry('p2', 'Bartek', 1, 180)],
 };
 
+const overallFixture: StatsOverall = {
+  games: 23,
+  legs: 61,
+  darts: 1234,
+  average: 75.25,
+  players: [
+    { playerId: 'p1', name: 'Anna', avatar: null, color: 1, darts: 6, legs: 1, average: 150.5, difference: 75.25 },
+    { playerId: 'p2', name: 'Bartek', avatar: '🎯', color: 7, darts: 3, legs: 1, average: 0, difference: -75.25 },
+    { playerId: 'p3', name: 'Celina', avatar: null, color: 3, darts: 12, legs: 0, average: null, difference: null },
+  ],
+};
+
 let urls: string[];
 let requests: { url: string; method: string; body: unknown }[];
 let respondStats: (url: string) => Response;
 let rankings: StatsRankings;
+let overall: () => Response;
 let profiles: Player[];
 let form: PlayerFormPoint[];
 let headToHead: (opponentId: string) => HeadToHead;
@@ -87,6 +100,7 @@ beforeEach(() => {
   requests = [];
   respondStats = (url) => json(200, stats(/players\/([^/]+)\/stats/.exec(url)?.[1] ?? ''));
   rankings = rankingsFixture;
+  overall = () => json(200, overallFixture);
   profiles = players;
   form = [];
   headToHead = (opponentId) => ({ ...emptyHeadToHead, opponentId });
@@ -117,6 +131,9 @@ beforeEach(() => {
       }
       if (url === '/api/players?archived=include') {
         return json(200, profiles);
+      }
+      if (url === '/api/stats/overall') {
+        return overall();
       }
       if (url.startsWith('/api/stats/rankings')) {
         return json(200, { ...rankings, filter: new URL(url, 'http://localhost').searchParams.get('type') });
@@ -261,6 +278,93 @@ describe('StatsScreen: ranking', () => {
     );
     render(<StatsScreen playerId={null} />);
     expect(await screen.findByText('Nie udało się pobrać statystyk')).toBeTruthy();
+  });
+});
+
+describe('StatsScreen: overall', () => {
+  const filterLabels = ['Wszystkie', 'Mecze 1v1', 'Zabawa', 'Trening'];
+
+  function filterButtons(): string[] {
+    const bar = screen.getByRole('button', { name: 'Wszystkie' }).parentElement as HTMLElement;
+    return within(bar)
+      .getAllByRole('button')
+      .map((button) => button.textContent ?? '');
+  }
+
+  async function openOverall(): Promise<void> {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    fireEvent.click(screen.getByRole('button', { name: 'Overall' }));
+  }
+
+  it('puts Overall right after Trening in the ranking filter only', async () => {
+    const { unmount } = render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(filterButtons()).toEqual([...filterLabels, 'Overall']);
+    unmount();
+
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    expect(filterButtons()).toEqual(filterLabels);
+    expect(screen.queryByRole('button', { name: 'Overall' })).toBeNull();
+  });
+
+  it('shows the totals and the players above and below the overall average', async () => {
+    await openOverall();
+    expect(await screen.findByText('Wszystkie gry liczone do statystyk razem')).toBeTruthy();
+    expect(urls).toContain('/api/stats/overall');
+    expect(window.location.hash).toBe('#/stats');
+    expect(screen.getByRole('button', { name: 'Overall' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Wszystkie' }).getAttribute('aria-pressed')).toBe('false');
+
+    expect(value('Lotki łącznie')).toBe('1234');
+    expect(value('Średnia ogólna (3 rzutki)')).toBe('75,25');
+    expect(value('Gry')).toBe('23');
+    expect(value('Legi')).toBe('61');
+    expect(within(card()).getAllByRole('term')).toHaveLength(4);
+
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Typ gry', 'Powyżej średniej', 'Poniżej średniej', 'Bez ukończonego lega']);
+    expect(rows(screen.getByRole('region', { name: 'Powyżej średniej' }))).toEqual(['AAnna150,50+75,256 lotek']);
+    expect(rows(screen.getByRole('region', { name: 'Poniżej średniej' }))).toEqual(['🎯Bartek0,00−75,253 lotki']);
+    expect(rows(screen.getByRole('region', { name: 'Bez ukończonego lega' }))).toEqual(['CCelina—12 lotek']);
+    expect(screen.queryByRole('region', { name: 'Średnia (3 rzutki)' })).toBeNull();
+  });
+
+  it('shows the ranking again after another filter', async () => {
+    await openOverall();
+    await screen.findByText('Wszystkie gry liczone do statystyk razem');
+    fireEvent.click(screen.getByRole('button', { name: 'Zabawa' }));
+    expect(await screen.findByRole('region', { name: 'Średnia (3 rzutki)' })).toBeTruthy();
+    expect(urls).toContain('/api/stats/rankings?type=casual');
+    expect(screen.queryByText('Powyżej średniej')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Overall' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('shows loading and then the error when the overview fails', async () => {
+    overall = () => json(500, { error: 'internal_error', message: 'Internal server error' });
+    await openOverall();
+    expect(screen.getByText('Ładowanie…')).toBeTruthy();
+    expect(await screen.findByText('Nie udało się pobrać statystyk')).toBeTruthy();
+  });
+
+  it('shows one message without darts', async () => {
+    overall = () => json(200, { games: 0, legs: 0, darts: 0, average: null, players: [] });
+    await openOverall();
+    expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
+    expect(screen.getByText('Wszystkie gry liczone do statystyk razem')).toBeTruthy();
+    expect(document.querySelector('dl')).toBeNull();
+  });
+
+  it('scrolls the five filter buttons inside the bar on phones', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const bar = screen.getByRole('button', { name: 'Overall' }).parentElement;
+    const barClasses = bar?.getAttribute('class')?.split(' ') ?? [];
+    expect(barClasses).toContain('max-sm:overflow-x-auto');
+    expect(barClasses).not.toContain('max-sm:overflow-hidden');
+    for (const button of within(bar as HTMLElement).getAllByRole('button')) {
+      expect(button.getAttribute('class')?.split(' ')).not.toContain('max-sm:min-w-0');
+    }
   });
 });
 

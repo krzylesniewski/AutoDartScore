@@ -24,7 +24,7 @@ interface Candidate {
   readonly value: number;
 }
 
-function byName(a: Profile, b: Profile): number {
+export function byName(a: Profile, b: Profile): number {
   return a.name.localeCompare(b.name, 'pl') || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 }
 
