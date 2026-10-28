@@ -273,6 +273,9 @@ importers:
       '@autoscore/schema':
         specifier: workspace:*
         version: link:../schema
+      '@autoscore/vision':
+        specifier: workspace:*
+        version: link:../vision
       '@fontsource/barlow':
         specifier: ^5.3.0
         version: 5.3.0

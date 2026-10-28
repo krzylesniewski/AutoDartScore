@@ -3,12 +3,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./geometry": "./src/geometry.ts"
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
-    "eval": "node --import jiti/register src/eval-cli.ts"
+    "eval": "node --import jiti/register src/eval-cli.ts",
+    "snapshot": "node --import jiti/register src/snapshot-main.ts"
   },
   "dependencies": {
     "@autoscore/schema": "workspace:*",
