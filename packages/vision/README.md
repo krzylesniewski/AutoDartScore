@@ -1,6 +1,6 @@
 # @autoscore/vision
 
-Źródła klatek i geometria tarczy dla detekcji. Pakiet czyta obraz z kamery, z nagrania albo z plików JPEG w `/fixtures` i zwraca go w jednym formacie `Frame`. Ma też model tarczy w mm i homografię z obrazu na płaską tarczę. Nie ma jeszcze detekcji i nie wysyła niczego do API.
+Źródła klatek, geometria tarczy i ewaluacja detekcji. Pakiet czyta obraz z kamery, z nagrania albo z plików JPEG w `/fixtures` i zwraca go w jednym formacie `Frame`. Ma też model tarczy w mm i homografię z obrazu na płaską tarczę. Detekcja to na razie baseline, który odróżnia zmianę po rzucie od szumu, ale nie odczytuje segmentu. Pakiet nie wysyła jeszcze niczego do API.
 
 ## Wymagania i ograniczenia
 
@@ -64,6 +64,51 @@ Tarcza (BDO/WDF, `BOARD_RADII`, promień w mm):
 
 Kalibracja: `CameraCalibration` z `@autoscore/schema` ma rozmiar obrazu i cztery punkty na zewnętrznej krawędzi pierścienia double, na granicach 5|20, 13|6, 17|3 i 8|11, w tej kolejności (góra, prawo, dół, lewo tarczy w jej własnej orientacji). Kamera patrzy z boku i pod kątem, więc o orientacji decyduje kolejność punktów. `CALIBRATION_BOARD_POINTS` to te same punkty na tarczy (r = 170, kąty 351°, 81°, 171° i 261°). `calibrationHomography(calibration)` zwraca homografię obraz → tarcza. Tarcza → obraz to `invertHomography` jej wyniku.
 
+## Ewaluacja
+
+Detektor sprawdzamy na zestawie testowym z `/fixtures`. Układ katalogów i format `labels.json` opisuje [`fixtures/README.md`](../../fixtures/README.md).
+
+```sh
+pnpm --filter @autoscore/vision eval
+pnpm --filter @autoscore/vision eval --detector baseline --threshold 0.8 --json /tmp/eval.json
+```
+
+| Flaga | Domyślnie | Znaczenie |
+|---|---|---|
+| `--detector <nazwa>` | `baseline` | Detektor z `DETECTORS`. Nieznana nazwa daje błąd z listą dostępnych. |
+| `--fixtures <katalog>` | `fixtures/` w repo | Katalog z sesjami. Sesja to podkatalog z `labels.json`, pozostałe wpisy są pomijane. |
+| `--threshold <liczba>` | `0.8` | Próg pewności od 0 do 1. Lotka poniżej progu trafia do potwierdzenia. |
+| `--json <plik>` | brak | Zapis raportu w JSON. |
+
+Ścieżki względne liczą się od katalogu roboczego, pod `pnpm --filter` to `packages/vision`. Nieznana flaga, nieznany detektor, zły próg, błędny `labels.json` albo `calibration.json` i błąd detektora kończą komendę kodem 1. Błędne detekcje nie są błędem: kod 0 znaczy, że ewaluacja się odbyła.
+
+Wynik każdego zdarzenia:
+
+- **poprawne**: dobry rodzaj zdarzenia, a dla lotki w sesji z kalibracją także dobry segment i mnożnik,
+- **do potwierdzenia**: wykryta lotka bez odczytu (`hit: null`) albo z pewnością poniżej progu, tam gdzie lotka naprawdę była,
+- **błędne**: zły rodzaj zdarzenia, zły odczyt pewnej lotki albo lotka (także niepewna) tam, gdzie nie było rzutu,
+- **bez oceny**: pewna lotka w sesji bez `calibration.json`. Trafienie oceniamy tylko z kalibracją.
+
+Raport JSON ma te same liczby: `totals`, `sessions`, `kinds` (rodzaj oczekiwany i wykryty), `hits` (trafienia z sesji z kalibracją, `skippedNoCalibration` i `byHit`) oraz `events` z wynikiem każdego zdarzenia. Nie ma w nim znaczników czasu ani ścieżek, więc dwa przebiegi na tym samym kodzie dają identyczny plik. Zmianę w detekcji porównujemy z raportem sprzed niej.
+
+`loadFixtureSessions(dir)` i `loadFixtureSession(dir)` wczytują sesje i sprawdzają `labels.json` schematem Zod (trafienie przez `Hit` z `@autoscore/schema`). Błąd podaje ścieżkę pliku i pola. Klatki dekoduje dopiero `loadEventFrames(event)`.
+
+### Interfejs `Detector`
+
+`detect({ before, after, calibration })` dostaje parę klatek i kalibrację sesji (albo `null`) i zwraca `Detection`:
+
+- `{ kind: 'dart', hit, confidence, candidates }`: `hit` to `Hit` albo `null` (brak odczytu, zawsze do potwierdzenia), `confidence` od 0 do 1, `candidates` to `Hit` z `probability`, jak `review.candidates` w kontrakcie,
+- `{ kind: 'removal' }`: wyjmowanie lotek,
+- `{ kind: 'none' }`: zmiana, która nie jest rzutem.
+
+Ewaluacja sprawdza wynik detektora i zatrzymuje się z nazwą sesji i zdarzenia, gdy jest niepoprawny. Nowy detektor dopisujemy do `DETECTORS` w `src/detectors.ts`.
+
+### Baseline
+
+`baselineDetector` to metoda ze spike'a `spikes/camera/detect-events.mjs` przeniesiona na parę klatek. `measureChange` liczy jasność w 320×180 i zmienione piksele (różnica ponad 25) w kratkach 20×20. Mała zmiana, zmiana całego kadru (ekspozycja, autofocus) albo zmiana w mniej niż 2 kratkach to `none`. Reszta to lotka bez odczytu, więc każda wykryta lotka jest do potwierdzenia. Kalibracji baseline nie używa.
+
+Ograniczenie: baseline nie widzi wyjmowania lotek. Spike rozpoznawał je po długości ruchu między klatkami, a para klatek tej informacji nie ma. Na `session-01` oba zdarzenia `removal` wychodzą jako lotka.
+
 ## Konfiguracja
 
 | Zmienna | Domyślnie | Znaczenie |
@@ -79,4 +124,4 @@ Listę nazw kamer w macOS pokazuje `ffmpeg -f avfoundation -list_devices true -i
 pnpm --filter @autoscore/vision test
 ```
 
-Testy generują krótkie nagrania `testsrc` w katalogu tymczasowym i usuwają je po sobie.
+Testy generują krótkie nagrania `testsrc` i małe pliki JPEG w katalogu tymczasowym i usuwają je po sobie. Test regresji baseline'u dekoduje wszystkie 42 klatki `session-01`, więc trwa kilka sekund.

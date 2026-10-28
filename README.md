@@ -193,14 +193,14 @@ packages/
   server/   API REST i WebSocket, log zdarzeń w SQLite
   web/      front React (ekran gry, kreator, klawiatura)
   audio/    głos i efekty dźwiękowe z wiadomości na żywo
-  vision/   źródła klatek, geometria tarczy i homografia (bez detekcji)
+  vision/   źródła klatek, geometria tarczy, homografia i ewaluacja detekcji
 design/     tokeny motywu i makiety
 spikes/     eksperymenty z kamerą, poza buildem i lintem
 fixtures/   klatki z tarczy z oznaczonym wynikiem, zestaw testowy detekcji
 rollout/    manifest planu PR-ów
 ```
 
-Pakiet `vision` ma na razie źródła klatek, geometrię tarczy i homografię z obrazu na tarczę. Detekcja dojdzie w kolejnych krokach etapu 2.
+Pakiet `vision` ma źródła klatek, geometrię tarczy, homografię z obrazu na tarczę i ewaluację detekcji na zestawie z `fixtures/`. Detektor to na razie baseline, który nie odczytuje segmentu. Odczyt trafień dojdzie w kolejnych krokach etapu 2.
 
 README pakietów: [engine](packages/engine/README.md), [schema](packages/schema/README.md), [server](packages/server/README.md), [web](packages/web/README.md), [audio](packages/audio/README.md), [vision](packages/vision/README.md).
 
@@ -211,6 +211,7 @@ pnpm test        # testy wszystkich pakietów (Vitest)
 pnpm typecheck   # tsc w każdym pakiecie
 pnpm lint        # ESLint na całym repo
 pnpm --filter @autoscore/engine test   # testy jednego pakietu
+pnpm --filter @autoscore/vision eval   # ewaluacja detekcji na fixtures/ (--json <plik> zapisuje raport)
 ```
 
 CI uruchamia te same trzy checki: `test`, `typecheck` i `lint`.
