@@ -1,3 +1,4 @@
+import '../theme.css';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot } from '../test/snapshots';
