@@ -23,7 +23,7 @@ export async function registerAccessControl(app: FastifyInstance, { auth, corsOr
   if (corsOrigins !== null) {
     await app.register(cors, {
       origin: [...corsOrigins],
-      methods: ['GET', 'HEAD', 'POST', 'PATCH'],
+      methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT'],
       allowedHeaders: ['Authorization', 'Content-Type'],
       maxAge: 7200,
     });

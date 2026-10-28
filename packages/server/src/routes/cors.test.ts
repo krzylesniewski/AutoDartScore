@@ -36,6 +36,18 @@ describe('with AUTOSCORE_CORS_ORIGIN', () => {
     expect(String(response.headers['access-control-allow-methods'])).toContain('PATCH');
   });
 
+  it('answers a preflight for PUT', async () => {
+    t = await setup({ corsOrigins: [front] });
+    const response = await t.app.inject({
+      method: 'OPTIONS',
+      url: '/cameras/camera-1/calibration',
+      headers: { origin: front, ...preflightHeaders, 'access-control-request-method': 'PUT' },
+    });
+    expect(response.statusCode).toBe(204);
+    expect(response.headers['access-control-allow-origin']).toBe(front);
+    expect(String(response.headers['access-control-allow-methods'])).toContain('PUT');
+  });
+
   it('keeps the CORS header on a 401 and answers a preflight without a token', async () => {
     t = await setup({ corsOrigins: [front], auth: { password: 'tajne', tokenSecret: 's'.repeat(32) } });
     const response = await t.app.inject({ method: 'GET', url: '/players', headers: { origin: front } });

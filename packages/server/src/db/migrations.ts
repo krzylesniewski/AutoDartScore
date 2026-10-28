@@ -152,6 +152,24 @@ const migrations: Record<string, Migration> = {
       await db.schema.alterTable('match_events').addColumn('actor', 'text').execute();
     },
   },
+  // Punkty w osobnych kolumnach zamiast JSON, żeby tabela dała się przenieść na PostgreSQL.
+  '0008_camera_calibrations': {
+    async up(db: Kysely<unknown>) {
+      let table = db.schema
+        .createTable('camera_calibrations')
+        .addColumn('camera_id', 'text', (col) => col.notNull())
+        .addColumn('seq', 'integer', (col) => col.notNull())
+        .addColumn('image_width', 'integer', (col) => col.notNull())
+        .addColumn('image_height', 'integer', (col) => col.notNull());
+      for (const column of ['p1_x', 'p1_y', 'p2_x', 'p2_y', 'p3_x', 'p3_y', 'p4_x', 'p4_y']) {
+        table = table.addColumn(column, 'real', (col) => col.notNull());
+      }
+      await table
+        .addColumn('created_at', 'text', (col) => col.notNull())
+        .addPrimaryKeyConstraint('camera_calibrations_pk', ['camera_id', 'seq'])
+        .execute();
+    },
+  },
 };
 
 const provider: MigrationProvider = {
