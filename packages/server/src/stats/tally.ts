@@ -109,7 +109,7 @@ export function mergeTotals(a: PlayerTotals, b: Partial<PlayerTotals>): PlayerTo
   };
 }
 
-function round(value: number, decimals: number): number {
+export function round(value: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
 }

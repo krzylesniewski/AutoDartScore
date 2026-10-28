@@ -132,6 +132,28 @@ export const StatsRankings = z.object({
 });
 export type StatsRankings = z.infer<typeof StatsRankings>;
 
+// Overall: wszystkie gry liczone do statystyk razem, bez filtra po typie.
+export const OverallPlayer = z.object({
+  playerId: PlayerId,
+  name: z.string().min(1),
+  avatar: z.string().nullable(),
+  color: PlayerColor,
+  darts: Count, // każda zamknięta tura, także z nieukończonych legów i z bustem
+  legs: Count, // ukończone legi
+  average: Average, // tylko ukończone legi
+  difference: z.number().nullable(), // średnia gracza minus średnia ogólna, null bez średniej
+});
+export type OverallPlayer = z.infer<typeof OverallPlayer>;
+
+export const StatsOverall = z.object({
+  games: Count,
+  legs: Count,
+  darts: Count, // tylko zapisani gracze, bez gości
+  average: Average, // średnia ze średnich graczy, każdy gracz waży tyle samo
+  players: z.array(OverallPlayer),
+});
+export type StatsOverall = z.infer<typeof StatsOverall>;
+
 // Bilans dwóch graczy z ukończonych meczów 1v1. Porzucona gra nie ma zwycięzcy, więc nie wchodzi do bilansu.
 export const HeadToHead = z.object({
   playerId: PlayerId,

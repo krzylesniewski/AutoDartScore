@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORM_GAMES, FREQUENT_HITS_LIMIT, FrequentHitsResponse, HeadToHead, LegProgress, LegProgressPoint, MIN_LEGS_FOR_AVERAGE, MatchSummary, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsRankings, type PlayerStatLine } from './index.js';
+import { FORM_GAMES, FREQUENT_HITS_LIMIT, FrequentHitsResponse, HeadToHead, LegProgress, LegProgressPoint, MIN_LEGS_FOR_AVERAGE, MatchSummary, OverallPlayer, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsOverall, StatsRankings, type PlayerStatLine } from './index.js';
 
 const line: PlayerStatLine = {
   dartsThrown: 6,
@@ -202,6 +202,32 @@ describe('StatsRankings', () => {
 
   it('needs 3 legs for an average', () => {
     expect(MIN_LEGS_FOR_AVERAGE).toBe(3);
+  });
+});
+
+describe('StatsOverall', () => {
+  const anna = { playerId: 'p1', name: 'Anna', avatar: '🎯', color: 1, darts: 6, legs: 1, average: 150.5, difference: 75.25 };
+  const bartek = { playerId: 'p2', name: 'Bartek', avatar: null, color: 7, darts: 3, legs: 1, average: 0, difference: -75.25 };
+  const celina = { playerId: 'p3', name: 'Celina', avatar: null, color: 12, darts: 12, legs: 0, average: null, difference: null };
+
+  it('parses players above, below and without an average', () => {
+    const overall = { games: 1, legs: 1, darts: 21, average: 75.25, players: [anna, bartek, celina] };
+    expect(StatsOverall.parse(overall)).toEqual(overall);
+  });
+
+  it('parses an empty overview', () => {
+    const overall = { games: 0, legs: 0, darts: 0, average: null, players: [] };
+    expect(StatsOverall.parse(overall)).toEqual(overall);
+  });
+
+  it('rejects a negative average', () => {
+    expect(OverallPlayer.safeParse({ ...anna, average: -1 }).success).toBe(false);
+    expect(StatsOverall.safeParse({ games: 1, legs: 1, darts: 9, average: -1, players: [] }).success).toBe(false);
+  });
+
+  it('rejects a fractional dart count', () => {
+    expect(OverallPlayer.safeParse({ ...anna, darts: 6.5 }).success).toBe(false);
+    expect(StatsOverall.safeParse({ games: 1, legs: 1, darts: 9.5, average: 75.25, players: [] }).success).toBe(false);
   });
 });
 
