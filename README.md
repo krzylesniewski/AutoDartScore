@@ -27,6 +27,7 @@ Etap 1 (Mac bez kamery) nie jest jeszcze skończony.
 - Node 24. `nvm use` czyta wersję z `.nvmrc`.
 - pnpm 12. Dokładna wersja jest w polu `packageManager` w `package.json`.
 - Dziś macOS. Docelowo mini PC z Linuksem.
+- ffmpeg i ffprobe na `PATH`. Potrzebuje ich pakiet `vision` i jego testy, więc także `pnpm test`.
 
 ## Instalacja i uruchomienie
 
@@ -59,6 +60,8 @@ Konfiguracja idzie przez zmienne środowiskowe.
 | `DATABASE_PATH` | `autoscore.sqlite` | Ścieżka pliku SQLite, względna wobec katalogu, w którym działa proces serwera. |
 | `AUTOSCORE_API_URL` | `http://localhost:3000` | Adres serwera, na który proxy Vite przekazuje `/api`. |
 | `AUTOSCORE_MATCH_LOCK_MINUTES` | `5` | Ile minut po rzutce kończącej grę da się jeszcze cofać. `0` zamyka grę od razu. Wartość spoza samych cyfr albo większa niż `525600` (rok) zatrzymuje start z błędem `Invalid AUTOSCORE_MATCH_LOCK_MINUTES`. |
+| `AUTOSCORE_CAMERA_NAME` | `HD Pro Webcam C920:none` | Nazwa kamery w AVFoundation (macOS) dla pakietu `vision`. Kamerę wybieramy po nazwie, bo indeksy zmieniają się po restarcie. |
+| `AUTOSCORE_CAMERA_VIDEO` | brak | Nagranie wideo zamiast kamery w pakiecie `vision`. Wygrywa z `AUTOSCORE_CAMERA_NAME`. Ścieżka względna liczy się od katalogu, w którym działa proces. |
 
 `PORT` musi składać się z samych cyfr i nie przekraczać 65535. Inaczej serwer kończy pracę przy starcie z błędem `Invalid PORT`. Po zmianie `PORT` ustaw `AUTOSCORE_API_URL` na ten sam port, na przykład:
 
@@ -190,14 +193,16 @@ packages/
   server/   API REST i WebSocket, log zdarzeń w SQLite
   web/      front React (ekran gry, kreator, klawiatura)
   audio/    głos i efekty dźwiękowe z wiadomości na żywo
+  vision/   źródła klatek z kamery, nagrania i plików JPEG (bez detekcji)
 design/     tokeny motywu i makiety
 spikes/     eksperymenty z kamerą, poza buildem i lintem
+fixtures/   klatki z tarczy z oznaczonym wynikiem, zestaw testowy detekcji
 rollout/    manifest planu PR-ów
 ```
 
-Pakiet `vision` i katalog `fixtures` dojdą w etapie 2 (kamera).
+Pakiet `vision` ma na razie tylko źródła klatek. Detekcja dojdzie w kolejnych krokach etapu 2.
 
-README pakietów: [engine](packages/engine/README.md), [schema](packages/schema/README.md), [server](packages/server/README.md), [web](packages/web/README.md), [audio](packages/audio/README.md).
+README pakietów: [engine](packages/engine/README.md), [schema](packages/schema/README.md), [server](packages/server/README.md), [web](packages/web/README.md), [audio](packages/audio/README.md), [vision](packages/vision/README.md).
 
 ## Komendy
 
