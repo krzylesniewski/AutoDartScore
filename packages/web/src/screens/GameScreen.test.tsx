@@ -1,8 +1,8 @@
-import { HitEvent, type LiveMessage, type MatchSnapshot } from '@autoscore/schema';
+import { HitEvent, type LiveMessage, type MatchSnapshot, type ReviewedThrow } from '@autoscore/schema';
 import { LiveAuthMessage } from '@autoscore/schema';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, reviewedThrow, snapshot, summary, summaryPlayer } from '../test/snapshots';
 import { ACHIEVEMENT_DURATION_MS } from '../api/use-match';
 import { GameScreen } from './GameScreen';
 
@@ -1723,5 +1723,312 @@ describe('achievements', () => {
     const status = screen.getByRole('status');
     expect(within(status).getByRole('list', { name: 'Osiągnięcia' }).textContent).toBe('Bartek Najkrótszy leg: 15 lotek (było 18)');
     expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'pointer-events-none']));
+  });
+});
+
+describe('pending throws', () => {
+  const counted = reviewedThrow('t1', { sequence: 0 });
+  const pendingT20 = reviewedThrow('t2', {
+    sequence: 1,
+    source: 'camera-1',
+    confidence: 0.4,
+    reading: { segment: 20, multiplier: 3 },
+    value: { segment: 20, multiplier: 3 },
+    status: 'pending',
+    scoring: 'waiting',
+    review: {
+      reason: 'near_wire',
+      flaggedBy: 'system',
+      candidates: [
+        { segment: 20, multiplier: 3, probability: 0.4 },
+        { segment: 5, multiplier: 3, probability: 0.12 },
+        { segment: 1, multiplier: 3, probability: 0.35 },
+      ],
+      resolved: null,
+    },
+  });
+  const pendingState: MatchSnapshot = {
+    ...initial,
+    eventSeq: 6,
+    currentDarts: [{ segment: 20, multiplier: 1 }],
+    players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 417, legsWon: 0 })],
+    lastTurnThrows: [counted, pendingT20],
+    awaitingReview: true,
+  };
+  const fullState: MatchSnapshot = { ...pendingState, lastTurnThrows: [counted, pendingT20, reviewedThrow('t3', { sequence: 2, scoring: 'waiting' })] };
+  // Bartek kończy turę po trzech rzutkach, kolej na Annę.
+  const closedState: MatchSnapshot = {
+    ...initial,
+    eventSeq: 8,
+    currentPlayerId: 'p1',
+    currentDarts: [],
+    turnIndex: 1,
+    players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 357, legsWon: 0 })],
+    lastTurnThrows: [counted, { ...pendingT20, status: 'confirmed', scoring: 'counted' }, reviewedThrow('t3', { sequence: 2 })],
+  };
+
+  function reviewResult(entry: ReviewedThrow, state: MatchSnapshot) {
+    return { throw: entry, events: [], state };
+  }
+
+  function disabled(name: string | RegExp): boolean {
+    return (screen.getByRole('button', { name }) as HTMLButtonElement).disabled;
+  }
+
+  function panel(): HTMLElement {
+    return screen.getByRole('region', { name: 'Rzutka 2 do potwierdzenia' });
+  }
+
+  it('shows the pending slot, the reason and the reading in the panel', () => {
+    connect(pendingState);
+    expect(within(screen.getByLabelText('Rzutka 2')).getByRole('button', { name: /Do potwierdzenia/ }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(panel()).getByText('Grot przy drucie')).toBeTruthy();
+    expect(within(panel()).getByText('Odczyt: T20')).toBeTruthy();
+    expect(within(panel()).getAllByRole('button').map((button) => button.textContent)).toEqual(['Potwierdź T20', 'T1 35%', 'T5 12%', 'Popraw z klawiatury']);
+    expect(screen.getByText('Weryfikacja')).toBeTruthy();
+  });
+
+  it('posts the reading on Potwierdź', async () => {
+    respond = async () => json(200, reviewResult({ ...pendingT20, status: 'confirmed', scoring: 'counted' }, { ...pendingState, eventSeq: 7, lastTurnThrows: [counted], awaitingReview: false }));
+    connect(pendingState);
+    tap('Potwierdź T20');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/throws/t2/verify`, body: { segment: 20, multiplier: 3 } });
+    await vi.waitFor(() => expect(screen.queryByRole('region', { name: 'Rzutka 2 do potwierdzenia' })).toBeNull());
+  });
+
+  it('posts the picked candidate', async () => {
+    respond = async () => json(200, reviewResult(pendingT20, pendingState));
+    connect(pendingState);
+    tap('T1 35%');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/throws/t2/verify`, body: { segment: 1, multiplier: 3 } });
+  });
+
+  it('sends the next keypad entry as the correction and nothing to /throws', async () => {
+    respond = async () => json(200, reviewResult(pendingT20, pendingState));
+    connect(pendingState);
+    tap('Popraw z klawiatury');
+    expect(within(panel()).getByRole('button', { name: 'Popraw z klawiatury' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(panel()).getByText('Wpisz na klawiaturze poprawną wartość rzutki 2')).toBeTruthy();
+    tap('T');
+    tap('19');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    expect(calls).toEqual([{ url: `/api/matches/${MATCH_ID}/throws/t2/verify`, body: { segment: 19, multiplier: 3 } }]);
+    expect(calls.some((call) => call.url.endsWith('/throws'))).toBe(false);
+    expect(within(panel()).getByRole('button', { name: 'Popraw z klawiatury' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('sends a normal throw after the correction is cancelled', async () => {
+    connect(pendingState);
+    tap('Popraw z klawiatury');
+    tap('Popraw z klawiatury');
+    expect(screen.queryByText('Wpisz na klawiaturze poprawną wartość rzutki 2')).toBeNull();
+    tap('5');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.url).toBe(`/api/matches/${MATCH_ID}/throws`);
+    expect(HitEvent.parse(calls[0]?.body)).toMatchObject({ segment: 5, multiplier: 1 });
+  });
+
+  it('sends no checkout dart on Enter and no misses on Reszta Miss while the turn waits', async () => {
+    const state: MatchSnapshot = {
+      ...pendingState,
+      players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 100, legsWon: 0 })],
+      lastTurnThrows: [{ ...pendingT20, value: { segment: 5, multiplier: 1 } }],
+      currentDarts: [],
+    };
+    connect(state);
+    expect(screen.queryByText('Zamknięcie')).toBeNull();
+    fireEvent.keyDown(window, { key: 'Enter' });
+    tap('Reszta Miss');
+    await flush();
+    expect(calls).toEqual([]);
+  });
+
+  it('flags the picked throw of the latest turn', async () => {
+    respond = async () => json(200, reviewResult(pendingT20, pendingState));
+    connect(closedState);
+    tap('Do weryfikacji');
+    const dialog = screen.getByRole('dialog', { name: 'Którą rzutkę oznaczyć do weryfikacji?' });
+    expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual(['Rzutka 1: 20', 'Rzutka 2: T20', 'Rzutka 3: 20', 'Anuluj']);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Rzutka 3: 20' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/throws/t3/flag`, body: undefined });
+  });
+
+  it('closes the flag dialog on Anuluj and on Escape without a request', async () => {
+    connect(closedState);
+    tap('Do weryfikacji');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Anuluj' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    tap('Do weryfikacji');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await flush();
+    expect(calls).toEqual([]);
+  });
+
+  it('types nothing while the flag dialog is open', async () => {
+    connect(closedState);
+    tap('Do weryfikacji');
+    fireEvent.keyDown(window, { key: '5' });
+    fireEvent.keyDown(window, { key: ' ' });
+    await flush();
+    expect(calls).toEqual([]);
+  });
+
+  it('disables Do weryfikacji without a throw in the latest turn and in a finished game', () => {
+    connect();
+    expect(disabled('Do weryfikacji')).toBe(true);
+    socket().serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: 9, state: { ...closedState, eventSeq: 9, finished: true, status: 'finished', currentPlayerId: null, type: 'casual', legsToWin: null } });
+    expect(disabled('Do weryfikacji')).toBe(true);
+  });
+
+  it('shows a failed flag', async () => {
+    respond = async () => json(409, { error: 'throw_not_flaggable', message: 'Throw t3 is not in the latest turn' });
+    connect(closedState);
+    tap('Do weryfikacji');
+    fireEvent.click(screen.getByRole('button', { name: 'Rzutka 3: 20' }));
+    expect(await screen.findByText('Nie udało się oznaczyć rzutki')).toBeTruthy();
+  });
+
+  it('tells that another screen resolved the throw on 409 throw_not_pending', async () => {
+    respond = async () => json(409, { error: 'throw_not_pending', message: 'Throw t2 does not wait for a review' });
+    connect(pendingState);
+    tap('Potwierdź T20');
+    expect(await screen.findByText('Ta rzutka jest już rozstrzygnięta')).toBeTruthy();
+  });
+
+  it('shows a failed verify', async () => {
+    respond = async () => json(500, { error: 'internal', message: 'boom' });
+    connect(pendingState);
+    tap('Potwierdź T20');
+    expect(await screen.findByText('Nie udało się zweryfikować rzutki')).toBeTruthy();
+  });
+
+  it('disables the keypad for a full turn and enables it for a correction', () => {
+    connect(fullState);
+    expect(disabled('20')).toBe(true);
+    expect(disabled('Miss')).toBe(true);
+    expect(within(panel()).getByText('Tura jest już skończona. Potwierdź albo popraw rzutkę, zanim padnie następna')).toBeTruthy();
+    expect(screen.queryByText(/z 3$/)).toBeNull();
+    tap('Popraw z klawiatury');
+    expect(disabled('20')).toBe(false);
+    expect(screen.queryByText('Tura jest już skończona. Potwierdź albo popraw rzutkę, zanim padnie następna')).toBeNull();
+  });
+
+  // Oznaczenie rzutki z bustem otwiera turę na nowo. Rzutka następnego gracza czekałaby w niej i przepadła po potwierdzeniu bustu.
+  it('accepts no throw while a pending dart busts before the 3rd dart', async () => {
+    const bust: MatchSnapshot = {
+      ...pendingState,
+      players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 40, legsWon: 0 })],
+    };
+    connect(bust);
+    expect(disabled('20')).toBe(true);
+    expect(disabled('Reszta Miss')).toBe(true);
+    const prompt = within(panel()).getByText('Tura jest już skończona. Potwierdź albo popraw rzutkę, zanim padnie następna');
+    expect(prompt.querySelector('svg')).not.toBeNull();
+    fireEvent.keyDown(window, { key: ' ' });
+    fireEvent.keyDown(window, { key: '5' });
+    await flush();
+    expect(calls).toEqual([]);
+
+    tap('Popraw z klawiatury');
+    tap('5');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/throws/t2/verify`, body: { segment: 5, multiplier: 1 } });
+  });
+
+  it('keeps the keypad for the next dart while the reading leaves the turn open', () => {
+    connect(pendingState);
+    expect(disabled('20')).toBe(false);
+    expect(screen.getByText('Rzutka 3 z 3')).toBeTruthy();
+    expect(screen.queryByText('Tura jest już skończona. Potwierdź albo popraw rzutkę, zanim padnie następna')).toBeNull();
+  });
+
+  it('shows the full turn message on 409 turn_pending', async () => {
+    respond = async () => json(409, { error: 'turn_pending', message: 'The turn already has 3 darts and waits for a review' });
+    connect();
+    tap('Miss');
+    expect(await screen.findByText('Tura ma już 3 rzutki. Najpierw rozstrzygnij rzutkę do potwierdzenia')).toBeTruthy();
+  });
+
+  it('shows the panel but disables it in an abandoned game', () => {
+    connect({ ...pendingState, status: 'abandoned', abandonment: { playerId: 'p2', reason: null, at: '2026-10-15T19:00:00.000Z' } });
+    const buttons = within(panel()).getAllByRole('button') as HTMLButtonElement[];
+    expect(buttons).toHaveLength(4);
+    expect(buttons.every((button) => button.disabled)).toBe(true);
+    expect(disabled('Do weryfikacji')).toBe(true);
+  });
+
+  it('follows a flag from another screen', () => {
+    const ws = connect(closedState);
+    expect(screen.queryByRole('region', { name: /do potwierdzenia/ })).toBeNull();
+    const flagged = reviewedThrow('t3', { sequence: 2, status: 'pending', scoring: 'waiting', review: { reason: 'manual', flaggedBy: 'player', candidates: [], resolved: null } });
+    const reopened: MatchSnapshot = {
+      ...closedState,
+      eventSeq: 9,
+      currentPlayerId: 'p2',
+      currentDarts: [
+        { segment: 20, multiplier: 1 },
+        { segment: 20, multiplier: 3 },
+      ],
+      players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 357, legsWon: 0 })],
+      lastTurnThrows: [...closedState.lastTurnThrows.slice(0, 2), flagged],
+      awaitingReview: true,
+    };
+    ws.serverSend({ type: 'throw_flagged', matchId: MATCH_ID, eventSeq: 9, throw: flagged });
+    ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: 9, state: reopened });
+    expect(within(screen.getByLabelText('Rzutka 3')).getByRole('button', { name: /Do potwierdzenia/ })).toBeTruthy();
+    const region = screen.getByRole('region', { name: 'Rzutka 3 do potwierdzenia' });
+    expect(within(region).getByText('Oznaczona przez gracza')).toBeTruthy();
+    expect(screen.getByText('Tura czeka na weryfikację')).toBeTruthy();
+  });
+
+  it('closes the turn after a verify from another screen and clears the correction', async () => {
+    const ws = connect(fullState);
+    tap('Popraw z klawiatury');
+    expect(disabled('20')).toBe(false);
+    const verified = { ...pendingT20, status: 'confirmed', scoring: 'counted', value: { segment: 20, multiplier: 1 } } as const;
+    ws.serverSend({ type: 'throw_verified', matchId: MATCH_ID, eventSeq: 8, throw: verified });
+    ws.serverSend({
+      type: 'turn_completed',
+      matchId: MATCH_ID,
+      eventSeq: 8,
+      playerId: 'p2',
+      legIndex: 0,
+      turnIndex: 0,
+      darts: [
+        { segment: 20, multiplier: 1 },
+        { segment: 20, multiplier: 1 },
+        { segment: 20, multiplier: 1 },
+      ],
+      total: 60,
+      remaining: 357,
+    });
+    ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: 8, state: closedState });
+    expect(screen.queryByRole('region', { name: /do potwierdzenia/ })).toBeNull();
+    expect(screen.queryByText('Tura czeka na weryfikację')).toBeNull();
+    expect(screen.queryByText('Wpisz na klawiaturze poprawną wartość rzutki 2')).toBeNull();
+    const top = within(screen.getByRole('region', { name: 'Wyniki' })).getAllByRole('listitem')[0];
+    expect(top?.getAttribute('aria-current')).toBe('true');
+    expect(top && within(top).getByText('Anna')).toBeTruthy();
+    expect(screen.getByText('Anna rzuca')).toBeTruthy();
+
+    tap('20');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.url).toBe(`/api/matches/${MATCH_ID}/throws`);
+  });
+
+  it('clears the achievement notice on a player flag but not on a system flag', () => {
+    const ws = connect(closedState);
+    ws.serverSend({ type: 'achievement', matchId: MATCH_ID, eventSeq: 8, playerId: 'p2', kind: 'turn_record', value: 140, previous: 121 });
+    const camera = reviewedThrow('t4', { sequence: 3, status: 'pending', scoring: 'waiting', review: { reason: 'low_confidence', flaggedBy: 'system', candidates: [], resolved: null } });
+    ws.serverSend({ type: 'throw_flagged', matchId: MATCH_ID, eventSeq: 9, throw: camera });
+    expect(screen.queryByRole('list', { name: 'Osiągnięcia' })).not.toBeNull();
+    ws.serverSend({ type: 'throw_flagged', matchId: MATCH_ID, eventSeq: 10, throw: { ...camera, id: 't3', review: { reason: 'manual', flaggedBy: 'player', candidates: [], resolved: null } } });
+    expect(screen.queryByRole('list', { name: 'Osiągnięcia' })).toBeNull();
   });
 });

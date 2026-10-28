@@ -4,7 +4,7 @@ import { formatCheckoutPercent } from '../game/checkout-practice';
 import { formatDecimal } from '../game/format-stat';
 import { scoreboardOrder } from '../game/scoreboard-order';
 import { pl } from '../i18n/pl';
-import { PlaceIcon, PlusIcon, ThrowingIcon } from './icons';
+import { PlaceIcon, PlusIcon, ThrowingIcon, WarningIcon } from './icons';
 
 const MAX_PLAYERS = 4;
 
@@ -179,11 +179,20 @@ function PlayerRow({ player, state, style, next }: PlayerRowProps) {
       </span>
       <span className={`flex min-w-0 flex-1 items-start ${style.nameBlock} ${layout.nameBlock}`}>
         <span className={`max-w-full truncate font-display leading-tight font-semibold ${style.name}`}>{player.name}</span>
-        {throwing && (
-          <span className={`shrink-0 rounded-(--radius-chip) bg-(--color-accent) px-2 font-display text-xl font-bold uppercase tracking-(--tracking-label) text-(--color-on-accent) ${style.badge}`}>
-            {pl.throwing}
-          </span>
-        )}
+        {throwing &&
+          (state.awaitingReview ? (
+            <span
+              className={`flex max-w-full min-w-0 items-center gap-1 rounded-(--radius-chip) bg-(--color-accent) px-2 font-display text-xl font-bold uppercase tracking-(--tracking-label) text-(--color-on-accent) ${style.badge}`}
+            >
+              <WarningIcon className="shrink-0" />
+              {/* Kolumna imienia bywa węższa niż napis, więc odznaka się przycina, zamiast wchodzić na legi i wynik. */}
+              <span className="min-w-0 truncate">{pl.awaitingReviewBadge}</span>
+            </span>
+          ) : (
+            <span className={`shrink-0 rounded-(--radius-chip) bg-(--color-accent) px-2 font-display text-xl font-bold uppercase tracking-(--tracking-label) text-(--color-on-accent) ${style.badge}`}>
+              {pl.throwing}
+            </span>
+          ))}
         {next && <span className={`shrink-0 font-display font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted) ${style.meta}`}>{pl.next}</span>}
       </span>
       {player.legsWon !== null && (
