@@ -28,6 +28,14 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-10-29: „Brak odczytu” zamiast „Potwierdź Miss” dla rzutki z kamery bez odczytu
+- **Zgłosił:** autor (z pytania recenzenta briefu C8)
+- **Rodzaj / obszar:** utrudnienie / ekran gry
+- **Co powiedział:** (bez cytatu; autor wybrał wariant „OK do C7, poprawka frontu później”)
+- **Kontekst:** etap 2, kamera z detektorem bazowym z C3, zanim wejdzie detektor z C7
+- **Status:** nowy
+- **Uwagi:** detektor bazowy nie odczytuje segmentu, więc każda rzutka z kamery przychodzi jako `pending` z odczytem 0×0 (`confidence` 0, bez kandydatów). Panel z C5 (`PendingThrowPanel`) pokazuje wtedy „Odczyt: Miss” i główny przycisk „Potwierdź Miss”, więc jedno dotknięcie zapisuje pudło za lotkę, która pewnie trafiła. Kierunek: przy `confidence` 0 i braku kandydatów pokazać „Brak odczytu” (ikona i tekst), bez przycisku potwierdzenia, tylko poprawka z klawiatury. Powiązane: przy `AUTOSCORE_PENDING_CONFIDENCE=0` takie odczyty liczyłyby się od razu jako miss, więc serwer mógłby zawsze traktować rzutkę z kamery bez odczytu jako `pending`.
+
 ### 2026-10-28: zakładka „Overall” ze statystykami wszystkich graczy razem
 - **Zgłosił:** gracze (przekazał autor)
 - **Rodzaj / obszar:** pomysł / statystyki
