@@ -120,14 +120,16 @@ Standard BDO/WDF, w mm od środka: Bull (double) r ≤ 6,35; Outer Bull r ≤ 15
 1. Wykrycie wbicia: porównanie z ostatnią stabilną klatką odniesienia (wniosek 1 ze spike'a), odróżnienie zmian globalnych (autofocus, ekspozycja) i wyjmowania lotek (ręka w kadrze dłużej niż ok. 1,5 s), analiza tylko obszaru tarczy z kalibracji.
 2. Lokalizacja grotu (nie środka lotki, wniosek 4), przejście przez homografię na płaską tarczę, trafienie z C2, `confidence` i kandydaci (np. sąsiedni segment lub pierścień przy drucie), `review.reason` (`near_wire`, `low_confidence`, `occlusion`) i `tip`. Klasyczne metody na start (opencv-wasm, jeśli potrzebne; bez natywnych bindingów).
 3. Niepewność daje niską `confidence` i kandydatów, a nie zgadywanie (zasada 7).
-4. Detektor podpięty pod ewaluację z C3.
+4. Detektor podpięty pod ewaluację z C3 i jako domyślny w komendzie `start` z C8 (C8 jest scalony przed C7, decyzja autora 2026-10-29).
 
 **Testy i ewaluacja:** testy jednostkowe na syntetycznych obrazach (np. narysowana lotka na płaskiej tarczy); wynik ewaluacji na całym `/fixtures` w opisie PR-a: poprawne / do potwierdzenia / błędne, ogółem i dla każdej sesji, z porównaniem do detektora bazowego z C3. Kryterium: zero rzutek błędnych z wysoką `confidence` jest ważniejsze niż mało „do potwierdzenia”.
 
 ## C8: `vision` end-to-end (vision, server)
 
+**Kolejność (decyzja autora 2026-10-29):** C8 idzie przed C7, bo C7 czeka na nagrania. C8 nie zależy od C7: używa interfejsu `Detector` z C3, a w testach (także end-to-end z punktu 4) detektora testowego, który zwraca zadane trafienia. Interfejsu `Detector` z C3 nie zmieniaj bez potrzeby, bo C7 dostarczy jego implementację.
+
 **Zmiana:**
-1. Komenda `pnpm --filter @autoscore/vision start`: `CameraSource` (kamera albo plik wideo), kalibracja pobrana z serwera, detektor z C7, wysyłka `HitEvent` (`source: camera-1`, `eventId` UUID, kolejny `sequence`, `confidence`, `review` z kandydatami) do meczu z „Decyzji roboczych”; ponowienie po błędzie sieci bez dublowania (idempotencja `eventId`).
+1. Komenda `pnpm --filter @autoscore/vision start`: `CameraSource` (kamera albo plik wideo), kalibracja pobrana z serwera, detektor przez interfejs `Detector` z C3 (domyślnie detektor bazowy z C3, wybór detektora w konfiguracji; detektor z C7 podłączy się później), wysyłka `HitEvent` (`source: camera-1`, `eventId` UUID, kolejny `sequence`, `confidence`, `review` z kandydatami) do meczu z „Decyzji roboczych”; ponowienie po błędzie sieci bez dublowania (idempotencja `eventId`).
 2. Zapis pary klatek dla rzutek `pending` (`AUTOSCORE_FRAMES_DIR`) i ścieżki w `review.frames`.
 3. Wyjmowanie lotek resetuje klatkę odniesienia, bez wysyłania rzutek.
 4. Odtworzenie nagrania do meczu (`AUTOSCORE_CAMERA_VIDEO`) jako test end-to-end: serwer w teście, mecz utworzony przez API, po odtworzeniu stan meczu zgadza się z oczekiwanym (na wideo wygenerowanym z klatek `/fixtures` albo syntetycznym).

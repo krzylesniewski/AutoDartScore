@@ -137,7 +137,7 @@ prs:
     branch: feat/vision-detection
     title: 'feat(vision): detect darts and score the tip through the homography'
     brief: briefs/C7.md
-    deps: [C3, C6]
+    deps: [C3, C6, C8]
     priority: 30
     effort: { brief: high, implement: high, verify: high }
     changeset: none
@@ -147,7 +147,7 @@ prs:
     branch: feat/vision-end-to-end
     title: 'feat(vision): send camera hits to the active match end to end'
     brief: briefs/C8.md
-    deps: [C5, C7]
+    deps: [C5]
     priority: 30
     effort: { brief: high, implement: high, verify: high }
     changeset: none
