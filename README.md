@@ -17,7 +17,7 @@ Jeszcze nie ma:
 - Statystyk i ekranu podsumowania lega lub meczu.
 - Historii meczów oraz przerywania i wznawiania gry.
 - Działających przycisków „Nowa runda” i „Do weryfikacji”. Na ekranie gry są nieaktywne, z etykietą „Wkrótce”.
-- Weryfikacji rzutek na ekranie gry. Serwer już przyjmuje rzutki do weryfikacji (`confidence` poniżej progu), oznaczenia i weryfikacje, ale ekran ich jeszcze nie pokazuje.
+- Ekranu kolejki weryfikacji i eksportu rozstrzygniętych rzutek do `/fixtures`. Rzutkę do weryfikacji (`confidence` poniżej progu, także z kamery) ekran gry już pokazuje, a gracz ją tam potwierdza albo poprawia.
 - Odczytu segmentu z kamery. Komenda `start` pakietu `vision` wysyła już lotki z kamery do gry w trakcie, ale detektor baseline nie odczytuje segmentu, więc każda lotka z kamery czeka na potwierdzenie jako `0×0`. Prawdziwy detektor przyjdzie w kolejnym kroku etapu 2.
 
 Etap 1 (Mac bez kamery) nie jest jeszcze skończony.
