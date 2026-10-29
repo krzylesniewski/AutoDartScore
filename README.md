@@ -18,7 +18,7 @@ Jeszcze nie ma:
 - Historii meczów oraz przerywania i wznawiania gry.
 - Działających przycisków „Nowa runda” i „Do weryfikacji”. Na ekranie gry są nieaktywne, z etykietą „Wkrótce”.
 - Weryfikacji rzutek na ekranie gry. Serwer już przyjmuje rzutki do weryfikacji (`confidence` poniżej progu), oznaczenia i weryfikacje, ale ekran ich jeszcze nie pokazuje.
-- Kamery. Detekcja przyjdzie w etapie 2.
+- Odczytu segmentu z kamery. Komenda `start` pakietu `vision` wysyła już lotki z kamery do gry w trakcie, ale detektor baseline nie odczytuje segmentu, więc każda lotka z kamery czeka na potwierdzenie jako `0×0`. Prawdziwy detektor przyjdzie w kolejnym kroku etapu 2.
 
 Etap 1 (Mac bez kamery) nie jest jeszcze skończony.
 
@@ -39,6 +39,8 @@ pnpm dev
 
 `pnpm dev` uruchamia równolegle serwer (`http://localhost:3000`) i front (domyślnie `http://localhost:5173`). Aplikację otwierasz pod adresem frontu.
 
+`pnpm dev:camera` uruchamia serwer, front i komendę `start` pakietu `vision`, która czyta kamerę (albo nagranie z `AUTOSCORE_CAMERA_VIDEO`) i wysyła wykryte lotki do najnowszej gry w trakcie. Kamerę na żywo w macOS uruchamia człowiek w Terminalu, na przykład `caffeinate -i pnpm dev:camera`. Szczegóły w [README pakietu vision](packages/vision/README.md#lotki-do-gry).
+
 Tablet w tej samej sieci otwiera `http://<adres-IP-komputera>:5173`. Tablet potrzebuje tylko portu 5173, bo front przekazuje zapytania do API przez proxy `/api`. Jeśli macOS pyta o połączenia przychodzące, zezwól na nie w zaporze (Ustawienia systemowe, Sieć, Zapora).
 
 Serwer przy starcie wykonuje migracje bazy. Plik bazy powstaje domyślnie w `packages/server/autoscore.sqlite`, bo pnpm uruchamia skrypty w katalogu pakietu. Pliki `*.sqlite` są w `.gitignore`.
@@ -58,12 +60,14 @@ Konfiguracja idzie przez zmienne środowiskowe.
 | `PORT` | `3000` | Port serwera API. |
 | `HOST` | `0.0.0.0` | Adres nasłuchu serwera. Domyślny pozwala połączyć się z innych urządzeń w sieci. |
 | `DATABASE_PATH` | `autoscore.sqlite` | Ścieżka pliku SQLite, względna wobec katalogu, w którym działa proces serwera. |
-| `AUTOSCORE_API_URL` | `http://localhost:3000` | Adres serwera, na który proxy Vite przekazuje `/api`. Czyta go też pakiet `vision`, gdy wysyła klatkę z kamery. Musi być adresem `http:` albo `https:`, inaczej `vision` kończy pracę z błędem `Invalid AUTOSCORE_API_URL`. |
+| `AUTOSCORE_API_URL` | `http://localhost:3000` | Adres serwera, na który proxy Vite przekazuje `/api`. Czytają go też komendy `snapshot` i `start` pakietu `vision`. Musi być adresem `http:` albo `https:`, inaczej `vision` kończy pracę z błędem `Invalid AUTOSCORE_API_URL`. |
 | `AUTOSCORE_MATCH_LOCK_MINUTES` | `5` | Ile minut po wpisie kończącym grę (rzutce albo weryfikacji) da się jeszcze cofać, oznaczać i weryfikować rzutki. `0` zamyka grę od razu. Wartość spoza samych cyfr albo większa niż `525600` (rok) zatrzymuje start z błędem `Invalid AUTOSCORE_MATCH_LOCK_MINUTES`. |
-| `AUTOSCORE_PENDING_CONFIDENCE` | `0.8` | Rzutka z `confidence` poniżej tego progu czeka na weryfikację. Liczba dziesiętna od `0` do `1`, na przykład `0.75`. Inna wartość zatrzymuje start z błędem `Invalid AUTOSCORE_PENDING_CONFIDENCE`. |
+| `AUTOSCORE_PENDING_CONFIDENCE` | `0.8` | Rzutka z `confidence` poniżej tego progu czeka na weryfikację. Liczba dziesiętna od `0` do `1`, na przykład `0.75`. Inna wartość zatrzymuje start z błędem `Invalid AUTOSCORE_PENDING_CONFIDENCE`. Czyta go też `vision start`: lotka poniżej progu albo bez odczytu zapisuje parę klatek i dostaje `review` z kandydatami. Ustaw obu tę samą wartość. |
 | `AUTOSCORE_CAMERA_NAME` | `HD Pro Webcam C920:none` | Nazwa kamery w AVFoundation (macOS) dla pakietu `vision`. Kamerę wybieramy po nazwie, bo indeksy zmieniają się po restarcie. |
 | `AUTOSCORE_CAMERA_VIDEO` | brak | Nagranie wideo zamiast kamery w pakiecie `vision`. Wygrywa z `AUTOSCORE_CAMERA_NAME`. Ścieżka względna liczy się od katalogu, w którym działa proces. |
-| `AUTOSCORE_PASSWORD` (`vision`) | brak | Hasło, którym pakiet `vision` loguje się do serwera (`POST /auth/login`) przed wysłaniem klatki. Ustaw to samo hasło co na serwerze. Puste albo brak oznacza wysyłkę bez logowania. |
+| `AUTOSCORE_PASSWORD` (`vision`) | brak | Hasło, którym pakiet `vision` loguje się do serwera (`POST /auth/login`) przed wysłaniem klatki (`snapshot`) albo lotek (`vision start`). Ustaw to samo hasło co na serwerze. Puste albo brak oznacza wysyłkę bez logowania. |
+| `AUTOSCORE_DETECTOR` | `baseline` | Detektor, którego używa `vision start`. Nieznana nazwa daje błąd `Invalid AUTOSCORE_DETECTOR` z listą dostępnych. |
+| `AUTOSCORE_FRAMES_DIR` | `~/.autoscore/frames` | Katalog, w którym `vision start` zapisuje parę klatek (przed i po rzucie) każdej niepewnej lotki. Powstaje w razie potrzeby. Ścieżki w `review.frames` są względne wobec niego. Ścieżka względna liczy się od katalogu, w którym działa proces. |
 
 `PORT` musi składać się z samych cyfr i nie przekraczać 65535. Inaczej serwer kończy pracę przy starcie z błędem `Invalid PORT`. Po zmianie `PORT` ustaw `AUTOSCORE_API_URL` na ten sam port, na przykład:
 
@@ -219,14 +223,22 @@ packages/
   server/   API REST i WebSocket, log zdarzeń w SQLite
   web/      front React (ekran gry, kreator, klawiatura)
   audio/    głos i efekty dźwiękowe z wiadomości na żywo
-  vision/   źródła klatek, geometria tarczy, homografia, ewaluacja detekcji i wysyłka klatki do kalibracji
+  vision/   źródła klatek, geometria tarczy, homografia, ewaluacja detekcji, klatka do kalibracji i wysyłka lotek do gry
 design/     tokeny motywu i makiety
 spikes/     eksperymenty z kamerą, poza buildem i lintem
 fixtures/   klatki z tarczy z oznaczonym wynikiem, zestaw testowy detekcji
 rollout/    manifest planu PR-ów
 ```
 
-Pakiet `vision` ma źródła klatek, geometrię tarczy, homografię z obrazu na tarczę, ewaluację detekcji na zestawie z `fixtures/` i komendę, która wysyła jedną klatkę do kalibracji. Detektor to na razie baseline, który nie odczytuje segmentu. Odczyt trafień dojdzie w kolejnych krokach etapu 2.
+Pakiet `vision` ma źródła klatek, geometrię tarczy, homografię z obrazu na tarczę, ewaluację detekcji na zestawie z `fixtures/`, komendę `snapshot`, która wysyła jedną klatkę do kalibracji, i komendę `start`, która wysyła lotki z kamery do gry w trakcie. Detektor to na razie baseline, który nie odczytuje segmentu, więc każda lotka z kamery przychodzi jako `0×0` do potwierdzenia. Odczyt trafień dojdzie w kolejnych krokach etapu 2.
+
+### Lotki z kamery
+
+1. Skalibruj kamerę (niżej). `start` czyta kalibrację tylko przy uruchomieniu, więc po nowej kalibracji uruchom go ponownie.
+2. Uruchom wszystko razem: `pnpm dev:camera`. Sama komenda to `pnpm --filter @autoscore/vision start`.
+3. Załóż grę w aplikacji. Lotka trafia do najnowszej gry w trakcie. Bez takiej gry albo gdy najnowsza to trening checkoutów, lotka nie jest wysyłana.
+4. Ruch trwający 1,5 s lub dłużej to wyjmowanie lotek: nic nie jest wysyłane.
+5. Niepewna lotka zapisuje klatki przed i po rzucie w `AUTOSCORE_FRAMES_DIR` (domyślnie `~/.autoscore/frames`) i czeka na potwierdzenie na ekranie gry.
 
 ### Kalibracja kamery
 

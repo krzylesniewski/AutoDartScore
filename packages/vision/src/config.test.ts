@@ -5,10 +5,12 @@ import { createCameraSource, loadConfig } from './config.js';
 import { VideoFileSource } from './video-file-source.js';
 
 const defaultApi = { url: 'http://localhost:3000', password: null };
+const homeDir = path.join(path.sep, 'home', 'gracz');
+const defaults = { api: defaultApi, detector: 'baseline', framesDir: path.join(homeDir, '.autoscore', 'frames'), pendingConfidence: 0.8 };
 
 describe('loadConfig', () => {
   it('uses the C920 by name and the local API without a password by default', () => {
-    expect(loadConfig({})).toEqual({ camera: { kind: 'avfoundation', name: 'HD Pro Webcam C920:none' }, api: defaultApi });
+    expect(loadConfig({}, homeDir)).toEqual({ camera: { kind: 'avfoundation', name: 'HD Pro Webcam C920:none' }, ...defaults });
   });
 
   it('reads and trims the camera name', () => {
@@ -76,21 +78,72 @@ describe('loadConfig api', () => {
   });
 });
 
+describe('loadConfig detector', () => {
+  it.each([undefined, '', '  '])('defaults to baseline for %j', (value) => {
+    expect(loadConfig({ AUTOSCORE_DETECTOR: value }, homeDir).detector).toBe('baseline');
+  });
+
+  it('reads and trims a known detector', () => {
+    expect(loadConfig({ AUTOSCORE_DETECTOR: ' baseline ' }, homeDir).detector).toBe('baseline');
+  });
+
+  it.each(['nope', 'toString', 'constructor'])('rejects %j with the available names', (name) => {
+    expect(() => loadConfig({ AUTOSCORE_DETECTOR: name }, homeDir)).toThrow(`Invalid AUTOSCORE_DETECTOR: "${name}" (available: baseline)`);
+  });
+});
+
+describe('loadConfig framesDir', () => {
+  it('defaults to .autoscore/frames in the home directory', () => {
+    expect(loadConfig({}, homeDir).framesDir).toBe(path.join(homeDir, '.autoscore', 'frames'));
+  });
+
+  it('falls back to the default for a blank override', () => {
+    expect(loadConfig({ AUTOSCORE_FRAMES_DIR: '  ' }, homeDir).framesDir).toBe(path.join(homeDir, '.autoscore', 'frames'));
+  });
+
+  it('prefers an absolute override', () => {
+    const dir = path.join(path.sep, 'data', 'frames');
+    expect(loadConfig({ AUTOSCORE_FRAMES_DIR: ` ${dir} ` }, homeDir).framesDir).toBe(dir);
+  });
+
+  it('resolves a relative override against the working directory', () => {
+    expect(loadConfig({ AUTOSCORE_FRAMES_DIR: 'frames' }, homeDir).framesDir).toBe(path.join(process.cwd(), 'frames'));
+  });
+});
+
+describe('loadConfig pendingConfidence', () => {
+  it.each([undefined, ''])('defaults to 0.8 for %j', (value) => {
+    expect(loadConfig({ AUTOSCORE_PENDING_CONFIDENCE: value }, homeDir).pendingConfidence).toBe(0.8);
+  });
+
+  it.each([
+    ['0.75', 0.75],
+    ['0', 0],
+    ['1', 1],
+  ])('reads %j', (value, threshold) => {
+    expect(loadConfig({ AUTOSCORE_PENDING_CONFIDENCE: value }, homeDir).pendingConfidence).toBe(threshold);
+  });
+
+  it.each(['abc', '1.5', '-0.5', ' 0.8', '.5'])('rejects %j', (value) => {
+    expect(() => loadConfig({ AUTOSCORE_PENDING_CONFIDENCE: value }, homeDir)).toThrow(`Invalid AUTOSCORE_PENDING_CONFIDENCE: ${value}`);
+  });
+});
+
 describe('createCameraSource', () => {
   it('creates a video file source', () => {
-    expect(createCameraSource({ camera: { kind: 'video', path: '/tmp/session.mp4' }, api: defaultApi }, 'linux')).toBeInstanceOf(
+    expect(createCameraSource({ camera: { kind: 'video', path: '/tmp/session.mp4' }, ...defaults }, 'linux')).toBeInstanceOf(
       VideoFileSource,
     );
   });
 
   it('creates an AVFoundation source on macOS', () => {
-    expect(createCameraSource({ camera: { kind: 'avfoundation', name: 'Cam:none' }, api: defaultApi }, 'darwin')).toBeInstanceOf(
+    expect(createCameraSource({ camera: { kind: 'avfoundation', name: 'Cam:none' }, ...defaults }, 'darwin')).toBeInstanceOf(
       AvFoundationSource,
     );
   });
 
   it('rejects AVFoundation outside macOS', () => {
-    expect(() => createCameraSource({ camera: { kind: 'avfoundation', name: 'Cam:none' }, api: defaultApi }, 'linux')).toThrow(
+    expect(() => createCameraSource({ camera: { kind: 'avfoundation', name: 'Cam:none' }, ...defaults }, 'linux')).toThrow(
       /macOS only.*AUTOSCORE_CAMERA_VIDEO/,
     );
   });

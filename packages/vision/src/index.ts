@@ -14,3 +14,8 @@ export * from './evaluation.js';
 export * from './run-evaluation.js';
 export * from './detectors.js';
 export * from './snapshot.js';
+export * from './api-client.js';
+export * from './active-match.js';
+export * from './dart-watcher.js';
+export * from './frame-store.js';
+export * from './camera-runner.js';

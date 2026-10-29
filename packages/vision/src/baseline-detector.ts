@@ -6,7 +6,7 @@ import { FRAME_BYTES_PER_PIXEL, type Frame } from './frame.js';
 const ANALYSIS_WIDTH = 320;
 const ANALYSIS_HEIGHT = 180;
 const PIXEL_THRESHOLD = 25;
-const MIN_EVENT_CHANGE = 0.0005;
+export const MIN_EVENT_CHANGE = 0.0005;
 const LARGE_CHANGE = 0.03;
 const CELL = 20;
 const CELL_ACTIVE = 0.05;

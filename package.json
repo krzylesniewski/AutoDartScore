@@ -7,7 +7,8 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
+    "dev": "pnpm -r --parallel --filter=!@autoscore/vision dev",
+    "dev:camera": "pnpm -r --parallel dev",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint ."
