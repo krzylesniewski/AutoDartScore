@@ -1,6 +1,9 @@
+import os from 'node:os';
 import path from 'node:path';
 import { AvFoundationSource } from './av-foundation-source.js';
 import type { CameraSource } from './camera-source.js';
+import { DETECTORS } from './detectors.js';
+import { DEFAULT_PENDING_CONFIDENCE } from './evaluation.js';
 import { VideoFileSource } from './video-file-source.js';
 
 export type CameraConfig =
@@ -15,6 +18,9 @@ export interface ApiConfig {
 export interface VisionConfig {
   readonly camera: CameraConfig;
   readonly api: ApiConfig;
+  readonly detector: string;
+  readonly framesDir: string;
+  readonly pendingConfidence: number;
 }
 
 // Nazwa z ffmpeg -f avfoundation -list_devices true -i "". Sufiks :none wyłącza dźwięk.
@@ -23,12 +29,46 @@ const DEFAULT_CAMERA_NAME = 'HD Pro Webcam C920:none';
 // Ta sama zmienna i wartość domyślna co w proxy Vite.
 const DEFAULT_API_URL = 'http://localhost:3000';
 
-export function loadConfig(env: NodeJS.ProcessEnv): VisionConfig {
+const DEFAULT_DETECTOR = 'baseline';
+
+export function loadConfig(env: NodeJS.ProcessEnv, homeDir: string = os.homedir()): VisionConfig {
   return {
     camera: parseCamera(env.AUTOSCORE_CAMERA_VIDEO, env.AUTOSCORE_CAMERA_NAME),
     // Bez trim, jak na serwerze, bo spacje mogą być częścią hasła.
     api: { url: parseApiUrl(env.AUTOSCORE_API_URL), password: env.AUTOSCORE_PASSWORD || null },
+    detector: parseDetector(env.AUTOSCORE_DETECTOR),
+    framesDir: parseFramesDir(env.AUTOSCORE_FRAMES_DIR, homeDir),
+    pendingConfidence: parsePendingConfidence(env.AUTOSCORE_PENDING_CONFIDENCE),
   };
+}
+
+function parseDetector(value: string | undefined): string {
+  const trimmed = (value ?? '').trim();
+  if (trimmed === '') {
+    return DEFAULT_DETECTOR;
+  }
+  if (!Object.hasOwn(DETECTORS, trimmed)) {
+    throw new Error(`Invalid AUTOSCORE_DETECTOR: ${JSON.stringify(trimmed)} (available: ${Object.keys(DETECTORS).join(', ')})`);
+  }
+  return trimmed;
+}
+
+// Domyślnie poza repozytorium, żeby klatki nie trafiły przypadkiem do gita.
+function parseFramesDir(value: string | undefined, homeDir: string): string {
+  const trimmed = (value ?? '').trim();
+  return trimmed === '' ? path.join(homeDir, '.autoscore', 'frames') : path.resolve(trimmed);
+}
+
+// Te same reguły co na serwerze, bo obie strony czytają tę samą zmienną.
+function parsePendingConfidence(value: string | undefined): number {
+  if (value === undefined || value === '') {
+    return DEFAULT_PENDING_CONFIDENCE;
+  }
+  const threshold = Number(value);
+  if (!/^\d+(\.\d+)?$/.test(value) || threshold > 1) {
+    throw new Error(`Invalid AUTOSCORE_PENDING_CONFIDENCE: ${value}`);
+  }
+  return threshold;
 }
 
 function parseApiUrl(value: string | undefined): string {
