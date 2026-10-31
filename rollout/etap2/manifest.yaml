@@ -1,0 +1,154 @@
+# AutoScore Dart: Etap 2 (Mac + jedna kamera USB) jako seria PR-ów.
+# Źródło: CLAUDE.md, auto-score-dart-pomysly.md i design/plan-etap2.md.
+# Opis pól: ~/.claude/skills/rollout/docs/manifest.html
+# Ten plik jest w repo; ~/.rollouts/autoscore-etap2/manifest.yaml to dowiązanie do niego.
+# Stan rolloutu (ledger, logi, inbox, briefy) zostaje w ~/.rollouts/autoscore-etap2/.
+rollout: autoscore-etap2
+model: opus
+# claude jest binarką natywną zainstalowaną pod Node 22; działa niezależnie od wersji Node.
+claudeBin: ~/.nvm/versions/node/v22.18.0/bin/claude
+
+repo:
+  path: ~/Documents/00_Nauka/AutoScoreDart
+  github: krzylesniewski/AutoDartScore
+  # Gałąź integracyjna etapu 2 (decyzja 2026-10-28): do main wchodzi raz na kamień milowy, PR-em autora.
+  base: feat/camera
+  public: true
+  # Node 24 z nvm przed domyślnym Node 22. pnpm jest z Homebrew.
+  pathPrepend: [~/.nvm/versions/node/v24.22.0/bin]
+  install: pnpm install --frozen-lockfile
+  requiredChecks: ['test', 'typecheck', 'lint', 'build', 'smoke'] # joby z .github/workflows/ci.yml
+  # Bez konta bota: agenci, PR-y i merge idą z loginu gh (KrzysztofLesniewski, rola Write).
+  maintainers: [KrzysztofLesniewski]
+  merge: { method: squash, admin: false }
+  # Plan i decyzje trzyma człowiek; agenci ich nie zmieniają.
+  forbid:
+    - auto-score-dart-pomysly.md
+    - CLAUDE.md
+    # Zestaw testowy detekcji dodaje i zmienia tylko autor (ewaluacja ma być uczciwa).
+    - 'fixtures/**'
+    - 'rollout/**'
+  alwaysInScope:
+    - pnpm-lock.yaml
+  denylist: [/Users/]
+  verify:
+    common:
+      - pnpm install --frozen-lockfile
+      - pnpm test
+      - pnpm typecheck
+      - pnpm lint
+
+briefing:
+  sources:
+    - title: CLAUDE.md (zasady, stack, reguły X01, konwencje, detekcja; wiążące)
+      path: ~/Documents/00_Nauka/AutoScoreDart/CLAUDE.md
+      kind: markdown
+    - title: "Plan i decyzje projektu (sekcje „Detekcja: jedna kamera USB (MVP)” i „Rzut do weryfikacji”)"
+      path: ~/Documents/00_Nauka/AutoScoreDart/auto-score-dart-pomysly.md
+      kind: markdown
+    - title: Etap 2, plan PR-ów C1-C8 i decyzje (wiążący)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-etap2.md
+      kind: markdown
+    # Tylko dla PR-ów z briefTags: [rwd].
+    - title: RWD ekranów, wspólne zasady układu (wiążące dla zmian we froncie)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/rwd.md
+      kind: markdown
+      tag: rwd
+
+policy:
+  concurrency: 4
+  merge: human # driver scala do feat/camera po mojej akceptacji
+  approval: inbox # akceptacja przez `rollout approve`
+  # Agent odpowiada na pytania z briefu tylko tym, co rozstrzyga plan; reszta trafia do mnie.
+  delegate: {}
+
+# Małe kroki: plik spoza zakresu PR-a wraca do implementera przed weryfikacją.
+gates:
+  preVerify:
+    scope: true
+
+# Kamień K1 (C1-C5): fundamenty i weryfikacja. Po scaleniu wszystkich PR feat/camera → main.
+prs:
+  - id: C1
+    branch: feat/vision-camera-source
+    title: 'feat(vision): vision package with CameraSource over ffmpeg'
+    brief: briefs/C1.md
+    priority: 50
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    # ffmpeg w CI, jeśli runner go nie ma (jedyna dozwolona zmiana workflow).
+    allowWorkflows: true
+    scope: ['packages/vision/**', 'package.json', 'tsconfig.json', 'eslint.config.js', '.github/workflows/ci.yml', '.gitignore']
+
+  - id: C2
+    branch: feat/vision-board-geometry
+    title: 'feat(vision): dartboard geometry and four-point homography'
+    brief: briefs/C2.md
+    deps: [C1]
+    priority: 50
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/vision/**', 'packages/schema/**']
+
+  - id: C3
+    branch: feat/vision-eval
+    title: 'feat(vision): fixtures reader, detector interface and eval script'
+    brief: briefs/C3.md
+    deps: [C1, C2]
+    priority: 45
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/vision/**', 'package.json']
+
+  - id: C4
+    branch: feat/pending-throws
+    title: 'feat: pending throws with flag and verify, replayed by the engine'
+    brief: briefs/C4.md
+    priority: 50
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    # Nowe wiadomości WebSocket mogą wymagać poprawki danych testowych frontu i przypadku w announcerze.
+    scope: ['packages/schema/**', 'packages/engine/**', 'packages/server/**', 'packages/audio/src/announcer.ts', 'packages/audio/src/announcer.test.ts', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
+
+  - id: C5
+    branch: feat/pending-throws-web
+    title: 'feat(web): confirm or correct pending throws on the game screen'
+    brief: briefs/C5.md
+    deps: [C4]
+    priority: 45
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  # Kamień K2 (C6-C8): kamera end-to-end. C7 startuje dopiero, gdy autor doda skalibrowane sesje do /fixtures.
+  - id: C6
+    branch: feat/camera-calibration
+    title: 'feat: camera calibration screen with snapshot and homography preview'
+    brief: briefs/C6.md
+    deps: [C2]
+    priority: 40
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**', 'packages/vision/**', 'README.md', 'packages/*/README.md']
+    briefTags: [rwd]
+
+  - id: C7
+    branch: feat/vision-detection
+    title: 'feat(vision): detect darts and score the tip through the homography'
+    brief: briefs/C7.md
+    deps: [C3, C6, C8]
+    priority: 30
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/vision/**', 'package.json']
+
+  - id: C8
+    branch: feat/vision-end-to-end
+    title: 'feat(vision): send camera hits to the active match end to end'
+    brief: briefs/C8.md
+    deps: [C5]
+    priority: 30
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/vision/**', 'packages/server/**', 'packages/schema/**', 'package.json', 'README.md', 'packages/*/README.md']

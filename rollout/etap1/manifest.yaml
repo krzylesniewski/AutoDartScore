@@ -108,6 +108,16 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p52.md
       kind: markdown
       tag: p52
+    # Tylko dla PR-ów z briefTags: [p53].
+    - title: P53, zakładka „Overall” na ekranie Statystyki (wiążący dla P53)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p53.md
+      kind: markdown
+      tag: p53
+    # Tylko dla PR-ów z briefTags: [p54].
+    - title: P54, dokumentacja komponentów z testów przez describe-me (wiążący dla P54)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p54.md
+      kind: markdown
+      tag: p54
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -686,3 +696,25 @@ prs:
     changeset: none
     scope: ['packages/audio/**', 'packages/web/**']
     briefTags: [p52, rwd]
+
+  # Pomysł graczy 2026-10-28 (feedback-graczy.md, design/plan-p53.md): łączna liczba lotek, średnia ogólna, gracze powyżej i poniżej.
+  - id: P53
+    branch: feat/stats-overall
+    title: 'feat: add the Overall tab with total darts and the average of averages'
+    brief: briefs/P53.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**', 'README.md', 'packages/*/README.md']
+    briefTags: [p53, rwd]
+
+  # Prośba autora 2026-10-28 (design/plan-p54.md): describe-me jako dokumentacja komponentów z testów Vitesta, tylko devDependencies.
+  - id: P54
+    branch: chore/describe-me
+    title: 'chore: add describe-me for component docs from Vitest tests'
+    brief: briefs/P54.md
+    priority: 60
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**', 'package.json', '.gitignore']
+    briefTags: [p54]
