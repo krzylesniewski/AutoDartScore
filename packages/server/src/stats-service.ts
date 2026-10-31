@@ -1,5 +1,5 @@
 import { isGameFinished, type GameState } from '@autoscore/engine';
-import type { DomainEvent, FrequentHitsResponse, HeadToHead, Hit, LegProgress, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
+import type { DomainEvent, FrequentHitsResponse, HeadToHead, Hit, LegProgress, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsRankings } from '@autoscore/schema';
 import { HttpError, notFound } from './errors.js';
 import { lastActivityAt, lastSeq, replayLog } from './replay.js';
 import { checkoutSession } from './snapshot.js';
@@ -8,7 +8,8 @@ import { buildForm, type FormGame } from './stats/form.js';
 import { buildFrequentHits } from './stats/frequent-hits.js';
 import { buildHeadToHead, type HeadToHeadGame } from './stats/head-to-head.js';
 import { buildLegProgress } from './stats/leg-progress.js';
-import { buildRankings } from './stats/rankings.js';
+import { buildOverall } from './stats/overall.js';
+import { buildRankings, type RankedGame } from './stats/rankings.js';
 import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine } from './stats/tally.js';
 import type { Store, StoredMatch } from './store/store.js';
 
@@ -16,6 +17,7 @@ export interface StatsService {
   playerStats(playerId: string, filter: StatsFilter): Promise<PlayerStats>;
   matchSummary(matchId: string): Promise<MatchSummary>;
   rankings(filter: StatsFilter): Promise<StatsRankings>;
+  overall(): Promise<StatsOverall>;
   headToHead(playerId: string, opponentId: string): Promise<HeadToHead>;
   playerForm(playerId: string, filter: StatsFilter): Promise<PlayerForm>;
   frequentHits(playerId: string): Promise<FrequentHitsResponse>;
@@ -80,6 +82,20 @@ export function createStatsService({ store }: Dependencies): StatsService {
     return matches;
   }
 
+  // Gry wszystkich graczy liczone do statystyk, w przeciwieństwie do statsGames dla jednego gracza.
+  async function rankedGames(filter: StatsFilter): Promise<RankedGame[]> {
+    const types = FILTER_TYPES[filter];
+    const games: RankedGame[] = [];
+    for (const match of await store.listMatches()) {
+      if (!match.countsToStats || !types.includes(match.type)) {
+        continue;
+      }
+      const { playerIds, events, tally } = await replayed(match);
+      games.push({ type: match.type, legs: completedPlayerLegs(match.type, playerIds, events), tally });
+    }
+    return games;
+  }
+
   return {
     async playerStats(playerId, filter) {
       await requirePlayer(playerId);
@@ -126,17 +142,12 @@ export function createStatsService({ store }: Dependencies): StatsService {
     },
 
     async rankings(filter) {
-      const types = FILTER_TYPES[filter];
-      const games = [];
-      for (const match of await store.listMatches()) {
-        if (!match.countsToStats || !types.includes(match.type)) {
-          continue;
-        }
-        const { playerIds, events, tally } = await replayed(match);
-        games.push({ type: match.type, legs: completedPlayerLegs(match.type, playerIds, events), tally });
-      }
       // Zarchiwizowany gracz zostaje w rankingu. Ukrywa go tylko wybór graczy do nowej gry.
-      return { filter, ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games }) };
+      return { filter, ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames(filter) }) };
+    },
+
+    async overall() {
+      return buildOverall({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames('all') });
     },
 
     async headToHead(playerId, opponentId) {

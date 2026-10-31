@@ -1,4 +1,4 @@
-import { ApiError, CameraCalibration, FrequentHitsResponse, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, ReviewResult, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
+import { ApiError, CameraCalibration, FrequentHitsResponse, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, ReviewResult, StatsOverall, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
 import type {
   AbandonMatchRequest,
   CheckoutAttemptRequest,
@@ -158,6 +158,10 @@ export function getFrequentHits(playerId: string): Promise<FrequentHitsResponse>
 
 export function getRankings(filter: StatsFilter): Promise<StatsRankings> {
   return request(`/stats/rankings?type=${filter}`, StatsRankings);
+}
+
+export function getOverall(): Promise<StatsOverall> {
+  return request('/stats/overall', StatsOverall);
 }
 
 export function getMatchSummary(matchId: string): Promise<MatchSummary> {

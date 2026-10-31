@@ -6,7 +6,9 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "docs:dev": "describe-me dev",
+    "docs:build": "describe-me build --out describe-me-dist"
   },
   "dependencies": {
     "@autoscore/audio": "workspace:*",
@@ -19,12 +21,15 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@describe-me/react": "0.12.1",
+    "@describe-me/vitest": "0.12.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "describe-me": "0.12.1",
     "jsdom": "^30.1.3",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.4",

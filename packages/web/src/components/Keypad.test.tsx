@@ -1,3 +1,4 @@
+import '../theme.css';
 import type { FrequentHit, Hit } from '@autoscore/schema';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
