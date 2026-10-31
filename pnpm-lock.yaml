@@ -243,6 +243,28 @@ importers:
         specifier: ^5.0.4
         version: 5.0.4(@types/node@26.6.5)(jsdom@30.1.3)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0))
 
+  packages/vision:
+    dependencies:
+      '@autoscore/schema':
+        specifier: workspace:*
+        version: link:../schema
+      jiti:
+        specifier: ^2.7.0
+        version: 2.7.0
+      jpeg-js:
+        specifier: ^0.4.4
+        version: 0.4.4
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@autoscore/server':
+        specifier: workspace:*
+        version: link:../server
+      vitest:
+        specifier: ^5.0.4
+        version: 5.0.4(@types/node@26.6.5)(jsdom@30.1.3)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0))
+
   packages/web:
     dependencies:
       '@autoscore/audio':
@@ -254,6 +276,9 @@ importers:
       '@autoscore/schema':
         specifier: workspace:*
         version: link:../schema
+      '@autoscore/vision':
+        specifier: workspace:*
+        version: link:../vision
       '@fontsource/barlow':
         specifier: ^5.3.0
         version: 5.3.0
@@ -1209,6 +1234,9 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
+
+  jpeg-js@0.4.4:
+    resolution: {integrity: sha512-WZzeDOEtTOBK4Mdsar0IqEU5sMr3vSV2RqkAIzUEV2BHnUfKGyswWFPFwK5EeDo93K3FohSHbLAjj0s1Wzd+dg==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -2699,6 +2727,8 @@ snapshots:
   isexe@2.0.0: {}
 
   jiti@2.7.0: {}
+
+  jpeg-js@0.4.4: {}
 
   js-tokens@4.0.0: {}
 

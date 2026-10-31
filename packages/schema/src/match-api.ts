@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { DomainEvent } from './domain-events.js';
-import { Hit, HitSource, Multiplier, Segment } from './hit.js';
+import { Hit, HitReview, HitSource, Multiplier, Segment } from './hit.js';
 import { BestOf, CheckoutAttempt, CheckoutRange, MatchStatus, MatchType, Placement, PracticeMode, StartingScore } from './match.js';
 import { PlayerColor } from './player.js';
+import { ReviewedThrow } from './review.js';
 
 const PlayerId = z.string().min(1);
 
@@ -43,6 +44,7 @@ export const CreateMatchRequest = z.discriminatedUnion('type', [
 export type CreateMatchRequest = z.infer<typeof CreateMatchRequest>;
 
 // Trafienie w takiej postaci, w jakiej przyszło, plus identyfikator nadany przez serwer i czas odbioru.
+// segment i multiplier to zawsze pierwotny odczyt. Wynik weryfikacji jest w logu, nie tutaj.
 export const ThrowRecord = z.object({
   id: z.string().min(1),
   matchId: z.string().min(1),
@@ -54,6 +56,7 @@ export const ThrowRecord = z.object({
   confidence: z.number().min(0).max(1),
   detectedAt: z.iso.datetime(),
   receivedAt: z.iso.datetime(),
+  review: HitReview.optional(), // tylko gdy trafienie je miało
 }).refine((record) => Hit.safeParse(record).success, {
   message: 'Invalid segment and multiplier combination',
   path: ['multiplier'],
@@ -115,7 +118,7 @@ export const MatchSnapshot = z.object({
   status: MatchStatus,
   abandonment: Abandonment.nullable(), // tylko gdy gra jest porzucona. Historię trzyma log
   endedAt: z.iso.datetime().nullable(), // tylko w zakończonym treningu
-  finishedAt: z.iso.datetime().nullable(), // receivedAt rzutki, która zakończyła grę
+  finishedAt: z.iso.datetime().nullable(), // czas wpisu w logu, który zakończył grę: rzutki albo weryfikacji
   editableUntil: z.iso.datetime().nullable(), // do tej chwili da się cofnąć rzutkę w zakończonej grze
   round: z.int().min(1).nullable(), // kolejka rzucającego w bieżącym legu. null po końcu gry i w Free run
   startedAt: z.iso.datetime().nullable(), // receivedAt pierwszej liczonej rzutki gry
@@ -138,6 +141,8 @@ export const MatchSnapshot = z.object({
     })
     .nullable(),
   checkouts: CheckoutSession.nullable(), // tylko w treningu checkoutów
+  lastTurnThrows: z.array(ReviewedThrow).max(3), // rzutki ostatniej tury, która ma choć jedną rzutkę
+  awaitingReview: z.boolean(), // któraś rzutka czeka (scoring waiting) na weryfikację
 });
 export type MatchSnapshot = z.infer<typeof MatchSnapshot>;
 
@@ -193,6 +198,21 @@ export const UndoResult = z.object({
   state: MatchSnapshot,
 });
 export type UndoResult = z.infer<typeof UndoResult>;
+
+export const ReviewResult = z.object({
+  throw: ReviewedThrow,
+  events: z.array(DomainEvent), // tylko zdarzenia wywołane tą komendą
+  state: MatchSnapshot,
+});
+export type ReviewResult = z.infer<typeof ReviewResult>;
+
+// Rzutki do weryfikacji (status pending) w kolejności z logu.
+export const ReviewQueue = z.object({
+  matchId: z.string().min(1),
+  eventSeq: z.int().min(0),
+  throws: z.array(ReviewedThrow),
+});
+export type ReviewQueue = z.infer<typeof ReviewQueue>;
 
 export const ApiError = z.object({
   error: z.string().min(1),

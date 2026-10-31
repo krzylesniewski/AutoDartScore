@@ -1,4 +1,4 @@
-import type { CheckoutAttempt, CheckoutSession, LegProgress, MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
+import type { CheckoutAttempt, CheckoutSession, LegProgress, MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine, ReviewedThrow } from '@autoscore/schema';
 
 export function player(id: string, name: string, overrides: Partial<MatchSnapshotPlayer> = {}): MatchSnapshotPlayer {
   return { id, name, avatar: null, color: 1, guest: false, remaining: 501, legsWon: null, place: null, dartsThrownInLeg: 0, ...overrides };
@@ -34,6 +34,8 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
     legStartedAt: null,
     pausedMs: 0,
     legPausedMs: 0,
+    lastTurnThrows: [],
+    awaitingReview: false,
     ...overrides,
   };
 }
@@ -160,4 +162,19 @@ export function listItem(overrides: Partial<MatchListItem> = {}): MatchListItem 
 
 export function profile(id: string, name: string, overrides: Partial<Player> = {}): Player {
   return { id, name, avatar: null, color: 1, guest: false, archivedAt: null, createdAt: '2026-10-15T18:30:00.000Z', ...overrides };
+}
+
+export function reviewedThrow(id: string, overrides: Partial<ReviewedThrow> = {}): ReviewedThrow {
+  return {
+    id,
+    sequence: 0,
+    source: 'keypad',
+    confidence: 1,
+    reading: { segment: 20, multiplier: 1 },
+    value: { segment: 20, multiplier: 1 },
+    status: 'confirmed',
+    scoring: 'counted',
+    review: null,
+    ...overrides,
+  };
 }

@@ -1,7 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 import type { CheckoutRule } from '@autoscore/engine';
-import type { CheckoutRange, CreatePlayerRequest, MatchType, Player, PracticeMode, ThrowRecord, UpdatePlayerRequest } from '@autoscore/schema';
+import {
+  Hit,
+  HitReview,
+  ReviewActor,
+  ReviewReason,
+  type CheckoutRange,
+  type CreatePlayerRequest,
+  type MatchType,
+  type Player,
+  type PracticeMode,
+  type ThrowRecord,
+  type UpdatePlayerRequest,
+} from '@autoscore/schema';
 import type { Database, MatchEventsTable, MatchesTable, PlayerChangesTable, PlayersTable, ThrowsTable } from '../db/database.js';
 import { playerNameTaken } from '../errors.js';
 import { defaultPlayerColor } from './player-color.js';
@@ -32,7 +44,21 @@ export type LogEntry =
   | { readonly seq: number; readonly type: 'match_abandoned'; readonly playerId: string; readonly reason: string | null; readonly createdAt: string }
   | { readonly seq: number; readonly type: 'match_resumed' | 'practice_ended'; readonly createdAt: string }
   | { readonly seq: number; readonly type: 'checkout_attempt'; readonly success: boolean; readonly createdAt: string }
-  | { readonly seq: number; readonly type: 'checkout_attempt_undone' | 'checkout_skipped' | 'checkout_skip_undone'; readonly createdAt: string };
+  | { readonly seq: number; readonly type: 'checkout_attempt_undone' | 'checkout_skipped' | 'checkout_skip_undone'; readonly createdAt: string }
+  | {
+      readonly seq: number;
+      readonly type: 'throw_flagged';
+      readonly throwId: string;
+      readonly reason: ReviewReason;
+      readonly actor: ReviewActor;
+      readonly createdAt: string;
+    }
+  | { readonly seq: number; readonly type: 'throw_verified'; readonly throwId: string; readonly hit: Hit; readonly actor: ReviewActor; readonly createdAt: string };
+
+export interface ThrowFlag {
+  readonly reason: ReviewReason;
+  readonly actor: ReviewActor;
+}
 
 export interface MatchLog {
   readonly entries: readonly LogEntry[];
@@ -56,7 +82,10 @@ export interface Store {
   listMatches(): Promise<StoredMatch[]>;
   loadLog(matchId: string): Promise<MatchLog>;
   findThrowByEventId(eventId: string): Promise<ThrowRecord | null>;
-  appendThrow(hit: NewThrow): Promise<{ throw: ThrowRecord; seq: number }>;
+  // Z flag zapisuje też oznaczenie do weryfikacji, w tej samej transakcji. seq to ostatni zapisany wpis.
+  appendThrow(hit: NewThrow, flag: ThrowFlag | null): Promise<{ throw: ThrowRecord; seq: number }>;
+  appendFlag(matchId: string, throwId: string, reason: ReviewReason, actor: ReviewActor): Promise<number>;
+  appendVerify(matchId: string, throwId: string, hit: Hit, actor: ReviewActor): Promise<number>;
   appendUndo(matchId: string, throwId: string): Promise<number>;
   appendAbandon(matchId: string, playerId: string, reason: string | null): Promise<number>;
   appendResume(matchId: string): Promise<number>;
@@ -96,7 +125,25 @@ function later(a: string | null, b: string | null): string | null {
   return b === null || a > b ? a : b;
 }
 
+function storedReview(row: Selectable<ThrowsTable>): HitReview | null {
+  if (row.review === null) {
+    return null;
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(row.review);
+  } catch {
+    throw new Error(`Corrupt throw ${row.id}: review is not JSON`);
+  }
+  const parsed = HitReview.safeParse(json);
+  if (!parsed.success) {
+    throw new Error(`Corrupt throw ${row.id}: invalid review`);
+  }
+  return parsed.data;
+}
+
 function toThrow(row: Selectable<ThrowsTable>): ThrowRecord {
+  const review = storedReview(row);
   return {
     id: row.id,
     matchId: row.match_id,
@@ -108,6 +155,7 @@ function toThrow(row: Selectable<ThrowsTable>): ThrowRecord {
     confidence: row.confidence,
     detectedAt: row.detected_at,
     receivedAt: row.received_at,
+    ...(review === null ? {} : { review }),
   } as ThrowRecord; // segment i mnożnik zapisał serwer po walidacji HitEvent
 }
 
@@ -128,7 +176,24 @@ function toMatch(row: Selectable<MatchesTable>, players: readonly Player[]): Sto
   };
 }
 
-function toLogEntry(row: Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'throw_id' | 'player_id' | 'reason' | 'success' | 'created_at'>): LogEntry {
+type LogRow = Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'throw_id' | 'player_id' | 'reason' | 'success' | 'segment' | 'multiplier' | 'actor' | 'created_at'>;
+
+function reviewThrowId(row: LogRow): string {
+  if (row.throw_id === null) {
+    throw new Error(`Corrupt log: ${row.type} at seq ${row.seq} has no throw_id`);
+  }
+  return row.throw_id;
+}
+
+function reviewActor(row: LogRow): ReviewActor {
+  const parsed = ReviewActor.safeParse(row.actor);
+  if (!parsed.success) {
+    throw new Error(`Corrupt log: ${row.type} at seq ${row.seq} has an invalid actor`);
+  }
+  return parsed.data;
+}
+
+function toLogEntry(row: LogRow): LogEntry {
   const { seq, type, created_at: createdAt } = row;
   switch (type) {
     case 'throw':
@@ -153,6 +218,20 @@ function toLogEntry(row: Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'th
         throw new Error(`Corrupt log: checkout_attempt at seq ${seq} has no success`);
       }
       return { seq, type, success: row.success === 1, createdAt };
+    case 'throw_flagged': {
+      const reason = ReviewReason.safeParse(row.reason);
+      if (!reason.success) {
+        throw new Error(`Corrupt log: throw_flagged at seq ${seq} has an invalid reason`);
+      }
+      return { seq, type, throwId: reviewThrowId(row), reason: reason.data, actor: reviewActor(row), createdAt };
+    }
+    case 'throw_verified': {
+      const hit = Hit.safeParse({ segment: row.segment, multiplier: row.multiplier });
+      if (!hit.success) {
+        throw new Error(`Corrupt log: throw_verified at seq ${seq} has an invalid hit`);
+      }
+      return { seq, type, throwId: reviewThrowId(row), hit: hit.data, actor: reviewActor(row), createdAt };
+    }
   }
 }
 
@@ -210,7 +289,10 @@ export function createStore(db: Kysely<Database>): Store {
     return withProfiles(rows);
   }
 
-  function appendLifecycle(matchId: string, entry: Pick<Insertable<MatchEventsTable>, 'type' | 'player_id' | 'reason' | 'success'>): Promise<number> {
+  function appendEntry(
+    matchId: string,
+    entry: Pick<Insertable<MatchEventsTable>, 'type' | 'throw_id' | 'player_id' | 'reason' | 'success' | 'segment' | 'multiplier' | 'actor'>,
+  ): Promise<number> {
     return db.transaction().execute(async (trx) => {
       const seq = await nextSeq(trx, matchId);
       await trx.insertInto('match_events').values({ match_id: matchId, seq, ...entry, created_at: now() }).execute();
@@ -370,7 +452,7 @@ export function createStore(db: Kysely<Database>): Store {
     async loadLog(matchId) {
       const entries = await db
         .selectFrom('match_events')
-        .select(['seq', 'type', 'throw_id', 'player_id', 'reason', 'success', 'created_at'])
+        .select(['seq', 'type', 'throw_id', 'player_id', 'reason', 'success', 'segment', 'multiplier', 'actor', 'created_at'])
         .where('match_id', '=', matchId)
         .orderBy('seq')
         .execute();
@@ -386,7 +468,7 @@ export function createStore(db: Kysely<Database>): Store {
       return row ? toThrow(row) : null;
     },
 
-    async appendThrow(hit) {
+    async appendThrow(hit, flag) {
       const row = {
         id: randomUUID(),
         match_id: hit.matchId,
@@ -398,6 +480,7 @@ export function createStore(db: Kysely<Database>): Store {
         confidence: hit.confidence,
         detected_at: hit.detectedAt,
         received_at: now(),
+        review: hit.review === undefined ? null : JSON.stringify(hit.review),
       };
       const seq = await db.transaction().execute(async (trx) => {
         const seq = await nextSeq(trx, hit.matchId);
@@ -406,7 +489,14 @@ export function createStore(db: Kysely<Database>): Store {
           .insertInto('match_events')
           .values({ match_id: hit.matchId, seq, type: 'throw', throw_id: row.id, created_at: row.received_at })
           .execute();
-        return seq;
+        if (flag === null) {
+          return seq;
+        }
+        await trx
+          .insertInto('match_events')
+          .values({ match_id: hit.matchId, seq: seq + 1, type: 'throw_flagged', throw_id: row.id, reason: flag.reason, actor: flag.actor, created_at: row.received_at })
+          .execute();
+        return seq + 1;
       });
       return { throw: toThrow(row), seq };
     },
@@ -419,32 +509,40 @@ export function createStore(db: Kysely<Database>): Store {
       });
     },
 
+    appendFlag(matchId, throwId, reason, actor) {
+      return appendEntry(matchId, { type: 'throw_flagged', throw_id: throwId, reason, actor });
+    },
+
+    appendVerify(matchId, throwId, hit, actor) {
+      return appendEntry(matchId, { type: 'throw_verified', throw_id: throwId, segment: hit.segment, multiplier: hit.multiplier, actor });
+    },
+
     appendAbandon(matchId, playerId, reason) {
-      return appendLifecycle(matchId, { type: 'match_abandoned', player_id: playerId, reason });
+      return appendEntry(matchId, { type: 'match_abandoned', player_id: playerId, reason });
     },
 
     appendResume(matchId) {
-      return appendLifecycle(matchId, { type: 'match_resumed' });
+      return appendEntry(matchId, { type: 'match_resumed' });
     },
 
     appendPracticeEnd(matchId) {
-      return appendLifecycle(matchId, { type: 'practice_ended' });
+      return appendEntry(matchId, { type: 'practice_ended' });
     },
 
     appendCheckoutAttempt(matchId, success) {
-      return appendLifecycle(matchId, { type: 'checkout_attempt', success: success ? 1 : 0 });
+      return appendEntry(matchId, { type: 'checkout_attempt', success: success ? 1 : 0 });
     },
 
     appendCheckoutUndo(matchId) {
-      return appendLifecycle(matchId, { type: 'checkout_attempt_undone' });
+      return appendEntry(matchId, { type: 'checkout_attempt_undone' });
     },
 
     appendCheckoutSkip(matchId) {
-      return appendLifecycle(matchId, { type: 'checkout_skipped' });
+      return appendEntry(matchId, { type: 'checkout_skipped' });
     },
 
     appendCheckoutSkipUndo(matchId) {
-      return appendLifecycle(matchId, { type: 'checkout_skip_undone' });
+      return appendEntry(matchId, { type: 'checkout_skip_undone' });
     },
   };
 }

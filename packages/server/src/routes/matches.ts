@@ -1,10 +1,14 @@
-import { AbandonMatchRequest, CheckoutAttemptRequest, CreateMatchRequest, MatchListQuery } from '@autoscore/schema';
+import { AbandonMatchRequest, CheckoutAttemptRequest, CreateMatchRequest, MatchListQuery, VerifyThrowRequest } from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import { invalidRequest } from '../errors.js';
 import type { MatchService } from '../match-service.js';
 
 interface MatchParams {
   Params: { id: string };
+}
+
+interface ThrowParams {
+  Params: { id: string; throwId: string };
 }
 
 export async function matchRoutes(app: FastifyInstance, service: MatchService): Promise<void> {
@@ -31,6 +35,16 @@ export async function matchRoutes(app: FastifyInstance, service: MatchService): 
     return reply.code(statusCode).send(result);
   });
 
+  app.post<ThrowParams>('/matches/:id/throws/:throwId/verify', async (request) => {
+    const parsed = VerifyThrowRequest.safeParse(request.body);
+    if (!parsed.success) {
+      throw invalidRequest(parsed.error.issues);
+    }
+    return service.verify(request.params.id, request.params.throwId, parsed.data);
+  });
+
+  app.get<MatchParams>('/matches/:id/review-queue', async (request) => service.reviewQueue(request.params.id));
+
   app.post<MatchParams>('/matches/:id/checkout-attempts', async (request, reply) => {
     const parsed = CheckoutAttemptRequest.safeParse(request.body);
     if (!parsed.success) {
@@ -47,11 +61,12 @@ export async function matchRoutes(app: FastifyInstance, service: MatchService): 
     return service.abandon(request.params.id, parsed.data);
   });
 
-  // Undo, wznowienie, koniec treningu i pominięcie checkoutu ignorują body. Własny parser w tym kontekście sprawia, że nawet pusty albo zepsuty JSON nie daje błędu 400.
+  // Undo, oznaczenie rzutki, wznowienie, koniec treningu i pominięcie checkoutu ignorują body. Własny parser w tym kontekście sprawia, że nawet pusty albo zepsuty JSON nie daje błędu 400.
   await app.register(async (undoScope) => {
     undoScope.removeAllContentTypeParsers();
     undoScope.addContentTypeParser('*', { parseAs: 'buffer' }, (_request, _body, done) => done(null, undefined));
     undoScope.post<MatchParams>('/matches/:id/undo', async (request) => service.undo(request.params.id));
+    undoScope.post<ThrowParams>('/matches/:id/throws/:throwId/flag', async (request) => service.flag(request.params.id, request.params.throwId));
     undoScope.post<MatchParams>('/matches/:id/resume', async (request) => service.resume(request.params.id));
     undoScope.post<MatchParams>('/matches/:id/end', async (request) => service.endPractice(request.params.id));
     undoScope.post<MatchParams>('/matches/:id/checkout-skips', async (request, reply) =>

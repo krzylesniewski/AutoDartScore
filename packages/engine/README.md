@@ -16,7 +16,14 @@ Jedno wejście dla wszystkich typów gry (`game.ts`):
 - `isGameFinished(game)`: trening checkoutów i Free run nigdy się nie kończą,
 - `currentRound(game)`: kolejka rzucającego w bieżącym legu, liczona od 1. Bust też jest turą. `null` po końcu gry, w Free run i w treningu checkoutów,
 - `dartsInCurrentLeg(game)`: liczone rzutki bieżącego lega, `0` zaraz po wygranym legu i zawsze w treningu checkoutów,
-- `countsToStats(config)`: `true` tylko dla meczu 1v1, zabawy i Solo 501, więc `false` dla Free run i treningu checkoutów.
+- `countsToStats(config)`: `true` tylko dla meczu 1v1, zabawy i Solo 501, więc `false` dla Free run i treningu checkoutów,
+- `openTurnDarts(game)`: rzutki otwartej tury, `[]` w treningu checkoutów.
+
+Log rzutek z weryfikacją (`throw-log.ts`):
+
+- `ThrowLogStep`: `throw` (z `hit`), `flag`, `verify` (z poprawionym `hit`) albo `undo`, każdy z `throwId`,
+- `replayThrowLog(config, steps)`: zwraca `state`, `events` (jak `replayGame` z liczonych wartości), `throws` (rzutki niecofnięte z `value`, `scoring` i `pending`), `counted`, `lastTurn`, `turnFull` i `finishedAtStep` (indeks kroku, po którym gra ostatnio się zakończyła, albo `null`).
+- Rzutka oznaczona (`flag`) czeka na weryfikację, a kolejne rzutki jej tury czekają za nią (`scoring: 'waiting'`). Oznaczenie policzonej rzutki zdejmuje ją i późniejsze rzutki tury z gry, także rzutkę kończącą grę. Weryfikacja (`verify`) ustala wartość, a czekające rzutki liczą się po kolei do następnej rzutki do weryfikacji. Gdy tura skończy się przed czekającymi rzutkami, te nie liczą się wcale (`void`). Cofnięcie zdejmuje ostatnią rzutkę bez względu na jej stan.
 
 Mecz 1v1, best of N legów (`x01-match.ts`):
 
@@ -57,7 +64,11 @@ Błędy (`errors.ts`): `EngineError` z polem `code`:
 - `invalid_config`: zła konfiguracja gry, na przykład zła liczba graczy albo ziarno checkoutów spoza `0..MAX_CHECKOUT_SEED`,
 - `invalid_hit`: trafienie niezgodne z kodowaniem,
 - `match_finished`: rzutka po końcu gry,
-- `wrong_mode`: rzutka w treningu checkoutów albo próba lub pominięcie checkoutu w innym trybie.
+- `wrong_mode`: rzutka w treningu checkoutów albo próba lub pominięcie checkoutu w innym trybie,
+- `turn_pending`: czwarta rzutka w turze, która czeka na weryfikację,
+- `throw_not_flaggable`: oznaczenie rzutki spoza ostatniej tury, rzutki `void` albo nieznanej,
+- `throw_already_pending`: oznaczenie rzutki, która już czeka na weryfikację,
+- `throw_not_pending`: weryfikacja rzutki, która nie czeka na weryfikację.
 
 ## Testy
 
@@ -71,3 +82,4 @@ pnpm --filter @autoscore/engine test
 - `free-run.test.ts`: licznik sesji (rzutki, suma, średnia), odtwarzanie.
 - `checkouts.test.ts`: powtarzalność celów, zakres, brak powtórki poprzedniego celu, rozkład na 10 000 celach, próby w obu zasadach, pominięcia, odtwarzanie mieszanych kroków.
 - `game.test.ts`: wspólne wejście, `countsToStats`, `isGameFinished`, `wrong_mode`.
+- `throw-log.test.ts`: log bez oznaczeń jak `replayGame`, wstrzymana tura, potwierdzenie i poprawka, bust i checkout po weryfikacji, rzutki `void`, oznaczenie rzutki kończącej grę, `turn_pending` i inne błędy, cofnięcie, zabawa, Solo 501 i Free run.

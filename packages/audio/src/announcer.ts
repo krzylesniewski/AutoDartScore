@@ -24,7 +24,8 @@ export interface AnnouncerOptions {
   readonly zeroComments?: () => boolean;
 }
 
-// Serwer wysyła jedną paczkę na rzutkę: throw_registered, zdarzenia domenowe, osiągnięcia i state_updated z tym samym eventSeq.
+// Serwer wysyła jedną paczkę na rzutkę albo weryfikację: throw_registered lub throw_verified, zdarzenia domenowe, osiągnięcia
+// i state_updated z tym samym eventSeq. Rzutka do weryfikacji nie daje zdarzeń domenowych, więc wynik tury pada dopiero po weryfikacji.
 // Czytamy dopiero po state_updated, żeby cała paczka dała jeden komunikat. Snapshot po połączeniu ma inny eventSeq
 // niż bufor i nigdy nie jest czytany.
 export function createAnnouncer(
@@ -106,6 +107,8 @@ export function createAnnouncer(
           silence();
           break;
         case 'throw_registered':
+        case 'throw_flagged':
+        case 'throw_verified':
           break;
         case 'achievement':
           addAchievement(message.eventSeq, message.kind);

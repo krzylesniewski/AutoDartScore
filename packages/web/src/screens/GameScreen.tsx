@@ -9,17 +9,20 @@ import { CheckoutActions, CheckoutRecentAttempts, CheckoutTargetCard } from '../
 import { CheckoutPracticeSummary } from '../components/CheckoutPracticeSummary';
 import { EndPracticeDialog } from '../components/EndPracticeDialog';
 import { EventBanner } from '../components/EventBanner';
+import { FlagThrowDialog } from '../components/FlagThrowDialog';
 import { Keypad } from '../components/Keypad';
 import { MatchEndView } from '../components/MatchEndView';
 import { MatchHeader } from '../components/MatchHeader';
 import { MatchStatsPanel } from '../components/MatchStatsPanel';
 import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
+import { PendingThrowPanel } from '../components/PendingThrowPanel';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
 import { LockIcon, WarningIcon } from '../components/icons';
 import { canEndPractice } from '../game/can-end-practice';
 import { checkoutControls } from '../game/checkout-practice';
 import { checkoutRoute } from '../game/checkout-route';
+import { reviewTurn } from '../game/review-turn';
 import { formatCountdown } from '../game/undo-window';
 import { useUndoWindow } from '../game/use-undo-window';
 import { pl } from '../i18n/pl';
@@ -29,12 +32,30 @@ const HOME_HREF = '#/';
 
 const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
 
+function ignore(): void {}
+
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
-  const { state, lastTurn, banner, achievements, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt, sendCheckoutSkip } = useMatch(
-    matchId,
-    audio.onLiveMessage,
-  );
+  const {
+    state,
+    lastTurn,
+    banner,
+    achievements,
+    error,
+    busy,
+    connection,
+    notFound,
+    sendHit,
+    sendRestMiss,
+    sendUndo,
+    sendFlag,
+    sendVerify,
+    sendAbandon,
+    sendResume,
+    sendEndPractice,
+    sendCheckoutAttempt,
+    sendCheckoutSkip,
+  } = useMatch(matchId, audio.onLiveMessage);
   // Zabawa i trening potrzebują podsumowania dopiero po końcu gry. Free run nigdy się nie kończy.
   const stats = useMatchSummary(matchId, state?.eventSeq ?? null, state !== null && (state.type === 'match' || state.finished));
   const checkoutMode = state?.practiceMode === 'checkouts';
@@ -44,6 +65,10 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const closeDialog = useCallback(() => setAbandoning(false), []);
   const [ending, setEnding] = useState(false);
   const closeEndDialog = useCallback(() => setEnding(false), []);
+  const [selectedPending, setSelectedPending] = useState<string | null>(null);
+  const [correcting, setCorrecting] = useState<string | null>(null);
+  const [flagging, setFlagging] = useState(false);
+  const closeFlagDialog = useCallback(() => setFlagging(false), []);
   const undoWindow = useUndoWindow(state);
   const checkouts = checkoutMode ? state.checkouts : null;
   const controls = state ? checkoutControls(state, connection === 'open') : { results: false, skip: false, undo: false };
@@ -95,6 +120,16 @@ export function GameScreen({ matchId }: { matchId: string }) {
     setEnding(false);
   }
   const keypadDisabled = !state || abandoned || ended || connection !== 'open';
+  const review = state ? reviewTurn(state) : null;
+  const pending = review?.pending.find((entry) => entry.id === selectedPending) ?? review?.pending[0] ?? null;
+  // Rzutkę mógł rozstrzygnąć albo cofnąć inny ekran. Wtedy poprawka nie może trafić do następnej rzutki.
+  if (correcting !== null && (keypadDisabled || !review?.pending.some((entry) => entry.id === correcting))) {
+    setCorrecting(null);
+  }
+  if (flagging && !review?.flaggable.length) {
+    setFlagging(false);
+  }
+  const correction = review?.pending.find((entry) => entry.id === correcting) ?? null;
   const checkout = state ? (checkoutRoute(state)?.[0] ?? null) : null;
   const thrower = state?.players.find((player) => player.id === state.currentPlayerId);
   const frequent = thrower && frequentHits && frequentHits.length > 0 ? { playerName: thrower.name, hits: frequentHits } : null;
@@ -105,6 +140,19 @@ export function GameScreen({ matchId }: { matchId: string }) {
       return;
     }
     sendHit(hit);
+  }
+
+  // Poprawka dotyczy zawsze rzutki z panelu, więc wybór innej rzutki ją przerywa.
+  function selectPending(throwId: string): void {
+    setSelectedPending(throwId);
+    if (throwId !== correcting) {
+      setCorrecting(null);
+    }
+  }
+
+  function correct(throwId: string, hit: Hit): void {
+    setCorrecting(null);
+    sendVerify(throwId, hit);
   }
 
   // Odmowa serwera wygrywa z zegarem urządzenia. Tekst blokady pokazujemy raz, zamiast błędu cofnięcia.
@@ -167,6 +215,23 @@ export function GameScreen({ matchId }: { matchId: string }) {
                 onUndo={sendUndo}
                 onCheckout={enterCheckout}
                 checkoutDisabled={keypadDisabled}
+                selectedPendingId={pending?.id ?? null}
+                onSelectPending={selectPending}
+                onFlag={() => setFlagging(true)}
+                flagDisabled={keypadDisabled || !review?.flaggable.length}
+              />
+            )}
+            {state && !checkoutMode && pending && (
+              <PendingThrowPanel
+                entry={pending}
+                slot={state.lastTurnThrows.indexOf(pending) + 1}
+                busy={busy}
+                disabled={keypadDisabled}
+                correcting={correction !== null}
+                turnClosed={review?.closed ?? false}
+                onConfirm={(hit) => sendVerify(pending.id, hit)}
+                onCorrect={() => setCorrecting(pending.id)}
+                onCancelCorrection={() => setCorrecting(null)}
               />
             )}
             {checkouts && !ended && <CheckoutTargetCard session={checkouts} />}
@@ -214,12 +279,12 @@ export function GameScreen({ matchId }: { matchId: string }) {
               )}
               {!state?.finished && !checkoutMode && (
                 <Keypad
-                  onHit={sendHit}
-                  onRestMiss={sendRestMiss}
+                  onHit={correction ? (hit) => correct(correction.id, hit) : sendHit}
+                  onRestMiss={correction ? ignore : sendRestMiss}
                   onUndo={sendUndo}
-                  disabled={keypadDisabled}
+                  disabled={keypadDisabled || (review?.closed === true && correction === null)}
                   undoDisabled={busy || abandoned || ended}
-                  checkout={busy ? null : checkout}
+                  checkout={busy || state?.awaitingReview ? null : checkout}
                   frequent={frequent}
                 />
               )}
@@ -236,6 +301,16 @@ export function GameScreen({ matchId }: { matchId: string }) {
           onConfirm={(playerId, reason) => {
             setAbandoning(false);
             sendAbandon(playerId, reason);
+          }}
+        />
+      )}
+      {flagging && state && review && (
+        <FlagThrowDialog
+          throws={review.flaggable.map((entry) => ({ slot: state.lastTurnThrows.indexOf(entry) + 1, entry }))}
+          onCancel={closeFlagDialog}
+          onPick={(throwId) => {
+            setFlagging(false);
+            sendFlag(throwId);
           }}
         />
       )}

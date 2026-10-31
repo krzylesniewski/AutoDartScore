@@ -41,6 +41,23 @@ describe('Scoreboard', () => {
     expect(screen.getAllByText('Rzuca')).toHaveLength(1);
   });
 
+  it('shows Weryfikacja with an icon on the thrower badge while the turn waits', () => {
+    render(<Scoreboard state={snapshot({ currentPlayerId: 'p2', awaitingReview: true })} size="large" />);
+    const badge = screen.getByText('Weryfikacja').parentElement as HTMLElement;
+    expect(badge.querySelector('svg')).not.toBeNull();
+    expect(badge.className.split(' ')).toContain('bg-(--color-accent)');
+    const row = badge.closest('li');
+    expect(row?.getAttribute('aria-current')).toBe('true');
+    expect(row && within(row).getByText('Bartek')).toBeTruthy();
+    expect(screen.queryByText('Rzuca')).toBeNull();
+  });
+
+  it('shows Rzuca without an icon while no throw waits', () => {
+    render(<Scoreboard state={snapshot({ currentPlayerId: 'p2' })} size="large" />);
+    expect(screen.getByText('Rzuca').querySelector('svg')).toBeNull();
+    expect(screen.queryByText('Weryfikacja')).toBeNull();
+  });
+
   it.each([
     ['casual with 2 players', casual(['Anna', 'Bartek']), 'large', 2],
     ['casual with 3 players', casual(['Anna', 'Bartek', 'Celina']), 'large', 1],

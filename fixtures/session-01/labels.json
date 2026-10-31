@@ -1,0 +1,235 @@
+{
+  "session": "session-01",
+  "recordedAt": "2026-10-16",
+  "camera": "Logitech HD Pro Webcam C920, 1920x1080, ok. 5 kl./s, autofocus i auto-ekspozycja włączone",
+  "note": "Zdarzenia wycięte przez spikes/camera/detect-events.mjs. Trafienia lotek podał gracz; wszystkie trafienia to single. Zdarzenia removal i none potwierdzone na klatkach. Kalibracja (4 punkty) do uzupełnienia w calibration.json, gdy powstanie narzędzie kalibracji.",
+  "events": [
+    {
+      "id": "01",
+      "afterTime": 0.803,
+      "before": "01-before.jpg",
+      "after": "01-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "zmiana całego kadru (start kamery, autofocus, ekspozycja)"
+    },
+    {
+      "id": "02",
+      "afterTime": 5.423,
+      "before": "02-before.jpg",
+      "after": "02-after.jpg",
+      "expected": {
+        "kind": "dart",
+        "turn": 1,
+        "segment": 5,
+        "multiplier": 1
+      }
+    },
+    {
+      "id": "03",
+      "afterTime": 9.038,
+      "before": "03-before.jpg",
+      "after": "03-after.jpg",
+      "expected": {
+        "kind": "dart",
+        "turn": 1,
+        "segment": 20,
+        "multiplier": 1
+      }
+    },
+    {
+      "id": "04",
+      "afterTime": 13.255,
+      "before": "04-before.jpg",
+      "after": "04-after.jpg",
+      "expected": {
+        "kind": "dart",
+        "turn": 1,
+        "segment": 1,
+        "multiplier": 1
+      }
+    },
+    {
+      "id": "05",
+      "afterTime": 23.499,
+      "before": "05-before.jpg",
+      "after": "05-after.jpg",
+      "expected": {
+        "kind": "removal"
+      }
+    },
+    {
+      "id": "06",
+      "afterTime": 29.324,
+      "before": "06-before.jpg",
+      "after": "06-after.jpg",
+      "expected": {
+        "kind": "dart",
+        "turn": 2,
+        "segment": 5,
+        "multiplier": 1
+      }
+    },
+    {
+      "id": "07",
+      "afterTime": 32.939,
+      "before": "07-before.jpg",
+      "after": "07-after.jpg",
+      "expected": {
+        "kind": "dart",
+        "turn": 2,
+        "segment": 0,
+        "multiplier": 0,
+        "comment": "miss: lotka na obudowie (surround), widoczna w kadrze"
+      }
+    },
+    {
+      "id": "08",
+      "afterTime": 35.952,
+      "before": "08-before.jpg",
+      "after": "08-after.jpg",
+      "expected": {
+        "kind": "dart",
+        "turn": 2,
+        "segment": 1,
+        "multiplier": 1
+      }
+    },
+    {
+      "id": "09",
+      "afterTime": 44.588,
+      "before": "09-before.jpg",
+      "after": "09-after.jpg",
+      "expected": {
+        "kind": "removal"
+      }
+    },
+    {
+      "id": "10",
+      "afterTime": 47.801,
+      "before": "10-before.jpg",
+      "after": "10-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "drobny dryf światła"
+    },
+    {
+      "id": "11",
+      "afterTime": 48.805,
+      "before": "11-before.jpg",
+      "after": "11-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "drobny dryf światła"
+    },
+    {
+      "id": "12",
+      "afterTime": 50.01,
+      "before": "12-before.jpg",
+      "after": "12-after.jpg",
+      "expected": {
+        "kind": "dart",
+        "turn": 3,
+        "segment": 20,
+        "multiplier": 1
+      }
+    },
+    {
+      "id": "13",
+      "afterTime": 52.22,
+      "before": "13-before.jpg",
+      "after": "13-after.jpg",
+      "expected": {
+        "kind": "dart",
+        "turn": 3,
+        "segment": 20,
+        "multiplier": 1
+      }
+    },
+    {
+      "id": "14",
+      "afterTime": 53.023,
+      "before": "14-before.jpg",
+      "after": "14-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "drobny dryf światła"
+    },
+    {
+      "id": "15",
+      "afterTime": 55.232,
+      "before": "15-before.jpg",
+      "after": "15-after.jpg",
+      "expected": {
+        "kind": "dart",
+        "turn": 3,
+        "segment": 20,
+        "multiplier": 1
+      }
+    },
+    {
+      "id": "16",
+      "afterTime": 59.651,
+      "before": "16-before.jpg",
+      "after": "16-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "drobny dryf światła"
+    },
+    {
+      "id": "17",
+      "afterTime": 60.856,
+      "before": "17-before.jpg",
+      "after": "17-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "zmiana całego kadru (start kamery, autofocus, ekspozycja)"
+    },
+    {
+      "id": "18",
+      "afterTime": 63.668,
+      "before": "18-before.jpg",
+      "after": "18-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "zmiana całego kadru (start kamery, autofocus, ekspozycja)"
+    },
+    {
+      "id": "19",
+      "afterTime": 64.873,
+      "before": "19-before.jpg",
+      "after": "19-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "drobny dryf światła"
+    },
+    {
+      "id": "20",
+      "afterTime": 68.086,
+      "before": "20-before.jpg",
+      "after": "20-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "zmiana całego kadru (start kamery, autofocus, ekspozycja)"
+    },
+    {
+      "id": "21",
+      "afterTime": 72.505,
+      "before": "21-before.jpg",
+      "after": "21-after.jpg",
+      "expected": {
+        "kind": "none"
+      },
+      "comment": "drobny dryf światła"
+    }
+  ]
+}

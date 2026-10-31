@@ -12,6 +12,7 @@ describe('loadConfig', () => {
       corsOrigins: null,
       webDir: null,
       matchLockMinutes: 5,
+      pendingConfidence: 0.8,
     });
   });
 
@@ -24,6 +25,7 @@ describe('loadConfig', () => {
       corsOrigins: null,
       webDir: null,
       matchLockMinutes: 5,
+      pendingConfidence: 0.8,
     });
   });
 
@@ -104,5 +106,22 @@ describe('loadConfig match lock', () => {
 
   it.each(['abc', '-1', '2.5', ' 5', '525601'])('rejects %j', (value) => {
     expect(() => loadConfig({ AUTOSCORE_MATCH_LOCK_MINUTES: value })).toThrow(`Invalid AUTOSCORE_MATCH_LOCK_MINUTES: ${value}`);
+  });
+});
+
+describe('loadConfig pending confidence', () => {
+  it.each([
+    [{}, 0.8],
+    [{ AUTOSCORE_PENDING_CONFIDENCE: '' }, 0.8],
+    [{ AUTOSCORE_PENDING_CONFIDENCE: '0' }, 0],
+    [{ AUTOSCORE_PENDING_CONFIDENCE: '0.65' }, 0.65],
+    [{ AUTOSCORE_PENDING_CONFIDENCE: '1' }, 1],
+    [{ AUTOSCORE_PENDING_CONFIDENCE: '1.0' }, 1],
+  ])('reads %j as %d', (env, threshold) => {
+    expect(loadConfig(env).pendingConfidence).toBe(threshold);
+  });
+
+  it.each(['abc', '-0.1', '1.01', '2', '.5', '0.', ' 0.8', '0,8', '1e-1'])('rejects %j', (value) => {
+    expect(() => loadConfig({ AUTOSCORE_PENDING_CONFIDENCE: value })).toThrow(`Invalid AUTOSCORE_PENDING_CONFIDENCE: ${value}`);
   });
 });

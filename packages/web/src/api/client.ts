@@ -1,4 +1,4 @@
-import { ApiError, FrequentHitsResponse, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, StatsOverall, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
+import { ApiError, CameraCalibration, FrequentHitsResponse, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, ReviewResult, StatsOverall, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
 import type {
   AbandonMatchRequest,
   CheckoutAttemptRequest,
@@ -10,6 +10,7 @@ import type {
   MatchListQuery,
   StatsFilter,
   UpdatePlayerRequest,
+  VerifyThrowRequest,
 } from '@autoscore/schema';
 import { resolveApiBase } from './api-url';
 import { handleUnauthorized, readToken } from './session';
@@ -40,21 +41,51 @@ function withToken(init: RequestInit, token: string): RequestInit {
   return { ...init, headers };
 }
 
-async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {}): Promise<T> {
+async function send(path: string, init: RequestInit): Promise<{ response: Response; sentToken: string | null }> {
   const sentToken = readToken();
   const response = await fetch(`${API_BASE}${path}`, sentToken === null ? init : withToken(init, sentToken));
+  return { response, sentToken };
+}
+
+function toRequestError(response: Response, body: unknown, sentToken: string | null): ApiRequestError {
+  const error = ApiError.safeParse(body);
+  if (error.success) {
+    if (response.status === 401 && error.data.error === 'unauthorized') {
+      handleUnauthorized(sentToken);
+    }
+    return new ApiRequestError(response.status, error.data.error, error.data.message);
+  }
+  return new ApiRequestError(response.status, 'http_error', `HTTP ${response.status}`);
+}
+
+async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {}): Promise<T> {
+  const { response, sentToken } = await send(path, init);
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = ApiError.safeParse(body);
-    if (error.success) {
-      if (response.status === 401 && error.data.error === 'unauthorized') {
-        handleUnauthorized(sentToken);
-      }
-      throw new ApiRequestError(response.status, error.data.error, error.data.message);
-    }
-    throw new ApiRequestError(response.status, 'http_error', `HTTP ${response.status}`);
+    throw toRequestError(response, body, sentToken);
   }
   return schema.parse(body);
+}
+
+// Odpowiedź binarna: JSON czytamy tylko z błędu.
+async function requestBlob(path: string): Promise<Blob> {
+  const { response, sentToken } = await send(path, {});
+  if (!response.ok) {
+    throw toRequestError(response, await response.json().catch(() => null), sentToken);
+  }
+  return response.blob();
+}
+
+// 404 to brak zasobu, a nie błąd. Pozostałe błędy przechodzą dalej.
+async function orNull<T>(pending: Promise<T>): Promise<T | null> {
+  try {
+    return await pending;
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 function postJson(body: unknown): RequestInit {
@@ -159,4 +190,28 @@ export function postCheckoutAttempt(matchId: string, success: boolean): Promise<
 
 export function postCheckoutSkip(matchId: string): Promise<MatchSnapshot> {
   return request(`/matches/${encodeURIComponent(matchId)}/checkout-skips`, MatchSnapshot, { method: 'POST' });
+}
+
+function cameraPath(cameraId: string, resource: 'snapshot' | 'calibration'): string {
+  return `/cameras/${encodeURIComponent(cameraId)}/${resource}`;
+}
+
+export function getCameraSnapshot(cameraId: string): Promise<Blob | null> {
+  return orNull(requestBlob(cameraPath(cameraId, 'snapshot')));
+}
+
+export function getCameraCalibration(cameraId: string): Promise<CameraCalibration | null> {
+  return orNull(request(cameraPath(cameraId, 'calibration'), CameraCalibration));
+}
+
+export function saveCameraCalibration(cameraId: string, calibration: CameraCalibration): Promise<CameraCalibration> {
+  return request(cameraPath(cameraId, 'calibration'), CameraCalibration, { ...postJson(calibration), method: 'PUT' });
+}
+
+export function flagThrow(matchId: string, throwId: string): Promise<ReviewResult> {
+  return request(`/matches/${encodeURIComponent(matchId)}/throws/${encodeURIComponent(throwId)}/flag`, ReviewResult, { method: 'POST' });
+}
+
+export function verifyThrow(matchId: string, throwId: string, hit: VerifyThrowRequest): Promise<ReviewResult> {
+  return request(`/matches/${encodeURIComponent(matchId)}/throws/${encodeURIComponent(throwId)}/verify`, ReviewResult, postJson(hit));
 }

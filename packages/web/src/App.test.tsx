@@ -26,6 +26,9 @@ beforeEach(() => {
       if (url === '/api/matches?status=unfinished' || url === '/api/matches') {
         return json(200, []);
       }
+      if (url.startsWith('/api/cameras/')) {
+        return json(404, { error: 'not_found', message: 'Snapshot not found' });
+      }
       if (url.startsWith('/api/stats/rankings')) {
         return json(200, { filter: 'all', games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [] });
       }
@@ -57,6 +60,17 @@ describe('App', () => {
     const link = screen.getByRole('link', { name: 'Ustawienia' });
     expect(link.getAttribute('href')).toBe('#/settings');
     expect(link.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('opens the camera calibration on #/settings/calibration', async () => {
+    window.location.hash = '#/settings/calibration';
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Kalibracja kamery' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ustawienia' }).getAttribute('aria-current')).toBe('page');
+    await vi.waitFor(() => expect(urls).toContain('/api/cameras/camera-1/snapshot'));
+    expect(urls).toContain('/api/cameras/camera-1/calibration');
+    expect(await screen.findByText(/Brak klatki z kamery/)).toBeTruthy();
+    expect(window.location.hash).toBe('#/settings/calibration');
   });
 
   it('opens the match history on #/history', async () => {

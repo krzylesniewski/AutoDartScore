@@ -10,6 +10,8 @@ import {
   MatchListItem,
   MatchListQuery,
   MatchSnapshot,
+  ReviewQueue,
+  ReviewResult,
   StartingScore,
   ThrowRecord,
   ThrowResult,
@@ -163,6 +165,8 @@ const snapshot = {
   placements: [],
   freeRun: null,
   checkouts: null,
+  lastTurnThrows: [],
+  awaitingReview: false,
 };
 
 const checkoutSession = {
@@ -233,7 +237,24 @@ describe('ThrowRecord', () => {
   it('rejects a treble Bull', () => {
     expect(ThrowRecord.safeParse({ ...throwRecord, segment: 25, multiplier: 3 }).success).toBe(false);
   });
+
+  it('accepts a stored throw with the review it came with', () => {
+    const reviewed = { ...throwRecord, confidence: 0.5, review: { reason: 'low_confidence', candidates: [{ segment: 20, multiplier: 1, probability: 0.5 }] } };
+    expect(ThrowRecord.parse(reviewed)).toEqual(reviewed);
+  });
 });
+
+const pendingThrow = {
+  id: 't2',
+  sequence: 1,
+  source: 'camera-1',
+  confidence: 0.5,
+  reading: { segment: 20, multiplier: 1 },
+  value: { segment: 20, multiplier: 1 },
+  status: 'pending',
+  scoring: 'waiting',
+  review: { reason: 'low_confidence', flaggedBy: 'system', candidates: [], resolved: null },
+};
 
 describe('MatchSnapshot', () => {
   it('accepts a 1v1 snapshot', () => {
@@ -339,6 +360,21 @@ describe('MatchSnapshot', () => {
 
   it.each(['round', 'startedAt', 'legStartedAt', 'pausedMs', 'legPausedMs'])('requires %s', (field) => {
     expect(MatchSnapshot.safeParse({ ...snapshot, [field]: undefined }).success).toBe(false);
+  });
+
+  it('accepts a snapshot with the throws of the latest turn waiting for review', () => {
+    const counted = { ...pendingThrow, id: 't1', sequence: 0, confidence: 1, reading: { segment: 20, multiplier: 3 }, value: { segment: 20, multiplier: 3 }, status: 'confirmed', scoring: 'counted', review: null };
+    const waiting = { ...snapshot, lastTurnThrows: [counted, pendingThrow], awaitingReview: true };
+    expect(MatchSnapshot.parse(waiting)).toEqual(waiting);
+  });
+
+  it('rejects more than 3 throws in the latest turn', () => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, lastTurnThrows: [pendingThrow, pendingThrow, pendingThrow, pendingThrow] }).success).toBe(false);
+  });
+
+  it('requires lastTurnThrows and awaitingReview', () => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, lastTurnThrows: undefined }).success).toBe(false);
+    expect(MatchSnapshot.safeParse({ ...snapshot, awaitingReview: undefined }).success).toBe(false);
   });
 
   it('rejects round 0', () => {
@@ -459,6 +495,22 @@ describe('ThrowResult and UndoResult', () => {
   it('accept an undo of a checkout attempt without a throw id', () => {
     expect(UndoResult.parse({ undoneThrowId: null, state: snapshot })).toEqual({ undoneThrowId: null, state: snapshot });
     expect(UndoResult.safeParse({ undoneThrowId: '', state: snapshot }).success).toBe(false);
+  });
+});
+
+describe('ReviewResult and ReviewQueue', () => {
+  it('accept a verified throw with its events and the queue', () => {
+    const verified = {
+      ...pendingThrow,
+      value: { segment: 5, multiplier: 1 },
+      status: 'confirmed',
+      scoring: 'counted',
+      review: { ...pendingThrow.review, resolved: { segment: 5, multiplier: 1, by: 'player', at: '2026-10-15T18:31:00.000Z' } },
+    };
+    const result = { throw: verified, events: [], state: snapshot };
+    expect(ReviewResult.parse(result)).toEqual(result);
+    const queue = { matchId: 'm1', eventSeq: 4, throws: [pendingThrow] };
+    expect(ReviewQueue.parse(queue)).toEqual(queue);
   });
 });
 

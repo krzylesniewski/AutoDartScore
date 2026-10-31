@@ -73,6 +73,20 @@ const achievement = (eventSeq: number, kind: AchievementKind): LiveMessage => ({
   previous: kind.startsWith('first_') ? null : 100,
 });
 
+const reviewedThrow = (status: 'confirmed' | 'pending') => ({
+  id: 't_5',
+  sequence: 5,
+  source: 'camera-1',
+  confidence: 0.5,
+  reading: { segment: 20, multiplier: 3 } as const,
+  value: { segment: 20, multiplier: 3 } as const,
+  status,
+  scoring: status === 'pending' ? ('waiting' as const) : ('counted' as const),
+  review: { reason: 'low_confidence' as const, flaggedBy: 'system' as const, candidates: [], resolved: null },
+});
+const throwFlagged = (eventSeq: number): LiveMessage => ({ type: 'throw_flagged', matchId: MATCH_ID, eventSeq, throw: reviewedThrow('pending') });
+const throwVerified = (eventSeq: number): LiveMessage => ({ type: 'throw_verified', matchId: MATCH_ID, eventSeq, throw: reviewedThrow('confirmed') });
+
 function turnBatch(eventSeq: number, total: number): LiveMessage[] {
   return [throwRegistered(eventSeq), turnCompleted(eventSeq, total), stateUpdated(eventSeq)];
 }
@@ -186,6 +200,26 @@ describe('createAnnouncer', () => {
     expect(speaker.calls).toEqual(['cancel']);
     announcer.handle(stateUpdated(5));
     expect(speaker.calls).toEqual(['cancel']);
+  });
+
+  it('stays silent on throw_flagged and throw_verified alone', () => {
+    send([throwRegistered(5), throwFlagged(5), stateUpdated(5)]);
+    send([throwFlagged(6), stateUpdated(6)]);
+    send([throwVerified(7), stateUpdated(7)]);
+    expect(speaker.calls).toEqual([]);
+  });
+
+  it('does not cancel the running announcement on throw_flagged', () => {
+    send(turnBatch(5, 100));
+    send([throwFlagged(6), stateUpdated(6)]);
+    expect(speaker.calls).toEqual(['cancel', 'speak:scores/100.mp3|sto']);
+  });
+
+  it('speaks the turn once after a verification', () => {
+    send([throwVerified(7), turnCompleted(7, 140)]);
+    expect(speaker.calls).toEqual([]);
+    announcer.handle(stateUpdated(7));
+    expect(speaker.calls).toEqual(['cancel', 'speak:scores/140.mp3|sto czterdzieści']);
   });
 
   it('cancels the previous announcement before speaking the next one', () => {

@@ -143,6 +143,33 @@ const migrations: Record<string, Migration> = {
       await typed.updateTable('matches').set({ checkout_rule: 'new_each_attempt' }).where('practice_mode', '=', 'checkouts').execute();
     },
   },
+  // Powód weryfikacji od detektora przy rzutce oraz oznaczenia i weryfikacje w logu. Stare wiersze dostają null.
+  '0007_throw_review': {
+    async up(db: Kysely<unknown>) {
+      await db.schema.alterTable('throws').addColumn('review', 'text').execute();
+      await db.schema.alterTable('match_events').addColumn('segment', 'integer').execute();
+      await db.schema.alterTable('match_events').addColumn('multiplier', 'integer').execute();
+      await db.schema.alterTable('match_events').addColumn('actor', 'text').execute();
+    },
+  },
+  // Punkty w osobnych kolumnach zamiast JSON, żeby tabela dała się przenieść na PostgreSQL.
+  '0008_camera_calibrations': {
+    async up(db: Kysely<unknown>) {
+      let table = db.schema
+        .createTable('camera_calibrations')
+        .addColumn('camera_id', 'text', (col) => col.notNull())
+        .addColumn('seq', 'integer', (col) => col.notNull())
+        .addColumn('image_width', 'integer', (col) => col.notNull())
+        .addColumn('image_height', 'integer', (col) => col.notNull());
+      for (const column of ['p1_x', 'p1_y', 'p2_x', 'p2_y', 'p3_x', 'p3_y', 'p4_x', 'p4_y']) {
+        table = table.addColumn(column, 'real', (col) => col.notNull());
+      }
+      await table
+        .addColumn('created_at', 'text', (col) => col.notNull())
+        .addPrimaryKeyConstraint('camera_calibrations_pk', ['camera_id', 'seq'])
+        .execute();
+    },
+  },
 };
 
 const provider: MigrationProvider = {

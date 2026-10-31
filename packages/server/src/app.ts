@@ -9,6 +9,7 @@ import { toApiError } from './errors.js';
 import { createLiveHub } from './live-hub.js';
 import { createMatchService } from './match-service.js';
 import { authRoutes } from './routes/auth.js';
+import { cameraRoutes } from './routes/cameras.js';
 import { healthRoutes } from './routes/health.js';
 import { liveRoutes } from './routes/live.js';
 import { matchRoutes } from './routes/matches.js';
@@ -17,6 +18,7 @@ import { statsRoutes } from './routes/stats.js';
 import { firstSegment, webAppRoutes } from './routes/web-app.js';
 import { createSerialQueue } from './serial-queue.js';
 import { createStatsService } from './stats-service.js';
+import { createCameraStore } from './store/camera-store.js';
 import { createStore } from './store/store.js';
 
 export interface AppOptions {
@@ -29,7 +31,8 @@ export interface AppOptions {
   readonly liveAuthTimeoutMs?: number;
   readonly livePingIntervalMs?: number;
   readonly webDir?: string | null; // katalog zbudowanego frontu. null wyłącza serwowanie plików
-  readonly matchLockMinutes?: number; // ile minut po ostatniej rzutce da się cofać w zakończonej grze. Domyślnie 5
+  readonly matchLockMinutes?: number; // ile minut po wpisie kończącym grę da się cofać, oznaczać i weryfikować rzutki. Domyślnie 5
+  readonly pendingConfidence?: number; // rzutka z mniejszą pewnością czeka na weryfikację. Domyślnie 0.8
 }
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
@@ -67,6 +70,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     random: options.random ?? Math.random,
     now,
     matchLockMs: (options.matchLockMinutes ?? 5) * 60_000,
+    pendingConfidence: options.pendingConfidence ?? 0.8,
   });
   healthRoutes(app);
   if (auth !== null) {
@@ -76,6 +80,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   await matchRoutes(app, service);
   liveRoutes(app, service, { auth, now, authTimeoutMs: options.liveAuthTimeoutMs ?? 5000, pingIntervalMs: options.livePingIntervalMs ?? 30_000 });
   statsRoutes(app, createStatsService({ store }));
+  await app.register(cameraRoutes, { store: createCameraStore(options.db), now });
   if (webDir !== null) {
     await webAppRoutes(app, { webDir, webRoutes, apiSegments });
   }

@@ -1,16 +1,20 @@
 import { hitPoints } from '@autoscore/engine';
-import type { Hit, MatchSnapshot } from '@autoscore/schema';
+import type { Hit, MatchSnapshot, ReviewedThrow } from '@autoscore/schema';
 import type { ReactNode } from 'react';
 import type { LastTurn } from '../api/use-match';
 import { checkoutRoute } from '../game/checkout-route';
 import { hitLabel } from '../game/hit-label';
+import { reviewTurn } from '../game/review-turn';
 import { pl } from '../i18n/pl';
-import { BustIcon, FlagIcon, UndoIcon } from './icons';
+import { BustIcon, FlagIcon, UndoIcon, WarningIcon } from './icons';
 import { SHORTCUT_BADGE } from './KeypadKey';
 
 const DARTS_PER_TURN = 3;
 
 const card = 'rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface)';
+const slotSize = 'h-[78px] lg:h-28';
+const slotLabel = 'font-display text-[clamp(30px,8cqi,36px)] leading-none font-bold lg:text-[clamp(40px,7cqi,48px)]';
+const slotNote = 'text-sm leading-tight text-(--color-text-muted) lg:text-lg lg:leading-tight';
 // Poniżej lg suma i zamknięcie dzielą jedną kartę, od lg każde ma własną.
 const sharedCard =
   'max-lg:rounded-(--radius-card) max-lg:border-(length:--border-width) max-lg:border-(--color-border) max-lg:bg-(--color-surface) max-lg:px-4 max-lg:py-2';
@@ -28,11 +32,30 @@ export interface TurnPanelProps {
   onUndo(): void;
   onCheckout(hit: Hit): void;
   checkoutDisabled: boolean;
+  selectedPendingId: string | null;
+  onSelectPending(throwId: string): void;
+  onFlag(): void;
+  flagDisabled: boolean;
 }
 
-export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, undoCountdown = null, onUndo, onCheckout, checkoutDisabled }: TurnPanelProps) {
+export function TurnPanel({
+  state,
+  lastTurn,
+  busy,
+  undoDisabled = false,
+  undoCountdown = null,
+  onUndo,
+  onCheckout,
+  checkoutDisabled,
+  selectedPendingId,
+  onSelectPending,
+  onFlag,
+  flagDisabled,
+}: TurnPanelProps) {
+  // Rzutki czekające na weryfikację nie trafiają do currentDarts, więc tura idzie wtedy z lastTurnThrows.
+  const review = state.awaitingReview;
   // Pusta tura zaraz po zamknięciu pokazuje ostatnią turę, dopóki nie przyjdzie kolejna zmiana stanu.
-  const shown = state.currentDarts.length === 0 && lastTurn?.eventSeq === state.eventSeq ? lastTurn : null;
+  const shown = !review && state.currentDarts.length === 0 && lastTurn?.eventSeq === state.eventSeq ? lastTurn : null;
   const darts: readonly Hit[] = shown ? shown.darts : state.currentDarts;
   const shownName = shown ? state.players.find((player) => player.id === shown.playerId)?.name : undefined;
   const thrower = state.finished ? undefined : state.players.find((player) => player.id === state.currentPlayerId);
@@ -43,13 +66,27 @@ export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, undoCou
       {thrower && (
         <div className="flex flex-nowrap items-baseline justify-between gap-x-4">
           <h2 className="min-w-0 truncate font-display text-(length:--text-heading) leading-tight font-bold">{pl.playerThrows(thrower.name)}</h2>
-          <span className="shrink-0 whitespace-nowrap text-(--color-text-muted)">{pl.dartOfTurn(state.currentDarts.length + 1)}</span>
+          {!(review && reviewTurn(state).closed) && (
+            <span className="shrink-0 whitespace-nowrap text-(--color-text-muted)">
+              {pl.dartOfTurn((review ? state.lastTurnThrows.length : state.currentDarts.length) + 1)}
+            </span>
+          )}
         </div>
       )}
       <ol className={`grid grid-cols-3 gap-3 ${shown ? 'opacity-50' : ''}`}>
-        {Array.from({ length: DARTS_PER_TURN }, (_, index) => (
-          <DartSlot key={index} index={index} dart={darts[index]} waiting={index === waitingIndex} />
-        ))}
+        {Array.from({ length: DARTS_PER_TURN }, (_, index) =>
+          review ? (
+            <ReviewSlot
+              key={index}
+              index={index}
+              entry={state.lastTurnThrows[index]}
+              selected={state.lastTurnThrows[index]?.id === selectedPendingId}
+              onSelect={onSelectPending}
+            />
+          ) : (
+            <DartSlot key={index} index={index} dart={darts[index]} waiting={index === waitingIndex} />
+          ),
+        )}
       </ol>
       {/* Od lg pusta linia trzyma miejsce na imię, żeby klawiatura nie skakała przy pokazaniu zamkniętej tury. */}
       <p aria-hidden={shownName ? undefined : 'true'} className={`font-display text-lg text-(--color-text-muted) ${shownName ? '' : 'max-lg:hidden'}`}>
@@ -60,9 +97,9 @@ export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, undoCou
           className={`flex flex-1 flex-col items-start justify-center gap-1 lg:h-20 lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-5 ${ownCard}`}
         >
           <span className={label}>{pl.turnTotal}</span>
-          <TurnTotal darts={darts} shown={shown} />
+          {review ? <ReviewTotal /> : <TurnTotal darts={darts} shown={shown} />}
         </div>
-        <CheckoutHint state={state} onCheckout={onCheckout} disabled={checkoutDisabled} />
+        {!review && <CheckoutHint state={state} onCheckout={onCheckout} disabled={checkoutDisabled} />}
       </div>
       <div className="grid grid-cols-3 gap-3">
         <button
@@ -79,7 +116,10 @@ export function TurnPanel({ state, lastTurn, busy, undoDisabled = false, undoCou
           </span>
         </button>
         <SoonButton label={pl.nextRound} className="border-(--color-border-strong) bg-(--color-surface-button)" />
-        <SoonButton label={pl.toReview} icon={<FlagIcon />} className="border-(--color-accent) bg-(--color-bg)" />
+        <button type="button" onClick={onFlag} disabled={busy || flagDisabled} className={`${button} border-(--color-accent) bg-(--color-bg) disabled:opacity-40`}>
+          <FlagIcon />
+          {pl.toReview}
+        </button>
       </div>
     </section>
   );
@@ -89,21 +129,55 @@ function DartSlot({ index, dart, waiting }: { index: number; dart: Hit | undefin
   return (
     <li
       aria-label={pl.dartSlot(index + 1)}
-      className={`flex h-[78px] flex-col items-center justify-center lg:h-28 lg:gap-1 ${
+      className={`flex ${slotSize} flex-col items-center justify-center lg:gap-1 ${
         waiting
           ? 'rounded-(--radius-card) border-(length:--border-width) border-dashed border-(--color-accent) bg-(--color-bg)'
           : card
       }`}
     >
       <span className={`${label} leading-tight`}>{pl.dartSlot(index + 1)}</span>
-      <span
-        className={`font-display text-[clamp(30px,8cqi,36px)] leading-none font-bold lg:text-[clamp(40px,7cqi,48px)] ${dart ? '' : 'text-(--color-text-muted)'}`}
-      >
-        {dart ? hitLabel(dart) : waiting ? '?' : ' '}
-      </span>
-      <span className="text-sm leading-tight text-(--color-text-muted) lg:text-lg lg:leading-tight">
-        {dart ? hitPoints(dart) : waiting ? pl.waitingForDart : ' '}
-      </span>
+      <span className={`${slotLabel} ${dart ? '' : 'text-(--color-text-muted)'}`}>{dart ? hitLabel(dart) : waiting ? '?' : ' '}</span>
+      <span className={slotNote}>{dart ? hitPoints(dart) : waiting ? pl.waitingForDart : ' '}</span>
+    </li>
+  );
+}
+
+interface ReviewSlotProps {
+  index: number;
+  entry: ReviewedThrow | undefined;
+  selected: boolean;
+  onSelect(throwId: string): void;
+}
+
+// Rzutka do weryfikacji ma ikonę i tekst zamiast punktów, nie tylko akcentową ramkę.
+function ReviewSlot({ index, entry, selected, onSelect }: ReviewSlotProps) {
+  const slotName = pl.dartSlot(index + 1);
+  if (entry?.status === 'pending') {
+    return (
+      <li aria-label={slotName} className={slotSize}>
+        <button
+          type="button"
+          aria-pressed={selected}
+          onClick={() => onSelect(entry.id)}
+          className={`flex h-full w-full flex-col items-center justify-center rounded-(--radius-card) border-(length:--border-width) border-(--color-accent) lg:gap-1 ${
+            selected ? 'bg-(--color-surface-active)' : 'bg-(--color-bg)'
+          }`}
+        >
+          <span className={`${label} leading-tight`}>{slotName}</span>
+          <span className={slotLabel}>{hitLabel(entry.value)}</span>
+          <span className="flex items-center gap-1 text-sm leading-tight font-semibold text-(--color-text) lg:text-lg lg:leading-tight">
+            <WarningIcon className="shrink-0 text-(--color-accent)" />
+            {pl.pendingThrow}
+          </span>
+        </button>
+      </li>
+    );
+  }
+  return (
+    <li aria-label={slotName} className={`flex ${slotSize} flex-col items-center justify-center lg:gap-1 ${card}`}>
+      <span className={`${label} leading-tight`}>{slotName}</span>
+      <span className={slotLabel}>{entry ? hitLabel(entry.value) : ' '}</span>
+      <span className={slotNote}>{entry ? (entry.scoring === 'waiting' ? pl.waitingBehindReview : hitPoints(entry.value)) : ' '}</span>
     </li>
   );
 }
@@ -122,6 +196,15 @@ function TurnTotal({ darts, shown }: { darts: readonly Hit[]; shown: LastTurn | 
     <span className="flex items-baseline gap-2 font-display lg:gap-4">
       {darts.length >= 2 && <span className="text-lg text-(--color-text-muted)">{darts.map(hitPoints).join(' + ')}</span>}
       <span className="text-[clamp(32px,10cqi,44px)] leading-none font-bold tabular-nums">{total}</span>
+    </span>
+  );
+}
+
+function ReviewTotal() {
+  return (
+    <span className="flex items-center gap-2 font-display text-xl leading-tight font-bold lg:text-2xl">
+      <WarningIcon className="shrink-0 text-(--color-accent)" />
+      {pl.turnAwaitingReview}
     </span>
   );
 }

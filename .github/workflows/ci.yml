@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # feat/camera: gałąź integracyjna etapu 2; bramka rolloutu wymaga zielonego CI na jej commitach.
+    branches: [main, feat/camera]
   pull_request:
 
 concurrency:
@@ -21,6 +22,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: pnpm test
 
   typecheck:
