@@ -247,7 +247,8 @@ function StatsPanel({ summary, columns, rows }: StatsPanelProps) {
                   scope="col"
                   className={`px-2 pb-3 text-left text-xl font-bold lg:px-3 ${index === 0 ? 'text-(--color-text)' : 'text-(--color-text-sub)'}`}
                 >
-                  <span className="flex items-center gap-2">
+                  {/* W zabawie imię może zejść pod avatar, żeby cztery kolumny mieściły się w panelu bez przewijania. */}
+                  <span className={`flex items-center gap-x-2 gap-y-1 ${place === null ? '' : 'flex-wrap'}`}>
                     {place !== null && (
                       <span className={`font-black ${place === 1 ? 'text-(--color-gold)' : 'text-(--color-text-muted)'}`}>{pl.placeNumber(place)}</span>
                     )}

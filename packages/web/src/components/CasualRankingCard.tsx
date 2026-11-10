@@ -19,7 +19,7 @@ export function CasualRankingCard({ state, summary }: CasualRankingCardProps) {
   const [first, ...others] = casualPlaces(state, summary);
 
   return (
-    <section aria-labelledby={headingId} className="sc-panel items-center gap-5 text-center">
+    <section aria-labelledby={headingId} className="sc-panel items-center gap-5 px-4 text-center sm:px-5.5">
       <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-full max-h-96 bg-(image:--gradient-winner-halo)" />
       <h2 id={headingId} className={`relative ${label}`}>
         {pl.casualRankingTitle}
@@ -46,9 +46,9 @@ export function CasualRankingCard({ state, summary }: CasualRankingCardProps) {
           {others.map(({ place, player, line }) => (
             <li
               key={player.id}
-              className="flex min-h-18 items-center gap-3 rounded-(--radius-card) bg-(--color-surface-softer) px-4.5 py-2 shadow-(--shadow-inset-line)"
+              className="flex min-h-18 items-center gap-2 rounded-(--radius-card) bg-(--color-surface-softer) px-3 py-2 shadow-(--shadow-inset-line) sm:gap-3 sm:px-4.5"
             >
-              <span className="w-9 shrink-0 font-display text-[30px] leading-none font-black text-(--color-text-sub)">{pl.placeNumber(place)}</span>
+              <span className="w-7 shrink-0 sm:w-9 font-display text-[30px] leading-none font-black text-(--color-text-sub)">{pl.placeNumber(place)}</span>
               <Avatar name={player.name} avatar={player.avatar} color={player.color} size="tile" />
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-display text-[27px] leading-tight font-bold">{player.name}</span>
