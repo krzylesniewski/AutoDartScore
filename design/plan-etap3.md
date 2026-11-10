@@ -52,6 +52,8 @@ Decyzja autora z 2026-11-10: redesign jest nowym etapem 3 (dwie kamery to teraz 
 - Podsumowanie: puchar zostaje, promienie z linii wokół niego nie.
 - Wykresy: dokładność z P56 zostaje (punkt co rzutkę, siatka co 3 lotki, co 50/100 punktów, podpisy osi). Redesign zmienia tylko wygląd wykresów (kolory, fonty, tło), nie ich logikę w `score-progress-chart.ts` i `form-chart.ts`.
 
+- Skróty klawiszowe: oznaczenia na klawiszach zostają, jak dziś (`SHORTCUT_BADGE`, od `lg`): S/D/T na mnożniku, B na 25, Shift+B na Bull, Spacja na Miss, Backspace na Cofnij, Enter na karcie zamknięcia; skróty w treningu „Końcówki” też. Same skróty (`use-keypad-shortcuts.ts`, `keypad-shortcut.ts`) bez zmian.
+
 ## Poza zakresem
 
 Nowe tryby gry, zmiany zasad X01, zmiany w `vision`, jasny motyw, animacje poza obecną zamianą wierszy w pasku wyników.
