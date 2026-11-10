@@ -74,6 +74,7 @@ prs:
   - id: R1
     branch: style/scena-tokens
     title: 'style(web): Scena theme tokens, stage background and base elements'
+    brief: briefs/R1.md
     priority: 60
     effort: { brief: high, implement: high, verify: high }
     changeset: none
@@ -83,6 +84,7 @@ prs:
   - id: R2
     branch: style/scena-app-bar
     title: 'style(web): Scena game header and navigation'
+    brief: briefs/R2.md
     deps: [R1]
     priority: 40
     effort: { brief: medium, implement: medium, verify: high }
@@ -93,6 +95,7 @@ prs:
   - id: R3
     branch: style/scena-scoreboard
     title: 'style(web): Scena scoreboard with a per-player progress bar'
+    brief: briefs/R3.md
     deps: [R1]
     priority: 55
     effort: { brief: high, implement: high, verify: high }
@@ -103,6 +106,7 @@ prs:
   - id: R4
     branch: style/scena-turn-keypad
     title: 'style(web): Scena turn panel, checkout card and keypad'
+    brief: briefs/R4.md
     deps: [R3]
     priority: 50
     effort: { brief: high, implement: high, verify: high }
@@ -113,6 +117,7 @@ prs:
   - id: R5
     branch: style/scena-new-game
     title: 'style(web): Scena new game screen and player dialogs'
+    brief: briefs/R5.md
     deps: [R1]
     priority: 40
     effort: { brief: high, implement: high, verify: high }
@@ -123,6 +128,7 @@ prs:
   - id: R6
     branch: style/scena-match-end
     title: 'style(web): Scena match end and summaries'
+    brief: briefs/R6.md
     deps: [R1]
     priority: 40
     effort: { brief: high, implement: high, verify: high }
@@ -133,6 +139,7 @@ prs:
   - id: R7
     branch: style/scena-history-stats
     title: 'style(web): Scena history, stats and player card'
+    brief: briefs/R7.md
     deps: [R1]
     priority: 35
     effort: { brief: high, implement: high, verify: high }
@@ -143,6 +150,7 @@ prs:
   - id: R8
     branch: style/scena-practice-settings
     title: 'style(web): Scena practice, settings, login and notices'
+    brief: briefs/R8.md
     deps: [R4]
     priority: 35
     effort: { brief: high, implement: high, verify: high }
@@ -153,6 +161,7 @@ prs:
   - id: R9
     branch: feat/leg-turns-snapshot
     title: 'feat: turns of the current leg in the match snapshot'
+    brief: briefs/R9.md
     priority: 45
     effort: { brief: high, implement: high, verify: high }
     changeset: none
@@ -162,6 +171,7 @@ prs:
   - id: R10
     branch: feat/web-leg-info
     title: 'feat(web): points knocked off, leg stats and turn history on the game screen'
+    brief: briefs/R10.md
     deps: [R4, R8, R9]
     priority: 30
     effort: { brief: high, implement: high, verify: high }
