@@ -19,6 +19,7 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
     legIndex: 0,
     turnIndex: 0,
     currentDarts: [],
+    legTurns: [],
     players: [player('p1', 'Anna', { legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })],
     winnerId: null,
     placements: [],

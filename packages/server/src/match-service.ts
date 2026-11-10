@@ -88,8 +88,8 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
   }
 
   async function snapshot(match: StoredMatch): Promise<MatchSnapshot> {
-    const { game, seq, abandonment, endedAt, finishedAt, times } = await load(match);
-    return toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, ...times });
+    const { game, events, throws, seq, abandonment, endedAt, finishedAt, times } = await load(match);
+    return toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, events, throws, ...times });
   }
 
   function abandoned(id: string): HttpError {
@@ -289,6 +289,8 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           endedAt: null,
           finishedAt: isGameFinished(applied.state) ? record.receivedAt : null,
           lockMs: matchLockMs,
+          events: [...events, ...applied.events],
+          throws: [...throws, record],
           // Gra nie jest porzucona, więc dopisany wpis rzutki nie zmienia żadnej przerwy i wystarczy log sprzed zapisu.
           ...gameTimes(log, [...throws, record], applied.state),
         });
@@ -344,12 +346,14 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (match.type === 'match' && isGameFinished(before)) {
           references.invalidate();
         }
-        const game = replayMatch(match, throws).state;
+        const { state: game, events } = replayMatch(match, throws);
         const state = toSnapshot(match, game, seq, {
           abandonment: null,
           endedAt: null,
           finishedAt: finishedAt(game, throws),
           lockMs: matchLockMs,
+          events,
+          throws,
           ...gameTimes(log, throws, game),
         });
         const meta = { matchId: id, eventSeq: seq };
@@ -437,8 +441,8 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (query.playerId !== undefined && !match.players.some((player) => player.id === query.playerId)) {
           continue;
         }
-        const { game, seq, abandonment, endedAt, finishedAt, updatedAt, times } = await load(match);
-        const state = toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, ...times });
+        const { game, events, throws, seq, abandonment, endedAt, finishedAt, updatedAt, times } = await load(match);
+        const state = toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, events, throws, ...times });
         if (query.status === 'unfinished' && (state.status === 'finished' || state.status === 'ended')) {
           continue;
         }
