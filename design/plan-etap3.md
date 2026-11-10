@@ -22,13 +22,13 @@ Decyzja autora z 2026-11-10: redesign jest nowym etapem 3 (dwie kamery to teraz 
 - **Narzędzie:** najpierw design system jako Artifact (typ Design System), potem makiety wszystkich ekranów zbudowane z niego na kanwie.
 - **Gałąź:** jak w etapie 2. Cały kod etapu 3 powstaje na gałęzi integracyjnej **`feat/redesign`** (własny worktree), a PR-y rolloutu `autoscore-etap3` celują w nią. Do `main` kod wchodzi raz na kamień milowy, przez PR, który otwiera i scala autor. Dzięki temu produkcja nie dostaje pół starego, pół nowego wyglądu.
 
-## Do decyzji przed startem rolloutu
+## Decyzje przed startem rolloutu
 
 1. **Kolejność etapów (rozstrzygnięte 2026-11-10):** etap 3 idzie równolegle z etapem 2, w osobnym rolloucie `autoscore-etap3`; wyjątek zapisany w `CLAUDE.md`. Konflikty dotyczą głównie `packages/web`: panel rzutki `pending` z C5 i ekran kalibracji z C6 też trzeba będzie przenieść na nowy wygląd.
-2. **Paleta:** „Scena+” ma paletę do wyboru w Tweaks. Która wersja jest docelowa (bazowa „Scena”: ciepła czerń, krem, czerwień tarczy)?
-3. **Karty:** „Scena” ma zaokrąglone karty (16 px), cienie i półprzezroczyste powierzchnie, a `CLAUDE.md` opisuje motyw A jako „kanciaste karty”. Po K1 opis motywu w `CLAUDE.md` trzeba zmienić na „Scena”.
-4. **Zakres makiet:** czy oprócz ekranów ze „Scena+” robimy w makietach także: grę 3-4 graczy (zabawa), trening (Free run, Solo 501, „Końcówki”), ustawienia, logowanie, dialogi (nowy gracz, porzucenie), rzutkę `pending` z kamery, widok kompaktowy (TV) i telefon 390 px?
-5. **Dane do nowych informacji:** snapshot (`MatchSnapshot` w `packages/schema/src/match-api.ts`) ma tylko bieżącą turę (`currentDarts`), więc historia tur, zbite punkty i statystyki lega wymagają nowego pola w snapshocie liczonego w serwerze przez odtworzenie zdarzeń (zasada: statystyki z rzutek, nie z liczników). Do potwierdzenia przy planie PR-ów: jedno pole `legTurns` w snapshocie, z którego front liczy resztę, czy gotowe wartości z serwera.
+2. **Paleta (rozstrzygnięte 2026-11-10):** bazowa „Scena”: ciepła czerń, krem, czerwień tarczy.
+3. **Karty (rozstrzygnięte 2026-11-10):** zaokrąglone jak w „Scenie” (18 px karty, 22 px panele), cienie i półprzezroczyste powierzchnie. Po K1 opis motywu w `CLAUDE.md` zmienia się z „kanciastych kart” motywu A na „Scena”.
+4. **Zakres makiet (rozstrzygnięte 2026-11-10): wszystkie ekrany.** Oprócz ekranów ze „Scena+” makiety obejmują: grę 3-4 graczy (zabawa), trening (Free run, Solo 501, „Końcówki”), ustawienia, logowanie, dialogi (nowy gracz, porzucenie), rzutkę `pending` z kamery, widok kompaktowy (TV) i telefon 390 px.
+5. **Dane do nowych informacji:** snapshot (`MatchSnapshot` w `packages/schema/src/match-api.ts`) ma tylko bieżącą turę (`currentDarts`), więc historia tur, zbite punkty i statystyki lega wymagają nowego pola w snapshocie liczonego w serwerze przez odtworzenie zdarzeń (zasada: statystyki z rzutek, nie z liczników). Rozstrzygnięte 2026-11-10: jedno pole `legTurns` w snapshocie (tury bieżącego lega: gracz, rzutki, wynik po turze, bust), liczone w serwerze z odtworzenia zdarzeń; front liczy z niego zbite punkty, najwyższą turę, liczbę rzutek i busty.
 
 ## Kroki
 
