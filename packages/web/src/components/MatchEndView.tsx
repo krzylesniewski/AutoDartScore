@@ -3,13 +3,14 @@ import { useRef, useState, type ReactNode } from 'react';
 import { createMatch } from '../api/client';
 import type { AchievementNotice } from '../api/use-match';
 import { formatAverage } from '../game/format-stat';
-import { durationSeconds, formatDuration, gameElapsedMs } from '../game/leg-clock';
 import { rematchRequest } from '../game/rematch-request';
 import { pl } from '../i18n/pl';
 import { AchievementNotices } from './AchievementNotices';
 import { Avatar } from './Avatar';
 import { EffectsToggle } from './EffectsToggle';
+import { GameTime } from './GameTime';
 import { CheckIcon, LockIcon, TrophyIcon, UndoIcon, WarningIcon } from './icons';
+import { LegDuration } from './LegDuration';
 import { SaveGuest, SUMMARY_ROWS } from './MatchSummaryPanel';
 import { ScoreProgressChart } from './ScoreProgressChart';
 import { VoiceToggle } from './VoiceToggle';
@@ -117,10 +118,6 @@ function setupLine(state: MatchSnapshot): string {
   if (state.legsToWin !== null) {
     parts.push(pl.bestOfOption(state.legsToWin * 2 - 1));
   }
-  const elapsed = gameElapsedMs(state);
-  if (elapsed !== null) {
-    parts.push(pl.gameTime(formatDuration(durationSeconds(elapsed))));
-  }
   return parts.join(' · ');
 }
 
@@ -143,6 +140,7 @@ function WinnerCard({ state, winner, loser }: WinnerCardProps) {
         </p>
         {loser && <Avatar name={loser.name} avatar={loser.avatar} color={loser.color} size="preview" />}
       </div>
+      <GameTime state={state} className="items-center" />
       <p className="text-lg text-(--color-text-muted)">{setupLine(state)}</p>
     </section>
   );
@@ -158,7 +156,13 @@ function LegCards({ state, summary }: { state: MatchSnapshot; summary: MatchSumm
           <li key={leg.legIndex} className={`flex items-center gap-3 px-5 py-4 lg:flex-1 ${card}`}>
             <Avatar name={name} avatar={legWinner?.avatar ?? null} color={legWinner?.color ?? 1} size="small" />
             <div className="flex min-w-0 flex-col">
-              <span className={label}>{pl.legNumber(leg.legIndex + 1)}</span>
+              <span className="flex flex-wrap items-center gap-x-2">
+                <span className={label}>{pl.legNumber(leg.legIndex + 1)}</span>
+                <span aria-hidden="true" className="text-(--color-text-muted)">
+                  ·
+                </span>
+                <LegDuration ms={leg.durationMs} />
+              </span>
               <span className="text-xl font-semibold break-words">{pl.legResult(name, leg.dartsThrown, leg.checkout)}</span>
               {leg.averages.length > 0 && (
                 <span className="break-words text-(--color-text-muted)">

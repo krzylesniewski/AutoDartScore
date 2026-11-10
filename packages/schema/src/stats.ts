@@ -53,6 +53,7 @@ export const MatchSummaryLeg = z.object({
   checkout: LegWon.shape.checkout,
   dartsThrown: LegWon.shape.dartsThrown, // rzutki zwycięzcy
   averages: z.array(z.object({ playerId: PlayerId, average: Average })),
+  durationMs: z.int().min(0), // od pierwszej do zamykającej rzutki lega, bez przerw
 });
 export type MatchSummaryLeg = z.infer<typeof MatchSummaryLeg>;
 

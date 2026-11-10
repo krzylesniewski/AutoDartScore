@@ -2,9 +2,10 @@ import type { MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlay
 import { useState } from 'react';
 import { updatePlayer } from '../api/client';
 import { formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../game/format-stat';
-import { durationSeconds, formatDuration, gameElapsedMs } from '../game/leg-clock';
 import { pl } from '../i18n/pl';
+import { GameTime } from './GameTime';
 import { CheckIcon, TrophyIcon, WarningIcon } from './icons';
+import { LegDuration } from './LegDuration';
 import { ScoreProgressChart } from './ScoreProgressChart';
 
 const NEW_GAME_HREF = '#/';
@@ -41,7 +42,6 @@ export function MatchSummaryPanel({ state, summary, error }: MatchSummaryPanelPr
   const name = (playerId: string | null) => state.players.find((player) => player.id === playerId)?.name ?? '';
   // Podsumowanie sprzed ostatniej rzutki nie zawiera zamykającej tury, więc czekamy na aktualne.
   const current = summary && summary.eventSeq >= state.eventSeq ? summary : null;
-  const elapsed = gameElapsedMs(state);
 
   return (
     <section className="flex flex-col gap-3 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-4 font-display">
@@ -50,7 +50,7 @@ export function MatchSummaryPanel({ state, summary, error }: MatchSummaryPanelPr
         {pl.matchOver}
       </h2>
       <MatchResult state={state} name={name} />
-      {elapsed !== null && <p className="text-(--color-text-muted)">{pl.gameTime(formatDuration(durationSeconds(elapsed)))}</p>}
+      <GameTime state={state} />
       {state.players
         .filter((player) => player.guest)
         .map((player) => (
@@ -58,7 +58,7 @@ export function MatchSummaryPanel({ state, summary, error }: MatchSummaryPanelPr
         ))}
       {current ? <SummaryTable state={state} summary={current} /> : <p className="text-(--color-text-muted)">{error ? pl.summaryFailed : pl.loading}</p>}
       {state.type === 'casual' && current?.lastLegProgress && <ScoreProgressChart progress={current.lastLegProgress} players={state.players} />}
-      {current && current.legs.length > 0 && <LegList summary={current} name={name} />}
+      {current && current.legs.length > 0 && <LegList summary={current} name={name} showDuration={state.type !== 'practice'} />}
       <a href={NEW_GAME_HREF} className={link}>
         {pl.newGame}
       </a>
@@ -109,7 +109,13 @@ function SummaryTable({ state, summary }: { state: MatchSnapshot; summary: Match
   );
 }
 
-function LegList({ summary, name }: { summary: MatchSummary; name: (playerId: string) => string }) {
+interface LegListProps {
+  summary: MatchSummary;
+  name: (playerId: string) => string;
+  showDuration: boolean; // trening nie pokazuje czasu lega
+}
+
+function LegList({ summary, name, showDuration }: LegListProps) {
   return (
     <section className="flex flex-col gap-2">
       <h3 className={label}>{pl.legs}</h3>
@@ -117,6 +123,7 @@ function LegList({ summary, name }: { summary: MatchSummary; name: (playerId: st
         {summary.legs.map((leg) => (
           <li key={leg.legIndex} className="flex flex-col">
             <span className="text-xl">{pl.legSummary(leg.legIndex + 1, pl.legResult(name(leg.winnerId), leg.dartsThrown, leg.checkout))}</span>
+            {showDuration && <LegDuration ms={leg.durationMs} />}
             <span className="text-(--color-text-muted)">
               {leg.averages.map((entry) => `${name(entry.playerId)} ${formatAverage(entry.average)}`).join(' · ')}
             </span>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORM_GAMES, FREQUENT_HITS_LIMIT, FrequentHitsResponse, HeadToHead, LegProgress, LegProgressPoint, MIN_LEGS_FOR_AVERAGE, MatchSummary, OverallPlayer, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsOverall, StatsRankings, type PlayerStatLine } from './index.js';
+import { FORM_GAMES, FREQUENT_HITS_LIMIT, FrequentHitsResponse, HeadToHead, LegProgress, LegProgressPoint, MIN_LEGS_FOR_AVERAGE, MatchSummary, MatchSummaryLeg, OverallPlayer, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsOverall, StatsRankings, type PlayerStatLine } from './index.js';
 
 const line: PlayerStatLine = {
   dartsThrown: 6,
@@ -89,6 +89,7 @@ describe('MatchSummary', () => {
             { playerId: 'p1', average: 150.5 },
             { playerId: 'p2', average: 0 },
           ],
+          durationMs: 252_000,
         },
       ],
       lastLegProgress: null,
@@ -154,6 +155,22 @@ describe('MatchSummary', () => {
 
   it('rejects an unknown game type', () => {
     expect(MatchSummary.safeParse({ matchId: 'm1', type: 'cricket', finished: false, eventSeq: 0, players: [], legs: [], lastLegProgress: null, checkouts: null }).success).toBe(false);
+  });
+});
+
+describe('MatchSummaryLeg', () => {
+  const leg = { legIndex: 0, winnerId: 'p1', checkout: 40, dartsThrown: 9, averages: [{ playerId: 'p1', average: 167 }], durationMs: 0 };
+
+  it('accepts a zero duration', () => {
+    expect(MatchSummaryLeg.parse(leg)).toEqual(leg);
+  });
+
+  it.each([-1, 1.5])('rejects the duration %s', (durationMs) => {
+    expect(MatchSummaryLeg.safeParse({ ...leg, durationMs }).success).toBe(false);
+  });
+
+  it('requires the duration', () => {
+    expect(MatchSummaryLeg.safeParse({ ...leg, durationMs: undefined }).success).toBe(false);
   });
 });
 

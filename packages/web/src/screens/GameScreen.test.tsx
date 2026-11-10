@@ -711,7 +711,7 @@ describe('abandon and resume', () => {
           finished: true,
           eventSeq: finished.eventSeq,
           players: [summaryPlayer('p1', { dartsThrown: 6, average: 150.5, legsWon: 1 }), summaryPlayer('p2', { dartsThrown: 3, average: 0 })],
-          legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [] }],
+          legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [], durationMs: 252_000 }],
         }),
       );
     connect(finished);

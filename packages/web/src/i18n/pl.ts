@@ -333,7 +333,7 @@ export const pl = {
   round: (n: number) => `Kolejka ${n}`,
   legTime: (spoken: string) => `Czas lega ${spoken}`,
   sessionTime: (spoken: string) => `Czas sesji ${spoken}`,
-  gameTime: (time: string) => `Czas gry ${time}`,
+  gameTimeLabel: 'Czas gry',
   scoreProgressHeading: (leg: number) => `Leg ${leg} · zejście z wyniku`,
   scoreProgressRemaining: 'Pozostało',
   scoreProgressDarts: 'Lotki',
