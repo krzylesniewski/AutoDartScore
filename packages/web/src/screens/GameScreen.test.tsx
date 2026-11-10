@@ -2,7 +2,7 @@ import { HitEvent, type LiveMessage, type MatchSnapshot } from '@autoscore/schem
 import { LiveAuthMessage } from '@autoscore/schema';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import { casual, checkoutHistory, checkoutPractice, checkoutSession, legTurn, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
 import { ACHIEVEMENT_DURATION_MS } from '../api/use-match';
 import { GameScreen } from './GameScreen';
 
@@ -748,7 +748,7 @@ describe('abandon and resume', () => {
 
   it('has no stats panel and fetches no summary in a casual game in progress', () => {
     connect(casual(['Anna', 'Bartek', 'Celina'], { id: MATCH_ID, eventSeq: 4, currentPlayerId: 'p1' }));
-    expect(screen.getByText('Celina')).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: 'Wyniki' })).getByText('Celina')).toBeTruthy();
     expect(screen.queryByRole('table', { name: 'Statystyki meczu' })).toBeNull();
     expect(summaryCalls).toEqual([]);
   });
@@ -1830,8 +1830,9 @@ describe('turn panel, checkout card and keypad', () => {
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((undo[0] as HTMLButtonElement).disabled).toBe(false);
     expect(undo[0]?.getAttribute('aria-keyshortcuts')).toBe('Backspace');
+    // Panel tury ma opakowanie, które chowa go poniżej lg przy otwartej historii tur.
     const turnPanel = screen.getByText('w tej turze').closest('section') as HTMLElement;
-    expect(turnPanel.nextElementSibling).toBe(undo[0]);
+    expect(turnPanel.parentElement?.nextElementSibling).toBe(undo[0]);
   });
 
   it('keeps the checkout card out of the keypad dock', () => {
@@ -1849,5 +1850,112 @@ describe('turn panel, checkout card and keypad', () => {
     connect();
     expect(screen.getByText('w tej turze')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^Zamknięcie/ })).toBeNull();
+  });
+});
+
+describe('leg panel', () => {
+  // Bartek rzuca drugą turę, a Anna ma za sobą bust. Bartkowi zostaje 40, więc jest też karta zamknięcia.
+  const midLeg: MatchSnapshot = {
+    ...initial,
+    players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 40, legsWon: 0 })],
+    legTurns: [legTurn('p2', { points: 100, remainingAfter: 140 }), legTurn('p1', { bust: true, remainingAfter: 501 })],
+  };
+
+  function panel(): HTMLElement {
+    return screen.getByRole('heading', { name: 'Historia tur · Leg 1' }).closest('section[id]') as HTMLElement;
+  }
+
+  function classesOf(element: Element | null | undefined): string[] {
+    return element?.className.split(' ') ?? [];
+  }
+
+  function closestHidden(element: HTMLElement): boolean {
+    let node: HTMLElement | null = element;
+    while (node) {
+      if (classesOf(node).includes('max-lg:hidden')) {
+        return true;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function keypadDock(): HTMLElement {
+    return screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement as HTMLElement;
+  }
+
+  it('puts the leg panel after the stats panel in the left column of a 1v1, outside the dock', () => {
+    connect(midLeg);
+    const stats = screen.getByRole('table', { name: 'Statystyki meczu' }).closest('section') as HTMLElement;
+    const column = screen.getByRole('region', { name: 'Wyniki' }).parentElement?.parentElement as HTMLElement;
+    expect(column.contains(stats)).toBe(true);
+    expect(column.contains(panel())).toBe(true);
+    expect(stats.compareDocumentPosition(panel()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(column.lastElementChild).toBe(panel());
+    expect(keypadDock().contains(panel())).toBe(false);
+  });
+
+  it('lets the left column scroll on its own from lg and the panel fill it', () => {
+    connect(midLeg);
+    const column = panel().parentElement as HTMLElement;
+    expect(classesOf(column)).toEqual(expect.arrayContaining(['lg:min-h-0', 'lg:overflow-y-auto', 'lg:overflow-x-hidden', 'lg:col-start-1', 'lg:row-start-1']));
+    expect(classesOf(panel())).toEqual(expect.arrayContaining(['lg:flex-1', 'lg:min-h-[260px]']));
+  });
+
+  it('opens the panel below lg with Tury in place of the scoreboard, the turn and the checkout card', () => {
+    connect(midLeg);
+    const tury = screen.getByRole('button', { name: 'Tury' });
+    expect(tury.getAttribute('aria-expanded')).toBe('false');
+    expect(tury.getAttribute('aria-controls')).toBe(panel().id);
+    expect(classesOf(panel())).toContain('max-lg:hidden');
+    const scoreboard = screen.getByRole('region', { name: 'Wyniki' });
+    const turnPanel = screen.getByText('w tej turze').closest('section') as HTMLElement;
+    const checkoutSlot = screen.getByRole('button', { name: /^Zamknięcie/ }).parentElement as HTMLElement;
+    expect([scoreboard, turnPanel, checkoutSlot].map(closestHidden)).toEqual([false, false, false]);
+
+    fireEvent.click(tury);
+    expect(tury.getAttribute('aria-expanded')).toBe('true');
+    expect(classesOf(panel())).not.toContain('max-lg:hidden');
+    expect([scoreboard, turnPanel, checkoutSlot].map(closestHidden)).toEqual([true, true, true]);
+    const stats = screen.getByRole('table', { name: 'Statystyki meczu' });
+    expect(closestHidden(stats)).toBe(true);
+    expect(classesOf(keypadDock())).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'mt-auto', 'lg:contents']));
+    expect(closestHidden(keypadDock())).toBe(false);
+  });
+
+  it('closes the panel with its close button and moves focus back to Tury', () => {
+    connect(midLeg);
+    const tury = screen.getByRole('button', { name: 'Tury' });
+    fireEvent.click(tury);
+    fireEvent.click(screen.getByRole('button', { name: 'Zamknij historię tur' }));
+    expect(tury.getAttribute('aria-expanded')).toBe('false');
+    expect(classesOf(panel())).toContain('max-lg:hidden');
+    expect(document.activeElement).toBe(tury);
+    expect(closestHidden(screen.getByRole('region', { name: 'Wyniki' }))).toBe(false);
+  });
+
+  it('shows the turn history and the leg tiles from legTurns', () => {
+    connect(midLeg);
+    const history = within(panel());
+    expect(history.getByRole('table', { name: 'Historia tur: wynik po turze i punkty w turze' })).toBeTruthy();
+    expect(within(history.getByText('Rzutek w legu').closest('dl') as HTMLElement).getByRole('definition').textContent).toBe('6');
+    expect(within(history.getByText('Busty').closest('dl') as HTMLElement).getByRole('definition').textContent).toBe('1');
+  });
+
+  it('has a leg panel and Tury in a casual game', () => {
+    connect(casual(['Anna', 'Bartek', 'Celina'], { id: MATCH_ID, eventSeq: 4, currentPlayerId: 'p1' }));
+    expect(screen.getByRole('heading', { name: 'Historia tur' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tury' })).toBeTruthy();
+  });
+
+  it('has no leg panel and no Tury button in checkout practice', () => {
+    connect(checkoutPractice(checkoutSession([], { target: 100, range: '51-100' }), { id: MATCH_ID, eventSeq: 1 }));
+    expect(screen.queryByRole('button', { name: 'Tury' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^Historia tur/ })).toBeNull();
+  });
+
+  it('has no Tury button before the first state', () => {
+    render(<GameScreen matchId={MATCH_ID} />);
+    expect(screen.queryByRole('button', { name: 'Tury' })).toBeNull();
   });
 });

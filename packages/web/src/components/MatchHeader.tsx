@@ -1,5 +1,5 @@
 import type { MatchSnapshot } from '@autoscore/schema';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type Ref } from 'react';
 import { canAbandon } from '../game/can-abandon';
 import { canEndPractice } from '../game/can-end-practice';
 import { pl } from '../i18n/pl';
@@ -18,6 +18,15 @@ export interface MatchHeaderProps {
   onAbandon?: () => void;
   onResume?: () => void;
   onEndPractice?: () => void;
+  // Przycisk „Tury” poniżej lg. Bez tego propsa nagłówek go nie ma.
+  turns?: TurnsToggle | undefined;
+}
+
+export interface TurnsToggle {
+  open: boolean;
+  controls: string;
+  onToggle(): void;
+  buttonRef?: Ref<HTMLButtonElement> | undefined;
 }
 
 const meta = 'font-display font-semibold whitespace-nowrap text-(--color-text-sub)';
@@ -31,7 +40,7 @@ const popover =
 // Od lg panel i blok tytułu mają display: contents, a ich dzieci stają w jednym wierszu paska.
 // Poniżej lg panel jest rozwijaną kartą pod paskiem, a blok tytułu dwoma wierszami obok znaku.
 // Porzuć mecz i Zakończ trening są od lg w osobnej karcie pod przyciskiem menu.
-export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange, onAbandon, onResume, onEndPractice }: MatchHeaderProps) {
+export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange, onAbandon, onResume, onEndPractice, turns }: MatchHeaderProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -138,6 +147,18 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
           </div>
         )}
       </div>
+      {turns && (
+        <button
+          ref={turns.buttonRef}
+          type="button"
+          aria-expanded={turns.open}
+          aria-controls={turns.controls}
+          onClick={turns.onToggle}
+          className={`h-11 shrink-0 cursor-pointer rounded-(--radius-pill) px-4 font-display text-[19px] whitespace-nowrap lg:hidden ${turns.open ? 'bg-(--color-text) font-extrabold text-(--color-text-inverse)' : 'bg-(--color-surface-soft) font-bold text-(--color-text)'}`}
+        >
+          {pl.turnsToggle}
+        </button>
+      )}
       <button
         ref={toggleRef}
         type="button"

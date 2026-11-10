@@ -419,4 +419,34 @@ describe('MatchHeader', () => {
       expect(toggle.querySelector('svg')).not.toBeNull();
     });
   });
+
+  describe('Tury', () => {
+    function renderHeader(turns?: { open: boolean; controls: string; onToggle(): void }) {
+      return render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} turns={turns} />);
+    }
+
+    it('has no Tury button without the turns prop', () => {
+      renderHeader();
+      expect(screen.queryByRole('button', { name: 'Tury' })).toBeNull();
+    });
+
+    it('shows the Tury button below lg, before the menu, pointing to the panel', () => {
+      const onToggle = vi.fn();
+      renderHeader({ open: false, controls: 'leg-info', onToggle });
+      const button = screen.getByRole('button', { name: 'Tury' });
+      expect(button.className.split(' ')).toEqual(expect.arrayContaining(['lg:hidden', 'h-11']));
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(button.getAttribute('aria-controls')).toBe('leg-info');
+      expect(button.nextElementSibling).toBe(screen.getByRole('button', { name: 'Menu gry' }));
+      fireEvent.click(button);
+      expect(onToggle).toHaveBeenCalledOnce();
+    });
+
+    it('marks the open panel on the button', () => {
+      renderHeader({ open: true, controls: 'leg-info', onToggle: vi.fn() });
+      const button = screen.getByRole('button', { name: 'Tury' });
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(button.className.split(' ')).toContain('bg-(--color-text)');
+    });
+  });
 });

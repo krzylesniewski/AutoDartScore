@@ -1,4 +1,22 @@
-import type { CheckoutAttempt, CheckoutSession, LegProgress, MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
+import type { CheckoutAttempt, CheckoutSession, LegProgress, LegTurn, MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
+
+// Domyślnie tura za 60 z 501. Bust bez podanych punktów i wyniku dostaje 0 punktów i wynik startowy, jak w schemacie.
+export function legTurn(playerId: string, overrides: Partial<LegTurn> = {}): LegTurn {
+  const bust = overrides.bust ?? false;
+  return {
+    playerId,
+    turnIndex: 0,
+    darts: [
+      { segment: 20, multiplier: 1 },
+      { segment: 20, multiplier: 1 },
+      { segment: 20, multiplier: 1 },
+    ],
+    points: bust ? 0 : 60,
+    remainingAfter: bust ? 501 : 441,
+    bust,
+    ...overrides,
+  };
+}
 
 export function player(id: string, name: string, overrides: Partial<MatchSnapshotPlayer> = {}): MatchSnapshotPlayer {
   return { id, name, avatar: null, color: 1, guest: false, remaining: 501, legsWon: null, place: null, dartsThrownInLeg: 0, ...overrides };

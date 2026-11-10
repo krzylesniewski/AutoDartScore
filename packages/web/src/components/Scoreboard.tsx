@@ -1,12 +1,13 @@
-import type { MatchSnapshot, MatchSnapshotPlayer } from '@autoscore/schema';
+import type { LegTurn, MatchSnapshot, MatchSnapshotPlayer } from '@autoscore/schema';
 import { formatCheckoutPercent } from '../game/checkout-practice';
 import { formatDecimal } from '../game/format-stat';
+import { knockedOff, lastTurnOf } from '../game/leg-info';
 import { scoreboardOrder } from '../game/scoreboard-order';
 import { type ScoreboardRowKind, scoreboardRowOffsets } from '../game/scoreboard-rows';
 import { pl } from '../i18n/pl';
 import { Avatar, type AvatarSize } from './Avatar';
 import { CardRings } from './CardRings';
-import { PlaceIcon, PlusIcon } from './icons';
+import { BustIcon, PlaceIcon, PlusIcon } from './icons';
 import { ProgressBar } from './ProgressBar';
 
 const MAX_PLAYERS = 4;
@@ -28,6 +29,7 @@ interface LayoutClasses {
   currentScore: string;
   currentDots: string;
   bar: string;
+  knockedOff: string;
   counter: string;
   counterItem: string;
   counterTerm: string;
@@ -44,11 +46,12 @@ interface LayoutClasses {
   placedName: string;
 }
 
+// Wiersz zbitych punktów pod paskiem ma zarezerwowane miejsce, więc wysokość karty nie zależy od tego, czy go widać.
 const PHONE: LayoutClasses = {
-  heights: '[--row-current:88px] [--row-waiting:60px] [--row-placed:60px] [--row-slot:58px]',
+  heights: '[--row-current:100px] [--row-waiting:60px] [--row-placed:60px] [--row-slot:58px]',
   gapCurrent: 'pb-1.5',
   gap: 'pb-1.5',
-  currentCard: 'grid-cols-[auto_minmax(0,1fr)_auto_auto] grid-rows-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3.5 py-2.5',
+  currentCard: 'grid-cols-[auto_minmax(0,1fr)_auto_auto] grid-rows-[minmax(0,1fr)_auto_auto] gap-x-3 gap-y-1.5 px-3.5 py-2',
   currentRings: '-top-[52px] -right-[46px] size-[150px]',
   currentWho: 'gap-[3px]',
   currentName: 'text-2xl',
@@ -57,6 +60,7 @@ const PHONE: LayoutClasses = {
   currentScore: 'text-[62px]',
   currentDots: 'size-3',
   bar: 'row-start-2',
+  knockedOff: 'col-span-full row-start-3 h-[17px] text-[17px]',
   counter: 'gap-3',
   counterItem: 'items-end',
   counterTerm: 'text-[12px]',
@@ -73,6 +77,13 @@ const PHONE: LayoutClasses = {
   placedName: 'text-xl',
 };
 
+// Rozmiar compact (widok TV) zostaje bez zbitych punktów, więc ma dawną kartę rzucającego.
+const COMPACT: LayoutClasses = {
+  ...PHONE,
+  heights: '[--row-current:88px] [--row-waiting:60px] [--row-placed:60px] [--row-slot:58px]',
+  currentCard: 'grid-cols-[auto_minmax(0,1fr)_auto_auto] grid-rows-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3.5 py-2.5',
+};
+
 const LG_SHARED = {
   currentCard: 'lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:gap-x-3.5 lg:gap-y-0',
   currentRings: 'lg:-top-[70px] lg:-right-[70px] lg:size-[260px]',
@@ -83,6 +94,8 @@ const LG_SHARED = {
   currentScore: 'lg:text-[clamp(72px,28cqi,128px)]',
   currentDots: 'lg:size-[13px]',
   bar: 'lg:row-start-3',
+  // Od lg w wierszu dużego wyniku, w lewym dolnym rogu. Wynik zostaje przy prawej krawędzi.
+  knockedOff: 'lg:col-span-2 lg:col-start-1 lg:row-start-2 lg:mb-5 lg:h-auto lg:self-end lg:text-[19px]',
   counter: 'lg:items-end lg:gap-5.5',
   counterItem: 'lg:mb-3.5 lg:items-start lg:gap-1',
   counterTerm: 'lg:text-(length:--text-label)',
@@ -131,18 +144,20 @@ interface Layout {
   phone: LayoutClasses;
   lg: LayoutClasses | null;
   avatars: AvatarSizes;
+  // Zbite punkty i ostatnia tura czekających, tylko w rozmiarze large.
+  legInfo: boolean;
 }
 
 type Size = 'large' | 'compact';
 
 function layoutFor(size: Size, type: MatchSnapshot['type']): Layout {
   if (size === 'compact') {
-    return { phone: PHONE, lg: null, avatars: { current: 'compactCurrent', waiting: 'compactWaiting', placed: 'compactWaiting' } };
+    return { phone: COMPACT, lg: null, avatars: { current: 'compactCurrent', waiting: 'compactWaiting', placed: 'compactWaiting' }, legInfo: false };
   }
   if (type === 'casual') {
-    return { phone: PHONE, lg: DENSE, avatars: { current: 'current', waiting: 'waitingDense', placed: 'placed' } };
+    return { phone: PHONE, lg: DENSE, avatars: { current: 'current', waiting: 'waitingDense', placed: 'placed' }, legInfo: true };
   }
-  return { phone: PHONE, lg: ROOMY, avatars: { current: 'current', waiting: 'waiting', placed: 'placed' } };
+  return { phone: PHONE, lg: ROOMY, avatars: { current: 'current', waiting: 'waiting', placed: 'placed' }, legInfo: true };
 }
 
 function classes(layout: Layout, key: Exclude<keyof LayoutClasses, 'waitingRings'>): string {
@@ -298,7 +313,46 @@ function CurrentCard({ player, state, layout }: RowProps) {
           <ProgressBar startingScore={progress.startingScore} remaining={progress.remaining} current />
         </div>
       )}
+      {layout.legInfo && <KnockedOff state={state} player={player} className={classes(layout, 'knockedOff')} />}
     </div>
+  );
+}
+
+// Free run i trening końcówek nie mają wyniku startowego, więc nie mają też zbitych punktów.
+function KnockedOff({ state, player, className }: { state: MatchSnapshot; player: MatchSnapshotPlayer; className: string }) {
+  const knocked = knockedOff(state.legTurns, player.id);
+  const shown = state.startingScore !== null && knocked.turns > 0;
+  return (
+    <span className={`min-w-0 truncate font-display leading-none font-bold text-(--color-text) ${className}`}>
+      {shown && (
+        <>
+          <span aria-hidden="true">{pl.knockedOff(knocked.points, knocked.turns)}</span>
+          <span className="sr-only">{pl.knockedOffLabel(knocked.points, knocked.turns)}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
+function LastTurn({ turn }: { turn: LegTurn }) {
+  if (turn.bust) {
+    return (
+      <>
+        <span aria-hidden="true" className="inline-flex items-center gap-1 font-display text-[1.15em] font-bold text-(--color-text-sub)">
+          <BustIcon />
+          {pl.bust}
+        </span>
+        <span className="sr-only">{pl.lastTurnBust}</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <span aria-hidden="true" className="font-display text-[1.15em] font-bold text-(--color-text-sub)">
+        {pl.lastTurnPoints(turn.points)}
+      </span>
+      <span className="sr-only">{pl.lastTurnLabel(turn.points)}</span>
+    </>
   );
 }
 
@@ -306,6 +360,7 @@ function WaitingRow({ player, state, layout, next }: RowProps & { next: boolean 
   const progress = progressOf(state, player);
   const legs = legDotsOf(state, player);
   const rings = layout.lg?.waitingRings;
+  const last = layout.legInfo && state.startingScore !== null ? lastTurnOf(state.legTurns, player.id) : null;
   return (
     <div
       className={`sc-player--waiting relative isolate grid h-full grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(0,1fr)_auto] items-center overflow-hidden rounded-(--radius-card) text-(--color-text) ${classes(layout, 'waitingCard')}`}
@@ -317,7 +372,13 @@ function WaitingRow({ player, state, layout, next }: RowProps & { next: boolean 
           <span className={`truncate font-display leading-none font-semibold ${classes(layout, 'waitingName')}`}>{player.name}</span>
           {legs && <LegDots won={legs.won} target={legs.target} className="gap-[5px]" dotClass={classes(layout, 'waitingDots')} />}
         </span>
-        {next && <span className={`truncate leading-tight text-(--color-text-muted) ${classes(layout, 'waitingNext')}`}>{pl.nextInQueue}</span>}
+        {(next || last) && (
+          <span className={`flex min-w-0 items-baseline gap-1.5 leading-tight whitespace-nowrap text-(--color-text-muted) ${classes(layout, 'waitingNext')}`}>
+            {next && <span className="truncate">{pl.nextInQueue}</span>}
+            {next && last && <span aria-hidden="true">·</span>}
+            {last && <LastTurn turn={last} />}
+          </span>
+        )}
       </span>
       {state.freeRun ? (
         <SessionCounter items={freeRunItems(state.freeRun)} layout={layout} />
