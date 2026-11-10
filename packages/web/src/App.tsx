@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { onUnauthorized } from './api/session';
+import { Stage } from './components/Stage';
 import { GameScreen } from './screens/GameScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -57,20 +58,44 @@ export function App() {
 
   // Po zalogowaniu ekran z adresu montuje się od nowa i pobiera dane już z tokenem.
   if (loginRequired) {
-    return <LoginScreen onLoggedIn={() => setLoginRequired(false)} />;
+    return (
+      <Stage light="center">
+        <LoginScreen onLoggedIn={() => setLoginRequired(false)} />
+      </Stage>
+    );
   }
 
   if (route?.screen === 'game') {
-    return <GameScreen key={route.matchId} matchId={route.matchId} />;
+    return (
+      <Stage light="game">
+        <GameScreen key={route.matchId} matchId={route.matchId} />
+      </Stage>
+    );
   }
   if (route?.screen === 'history') {
-    return <HistoryScreen />;
+    return (
+      <Stage light="list">
+        <HistoryScreen />
+      </Stage>
+    );
   }
   if (route?.screen === 'settings') {
-    return <SettingsScreen />;
+    return (
+      <Stage light="game">
+        <SettingsScreen />
+      </Stage>
+    );
   }
   if (route?.screen === 'stats') {
-    return <StatsScreen playerId={route.playerId} />;
+    return (
+      <Stage light="list">
+        <StatsScreen playerId={route.playerId} />
+      </Stage>
+    );
   }
-  return <HomeScreen />;
+  return (
+    <Stage light="game">
+      <HomeScreen />
+    </Stage>
+  );
 }

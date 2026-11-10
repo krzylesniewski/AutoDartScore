@@ -45,7 +45,7 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn(): void }) {
 
   return (
     // Boczne wcięcia ekranu dodaje już #root w theme.css.
-    <main className="flex h-full items-center justify-center overflow-auto bg-(--color-bg) p-(--space-page) pt-[calc(var(--space-page)+env(safe-area-inset-top))] pb-[calc(var(--space-page)+env(safe-area-inset-bottom))]">
+    <main className="flex h-full items-center justify-center overflow-auto p-(--space-page) pt-[calc(var(--space-page)+env(safe-area-inset-top))] pb-[calc(var(--space-page)+env(safe-area-inset-bottom))]">
       <div className="flex w-full max-w-sm flex-col gap-6 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-6">
         <h1 className="flex items-center gap-3 font-display text-(length:--text-heading) font-bold tracking-wide">
           <TargetIcon className="text-(--color-accent)" />

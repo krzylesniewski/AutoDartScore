@@ -4,6 +4,7 @@
  * Fonty idą lokalnie z @fontsource.
  */
 @import "../../../design/theme.css";
+@import "./scena-elements.css";
 
 /* Bez palety Tailwinda: kolory tylko ze zmiennych motywu. */
 @theme {
@@ -25,11 +26,11 @@
 }
 
 /*
- * Wysokość nad kołem klawiatury i pod nim od lg: nagłówek 65 px, górny odstęp main 24 px, panel tury 351 px,
+ * Wysokość nad kołem klawiatury i pod nim od lg: nagłówek 65 px, górny odstęp main 28 px, panel tury 351 px,
  * odstęp w kolumnie 12 px i dolny odstęp main 12 px. Bok koła to wysokość okna minus ta rezerwa.
  */
 :root {
-  --keypad-ring-reserve: 464px;
+  --keypad-ring-reserve: 468px;
 }
 
 /* dvh, bo pasek przeglądarki na telefonie zmienia wysokość okna. Bez tego pasek ze Startem chowa się pod nim. */
