@@ -44,6 +44,15 @@ function previousRecord(previous: number | null): string {
   return previous === null ? '' : ` (było ${previous})`;
 }
 
+function pointsCount(count: number): string {
+  return `${count} ${plural(count, 'punkt', 'punkty', 'punktów')}`;
+}
+
+// Miejscownik: w 1 turze, w 2 turach, w 5 turach.
+function inTurns(count: number): string {
+  return `${count} ${count === 1 ? 'turze' : 'turach'}`;
+}
+
 // Wszystkie teksty widoczne dla użytkownika.
 export const pl = {
   newGame: 'Nowa gra',
@@ -399,4 +408,24 @@ export const pl = {
   zeroComments: 'Komentarze do zera',
   zeroCommentsOn: 'włączone',
   zeroCommentsOff: 'wyłączone',
+  turnHistory: 'Historia tur',
+  turnHistorySubtitle: 'po turze (punkty w turze)',
+  turnHistoryCaption: 'Historia tur: wynik po turze i punkty w turze',
+  turnColumn: 'Tura',
+  legRun: 'Przebieg lega',
+  legRunSubtitle: 'punkty w turze i wynik po turze',
+  rowPoints: 'Punkty',
+  rowRemaining: 'Zostało',
+  sessionRun: 'Przebieg sesji',
+  sessionRunSubtitle: 'rzutki i punkty w turze',
+  legDarts: 'Rzutek w legu',
+  legBusts: 'Busty',
+  turnsToggle: 'Tury',
+  closeTurnHistory: 'Zamknij historię tur',
+  outOfQueue: 'poza kolejką',
+  lastTurnBust: 'Ostatnia tura: bust',
+  knockedOff: (points: number, turns: number) => `▼ ${points} w ${inTurns(turns)}`,
+  knockedOffLabel: (points: number, turns: number) => `Zbite ${pointsCount(points)} w ${inTurns(turns)}`,
+  lastTurnPoints: (points: number) => `▼ ${points}`,
+  lastTurnLabel: (points: number) => `Ostatnia tura: ${pointsCount(points)}`,
 } as const;

@@ -1,7 +1,7 @@
 import '../theme.css';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot } from '../test/snapshots';
+import { casual, checkoutHistory, checkoutPractice, checkoutSession, legTurn, player, snapshot } from '../test/snapshots';
 import { Scoreboard } from './Scoreboard';
 
 const THROWING = 'rzuca teraz · rzutka 1 z 3';
@@ -266,5 +266,104 @@ describe('Scoreboard', () => {
     expect(thrower.classList).toContain('sc-avatar--current');
     expect(thrower.style.getPropertyValue('--sc-avatar-color')).toBe('var(--color-avatar-7)');
     expect(screen.getByText('🦊').classList).not.toContain('sc-avatar--current');
+  });
+});
+
+describe('Scoreboard leg info', () => {
+  // Anna rzuca trzecią turę: 60 i 71 zbite. Bartek ma za sobą jedną turę.
+  function midLeg(bartekLast = legTurn('p2', { points: 60, remainingAfter: 441 })) {
+    return snapshot({
+      currentPlayerId: 'p1',
+      players: [player('p1', 'Anna', { remaining: 370, legsWon: 0 }), player('p2', 'Bartek', { remaining: bartekLast.remainingAfter ?? 501, legsWon: 0 })],
+      legTurns: [legTurn('p1', { points: 60, remainingAfter: 441 }), bartekLast, legTurn('p1', { points: 71, remainingAfter: 370 })],
+    });
+  }
+
+  function row(name: string): HTMLElement {
+    return screen.getByText(name).closest('li') as HTMLElement;
+  }
+
+  it('shows the points knocked off on the thrower card with a screen reader text', () => {
+    render(<Scoreboard state={midLeg()} size="large" />);
+    const visible = within(row('Anna')).getByText('▼ 131 w 2 turach');
+    expect(visible.getAttribute('aria-hidden')).toBe('true');
+    const label = within(row('Anna')).getByText('Zbite 131 punktów w 2 turach');
+    expect(label.className.split(' ')).toContain('sr-only');
+  });
+
+  it('puts the knocked-off line next to the big score from lg and under the bar below lg', () => {
+    render(<Scoreboard state={midLeg()} size="large" />);
+    const line = within(row('Anna')).getByText('▼ 131 w 2 turach').parentElement as HTMLElement;
+    expect(line.className.split(' ')).toEqual(expect.arrayContaining(['row-start-3', 'lg:row-start-2', 'lg:self-end', 'text-(--color-text)']));
+  });
+
+  it("shows the last turn of a waiting player after the next player's label", () => {
+    render(<Scoreboard state={midLeg()} size="large" />);
+    const bartek = row('Bartek');
+    expect(within(bartek).getByText('następny')).toBeTruthy();
+    expect(within(bartek).getByText('▼ 60').getAttribute('aria-hidden')).toBe('true');
+    expect(within(bartek).getByText('Ostatnia tura: 60 punktów').className.split(' ')).toContain('sr-only');
+  });
+
+  it('shows the last turn alone for a waiting player who is not next', () => {
+    const state = casual(['Anna', 'Bartek', 'Celina'], {
+      currentPlayerId: 'p1',
+      legTurns: [legTurn('p1'), legTurn('p2', { points: 45, remainingAfter: 456 }), legTurn('p3', { points: 26, remainingAfter: 475 })],
+    });
+    render(<Scoreboard state={state} size="large" />);
+    const celina = row('Celina');
+    expect(within(celina).queryByText('następny')).toBeNull();
+    expect(within(celina).getByText('▼ 26')).toBeTruthy();
+  });
+
+  it('shows the bust icon and Bust after a bust, read as the last turn bust', () => {
+    render(<Scoreboard state={midLeg(legTurn('p2', { bust: true, remainingAfter: 501 }))} size="large" />);
+    const bartek = row('Bartek');
+    const bust = within(bartek).getByText('Bust');
+    expect(bust.getAttribute('aria-hidden')).toBe('true');
+    expect(bust.querySelector('svg')).toBeTruthy();
+    expect(within(bartek).getByText('Ostatnia tura: bust').className.split(' ')).toContain('sr-only');
+    expect(within(bartek).queryByText(/^▼/)).toBeNull();
+  });
+
+  it('shows nothing before the first closed turn', () => {
+    render(<Scoreboard state={snapshot({ currentDarts: [{ segment: 20, multiplier: 3 }] })} size="large" />);
+    expect(screen.queryByText(/▼/)).toBeNull();
+    expect(screen.queryByText(/^Zbite/)).toBeNull();
+    expect(screen.queryByText(/^Ostatnia tura/)).toBeNull();
+  });
+
+  it('shows nothing in Free run', () => {
+    const state = { ...freeRun(), legTurns: [legTurn('p1', { points: 85, remainingAfter: null })] };
+    render(<Scoreboard state={state} size="large" />);
+    expect(screen.queryByText(/▼/)).toBeNull();
+    expect(screen.queryByText(/^Zbite/)).toBeNull();
+  });
+
+  it('shows nothing in checkout practice', () => {
+    render(<Scoreboard state={checkoutPractice(checkoutSession(checkoutHistory([true])))} size="large" />);
+    expect(screen.queryByText(/▼/)).toBeNull();
+    expect(screen.queryByText(/^Zbite/)).toBeNull();
+  });
+
+  it('shows none of it in the compact size', () => {
+    render(<Scoreboard state={midLeg()} size="compact" />);
+    expect(screen.queryByText(/▼/)).toBeNull();
+    expect(screen.queryByText(/^Zbite/)).toBeNull();
+    expect(screen.queryByText(/^Ostatnia tura/)).toBeNull();
+  });
+
+  it('keeps the phone thrower row height with and without the knocked-off line', () => {
+    const { unmount } = render(<Scoreboard state={snapshot()} size="large" />);
+    const before = screen.getByRole('list').className;
+    unmount();
+    render(<Scoreboard state={midLeg()} size="large" />);
+    expect(before.split(' ')).toContain('[--row-current:100px]');
+    expect(screen.getByRole('list').className).toBe(before);
+  });
+
+  it('keeps the old phone thrower row height in the compact size', () => {
+    render(<Scoreboard state={snapshot()} size="compact" />);
+    expect(screen.getByRole('list').className.split(' ')).toContain('[--row-current:88px]');
   });
 });

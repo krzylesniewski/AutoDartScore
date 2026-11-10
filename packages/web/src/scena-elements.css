@@ -2,7 +2,7 @@
  * Elementy bazowe Sceny: scena (.sc-stage, .sc-stage__rings, .sc-stage__content), panel (.sc-panel),
  * przyciski (.sc-btn i warianty), przełącznik segmentowy (.sc-seg), karta gracza (.sc-player, .sc-avatar--current,
  * .sc-card-rings), pasek progresu (.sc-progress), pasek aplikacji (.sc-appbar, .sc-nav, .sc-clock, .sc-status),
- * sloty rzutek (.sc-slot), karta zamknięcia (.sc-checkout, .sc-route-chip, .sc-kbd--on-accent), klawisze (.sc-key--bull, .sc-chip)
+ * sloty rzutek (.sc-slot), kafelki statystyk lega (.sc-tiles, .sc-tile), karta zamknięcia (.sc-checkout, .sc-route-chip, .sc-kbd--on-accent), klawisze (.sc-key--bull, .sc-chip)
  * i pierścień fokusu.
  * Nazwy klas i wartości jak w design/scena/components/ (bundle.css i README.md komponentów).
  */
@@ -329,6 +329,23 @@
 
   .sc-slot--filled {
     background: var(--color-surface-soft);
+  }
+
+  .sc-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .sc-tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: 8px 12px;
+    border-radius: var(--radius-button);
+    background: var(--color-surface-softer);
+    box-shadow: var(--shadow-inset-line);
   }
 
   .sc-checkout {

@@ -1,5 +1,5 @@
 import type { Hit } from '@autoscore/schema';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
 import { useFrequentHits } from '../api/use-frequent-hits';
 import { useMatch } from '../api/use-match';
 import { useMatchSummary } from '../api/use-match-summary';
@@ -11,6 +11,7 @@ import { CheckoutPracticeSummary } from '../components/CheckoutPracticeSummary';
 import { EndPracticeDialog } from '../components/EndPracticeDialog';
 import { EventBanner } from '../components/EventBanner';
 import { Keypad } from '../components/Keypad';
+import { LegInfo } from '../components/LegInfo';
 import { MatchEndView } from '../components/MatchEndView';
 import { MatchHeader } from '../components/MatchHeader';
 import { MatchStatsPanel } from '../components/MatchStatsPanel';
@@ -46,6 +47,9 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const closeDialog = useCallback(() => setAbandoning(false), []);
   const [ending, setEnding] = useState(false);
   const closeEndDialog = useCallback(() => setEnding(false), []);
+  const [turnsOpen, setTurnsOpen] = useState(false);
+  const turnsButtonRef = useRef<HTMLButtonElement>(null);
+  const legInfoId = useId();
   const undoWindow = useUndoWindow(state);
   const checkouts = checkoutMode ? state.checkouts : null;
   const controls = state ? checkoutControls(state, connection === 'open') : { results: false, skip: false, undo: false };
@@ -117,6 +121,14 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const shownError = lockedByServer ? null : error;
   const undoCountdown = !undoLocked && undoWindow.secondsLeft !== null ? formatCountdown(undoWindow.secondsLeft) : null;
   const undoDisabled = busy || abandoned || ended || undoLocked;
+  const legInfoShown = state !== null && !checkoutMode;
+  // Poniżej lg otwarty panel lega zajmuje miejsce paska wyników, panelu tury i karty zamknięcia. Od lg przełącznik nic nie zmienia.
+  const hiddenByTurns = turnsOpen ? 'max-lg:hidden' : '';
+
+  function closeTurns(): void {
+    setTurnsOpen(false);
+    turnsButtonRef.current?.focus();
+  }
 
   if ((state?.type === 'match' || state?.type === 'casual') && state.finished) {
     return (
@@ -150,25 +162,38 @@ export function GameScreen({ matchId }: { matchId: string }) {
         onAbandon={() => setAbandoning(true)}
         onResume={sendResume}
         onEndPractice={() => setEnding(true)}
+        turns={legInfoShown ? { open: turnsOpen, controls: legInfoId, onToggle: () => setTurnsOpen(!turnsOpen), buttonRef: turnsButtonRef } : undefined}
       />
       {/* Opakowanie nie przewija się, więc baner poniżej lg trzyma się góry widocznego obszaru.
           Poniżej lg main jest kolumną flex, a prawa kolumna ma display: contents. Dok jest wtedy dzieckiem main.
           Sticky trzyma go na dole przez całe przewijanie, a mt-auto także wtedy, gdy treść jest krótsza niż ekran.
-          Karta zamknięcia jest w DOM raz: od lg na dole lewej kolumny, poniżej lg przez order między panelem tury a dokiem. */}
+          Karta zamknięcia jest w DOM raz: od lg na dole lewej kolumny, poniżej lg przez order między panelem tury a dokiem.
+          Od lg lewa kolumna przewija się sama, więc rosnąca historia tur nie przesuwa karty zamknięcia ani klawiatury.
+          Ujemny margines z równym paddingiem daje miejsce na cień karty rzucającego, który kontener przewijania by przyciął. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
         <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:grid-rows-[1fr_auto] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
-          <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
-            {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
-            {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
-            {checkouts && <CheckoutRecentAttempts session={checkouts} />}
+          <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1 lg:-mx-(--space-page) lg:-mt-1 lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:px-(--space-page) lg:pt-1 lg:pb-1">
+            <div className={`contents ${hiddenByTurns}`}>
+              {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
+              {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
+              {checkouts && <CheckoutRecentAttempts session={checkouts} />}
+            </div>
+            {/* Zamknięty panel zostaje w DOM poniżej lg, żeby aria-controls przycisku „Tury” wskazywało istniejący element. */}
+            {state && legInfoShown && (
+              <LegInfo state={state} id={legInfoId} onClose={closeTurns} className={`lg:min-h-[260px] lg:flex-1 ${turnsOpen ? '' : 'max-lg:hidden'}`} />
+            )}
           </div>
           {state && !checkoutMode && (
-            <div className="empty:hidden max-lg:order-1 max-lg:has-[>.invisible]:hidden lg:col-start-1 lg:row-start-2">
+            <div className={`empty:hidden max-lg:order-1 max-lg:has-[>.invisible]:hidden lg:col-start-1 lg:row-start-2 ${hiddenByTurns}`}>
               <CheckoutCard state={state} onCheckout={enterCheckout} disabled={keypadDisabled} />
             </div>
           )}
           <div className="contents lg:relative lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-(--space-6)">
-            {state && !checkoutMode && <TurnPanel state={state} lastTurn={lastTurn} />}
+            {state && !checkoutMode && (
+              <div className={`contents ${hiddenByTurns}`}>
+                <TurnPanel state={state} lastTurn={lastTurn} />
+              </div>
+            )}
             {checkouts && !ended && <CheckoutTargetCard session={checkouts} />}
             {/* Od lg komunikat o końcu treningu leży na górze prawej kolumny, więc podsumowanie zaczyna się pod nim. */}
             {checkouts && ended && (
