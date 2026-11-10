@@ -24,7 +24,7 @@ Decyzja autora z 2026-11-10: redesign jest nowym etapem 3 (dwie kamery to teraz 
 
 ## Do decyzji przed startem rolloutu
 
-1. **Kolejność etapów:** `CLAUDE.md` mówi „nie zaczynaj kolejnego etapu, dopóki poprzedni nie działa end-to-end”, a etap 2 stoi na C7 (czeka na nagrane i skalibrowane sesje). Czy etap 3 idzie równolegle do etapu 2 (wyjątek od zasady zapisany w `CLAUDE.md`)? Konflikty dotyczą głównie `packages/web`: panel rzutki `pending` z C5 i ekran kalibracji z C6 też trzeba będzie przenieść na nowy wygląd.
+1. **Kolejność etapów (rozstrzygnięte 2026-11-10):** etap 3 idzie równolegle z etapem 2, w osobnym rolloucie `autoscore-etap3`; wyjątek zapisany w `CLAUDE.md`. Konflikty dotyczą głównie `packages/web`: panel rzutki `pending` z C5 i ekran kalibracji z C6 też trzeba będzie przenieść na nowy wygląd.
 2. **Paleta:** „Scena+” ma paletę do wyboru w Tweaks. Która wersja jest docelowa (bazowa „Scena”: ciepła czerń, krem, czerwień tarczy)?
 3. **Karty:** „Scena” ma zaokrąglone karty (16 px), cienie i półprzezroczyste powierzchnie, a `CLAUDE.md` opisuje motyw A jako „kanciaste karty”. Po K1 opis motywu w `CLAUDE.md` trzeba zmienić na „Scena”.
 4. **Zakres makiet:** czy oprócz ekranów ze „Scena+” robimy w makietach także: grę 3-4 graczy (zabawa), trening (Free run, Solo 501, „Końcówki”), ustawienia, logowanie, dialogi (nowy gracz, porzucenie), rzutkę `pending` z kamery, widok kompaktowy (TV) i telefon 390 px?
