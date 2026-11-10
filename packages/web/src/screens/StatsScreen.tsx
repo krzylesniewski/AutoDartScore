@@ -1,7 +1,8 @@
 import type { MatchListItem, Player, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsRankings } from '@autoscore/schema';
-import { useEffect, useState, type DependencyList } from 'react';
+import { Fragment, useEffect, useState, type DependencyList } from 'react';
 import { ApiRequestError, getOverall, getPlayerForm, getPlayerStats, getRankings, listMatches, listPlayers } from '../api/client';
 import { AppNav } from '../components/AppNav';
+import { Avatar } from '../components/Avatar';
 import { FormChart } from '../components/FormChart';
 import { HeadToHeadPanel } from '../components/HeadToHeadPanel';
 import { MatchHistoryList } from '../components/MatchHistoryList';
@@ -31,15 +32,20 @@ type RankingView = StatsFilter | 'overall';
 
 const RANKING_VIEWS: readonly FilterOption<RankingView>[] = [...FILTERS, { value: 'overall', label: pl.filterOverall }];
 
-const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
-const choice = 'min-h-12 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-xl';
-// Poniżej sm przyciski filtra tworzą jeden pasek z przegródkami, jak Segmented w kreatorze gry.
-// Bez min-w-0 przycisk nie jest węższy od etykiety, a pięć przycisków przewija się w pasku zamiast przycinać.
-const segment =
-  'max-sm:flex-1 max-sm:whitespace-nowrap max-sm:rounded-none max-sm:border-0 max-sm:border-(--color-border) max-sm:px-2 max-sm:text-lg max-sm:not-first:border-l-(length:--border-width)';
+const label = 'font-display text-[15px] font-bold tracking-[0.18em] text-(--color-text-muted) uppercase';
+const title = 'font-display text-[length:clamp(2.5rem,10vw,4rem)] leading-[0.9] font-black tracking-[0.01em]';
+const panelHeading = 'font-display text-[26px] leading-tight font-extrabold';
+// Poniżej sm przyciski filtra dzielą szerokość paska. Bez min-w-0 przycisk nie jest węższy od etykiety,
+// a pięć przycisków przewija się w pasku zamiast przycinać.
+const segment = 'min-h-12 whitespace-nowrap rounded-(--radius-button) px-5 font-display text-xl max-sm:flex-1 max-sm:px-3 max-sm:text-lg';
+const selectedStyle = 'bg-(--color-text) font-extrabold text-(--color-text-inverse) shadow-(--shadow-selected)';
 
-function choiceStyle(selected: boolean): string {
-  return `${choice} ${selected ? 'border-(--color-text) bg-(--color-text) text-(--color-text-inverse)' : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text)'}`;
+function segmentStyle(selected: boolean): string {
+  return `${segment} ${selected ? selectedStyle : 'bg-transparent font-bold text-(--color-text)'}`;
+}
+
+function chipStyle(selected: boolean): string {
+  return `flex min-h-11 max-w-full items-center gap-2 rounded-(--radius-button) pr-4 pl-2 font-display text-[19px] ${selected ? selectedStyle : 'bg-(--color-surface-soft) font-bold text-(--color-text) shadow-(--shadow-inset-line)'}`;
 }
 
 function statsHref(playerId: string): string {
@@ -105,15 +111,21 @@ interface FilterButtonsProps<T extends string> {
   options: readonly FilterOption<T>[];
   filter: T;
   onChange(filter: NoInfer<T>): void;
+  labelledBy: string;
+  // Opcja, przed którą stoi kreska oddzielająca, np. Overall jako widok, a nie filtr.
+  dividerBefore?: NoInfer<T>;
 }
 
-function FilterButtons<T extends string>({ options, filter, onChange }: FilterButtonsProps<T>) {
+function FilterButtons<T extends string>({ options, filter, onChange, labelledBy, dividerBefore }: FilterButtonsProps<T>) {
   return (
-    <div className="flex flex-wrap gap-2.5 max-sm:w-full max-sm:flex-nowrap max-sm:gap-0 max-sm:overflow-x-auto max-sm:rounded-(--radius-card) max-sm:border-(length:--border-width) max-sm:border-(--color-border-strong)">
+    <div role="group" aria-labelledby={labelledBy} className="sc-seg w-fit flex-wrap max-sm:w-full max-sm:flex-nowrap max-sm:overflow-x-auto">
       {options.map((option) => (
-        <button key={option.value} type="button" aria-pressed={filter === option.value} onClick={() => onChange(option.value)} className={`${choiceStyle(filter === option.value)} ${segment}`}>
-          {option.label}
-        </button>
+        <Fragment key={option.value}>
+          {option.value === dividerBefore && <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-(--color-border)" />}
+          <button type="button" aria-pressed={filter === option.value} onClick={() => onChange(option.value)} className={segmentStyle(filter === option.value)}>
+            {option.label}
+          </button>
+        </Fragment>
       ))}
     </div>
   );
@@ -133,21 +145,21 @@ function Ranking() {
   const data = useLoaded<RankingData>(() => loadView(view), pl.statsFailed, [view]);
 
   return (
-    <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 pt-4 pb-6 sm:px-8 lg:px-12 lg:pt-7 lg:pb-8 xl:overflow-hidden">
+    <main className="flex min-h-0 flex-1 flex-col gap-(--space-6) overflow-auto px-4 pt-4 pb-6 sm:px-8 lg:px-(--space-page) lg:pt-6 xl:overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-4 sm:gap-8">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="font-display text-[length:clamp(2.5rem,10vw,3.5rem)] leading-none font-bold uppercase">{pl.stats}</h1>
+        <div className="flex flex-col gap-2">
+          <h1 className={title}>{pl.stats}</h1>
           {data.status === 'ready' && (
-            <p className="text-[17px] text-(--color-text-muted)">
+            <p className="text-[17px] text-(--color-text-sub)">
               {data.value.view === 'overall' ? pl.overallSubtitle : pl.rankingSubtitle(data.value.rankings.games, data.value.rankings.legs)}
             </p>
           )}
         </div>
-        <section aria-labelledby="ranking-filter" className="flex flex-col gap-2.5 max-sm:w-full">
-          <h2 id="ranking-filter" className={label}>
+        <section aria-labelledby="ranking-filter" className="flex flex-col gap-2 max-sm:w-full sm:items-end">
+          <h2 id="ranking-filter" className={`${label} sm:mr-1.5`}>
             {pl.gameType}
           </h2>
-          <FilterButtons options={RANKING_VIEWS} filter={view} onChange={setView} />
+          <FilterButtons options={RANKING_VIEWS} filter={view} onChange={setView} labelledBy="ranking-filter" dividerBefore="overall" />
         </section>
       </div>
       {data.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
@@ -200,13 +212,13 @@ function PlayerCard({ playerId }: { playerId: string }) {
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-auto">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-4 sm:gap-6 sm:p-6">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-4 sm:gap-6 sm:p-6 xl:max-w-none xl:px-(--space-page)">
         <div className="flex flex-wrap items-baseline justify-between gap-4 max-sm:flex-col max-sm:items-start max-sm:gap-2">
-          <a href={RANKING_HREF} className="inline-flex min-h-11 items-center gap-1 font-display text-xl font-semibold uppercase text-(--color-text) underline sm:order-last">
+          <a href={RANKING_HREF} className="inline-flex min-h-11 items-center gap-1 font-display text-xl font-bold text-(--color-text-sub) underline underline-offset-4 sm:order-last">
             <span aria-hidden="true" className="sm:hidden">←</span>
             {pl.ranking}
           </a>
-          <h1 className="font-display text-[length:clamp(2.25rem,9vw,3rem)] leading-none font-bold uppercase">{pl.stats}</h1>
+          <h1 className={title}>{pl.stats}</h1>
         </div>
 
         {current && <PlayerProfile player={current} onChanged={() => setVersion((value) => value + 1)} />}
@@ -217,7 +229,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
           {players.status === 'error' && <ErrorText text={players.message} />}
           {players.status === 'ready' && players.value.length === 0 && <p className="text-(--color-text-muted)">{pl.noPlayers}</p>}
           {players.status === 'ready' && (
-            <div className="flex flex-wrap gap-2 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1">
+            <div className="flex flex-wrap gap-2 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:p-1">
               {players.value.map((player) => (
                 <button
                   key={player.id}
@@ -226,11 +238,11 @@ function PlayerCard({ playerId }: { playerId: string }) {
                   onClick={() => {
                     window.location.hash = statsHref(player.id);
                   }}
-                  className={`${choiceStyle(player.id === playerId)} flex max-w-full items-center gap-2 max-sm:shrink-0`}
+                  className={`${chipStyle(player.id === playerId)} max-sm:shrink-0`}
                 >
-                  {player.avatar && <span aria-hidden="true">{player.avatar}</span>}
+                  <Avatar name={player.name} avatar={player.avatar} color={player.color} />
                   <span className="min-w-0 truncate">{player.name}</span>
-                  {player.archivedAt !== null && <span className="text-base text-(--color-text-muted) uppercase">{pl.archived}</span>}
+                  {player.archivedAt !== null && <span className="text-base font-semibold opacity-75">{pl.archived}</span>}
                 </button>
               ))}
             </div>
@@ -238,34 +250,43 @@ function PlayerCard({ playerId }: { playerId: string }) {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className={label}>{pl.statsFilter}</h2>
-          <FilterButtons options={FILTERS} filter={filter} onChange={setFilter} />
-        </section>
-
-        <StatsCard stats={stats} />
-
-        <section aria-labelledby="player-form" className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 id="player-form" className={label}>
-              {pl.form}
-            </h2>
-            <span className="text-[15px] text-(--color-text-muted)">{pl.formSubtitle}</span>
-          </div>
-          {form.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
-          {form.status === 'error' && <ErrorText text={form.message} />}
-          {form.status === 'ready' && <FormChart points={form.value.points} />}
-        </section>
-
-        {current && <HeadToHeadPanel key={playerId} player={current} opponents={known.filter((player) => player.id !== playerId)} />}
-
-        <section aria-labelledby="player-history" className="flex flex-col gap-2">
-          <h2 id="player-history" className={label}>
-            {pl.playerHistory}
+          <h2 id="stats-filter" className={label}>
+            {pl.statsFilter}
           </h2>
-          {history.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
-          {history.status === 'error' && <ErrorText text={history.message} />}
-          {history.status === 'ready' && <MatchHistoryList games={history.value} now={new Date()} />}
+          <FilterButtons options={FILTERS} filter={filter} onChange={setFilter} labelledBy="stats-filter" />
         </section>
+
+        {/* Na monitorze dwie kolumny jak w makiecie, niżej jedna w tej samej kolejności. */}
+        <div className="flex flex-col gap-5 sm:gap-6 xl:grid xl:grid-cols-[minmax(0,9fr)_minmax(0,7fr)] xl:items-start">
+          <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
+            <StatsCard stats={stats} />
+
+            <section aria-labelledby="player-form" className="sc-panel">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 id="player-form" className={panelHeading}>
+                  {pl.form}
+                </h2>
+                <span className="text-sm text-(--color-text-muted)">{pl.formSubtitle}</span>
+              </div>
+              {form.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
+              {form.status === 'error' && <ErrorText text={form.message} />}
+              {form.status === 'ready' && <FormChart points={form.value.points} />}
+            </section>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
+            {current && <HeadToHeadPanel key={playerId} player={current} opponents={known.filter((player) => player.id !== playerId)} />}
+
+            <section aria-labelledby="player-history" className="sc-panel sc-panel--flat gap-2.5">
+              <h2 id="player-history" className={panelHeading}>
+                {pl.playerHistory}
+              </h2>
+              {history.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
+              {history.status === 'error' && <ErrorText text={history.message} />}
+              {history.status === 'ready' && <MatchHistoryList games={history.value} now={new Date()} />}
+            </section>
+          </div>
+        </div>
       </div>
     </main>
   );
@@ -281,17 +302,18 @@ function StatsCard({ stats }: { stats: Loaded<PlayerStats> }) {
   if (stats.value.dartsThrown === 0) {
     return <p className="font-display text-2xl text-(--color-text-muted)">{pl.noThrows}</p>;
   }
+  // Na telefonie jedna lista w płaskim panelu, od sm osobne kafelki.
   return (
-    <dl className="grid grid-cols-1 gap-x-6 gap-y-3 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) p-5 max-sm:gap-y-0 sm:grid-cols-3">
+    <dl className="grid grid-cols-1 max-sm:rounded-(--radius-card) max-sm:bg-(--color-surface-softer) max-sm:px-5 max-sm:py-1 max-sm:shadow-(--shadow-inset-line) sm:grid-cols-3 sm:gap-2.5 xl:grid-cols-4">
       {statItems(stats.value).map(({ term, value, detail }) => (
         <div
           key={term}
-          className="flex flex-col gap-1 max-sm:flex-row max-sm:items-baseline max-sm:justify-between max-sm:gap-4 max-sm:border-b max-sm:border-(--color-border) max-sm:py-2.5 max-sm:last:border-b-0"
+          className="flex flex-col gap-1 max-sm:flex-row max-sm:items-baseline max-sm:justify-between max-sm:gap-4 max-sm:border-b max-sm:border-(--color-border) max-sm:py-2.5 max-sm:last:border-b-0 sm:min-h-20 sm:justify-between sm:rounded-(--radius-card) sm:bg-(--color-surface-softer) sm:px-4.5 sm:py-3 sm:shadow-(--shadow-inset-line)"
         >
-          <dt className={`min-w-0 ${label}`}>{term}</dt>
-          <dd className="font-display text-3xl font-bold whitespace-nowrap tabular-nums max-sm:shrink-0 max-sm:text-right max-sm:text-2xl">
+          <dt className="min-w-0 font-display text-sm font-bold tracking-(--tracking-label) text-(--color-text-muted) uppercase">{term}</dt>
+          <dd className="font-display text-[32px] leading-none font-extrabold whitespace-nowrap tabular-nums max-sm:shrink-0 max-sm:text-right max-sm:text-2xl">
             {value}
-            {detail && <span className="max-sm:block max-sm:text-base max-sm:font-normal max-sm:text-(--color-text-muted)"> {detail}</span>}
+            {detail && <span className="text-lg font-semibold text-(--color-text-muted) max-sm:block max-sm:text-base max-sm:font-normal"> {detail}</span>}
           </dd>
         </div>
       ))}
@@ -301,8 +323,8 @@ function StatsCard({ stats }: { stats: Loaded<PlayerStats> }) {
 
 function ErrorText({ text }: { text: string }) {
   return (
-    <p className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
-      <WarningIcon />
+    <p className="flex items-center gap-2 font-display text-xl text-(--color-text)">
+      <WarningIcon className="text-(--color-accent)" />
       {text}
     </p>
   );

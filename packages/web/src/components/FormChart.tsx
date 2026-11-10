@@ -10,7 +10,7 @@ export interface FormChartProps {
 const SIZE = { width: 600, height: 180, padding: 14 };
 
 // Liczby osi są w HTML, bo tekst w SVG z preserveAspectRatio="none" rozciągnąłby się razem z wykresem.
-const axisNumber = 'font-display text-sm leading-none text-(--color-text-muted) tabular-nums sm:text-base';
+const axisNumber = 'font-display text-sm leading-none font-semibold text-(--color-text-muted) tabular-nums sm:text-base';
 
 function percent(value: number, total: number): string {
   return `${(value / total) * 100}%`;
@@ -53,14 +53,22 @@ export function FormChart({ points }: FormChartProps) {
         aria-label={pl.formChart(points.length, formatAverage(last))}
         viewBox={`0 0 ${SIZE.width} ${SIZE.height}`}
         preserveAspectRatio="none"
-        className="block h-44 w-full min-w-0 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-bg)"
+        className="block h-44 w-full min-w-0 rounded-[10px] bg-(--color-bg)/55"
       >
         {chart.grid.map((tick) => (
           <line key={tick.value} x1={0} x2={SIZE.width} y1={tick.position} y2={tick.position} className="stroke-(--color-border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
         ))}
-        {chart.path && <path d={chart.path} className="fill-none stroke-(--color-accent)" strokeWidth={3} vectorEffect="non-scaling-stroke" />}
+        {chart.path && <path d={chart.path} className="fill-none stroke-(--color-accent)" strokeWidth={3} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
         {chart.points.map((point, index) => (
-          <circle key={points[index]?.matchId ?? index} cx={point.x} cy={point.y} r={5} className="fill-(--color-accent)" />
+          <circle
+            key={points[index]?.matchId ?? index}
+            cx={point.x}
+            cy={point.y}
+            r={5}
+            className="fill-(--color-accent) stroke-(--color-surface)"
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
+          />
         ))}
       </svg>
       <div aria-hidden="true" className="relative col-start-2">
