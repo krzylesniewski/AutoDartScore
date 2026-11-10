@@ -56,7 +56,7 @@ function gameLabelStep(count: number): number {
 }
 
 // Współrzędne SVG: y rośnie w dół, więc najwyższa średnia ma najmniejsze y. Skala biegnie od dolnej do górnej linii siatki.
-// Siatka poszerza się o krok w obie strony naraz, więc równe wartości leżą na środku wysokości, chyba że dolna linia oprze się o 0.
+// Przy za małej liczbie linii siatka poszerza się o krok w obie strony naraz. Równe wartości leżą wtedy na środkowej linii albo między dwiema środkowymi, chyba że dolna linia oprze się o 0.
 export function formChart(values: readonly number[], { width, height, padding }: ChartSize): FormChartLayout {
   if (values.length === 0) {
     return { points: [], min: null, max: null, low: null, high: null, grid: [], gameLabels: [], path: '' };
