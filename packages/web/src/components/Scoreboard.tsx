@@ -29,8 +29,11 @@ interface LayoutClasses {
   currentDots: string;
   bar: string;
   counter: string;
+  counterItem: string;
   counterTerm: string;
   counterValue: string;
+  counterPrimary: string;
+  counterPrimaryValue: string;
   waitingCard: string;
   waitingRings: string | null;
   waitingName: string;
@@ -55,8 +58,11 @@ const PHONE: LayoutClasses = {
   currentDots: 'size-3',
   bar: 'row-start-2',
   counter: 'gap-3',
+  counterItem: 'items-end',
   counterTerm: 'text-[12px]',
   counterValue: 'text-[22px]',
+  counterPrimary: 'items-end',
+  counterPrimaryValue: 'text-[22px]',
   waitingCard: 'gap-x-2.5 gap-y-1 px-3.5 py-1.5',
   waitingRings: null,
   waitingName: 'text-xl',
@@ -77,9 +83,12 @@ const LG_SHARED = {
   currentScore: 'lg:text-[clamp(72px,28cqi,128px)]',
   currentDots: 'lg:size-[13px]',
   bar: 'lg:row-start-3',
-  counter: 'lg:gap-5',
+  counter: 'lg:items-end lg:gap-5.5',
+  counterItem: 'lg:mb-3.5 lg:items-start lg:gap-1',
   counterTerm: 'lg:text-(length:--text-label)',
-  counterValue: 'lg:text-[34px]',
+  counterValue: 'lg:text-[30px] lg:font-extrabold',
+  counterPrimary: 'lg:gap-1.5',
+  counterPrimaryValue: 'lg:text-[clamp(72px,28cqi,128px)] lg:leading-[0.82] lg:font-extrabold',
   waitingDots: 'lg:size-[11px]',
   placedName: 'lg:text-[22px]',
 };
@@ -357,9 +366,9 @@ type CounterItems = readonly (readonly [term: string, value: string])[];
 
 function freeRunItems(freeRun: NonNullable<MatchSnapshot['freeRun']>): CounterItems {
   return [
-    [pl.total, String(freeRun.totalPoints)],
     [pl.dartsThrown, String(freeRun.dartsThrown)],
     [pl.average, formatDecimal(freeRun.average, 1)],
+    [pl.total, String(freeRun.totalPoints)],
   ];
 }
 
@@ -372,15 +381,23 @@ function checkoutItems(session: NonNullable<MatchSnapshot['checkouts']>): Counte
 }
 
 // Licznik sesji w miejscu pozostałego wyniku, w treningach bez wyniku.
+// Ostatnia pozycja jest główna: od lg ma rozmiar pozostałego wyniku, a dwie pozostałe stoją małe po jej lewej.
 function SessionCounter({ items, layout }: { items: CounterItems; layout: Layout }) {
   return (
     <dl className={`flex shrink-0 font-display ${classes(layout, 'counter')}`}>
-      {items.map(([term, value]) => (
-        <div key={term} className="flex flex-col items-end">
-          <dt className={`leading-tight uppercase tracking-(--tracking-label) text-(--color-text-muted) ${classes(layout, 'counterTerm')}`}>{term}</dt>
-          <dd className={`leading-none font-bold tabular-nums ${classes(layout, 'counterValue')}`}>{value}</dd>
-        </div>
-      ))}
+      {items.map(([term, value], index) => {
+        const primary = index === items.length - 1;
+        return (
+          <div key={term} className={`flex flex-col ${classes(layout, primary ? 'counterPrimary' : 'counterItem')}`}>
+            <dt className={`leading-tight uppercase tracking-(--tracking-label) text-(--color-text-muted) ${classes(layout, 'counterTerm')}`}>{term}</dt>
+            <dd
+              className={`leading-none font-bold tabular-nums ${primary && layout.lg ? 'sc-player__value ' : ''}${classes(layout, primary ? 'counterPrimaryValue' : 'counterValue')}`}
+            >
+              {value}
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }

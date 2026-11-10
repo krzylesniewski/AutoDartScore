@@ -4,6 +4,8 @@ import { suggestCheckout } from '../game/checkout';
 import { formatCheckoutPercent } from '../game/checkout-practice';
 import { hitLabel } from '../game/hit-label';
 import { pl } from '../i18n/pl';
+import { CardRings } from './CardRings';
+import { CornerRings } from './CornerRings';
 import { BustIcon, CheckIcon, ShuffleIcon, UndoIcon } from './icons';
 import { KeypadKey, type KeypadKeyHandle, type KeypadKeyTone } from './KeypadKey';
 import { ROUTE_CHIP } from './CheckoutCard';
@@ -11,30 +13,51 @@ import { useCheckoutShortcuts } from './use-checkout-shortcuts';
 
 const RECENT_COUNT = 5;
 
-const card = 'rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface)';
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
+const raisedFill = 'bg-linear-to-b from-(--color-surface-raised) to-(--color-surface)';
+// Jak na karcie zamknięcia ekranu gry: biały tekst na jasnym końcu gradientu wymaga pogrubienia i co najmniej 19 px.
+const ROUTE_LABEL = 'relative font-display text-[19px] leading-none font-bold tracking-[0.16em] whitespace-nowrap uppercase';
 const resultButton =
-  'flex min-h-(--button-height) items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-3 py-2 text-center font-display text-[22px] leading-tight font-bold disabled:opacity-40 lg:min-h-24 lg:text-(length:--text-heading)';
-const failureTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text)', border: 'border-(--color-accent)' };
-const failurePressedTone: KeypadKeyTone = { fill: 'bg-(--color-surface-active) text-(--color-text)', border: 'border-(--color-accent)' };
+  'flex min-h-(--button-height) items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-3 py-2 text-center font-display text-[22px] leading-tight font-extrabold disabled:opacity-40 lg:min-h-28 lg:gap-3.5 lg:text-4xl';
+// Gradient i cień siedzą w tonie, bo wciśnięty klawisz podmienia całe wypełnienie.
+const failureTone: KeypadKeyTone = { fill: `${raisedFill} text-(--color-text) shadow-(--shadow-key)`, border: 'border-(--color-accent)' };
+const failurePressedTone: KeypadKeyTone = { fill: 'bg-(--color-surface-raised) text-(--color-text) shadow-(--shadow-key)', border: 'border-(--color-accent)' };
 // Wciśnięty zostaje kremowy, jak wybrany mnożnik na klawiaturze rzutek.
-const successTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse)', border: 'border-(--color-text)' };
+const successTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse) shadow-(--shadow-selected)', border: 'border-(--color-text)' };
+// Jak klawisz „Reszta tury”: przezroczysta ramka zostaje w spoczynku, żeby błysk akcentu nie przesuwał treści.
 const secondaryButton =
-  'flex min-h-12 items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-3 font-display text-(length:--text-button) font-semibold disabled:opacity-40';
-const undoTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--color-text)', border: 'border-(--color-border-strong)' };
+  'flex min-h-12 items-center justify-center gap-2 rounded-(--radius-button) border-(length:--border-width) px-3 font-display text-lg leading-none font-semibold shadow-(--shadow-outline) disabled:opacity-40 sm:text-[22px] lg:min-h-16 lg:gap-2.5';
+const secondaryTone: KeypadKeyTone = { fill: 'bg-transparent text-(--color-text)', border: 'border-transparent' };
 
 export function CheckoutTargetCard({ session }: { session: CheckoutSession }) {
   const id = useId();
   const route = suggestCheckout(session.target, 3);
-  // Padding od lg jest dobrany do największego chipa trasy (52 px), żeby przyciski treningu pod kartą nie zmieniały miejsca.
+  // Od lg karta wypełnia wolną wysokość kolumny, więc przyciski treningu pod nią nie zmieniają miejsca przy kolejnych celach.
+  // overflow-hidden zeruje minimalną wysokość elementu flex, więc bez shrink-0 kolumna telefonu ściskałaby kartę i blok trasy.
   return (
-    <section aria-labelledby={id} className={`@container flex flex-col items-center gap-2 px-4 py-3 sm:gap-3 lg:gap-5 lg:py-9 ${card}`}>
-      <h2 id={id} className={label}>
+    <section
+      aria-labelledby={id}
+      className={`@container relative flex shrink-0 flex-col items-center justify-center gap-3 overflow-hidden rounded-(--radius-panel) px-4 py-4 shadow-(--shadow-panel) sm:gap-4 lg:min-h-0 lg:flex-1 lg:gap-5 lg:p-7 ${raisedFill}`}
+    >
+      <CornerRings className="-top-20 -right-20 size-60 lg:-top-30 lg:-right-30 lg:size-105" />
+      <h2 id={id} className={`relative ${label}`}>
         {pl.checkoutTarget}
       </h2>
-      <p className="font-display text-[clamp(64px,24cqi,200px)] leading-none font-bold tabular-nums">{session.target}</p>
-      {route && <p className={ROUTE_CHIP}>{route.map(hitLabel).join(' ')}</p>}
-      <p className="font-display text-xl text-(--color-text-muted) tabular-nums lg:text-2xl">
+      <p className="relative font-display text-[clamp(64px,24cqi,200px)] leading-[0.8] font-extrabold tabular-nums">{session.target}</p>
+      {route && (
+        <div className="sc-checkout flex max-w-full shrink-0 flex-col items-center gap-2.5 px-4 pt-3 pb-4 lg:px-5.5 lg:pt-4 lg:pb-5">
+          <CardRings className="-top-12 -right-12 size-40 text-(--color-on-accent) opacity-(--opacity-checkout-rings)" />
+          <span className={ROUTE_LABEL}>{pl.checkoutInDarts(route.length)}</span>
+          <span className="relative flex flex-nowrap gap-3">
+            {route.map((hit, index) => (
+              <span key={index} className={ROUTE_CHIP}>
+                {hitLabel(hit)}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
+      <p className="relative font-display text-xl font-bold text-(--color-text-sub) tabular-nums lg:text-[26px]">
         {pl.checkoutCounter(session.successes, session.attempts, formatCheckoutPercent(session))}
       </p>
     </section>
@@ -114,7 +137,7 @@ export function CheckoutActions({ resultsDisabled, skipDisabled, undoDisabled, b
           title={pl.checkoutSkipShortcut}
           shortcut={{ keys: 'N', label: 'N' }}
           className={secondaryButton}
-          idleTone={undoTone}
+          idleTone={secondaryTone}
         >
           <ShuffleIcon />
           {pl.checkoutSkip}
@@ -128,7 +151,7 @@ export function CheckoutActions({ resultsDisabled, skipDisabled, undoDisabled, b
           title={pl.undoShortcut}
           shortcut={{ keys: 'Backspace', label: pl.shortcutBackspace }}
           className={secondaryButton}
-          idleTone={undoTone}
+          idleTone={secondaryTone}
         >
           <UndoIcon />
           {pl.undo}
@@ -146,16 +169,19 @@ export function CheckoutRecentAttempts({ session }: { session: CheckoutSession }
     .slice(-RECENT_COUNT)
     .reverse();
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-2">
-      <h2 id={id} className={label}>
-        {pl.checkoutRecent}
-      </h2>
+    <section aria-labelledby={id} className="sc-panel sc-panel--flat gap-2.5">
+      <div className="flex items-baseline justify-between gap-3.5">
+        <h2 id={id} className="font-display text-[21px] leading-[1.1] font-extrabold">
+          {pl.checkoutRecent}
+        </h2>
+        <span className="text-[13px] text-(--color-text-muted)">{pl.checkoutRecentHint}</span>
+      </div>
       {recent.length === 0 ? (
-        <p className="h-39 text-(--color-text-muted) lg:h-58">{pl.checkoutNoAttempts}</p>
+        <p className="h-40 text-(--color-text-muted) lg:h-70">{pl.checkoutNoAttempts}</p>
       ) : (
-        <ol className="flex h-39 flex-col gap-1 lg:h-58 lg:gap-2">
+        <ol className="flex h-40 flex-col lg:h-70">
           {recent.map(({ attempt, number }) => (
-            <AttemptRow key={number} attempt={attempt} number={number} className="h-7 lg:h-10" />
+            <AttemptRow key={number} attempt={attempt} number={number} className="h-8 lg:h-14" />
           ))}
         </ol>
       )}
@@ -165,9 +191,9 @@ export function CheckoutRecentAttempts({ session }: { session: CheckoutSession }
 
 export function AttemptRow({ attempt, number, className }: { attempt: CheckoutAttempt; number: number; className: string }) {
   return (
-    <li className={`grid grid-cols-[3ch_4ch_1fr] items-center gap-3 border-b border-(--color-border) font-display text-lg lg:text-xl ${className}`}>
-      <span className="text-right text-(--color-text-muted) tabular-nums">{pl.checkoutAttemptNumber(number)}</span>
-      <span className="text-right font-bold tabular-nums">{attempt.target}</span>
+    <li className={`grid grid-cols-[3ch_4ch_1fr] items-center gap-3 border-t border-(--color-border) font-display tabular-nums ${className}`}>
+      <span className="text-right text-lg font-semibold text-(--color-text-muted) lg:text-[19px]">{pl.checkoutAttemptNumber(number)}</span>
+      <span className="text-right text-xl font-extrabold lg:text-[28px]">{attempt.target}</span>
       <AttemptResult success={attempt.success} />
     </li>
   );
@@ -175,12 +201,12 @@ export function AttemptRow({ attempt, number, className }: { attempt: CheckoutAt
 
 function AttemptResult({ success }: { success: boolean }) {
   return success ? (
-    <span className="flex items-center gap-2">
+    <span className="flex items-center gap-2 text-lg font-bold lg:text-xl">
       <CheckIcon className="text-(--color-status-ok)" />
       {pl.checkoutSuccess}
     </span>
   ) : (
-    <span className="flex items-center gap-2 text-(--color-text-muted)">
+    <span className="flex items-center gap-2 text-lg font-semibold text-(--color-text-muted) lg:text-xl">
       <BustIcon className="text-(--color-accent)" />
       {pl.checkoutFailure}
     </span>

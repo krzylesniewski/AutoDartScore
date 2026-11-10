@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { pl } from '../i18n/pl';
 import { checkoutHistory, checkoutSession } from '../test/snapshots';
 import { CheckoutActions, CheckoutRecentAttempts, CheckoutTargetCard, type CheckoutActionsProps } from './CheckoutPracticePanel';
 import { CheckoutPracticeSummary } from './CheckoutPracticeSummary';
@@ -57,7 +58,8 @@ describe('CheckoutTargetCard', () => {
     render(<CheckoutTargetCard session={checkoutSession(checkoutHistory(SEVEN_OF_TWELVE), { target: 100 })} />);
     const card = screen.getByRole('region', { name: 'Końcówka' });
     expect(within(card).getByText('100')).toBeTruthy();
-    expect(within(card).getByText('T20 D20')).toBeTruthy();
+    expect(within(card).getByText('T20')).toBeTruthy();
+    expect(within(card).getByText('D20')).toBeTruthy();
     expect(within(card).getByText('7 z 12 · 58%')).toBeTruthy();
   });
 
@@ -73,10 +75,19 @@ describe('CheckoutTargetCard', () => {
     expect(screen.getByText('64').className).toMatch(/text-\[clamp\(/);
   });
 
-  it('shows the route in the shared route chip and trims the padding from lg', () => {
+  it('shows one shared route chip per dart in an accent block and fills the column from lg', () => {
     render(<CheckoutTargetCard session={checkoutSession([], { target: 100 })} />);
-    expect(screen.getByText('T20 D20').className).toBe(ROUTE_CHIP);
-    expect(screen.getByRole('region', { name: 'Końcówka' }).className.split(' ')).toContain('lg:py-9');
+    const card = screen.getByRole('region', { name: 'Końcówka' });
+    const chips = [...card.querySelectorAll('span')].filter((span) => span.className === ROUTE_CHIP);
+    expect(chips.map((chip) => chip.textContent)).toEqual(['T20', 'D20']);
+    const block = within(card).getByText(pl.checkoutInDarts(2)).parentElement;
+    expect(block?.tagName).toBe('DIV');
+    expect(block?.className.split(' ')).toContain('sc-checkout');
+    for (const chip of chips) {
+      expect(block?.contains(chip)).toBe(true);
+    }
+    expect(card.className.split(' ')).toEqual(expect.arrayContaining(['lg:flex-1', 'lg:min-h-0', 'rounded-(--radius-panel)']));
+    expect(card.className.split(' ')).not.toContain('lg:py-9');
   });
 });
 
@@ -112,7 +123,7 @@ describe('CheckoutActions', () => {
   it('keeps the result buttons at least 56 px tall, taller from lg', () => {
     actions();
     for (const name of ['Udało się', 'Nie udało się']) {
-      expect(button(name).className.split(' ')).toEqual(expect.arrayContaining(['min-h-(--button-height)', 'lg:min-h-24']));
+      expect(button(name).className.split(' ')).toEqual(expect.arrayContaining(['min-h-(--button-height)', 'lg:min-h-28']));
     }
     expect(button('Cofnij').className.split(' ')).toContain('min-h-12');
     expect(button('Nowa końcówka').className).toBe(button('Cofnij').className);
@@ -285,11 +296,18 @@ describe('CheckoutRecentAttempts', () => {
     }
   });
 
+  it('keeps the region name without the newest-first hint', () => {
+    render(<CheckoutRecentAttempts session={checkoutSession()} />);
+    const region = screen.getByRole('region', { name: 'Ostatnie próby' });
+    expect(within(region).getByText('najnowsza na górze').closest('h2')).toBeNull();
+  });
+
   it('reserves the height of 5 rows from the first attempt', () => {
     const { rerender } = render(<CheckoutRecentAttempts session={checkoutSession()} />);
-    expect(screen.getByText('Brak prób').className.split(' ')).toEqual(expect.arrayContaining(['h-39', 'lg:h-58']));
+    expect(screen.getByText('Brak prób').className.split(' ')).toEqual(expect.arrayContaining(['h-40', 'lg:h-70']));
     rerender(<CheckoutRecentAttempts session={checkoutSession(checkoutHistory([true]))} />);
-    expect(screen.getByRole('list').className.split(' ')).toEqual(expect.arrayContaining(['h-39', 'lg:h-58']));
+    expect(screen.getByRole('list').className.split(' ')).toEqual(expect.arrayContaining(['h-40', 'lg:h-70']));
+    expect(screen.getByRole('listitem').className.split(' ')).toEqual(expect.arrayContaining(['h-8', 'lg:h-14']));
   });
 });
 

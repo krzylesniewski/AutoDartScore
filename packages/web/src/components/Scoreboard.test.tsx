@@ -112,6 +112,24 @@ describe('Scoreboard', () => {
     expect(screen.getByText('122,5')).toBeTruthy();
   });
 
+  it('puts Suma last as the big Free run value in the large size', () => {
+    render(<Scoreboard state={freeRun()} size="large" />);
+    const terms = screen.getAllByRole('term');
+    expect(terms.map((term) => term.textContent)).toEqual(['Rzutki', 'Średnia', 'Suma']);
+    const total = terms[2]?.nextElementSibling;
+    expect(total?.textContent).toBe('245');
+    expect(total?.className.split(' ')).toEqual(expect.arrayContaining(['sc-player__value', 'lg:text-[clamp(72px,28cqi,128px)]']));
+    expect(terms[0]?.nextElementSibling?.className.split(' ')).not.toContain('sc-player__value');
+  });
+
+  it('keeps all three Free run values small in the compact size', () => {
+    render(<Scoreboard state={freeRun()} size="compact" />);
+    for (const value of screen.getAllByRole('definition')) {
+      expect(value.className.split(' ')).not.toContain('sc-player__value');
+      expect(value.className).not.toContain('lg:');
+    }
+  });
+
   it('shows the attempt counter in checkout practice', () => {
     const results = [true, true, false, true, false, true, false, true, false, true, true, false];
     render(<Scoreboard state={checkoutPractice(checkoutSession(checkoutHistory(results)))} size="large" />);
