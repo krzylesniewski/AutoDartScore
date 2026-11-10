@@ -27,7 +27,7 @@ Decyzja autora z 2026-11-10: redesign jest nowym etapem 3 (dwie kamery to teraz 
 1. **Kolejność etapów (rozstrzygnięte 2026-11-10):** etap 3 idzie równolegle z etapem 2, w osobnym rolloucie `autoscore-etap3`; wyjątek zapisany w `CLAUDE.md`. Konflikty dotyczą głównie `packages/web`: panel rzutki `pending` z C5 i ekran kalibracji z C6 też trzeba będzie przenieść na nowy wygląd.
 2. **Paleta (rozstrzygnięte 2026-11-10):** bazowa „Scena”: ciepła czerń, krem, czerwień tarczy.
 3. **Karty (rozstrzygnięte 2026-11-10):** zaokrąglone jak w „Scenie” (18 px karty, 22 px panele), cienie i półprzezroczyste powierzchnie. Po K1 opis motywu w `CLAUDE.md` zmienia się z „kanciastych kart” motywu A na „Scena”.
-4. **Zakres makiet (rozstrzygnięte 2026-11-10): wszystkie ekrany.** Oprócz ekranów ze „Scena+” makiety obejmują: grę 3-4 graczy (zabawa), trening (Free run, Solo 501, „Końcówki”), ustawienia, logowanie, dialogi (nowy gracz, porzucenie), rzutkę `pending` z kamery, widok kompaktowy (TV) i telefon 390 px.
+4. **Zakres makiet (rozstrzygnięte 2026-11-10): wszystkie ekrany.** Oprócz ekranów ze „Scena+” makiety obejmują: grę 3-4 graczy (zabawa), trening (Free run, Solo 501, „Końcówki”), ustawienia, logowanie, dialogi (nowy gracz, porzucenie), rzutkę `pending` z kamery i telefon 390 px. Makieta widoku TV powstała, ale widok jest odłożony na później (niżej, „Poza zakresem”).
 5. **Dane do nowych informacji:** snapshot (`MatchSnapshot` w `packages/schema/src/match-api.ts`) ma tylko bieżącą turę (`currentDarts`), więc historia tur, zbite punkty i statystyki lega wymagają nowego pola w snapshocie liczonego w serwerze przez odtworzenie zdarzeń (zasada: statystyki z rzutek, nie z liczników). Rozstrzygnięte 2026-11-10: jedno pole `legTurns` w snapshocie (tury bieżącego lega: gracz, rzutki, wynik po turze, bust), liczone w serwerze z odtworzenia zdarzeń; front liczy z niego zbite punkty, najwyższą turę, liczbę rzutek i busty.
 
 ## Kroki
@@ -56,4 +56,4 @@ Decyzja autora z 2026-11-10: redesign jest nowym etapem 3 (dwie kamery to teraz 
 
 ## Poza zakresem
 
-Nowe tryby gry, zmiany zasad X01, zmiany w `vision`, jasny motyw, animacje poza obecną zamianą wierszy w pasku wyników.
+Nowe tryby gry, zmiany zasad X01, zmiany w `vision`, jasny motyw, animacje poza obecną zamianą wierszy w pasku wyników. Widok TV (drugi ekran) odłożony na później decyzją autora 2026-11-10 (`auto-score-dart-pomysly.md`, „Na później: widok TV”); w etapie 3 kompaktowy rozmiar paska wyników dostaje tylko nowy wygląd.

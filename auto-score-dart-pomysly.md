@@ -104,6 +104,10 @@ Ostateczny układ ekranu: sekcja "Front: decyzje". Poniżej wymagania ogólne.
 - **Przycisk "nowa runda"** (awaryjny reset, gdy kamera nie wykryje wyjęcia rzutek) i mały wskaźnik stanu kamery.
 - Duże elementy dotykowe i wysoki kontrast, bo gra toczy się w ruchu, z kilku metrów.
 
+### Na później: widok TV (drugi ekran)
+
+Odłożone decyzją autora 2026-11-10, poza etapem 3. Osobny ekran tej samej gry na telewizor na ścianie albo nakładkę na transmisję: kompaktowy pasek wyników (`Scoreboard` w rozmiarze `compact`, dziś nieużywany) z bardzo dużymi wynikami, bieżąca tura, ostatnia tura przeciwnika i karta zamknięcia tylko do patrzenia, bez klawiatury, z wyłączonym głosem. Wymaga nowej trasy w froncie (np. `#/tv/<matchId>`). Makieta w wyglądzie „Scena”: `E3GraTV` na kanwie https://claude.ai/artifact/Uw59Q2VKaZLe1R3CWH4Haq (strona „Etap 3”).
+
 ## Rzut do weryfikacji
 
 Opcja dla rzutek, których wynik jest niepewny. Powód: kamera (albo kilka detektorów) potrafi odczytać ten sam grot inaczej, zwłaszcza tuż przy drucie albo przy skupieniu rzutek (np. 5 vs 12, T20 vs 20).
