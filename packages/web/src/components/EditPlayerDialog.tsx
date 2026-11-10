@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ApiRequestError, updatePlayer } from '../api/client';
 import { pl } from '../i18n/pl';
 import { AvatarColorPicker } from './AvatarColorPicker';
+import { CornerRings } from './CornerRings';
 import { WarningIcon } from './icons';
 
 export interface EditPlayerDialogProps {
@@ -11,9 +12,8 @@ export interface EditPlayerDialogProps {
   onCancel(): void;
 }
 
-const button = 'flex h-(--button-height) items-center justify-center rounded-(--radius-card) border-(length:--border-width) px-5 font-display text-(length:--text-button) font-semibold disabled:opacity-40';
-const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
-const input = 'min-h-12 rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-bg) px-3 text-xl';
+const label = 'font-display text-(length:--text-label) font-bold uppercase tracking-[0.18em] text-(--color-text-muted)';
+const input = 'h-14 rounded-(--radius-button) border-0 bg-(--color-bg)/55 px-4 shadow-(--shadow-outline)';
 
 export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialogProps) {
   const titleId = useId();
@@ -64,13 +64,15 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex max-h-full w-full max-w-xl flex-col gap-4 overflow-y-auto rounded-(--radius-card) border-(length:--border-width) border-(--color-border-strong) bg-(--color-surface) p-6"
+        className="relative flex max-h-full w-full max-w-160 flex-col gap-5.5 overflow-x-hidden overflow-y-auto rounded-(--radius-panel) bg-linear-to-b from-(--color-surface-raised) to-(--color-surface) px-5 pt-6 pb-5 shadow-(--shadow-card) sm:px-8 sm:pt-7.5 sm:pb-7"
       >
-        <h2 id={titleId} className="font-display text-(length:--text-heading) font-bold uppercase">
+        {/* overflow-x-hidden przycina tarczę w rogu, żeby nie dodała przewijania w poziomie. */}
+        <CornerRings className="-top-20 -right-20 size-60" />
+        <h2 id={titleId} className="relative font-display text-[32px] leading-none font-black tracking-[0.01em] uppercase sm:text-[40px]">
           {pl.editProfile}
         </h2>
-        <form onSubmit={(event) => void save(event)} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1">
+        <form onSubmit={(event) => void save(event)} className="relative flex flex-col gap-5">
+          <label className="flex flex-col gap-2">
             <span className={label}>{pl.playerName}</span>
             <input
               ref={nameInput}
@@ -82,31 +84,31 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
                 setName(event.target.value);
                 setNameError(null);
               }}
-              className={input}
+              className={`${input} text-[22px] aria-invalid:inset-ring-2 aria-invalid:inset-ring-(--color-accent)`}
             />
           </label>
           {nameError && (
-            <p id={nameErrorId} className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
-              <WarningIcon />
+            <p id={nameErrorId} className="-mt-2.5 flex items-center gap-2.5 font-display text-xl font-bold text-(--color-text)">
+              <WarningIcon className="text-(--color-accent)" />
               {nameError}
             </p>
           )}
-          <label className="flex flex-col gap-1">
+          <label className="flex flex-col gap-2">
             <span className={label}>{pl.playerAvatar}</span>
-            <input value={avatar} maxLength={16} onChange={(event) => setAvatar(event.target.value)} className={`${input} w-28`} />
+            <input value={avatar} maxLength={16} onChange={(event) => setAvatar(event.target.value)} className={`${input} w-28 text-[26px]`} />
           </label>
           <AvatarColorPicker value={color} onChange={setColor} name={name} avatar={avatar} />
           {error && (
-            <p className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
-              <WarningIcon />
+            <p className="flex items-center gap-2.5 font-display text-xl font-bold text-(--color-text)">
+              <WarningIcon className="text-(--color-accent)" />
               {error}
             </p>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <button type="submit" disabled={saving || name.trim() === ''} className={`${button} border-(--color-text) bg-(--color-text) text-(--color-text-inverse)`}>
+          <div className="mt-1.5 grid grid-cols-2 gap-3">
+            <button type="submit" disabled={saving || name.trim() === ''} className="sc-btn sc-btn--primary h-15 rounded-(--radius-button) text-[26px]">
               {pl.save}
             </button>
-            <button type="button" onClick={onCancel} className={`${button} border-(--color-border-strong) bg-(--color-surface-button)`}>
+            <button type="button" onClick={onCancel} className="sc-btn h-15 text-[24px] font-bold">
               {pl.cancel}
             </button>
           </div>
