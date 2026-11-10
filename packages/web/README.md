@@ -50,6 +50,8 @@ Ekran logowania pojawia się tylko wtedy, gdy serwer ma ustawione hasło i odpow
 
 ## Dźwięk
 
+Ikona karty to znak aplikacji w `public/favicon.svg` (kopia `design/scena/assets/Logo/autoscore-mark.svg`), a ikona ekranu głównego tabletu i telefonu to ten sam znak na tle sceny w `public/apple-touch-icon.png` (180 px). `theme-color` w `index.html` to kolor tła sceny (`--color-bg`).
+
 Głos i efekty są domyślnie włączone na każdym urządzeniu. Przełączniki są na ekranie gry i na ekranie „Ustawienia”. Wybór z nich zostaje w `localStorage` pod kluczami `autoscore.voice` i `autoscore.effects`. Na drugim ekranie wyłącz je ręcznie, żeby wynik nie był czytany dwa razy. Nic nie wyłącza ich automatycznie. Głos gra nagrania z `public/audio/pl/`. Komunikat to lista nagrań grana po kolei: najpierw wynik tury (albo bust, game shot, zwycięzca), po turze za 0 jeden z dwóch żartobliwych komentarzy, tylko gdy przełącznik „Komentarze do zera” w „Ustawieniach” jest włączony, a na końcu po jednym nagraniu na każdy rodzaj osiągnięcia meczu 1v1. Gdy nagrania brak albo nie da się go odtworzyć (błąd sieci, blokada autoodtwarzania), tę część czyta Web Speech API, a po odczycie gra następna. Ekran gry wczytuje 16 nagrań zdarzeń (także komentarze i osiągnięcia) od razu, a nagrania sum przy pierwszym użyciu. Logikę komunikatów dostarcza [@autoscore/audio](../audio/README.md).
 
 ## Testy
