@@ -380,6 +380,7 @@ export const pl = {
   checkoutSuccesses: 'Udane',
   checkoutPercent: 'Skuteczność',
   checkoutRecent: 'Ostatnie próby',
+  checkoutRecentHint: 'najnowsza na górze',
   checkoutAttemptNumber: (attempt: number) => `${attempt}.`,
   checkoutSummary: 'Podsumowanie treningu',
   checkoutAllAttempts: 'Wszystkie próby',

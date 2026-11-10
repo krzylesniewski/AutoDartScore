@@ -872,7 +872,8 @@ describe('checkout practice', () => {
     connect(fresh);
     const card = screen.getByRole('region', { name: 'Końcówka' });
     expect(within(card).getByText('100')).toBeTruthy();
-    expect(within(card).getByText('T20 D20')).toBeTruthy();
+    expect(within(card).getByText('T20')).toBeTruthy();
+    expect(within(card).getByText('D20')).toBeTruthy();
     expect(within(card).getByText('0 z 0 · —')).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Klawiatura rzutek' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Miss' })).toBeNull();

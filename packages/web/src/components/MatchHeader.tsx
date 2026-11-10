@@ -112,8 +112,8 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
         id={panelId}
         className={`${open ? 'flex' : 'hidden'} ${card} absolute top-full right-4 left-4 flex-col gap-2 sm:left-auto sm:w-80 lg:contents`}
       >
-        <VoiceToggle enabled={voiceEnabled} onChange={onVoiceChange} iconFromLg />
-        <EffectsToggle enabled={effectsEnabled} onChange={onEffectsChange} iconFromLg />
+        <VoiceToggle enabled={voiceEnabled} onChange={onVoiceChange} variant="icon" />
+        <EffectsToggle enabled={effectsEnabled} onChange={onEffectsChange} variant="icon" />
         {state?.status === 'abandoned' && (
           <button
             type="button"

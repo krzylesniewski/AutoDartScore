@@ -29,7 +29,7 @@ import { pl } from '../i18n/pl';
 const NEW_GAME_HREF = '#/';
 const HOME_HREF = '#/';
 
-const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
+const noticeLink = 'ml-auto inline-flex min-h-11 items-center underline text-(--color-text)';
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
@@ -74,14 +74,16 @@ export function GameScreen({ matchId }: { matchId: string }) {
 
   if (notFound) {
     return (
-      <main className="flex h-full flex-col items-center justify-center gap-4 p-(--space-page) font-display">
-        <p className="flex items-center gap-2 text-3xl">
-          <WarningIcon className="text-(--color-accent)" />
-          {pl.matchNotFound}
-        </p>
-        <a href={NEW_GAME_HREF} className={link}>
-          {pl.newGame}
-        </a>
+      <main className="flex h-full flex-col items-center justify-center p-(--space-page)">
+        <div className="sc-panel max-w-full items-center gap-5 px-8 py-7 text-center">
+          <p className="flex items-center gap-2.5 font-display text-3xl font-bold text-(--color-text)">
+            <WarningIcon className="shrink-0 text-(--color-accent)" />
+            {pl.matchNotFound}
+          </p>
+          <a href={NEW_GAME_HREF} className="sc-btn sc-btn--outline">
+            {pl.newGame}
+          </a>
+        </div>
       </main>
     );
   }
@@ -187,14 +189,14 @@ export function GameScreen({ matchId }: { matchId: string }) {
                 {undoLocked && <Notice text={pl.matchLocked} icon={<LockIcon className="text-(--color-accent)" />} />}
                 {abandoned && (
                   <Notice text={pl.abandonedReadOnly}>
-                    <a href={HOME_HREF} className="ml-auto underline">
+                    <a href={HOME_HREF} className={noticeLink}>
                       {pl.home}
                     </a>
                   </Notice>
                 )}
                 {ended && (
                   <Notice text={pl.practiceEndedReadOnly}>
-                    <a href={HOME_HREF} className="ml-auto underline">
+                    <a href={HOME_HREF} className={noticeLink}>
                       {pl.home}
                     </a>
                   </Notice>
@@ -253,7 +255,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
 
 function Notice({ text, icon = <WarningIcon className="text-(--color-accent)" />, children }: { text: string; icon?: ReactNode; children?: ReactNode }) {
   return (
-    <p className="flex items-center gap-2 rounded-(--radius-card) border-(length:--border-width) border-(--color-accent) bg-(--color-surface) px-4 py-2 font-display text-xl text-(--color-text)">
+    // Od lg komunikat leży na panelu tury, więc tło musi być kryjące.
+    <p className="flex items-center gap-2 rounded-(--radius-card) bg-linear-to-b from-(--color-surface-raised) to-(--color-surface) px-4 py-2 font-display text-xl text-(--color-text) shadow-(--shadow-card)">
       {icon}
       {text}
       {children}
