@@ -5,8 +5,8 @@
 # Stan rolloutu (ledger, logi, inbox, briefy) zostaje w ~/.rollouts/autoscore-etap1/.
 rollout: autoscore-etap1
 model: opus
-# claude jest binarką natywną zainstalowaną pod Node 22; działa niezależnie od wersji Node.
-claudeBin: ~/.nvm/versions/node/v22.18.0/bin/claude
+# claude jest binarką natywną zainstalowaną pod Node 24.22.2 (od 2026-11-10; instalacja pod Node 22.18 jest uszkodzona); działa niezależnie od wersji Node.
+claudeBin: ~/.nvm/versions/node/v24.22.2/bin/claude
 
 repo:
   path: ~/Documents/00_Nauka/AutoScoreDart
@@ -108,6 +108,21 @@ briefing:
       path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p52.md
       kind: markdown
       tag: p52
+    # Tylko dla PR-ów z briefTags: [p53].
+    - title: P53, zakładka „Overall” na ekranie Statystyki (wiążący dla P53)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p53.md
+      kind: markdown
+      tag: p53
+    # Tylko dla PR-ów z briefTags: [p54].
+    - title: P54, dokumentacja komponentów z testów przez describe-me (wiążący dla P54)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p54.md
+      kind: markdown
+      tag: p54
+    # Tylko dla PR-ów z briefTags: [p55-p57].
+    - title: P55-P57, większe zakończenie, siatka na wykresach, czas gry i legów (wiążący dla P55-P57)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-p55-p57.md
+      kind: markdown
+      tag: p55-p57
 
 policy:
   concurrency: 4 # jak najwięcej równolegle (decyzja 2026-10-18)
@@ -686,3 +701,59 @@ prs:
     changeset: none
     scope: ['packages/audio/**', 'packages/web/**']
     briefTags: [p52, rwd]
+
+  # Pomysł graczy 2026-10-28 (feedback-graczy.md, design/plan-p53.md): łączna liczba lotek, średnia ogólna, gracze powyżej i poniżej.
+  - id: P53
+    branch: feat/stats-overall
+    title: 'feat: add the Overall tab with total darts and the average of averages'
+    brief: briefs/P53.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**', 'README.md', 'packages/*/README.md']
+    briefTags: [p53, rwd]
+
+  # Prośba autora 2026-10-28 (design/plan-p54.md): describe-me jako dokumentacja komponentów z testów Vitesta, tylko devDependencies.
+  - id: P54
+    branch: chore/describe-me
+    title: 'chore: add describe-me for component docs from Vitest tests'
+    brief: briefs/P54.md
+    priority: 60
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**', 'package.json', '.gitignore']
+    briefTags: [p54]
+
+  # Prośby autora 2026-11-10 (feedback-graczy.md, design/plan-p55-p57.md). P55-P57 niezależne.
+  # Chip trasy zamknięcia ok. 18% większy, w grze i w treningu „Końcówki” (sekcja P55).
+  - id: P55
+    branch: style/web-bigger-checkout-chip
+    title: 'style(web): enlarge the checkout route chip by about 18%'
+    brief: briefs/P55.md
+    priority: 60
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p55-p57, rwd]
+
+  # Siatka co turę na osi lotek i co 50/100 na osi wyniku, siatka i podpisy w „Formie” (sekcja P56).
+  - id: P56
+    branch: feat/web-chart-grid
+    title: 'feat(web): add axis grids and labels to the score and form charts'
+    brief: briefs/P56.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [p55-p57, rwd]
+
+  # Czas gry wyraźniej w karcie wyniku i durationMs każdego lega z serwera (sekcja P57).
+  - id: P57
+    branch: feat/summary-durations
+    title: 'feat: show the game time prominently and the duration of each leg in the summary'
+    brief: briefs/P57.md
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/**', 'README.md', 'packages/*/README.md']
+    briefTags: [p55-p57, rwd]

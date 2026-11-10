@@ -78,6 +78,8 @@ Stan gry podaje `finishedAt` (czas przyjęcia rzutki kończącej grę) i `editab
 
 Stan gry podaje też `round` (kolejka rzucającego w bieżącym legu, liczona od 1, `null` po końcu gry, w Free run i w treningu checkoutów), `startedAt` i `legStartedAt` (czas przyjęcia pierwszej liczonej rzutki gry i bieżącego lega, `null` przed nią i zawsze w treningu checkoutów, który nie ma rzutek) oraz `pausedMs` i `legPausedMs` (suma zamkniętych przerw od porzucenia do wznowienia, liczona od `startedAt` i od `legStartedAt`). Wszystkie czasy pochodzą z logu, więc cofnięcie rzutki przesuwa je razem ze stanem. Otwarte porzucenie nie wchodzi do sumy przerw.
 
+Pole `legTurns` to zamknięte tury bieżącego lega w kolejności rzutów. Każdy wpis ma gracza (`playerId`), numer tury (`turnIndex`), rzutki (`darts`), zdobyte punkty (`points`), wynik po turze (`remainingAfter`) i znacznik `bust`. Otwarta tura nie trafia na listę, jej rzutki są w `currentDarts`. Bust ma `points: 0` i `remainingAfter` równe wynikowi sprzed tury. Nowy leg zaczyna się z pustą listą, a po rzutce kończącej mecz zostają tury ostatniego lega. W Free run turą jest każde pełne podejście po 3 rzutki, a `remainingAfter` jest `null`. W treningu checkoutów lista jest zawsze pusta. Cofnięcie rzutki przelicza listę z logu razem z resztą stanu.
+
 ## Struktura
 
 - `src/main.ts`: start procesu (konfiguracja, baza, migracje, nasłuch).
@@ -89,6 +91,7 @@ Stan gry podaje też `round` (kolejka rzucającego w bieżącym legu, liczona od
 - `src/match-service.ts`: komendy gry (utworzenie, rzutka, próba i pominięcie checkoutu, cofnięcie, porzucenie, wznowienie, zakończenie treningu, lista, subskrypcja).
 - `src/replay.ts`: wybór rzutek oraz prób i pominięć checkoutu, które się liczą, stan porzucenia, czas zakończenia treningu i odtworzenie stanu w silniku.
 - `src/snapshot.ts`: budowa `MatchSnapshot` ze stanu silnika.
+- `src/leg-turns.ts`: `buildLegTurns`, czyli zamknięte tury bieżącego lega (`legTurns`) ze zdarzeń odtworzenia, a w Free run z pełnych podejść po 3 rzutki.
 - `src/stats-service.ts` i `src/stats/`: statystyki liczone z odtworzenia logu. W `src/stats/` są `tally.ts` (sumy gracza w grze), `completed-legs.ts` (punkty i rzutki w ukończonych legach), `rankings.ts` (ranking graczy i rekordy), `overall.ts` (łączna liczba lotek, średnia ze średnich graczy, gracze powyżej i poniżej niej), `head-to-head.ts` (bilans dwóch graczy z ukończonych meczów 1v1), `form.ts` (średnia z każdej z ostatnich gier), `frequent-hits.ts` (do 6 najczęstszych trafień gracza bez Miss, według liczby, potem punktów, potem segmentu), `leg-progress.ts` (pozostały wynik po każdej rzutce ostatniego lega z zamkniętych tur, do podsumowania gry), `leg-durations.ts` (czas każdego wygranego lega z rzutek, które się liczą, bez przerw przyciętych do lega) i `achievements.ts` (rekordy gracza i wykrywanie osiągnięć). Średnia na 3 rzutki na karcie gracza, w rankingu, w bilansie i na wykresie formy liczy tylko ukończone legi.
 - `src/achievement-reference.ts`: rekordy gracza z ukończonych meczów 1v1 do wykrywania osiągnięć. Osiągnięcia (`achievement` na WebSocket) dotyczą tylko meczów 1v1 i zapisanych profili, od drugiego ukończonego meczu 1v1 gracza. Liczymy je z logu, z pamięcią podręczną w procesie, i niczego nie zapisujemy.
 - `src/live-hub.ts`: rozsyłanie wiadomości do subskrybentów jednej gry.

@@ -1,36 +1,58 @@
 /*
- * Motyw A: ciemny klasyczny (czerń, krem, czerwień z tarczy).
- * Źródło: makiety "A: 2 graczy" i "A: 4 graczy" w artefakcie
- * https://claude.ai/artifact/X3fQ7qb26tmktL3amc2pML (wariant B, zielony "Ciemny nowoczesny", odrzucony).
- * Jedno źródło prawdy dla kolorów, typografii i promieni. Front (P5) podpina to pod Tailwinda.
+ * Motyw „Scena”: ciepła czerń, krem, czerwień z tarczy, zaokrąglone karty nad oświetloną sceną.
+ * Zasady i wartości: design/scena/ (README.md, tokens.json). Wartości tokenów są przepisane stamtąd znak w znak.
+ * Jedno źródło prawdy dla kolorów, typografii, promieni i odstępów. Front podpina to pod Tailwinda.
  */
 
 /* Fonty nie są importowane tutaj: makiety HTML ładują je przez <link> w <head>, a front lokalnie z @fontsource. */
 
 :root {
-  /* Tła i powierzchnie, od najciemniejszej */
-  --color-bg: #0f0f0f; /* tło aplikacji */
-  --color-surface-header: #161616; /* górny pasek */
-  --color-surface: #1a1a1a; /* karty: sloty rzutek, suma tury, zamknięcie, wiersz gracza */
-  --color-surface-button: #1f1f1f; /* przyciski drugorzędne (Cofnij, Nowa runda) */
-  --color-surface-active: #222222; /* wiersz rzucającego gracza */
+  /* Scena: gradient tła od światła nad tarczą do najciemniejszego brzegu */
+  --color-bg: #0a0908; /* tło aplikacji, brzegi gradientu sceny */
+  --color-bg-mid: #16120f; /* środek gradientu sceny */
+  --color-bg-glow: #2b201a; /* światło nad tarczą, początek gradientu */
 
-  /* Obramowania */
-  --color-border-subtle: #2a2a2a; /* linia pod górnym paskiem */
-  --color-border: #2e2e2e; /* karty */
-  --color-border-strong: #3a3a3a; /* chipy, przyciski, przerywane "Dodaj gracza" */
+  /* Powierzchnie: karty z gradientem i półprzezroczysty krem */
+  --color-surface: #1b1714; /* dół gradientu karty */
+  --color-surface-raised: #2a2420; /* góra gradientu karty */
+  --color-surface-soft: rgba(243, 236, 216, 0.07); /* przyciski drugorzędne i ikonowe, chipy */
+  --color-surface-softer: rgba(243, 236, 216, 0.035); /* wiersz czekającego gracza, puste sloty, tło przełącznika */
+
+  /* Linie: dekoracyjne, nigdy jedyna granica kontrolki */
+  --color-border: rgba(243, 236, 216, 0.11);
+
+  /* Motyw A: aliasy dla ekranów, które nie przeszły jeszcze na Scenę */
+  --color-surface-header: var(--color-surface-softer);
+  --color-surface-button: var(--color-surface-soft);
+  --color-surface-active: var(--color-surface-raised);
+  --color-border-subtle: var(--color-border);
+  --color-border-strong: var(--color-border);
 
   /* Tekst */
-  --color-text: #f3ecd8; /* krem: główny tekst i wyniki (16,2:1 na tle) */
-  --color-text-muted: #a8a08a; /* etykiety, wynik czekających graczy (6,7:1 na karcie) */
-  --color-text-inverse: #0f0f0f; /* tekst na kremowym chipie (np. "Leg 2") */
+  --color-text: #f3ecd8; /* krem: główny tekst i wyniki */
+  --color-text-sub: #c9bfa6; /* tekst drugi: meta, wynik czekającego gracza */
+  --color-text-muted: #a8a08a; /* etykiety, jednostki, nagłówki tabel */
+  --color-text-inverse: #0a0908; /* tekst na kremie, np. wybrany segment przełącznika */
 
-  /* Akcent: czerwień z tarczy. Rzucający, zamknięcie, slot czekający na rzutkę, "Do weryfikacji". */
+  /* Akcent: czerwień z tarczy. Wypełnienia i obrysy, nie tekst. */
   --color-accent: #d8352a;
-  --color-on-accent: #fff7e6; /* 4,4:1 na akcencie: tylko tekst duży (≥24 px) albo pogrubiony ≥19 px */
+  --color-accent-hi: #e8483a; /* jasny koniec gradientu karty zamknięcia */
+  --color-accent-lo: #a8231b; /* ciemny koniec gradientu karty zamknięcia */
+  --color-accent-glow: rgba(216, 53, 42, 0.5); /* poświata akcentu */
+  --color-on-accent: #fff7e6; /* 3,6:1 na jasnym końcu gradientu: tylko tekst ≥24 px albo pogrubiony ≥19 px */
+  --color-route-chip: rgba(0, 0, 0, 0.28); /* rzutka trasy na karcie zamknięcia */
+  --color-progress-track: rgba(243, 236, 216, 0.1); /* tor paska progresu */
 
-  /* Stan (kropki w górnym pasku: kamera, głos). Zawsze z tekstem obok, kolor nie niesie znaczenia sam. */
+  /* Miejsca: zawsze z ikoną albo tekstem, kolor nie niesie znaczenia sam */
+  --color-gold: #f2b134;
+  --color-silver: #c9ced6;
+  --color-bronze: #d08a4a;
+
+  /* Stan (kamera, gra na żywo). Zawsze z tekstem obok. */
   --color-status-ok: #3ddc84;
+
+  /* Fokus klawiatury */
+  --color-focus: #f3ecd8;
 
   /* Kolory awatarów graczy 1-16 (tekst na nich: --color-on-avatar) */
   --color-avatar-1: #f2b134;
@@ -51,8 +73,25 @@
   --color-avatar-16: #f2a3a3;
   --color-on-avatar: #111111;
 
+  /* Cienie: karty wiszą nad sceną dzięki cieniowi, nie grubej obwódce */
+  --shadow-card: 0 1px 0 rgba(243, 236, 216, 0.11) inset, 0 24px 48px -16px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(243, 236, 216, 0.11);
+  --shadow-panel: 0 1px 0 rgba(243, 236, 216, 0.11) inset, 0 30px 60px -24px rgba(0, 0, 0, 0.85);
+  --shadow-inset-line: 0 0 0 1px rgba(243, 236, 216, 0.11) inset;
+  --shadow-outline: 0 0 0 1px rgba(243, 236, 216, 0.12) inset;
+  --shadow-key: 0 1px 0 rgba(243, 236, 216, 0.11) inset, 0 10px 20px -10px rgba(0, 0, 0, 0.9);
+  --shadow-checkout: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 30px 60px -20px rgba(216, 53, 42, 0.5);
+  --shadow-slot-active: 0 0 0 1px #d8352a inset, 0 0 40px -10px rgba(216, 53, 42, 0.5) inset;
+  --shadow-selected: 0 8px 20px -8px rgba(0, 0, 0, 0.7);
+  --shadow-tab-glow: 0 0 14px 2px var(--color-accent-glow); /* poświata pod kreską aktywnej zakładki */
+  --focus-ring: 0 0 0 2px #0a0908, 0 0 0 4px #f3ecd8; /* 2 px przerwy w kolorze tła, potem 2 px kremu */
+
+  /* Przezroczystość tarcz w tle */
+  --opacity-rings: 0.07; /* z tokens.json; tło sceny nie ma już pierścieni (2026-11-10) */
+  --opacity-card-rings: 0.07;
+  --opacity-checkout-rings: 0.16;
+
   /* Typografia */
-  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif; /* liczby, wyniki, nazwa aplikacji; 600/700 */
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif; /* liczby, wyniki, nazwa aplikacji; 500-900 */
   --font-body: 'Barlow', 'Helvetica Neue', Arial, sans-serif; /* reszta; 400/500/600 */
   --font-numeric: tabular-nums; /* font-variant-numeric dla wyników */
 
@@ -69,11 +108,25 @@
   --text-label: 15px; /* etykiety WIELKIMI literami */
   --tracking-label: 0.14em;
 
-  /* Kształt: kanciaste karty */
-  --radius-card: 6px; /* karty, przyciski */
-  --radius-chip: 4px; /* chipy, odznaki, panel zamknięcia */
-  --border-width: 2px; /* karty i przyciski */
+  /* Kształt: zaokrąglone karty */
+  --radius-chip: 10px; /* rzutka trasy na karcie zamknięcia */
+  --radius-button: 12px; /* przyciski, chipy, wybrana opcja filtra */
+  --radius-segment: 13px; /* wybrany segment w kolumnie mnożnika */
+  --radius-card: 18px; /* karty graczy, sloty rzutek, karta zamknięcia */
+  --radius-panel: 22px; /* duże panele */
+  --radius-pill: 999px; /* przyciski ikonowe, odznaki, klawisze tarczy */
+  /* Scena nie ma tokenu grubości. Zmiana przesunęłaby wysokości ekranu gry, od których zależy --keypad-ring-reserve. */
+  --border-width: 2px;
   --button-height: 56px;
-  --space-page: 24px; /* odstęp od krawędzi i między kolumnami */
+
+  /* Odstępy */
+  --space-1: 4px; /* między etykietą a wartością */
+  --space-2: 6px; /* między kropkami legów, wewnątrz przełącznika */
+  --space-3: 8px; /* między chipami, między wierszami listy */
+  --space-4: 10px; /* między chipami trasy */
+  --space-5: 14px; /* między kartami w kolumnie */
+  --space-6: 18px; /* między sekcjami w kolumnie */
+  --space-7: 24px; /* wewnętrzny odstęp karty z boku */
+  --space-page: 28px; /* odstęp od krawędzi i między kolumnami */
   --scoreboard-width: 520px; /* lewa kolumna z paskiem wyników */
 }

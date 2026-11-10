@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 3, historia gier</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#fff7e6}
+</style>
+</helmet>
+<div style="width: 1600px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 1100px 650px at 22% -10%, #2b201a 0%, #16120f 45%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column;">
+  <svg width="1000" height="1000" viewBox="-500 -500 1000 1000" aria-hidden="true" style="position: absolute; left: 1050px; top: -560px; opacity: 0.07; pointer-events: none;">
+    <circle r="490" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="455" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="430" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="270" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="252" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <sc-for list="{{wires}}" as="w" hint-placeholder-count="20"><line x1="0" y1="-275" x2="0" y2="-490" stroke="#f3ecd8" stroke-width="1" transform="{{w}}"></line></sc-for>
+  </svg>
+
+  <header style="position: relative; height: 68px; flex-shrink: 0; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid rgba(243,236,216,0.11);">
+    <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="#d8352a"></circle><circle cx="17" cy="17" r="10" fill="#0f0f0f"></circle><circle cx="17" cy="17" r="6" fill="#f3ecd8"></circle><circle cx="17" cy="17" r="2.4" fill="#d8352a"></circle></svg>
+    <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.08em; margin-right: 18px;">AUTO SCORE</span>
+    <nav aria-label="Główna nawigacja" style="display: flex; gap: 4px; align-self: stretch;">
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Nowa gra</a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Statystyki</a>
+      <a href="#" aria-current="page" style="position: relative; display: flex; align-items: center; padding: 0 16px; color: #f3ecd8; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Historia<span style="position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px; background: #d8352a; box-shadow: 0 0 14px 2px rgba(216,53,42,0.5);"></span></a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Ustawienia</a>
+    </nav>
+    <span style="flex-grow: 1;"></span>
+    <span style="display: inline-flex; align-items: center; gap: 8px; color: #a8a08a; background: rgba(243,236,216,0.035); padding: 8px 14px; border-radius: 999px; font-size: 15px;"><span style="width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box; border: 2px solid #a8a08a;"></span>Kamera: brak</span>
+    <span style="display: inline-flex; align-items: center; gap: 8px; color: #a8a08a; background: rgba(243,236,216,0.035); padding: 8px 14px; border-radius: 999px; font-size: 15px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #3ddc84;"></span>Głos: włączony</span>
+  </header>
+
+  <main style="position: relative; flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 24px 28px 0; display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: flex-end; gap: 24px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 64px; line-height: 0.9; letter-spacing: 0.01em;">Historia</h1>
+        <span style="font-size: 17px; color: #a8a08a;">Wszystkie gry, od ostatnio aktywnej</span>
+      </div>
+      <span style="flex-grow: 1;"></span>
+      <section aria-labelledby="history-filter" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
+        <h2 id="history-filter" style="margin: 0 6px 0 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">TYP GRY</h2>
+        <div style="display: flex; padding: 5px; gap: 4px; border-radius: 16px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;">
+          <button type="button" aria-pressed="true" style="height: 46px; padding: 0 20px; border: 0; border-radius: 12px; background: #f3ecd8; color: #0a0908; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7);">Wszystkie</button>
+          <button type="button" aria-pressed="false" style="height: 46px; padding: 0 20px; border: 0; border-radius: 12px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Mecze 1v1</button>
+          <button type="button" aria-pressed="false" style="height: 46px; padding: 0 20px; border: 0; border-radius: 12px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Zabawa</button>
+          <button type="button" aria-pressed="false" style="height: 46px; padding: 0 20px; border: 0; border-radius: 12px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Trening</button>
+        </div>
+      </section>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <sc-for list="{{groups}}" as="grp" hint-placeholder-count="2">
+        <h2 style="margin: 6px 0 2px 4px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">{{grp.label}}</h2>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+          <sc-for list="{{grp.rows}}" as="m" hint-placeholder-count="4">
+            <li style="{{m.rowStyle}}">
+              <time datetime="{{m.iso}}" style="width: 64px; flex-shrink: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px; color: #c9bfa6; font-variant-numeric: tabular-nums;">{{m.time}}</time>
+              <span style="width: 140px; flex-shrink: 0; display: flex;" aria-hidden="true">
+                <sc-for list="{{m.avatars}}" as="a" hint-placeholder-count="2"><span style="{{a.style}}">{{a.initial}}</span></sc-for>
+              </span>
+              <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0;">
+                <span style="font-family: 'Barlow Condensed', sans-serif; font-size: 25px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><sc-for list="{{m.parts}}" as="p" hint-placeholder-count="3"><span style="{{p.style}}">{{p.text}}</span></sc-for></span>
+                <span style="font-size: 14px; color: #a8a08a;">{{m.type}}</span>
+              </div>
+              <span style="{{m.badgeStyle}}"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="{{m.iconColor}}"><path d="{{m.icon}}"></path></svg>{{m.status}}</span>
+              <span style="width: 44px; height: 44px; flex-shrink: 0; display: flex;">
+                <sc-if value="{{m.abandonable}}" hint-placeholder-val="{{false}}">
+                  <button type="button" aria-label="{{m.abandonLabel}}" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: transparent; box-shadow: 0 0 0 1px rgba(243,236,216,0.12) inset; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M6.4 4L12 9.6 17.6 4 20 6.4 14.4 12 20 17.6 17.6 20 12 14.4 6.4 20 4 17.6 9.6 12 4 6.4z"></path></svg></button>
+                </sc-if>
+              </span>
+              <a href="#" aria-label="{{m.detailsLabel}}" style="height: 44px; flex-shrink: 0; box-sizing: border-box; padding: 0 12px 0 18px; border-radius: 12px; background: rgba(243,236,216,0.07); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; color: #f3ecd8; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; display: flex; align-items: center; gap: 6px;">Szczegóły<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#c9bfa6" stroke-width="2"><path d="M9 6l6 6-6 6"></path></svg></a>
+            </li>
+          </sc-for>
+        </ul>
+      </sc-for>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const wires = Array.from({ length: 20 }, (_, i) => 'rotate(' + (i * 18 + 9) + ')');
+const P = {
+S: { name: 'Szymon', initial: 'S', color: '#5aa9ff' },
+K: { name: 'Krzysiek', initial: 'XD', color: '#ff70b8' },
+G: { name: 'Grzesiek', initial: 'G', color: '#b28cff' },
+D: { name: 'Dzimi', initial: 'D', color: '#f2b134' }
+};
+const avatars = (ids, live) => ids.map((id, i) => ({
+initial: P[id].initial,
+style: 'width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%; background: ' + P[id].color + '; color: #111111; display: flex; align-items: center; justify-content: center; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: ' + (P[id].initial.length > 1 ? 16 : 18) + 'px; box-shadow: 0 0 0 3px ' + (live ? '#221d19' : '#16120f') + ';' + (i === 0 ? '' : ' margin-left: -10px;')
+}));
+const win = 'font-weight: 800; color: #f3ecd8;';
+const lose = 'font-weight: 600; color: #a8a08a;';
+const plain = 'font-weight: 700; color: #c9bfa6;';
+const score = 'font-weight: 800; color: #f3ecd8; padding: 0 8px;';
+const ICON = {
+trophy: 'M6 3h12v2h3v3a5 5 0 01-5 5h-.3A6 6 0 0113 15.9V18h4v3H7v-3h4v-2.1A6 6 0 018.3 13H8a5 5 0 01-5-5V5h3zm0 4H5v1a3 3 0 001 2.2zm12 0v3.2A3 3 0 0019 8V7z',
+throwing: 'M8 4l12 8-12 8z',
+pause: 'M6 4h4v16H6zm8 0h4v16h-4z',
+stop: 'M6 6h12v12H6z'
+};
+const STATUS = {
+winner: { icon: ICON.trophy, color: '#f2b134' },
+in_progress: { icon: ICON.throwing, color: '#3ddc84' },
+abandoned: { icon: ICON.pause, color: '#d8352a' },
+ended: { icon: ICON.stop, color: '#a8a08a' }
+};
+const badge = 'display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 8px 14px; border-radius: 999px; background: rgba(243,236,216,0.07); font-family: Barlow Condensed, sans-serif; font-weight: 700; font-size: 17px; white-space: nowrap; color: #f3ecd8;';
+const rowBase = 'height: 72px; box-sizing: border-box; border-radius: 18px; padding: 0 16px 0 22px; display: flex; align-items: center; gap: 20px;';
+const row = (r) => {
+const s = STATUS[r.status];
+const live = r.status === 'in_progress';
+const title = r.parts.map((p) => p[0]).join('');
+return {
+time: r.time, iso: r.iso, type: r.type, status: r.label,
+avatars: avatars(r.ids, live),
+parts: r.parts.map((p) => ({ text: p[0], style: p[1] })),
+icon: s.icon, iconColor: s.color, badgeStyle: badge,
+abandonable: live && r.type.indexOf('Trening') !== 0,
+abandonLabel: 'Porzuć: ' + title,
+detailsLabel: 'Szczegóły: ' + title,
+rowStyle: rowBase + (live ? ' background: linear-gradient(90deg, #2a2420, #1b1714); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;' : ' background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;')
+};
+};
+const today = [
+{ time: '17:05', iso: '2026-11-10T17:05', ids: ['D', 'S'], parts: [['Dzimi', win], ['0 : 0', score], ['Szymon', win]], type: 'Mecz 1v1 · 301', status: 'in_progress', label: 'W trakcie' },
+{ time: '16:40', iso: '2026-11-10T16:40', ids: ['G', 'D', 'K', 'S'], parts: [['1. Grzesiek', win], [' · 2. Dzimi · 3. Krzysiek · 4. Szymon', plain]], type: 'Zabawa · 301', status: 'winner', label: 'Wygrywa Grzesiek' },
+{ time: '16:12', iso: '2026-11-10T16:12', ids: ['S', 'K'], parts: [['Szymon', lose], ['1 : 2', score], ['Krzysiek', win]], type: 'Mecz 1v1 · 301', status: 'winner', label: 'Wygrywa Krzysiek' },
+{ time: '15:20', iso: '2026-11-10T15:20', ids: ['K'], parts: [['Krzysiek', win], [' · 7/12 · 58%', plain]], type: 'Trening · Końcówki 2-50', status: 'ended', label: 'Zakończony' },
+{ time: '14:51', iso: '2026-11-10T14:51', ids: ['G', 'D'], parts: [['Grzesiek', win], ['1 : 0', score], ['Dzimi', lose]], type: 'Mecz 1v1 · 301', status: 'winner', label: 'Wygrywa Grzesiek' }
+].map(row);
+const yesterday = [
+{ time: '21:12', iso: '2026-11-09T21:12', ids: ['D', 'K', 'S'], parts: [['1. Dzimi', win], [' · Krzysiek · Szymon', plain]], type: 'Zabawa · 301', status: 'abandoned', label: 'Porzucony' },
+{ time: '20:30', iso: '2026-11-09T20:30', ids: ['S'], parts: [['Szymon', win], [' · 60 rzutek · średnia 31,45', plain]], type: 'Trening · Free run', status: 'ended', label: 'Zakończony' }
+].map(row);
+const groups = [{ label: 'DZIŚ', rows: today }, { label: 'WCZORAJ', rows: yesterday }];
+return { wires, groups };
+}
+}
+</script>
+</body>
+</html>

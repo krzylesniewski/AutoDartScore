@@ -1,0 +1,170 @@
+# AutoScore Dart: Etap 3 (redesign „Scena”) jako seria PR-ów R1-R10.
+# Źródło: CLAUDE.md, design/plan-etap3.md, design/scena/ (design system), design/mockups/scena/ (makiety).
+# Opis pól: ~/.claude/skills/rollout/docs/manifest.html
+# Ten plik jest w repo; ~/.rollouts/autoscore-etap3/manifest.yaml to dowiązanie do niego.
+# Stan rolloutu (ledger, logi, inbox, briefy) zostaje w ~/.rollouts/autoscore-etap3/.
+rollout: autoscore-etap3
+model: opus
+claudeBin: ~/.nvm/versions/node/v24.22.2/bin/claude
+
+repo:
+  path: ~/Documents/00_Nauka/AutoScoreDart
+  github: krzylesniewski/AutoDartScore
+  # Gałąź integracyjna etapu 3 (decyzja 2026-11-10): do main wchodzi raz na kamień milowy, PR-em autora.
+  base: feat/redesign
+  public: true
+  pathPrepend: [~/.nvm/versions/node/v24.22.0/bin]
+  install: pnpm install --frozen-lockfile
+  requiredChecks: ['test', 'typecheck', 'lint', 'build', 'smoke'] # joby z .github/workflows/ci.yml
+  maintainers: [KrzysztofLesniewski]
+  merge: { method: squash, admin: false }
+  # Plan, decyzje i źródła wyglądu trzyma człowiek; agenci ich nie zmieniają.
+  forbid:
+    - auto-score-dart-pomysly.md
+    - CLAUDE.md
+    - 'rollout/**'
+    - 'fixtures/**'
+    - design/plan-etap3.md
+    - 'design/scena/**'
+    - 'design/mockups/**'
+  alwaysInScope:
+    - pnpm-lock.yaml
+  denylist: [/Users/]
+  verify:
+    common:
+      - pnpm install --frozen-lockfile
+      - pnpm test
+      - pnpm typecheck
+      - pnpm lint
+
+briefing:
+  sources:
+    - title: CLAUDE.md (zasady, stack, reguły X01, front, konwencje; wiążące)
+      path: ~/Documents/00_Nauka/AutoScoreDart/CLAUDE.md
+      kind: markdown
+    - title: Etap 3, decyzje i plan PR-ów R1-R10 (wiążący)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-etap3.md
+      kind: markdown
+    - title: Design system „Scena”, zasady użycia tokenów i komponentów (wiążące dla wyglądu)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/scena/README.md
+      kind: markdown
+    - title: Makiety etapu 3, spis ekranów i co makiety zmieniają, a czego nie
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/mockups/scena/README.md
+      kind: markdown
+    # Tylko dla PR-ów z briefTags: [rwd].
+    - title: RWD ekranów, wspólne zasady układu (wiążące dla zmian we froncie)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/rwd.md
+      kind: markdown
+      tag: rwd
+
+policy:
+  concurrency: 4
+  # Decyzja autora 2026-11-10: PR-y scalane automatycznie do feat/redesign; do main tylko PR-em autora na kamień milowy.
+  merge: auto
+  # Agent odpowiada na pytania z briefu tylko tym, co rozstrzyga plan; reszta trafia do autora.
+  delegate: {}
+
+# Małe kroki: plik spoza zakresu PR-a wraca do implementera przed weryfikacją.
+gates:
+  preVerify:
+    scope: true
+
+# K1 (R1-R8): nowy wygląd. K2 (R9-R10): informacje o legu. Po kamieniu feat/redesign → main PR-em autora.
+prs:
+  - id: R1
+    branch: style/scena-tokens
+    title: 'style(web): Scena theme tokens, stage background and base elements'
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['design/theme.css', 'packages/web/**']
+    briefTags: [rwd]
+
+  - id: R2
+    branch: style/scena-app-bar
+    title: 'style(web): Scena game header and navigation'
+    deps: [R1]
+    priority: 40
+    effort: { brief: medium, implement: medium, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: R3
+    branch: style/scena-scoreboard
+    title: 'style(web): Scena scoreboard with a per-player progress bar'
+    deps: [R1]
+    priority: 55
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: R4
+    branch: style/scena-turn-keypad
+    title: 'style(web): Scena turn panel, checkout card and keypad'
+    deps: [R3]
+    priority: 50
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: R5
+    branch: style/scena-new-game
+    title: 'style(web): Scena new game screen and player dialogs'
+    deps: [R1]
+    priority: 40
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: R6
+    branch: style/scena-match-end
+    title: 'style(web): Scena match end and summaries'
+    deps: [R1]
+    priority: 40
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: R7
+    branch: style/scena-history-stats
+    title: 'style(web): Scena history, stats and player card'
+    deps: [R1]
+    priority: 35
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: R8
+    branch: style/scena-practice-settings
+    title: 'style(web): Scena practice, settings, login and notices'
+    deps: [R4]
+    priority: 35
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: R9
+    branch: feat/leg-turns-snapshot
+    title: 'feat: turns of the current leg in the match snapshot'
+    priority: 45
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    # Nowe pole snapshotu może wymagać poprawki danych testowych frontu.
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
+
+  - id: R10
+    branch: feat/web-leg-info
+    title: 'feat(web): points knocked off, leg stats and turn history on the game screen'
+    deps: [R4, R8, R9]
+    priority: 30
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]

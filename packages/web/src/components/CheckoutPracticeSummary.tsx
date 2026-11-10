@@ -15,10 +15,7 @@ export function CheckoutPracticeSummary({ session }: { session: CheckoutSession 
     [pl.checkoutPercent, formatCheckoutPercent(session)],
   ] as const;
   return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-4 rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) px-4 py-4 lg:px-6"
-    >
+    <section aria-labelledby={id} className="sc-panel gap-4 lg:px-6">
       <h2 id={id} className="font-display text-(length:--text-heading) leading-tight font-bold">
         {pl.checkoutSummary}
       </h2>
@@ -26,12 +23,12 @@ export function CheckoutPracticeSummary({ session }: { session: CheckoutSession 
         {totals.map(([term, value]) => (
           <div key={term} className="flex flex-col gap-1">
             <dt className={label}>{term}</dt>
-            <dd className="font-display text-4xl font-bold tabular-nums">{value}</dd>
+            <dd className="font-display text-[30px] leading-none font-extrabold tabular-nums lg:text-4xl">{value}</dd>
           </div>
         ))}
       </dl>
       <h3 className={label}>{pl.checkoutAllAttempts}</h3>
-      <ol className="flex flex-col gap-1">
+      <ol className="flex flex-col">
         {session.history.map((attempt, index) => (
           <AttemptRow key={index} attempt={attempt} number={index + 1} className="min-h-9" />
         ))}

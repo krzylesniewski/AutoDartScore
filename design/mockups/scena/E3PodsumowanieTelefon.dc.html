@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 3, koniec meczu na telefonie</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#ffffff}
+button:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 2px #0a0908,0 0 0 4px #f3ecd8}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 560px 460px at 50% -8%, #2b201a 0%, #16120f 45%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column;">
+  <svg width="620" height="620" viewBox="-500 -500 1000 1000" aria-hidden="true" style="position: absolute; left: -115px; top: -120px; opacity: 0.07; pointer-events: none;">
+    <circle r="490" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+    <circle r="455" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+    <circle r="430" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+    <circle r="270" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+    <circle r="252" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+  </svg>
+
+  <header style="position: relative; height: 48px; flex-shrink: 0; box-sizing: border-box; padding: 0 12px 0 8px; display: flex; align-items: center; gap: 6px;">
+    <a href="#" style="height: 44px; display: flex; align-items: center; padding: 0 8px; color: #c9bfa6; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px;">Zamknij</a>
+    <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; line-height: 1;">Podsumowanie</h1>
+    <span style="flex-grow: 1;"></span>
+    <button type="button" aria-label="Głos: włączony" aria-pressed="true" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: rgba(243,236,216,0.07); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M3 9h4l5-5v16l-5-5H3zm11-1v8a4.5 4.5 0 000-8zm0-4.8v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z"></path></svg></button>
+    <button type="button" aria-label="Efekty dźwiękowe: włączone" aria-pressed="true" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: rgba(243,236,216,0.07); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg></button>
+  </header>
+
+  <main style="position: relative; flex-grow: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 4px 16px 20px; display: flex; flex-direction: column; gap: 8px;">
+    <section aria-label="Wynik meczu" style="position: relative; flex-shrink: 0; overflow: hidden; border-radius: 22px; padding: 12px 14px 12px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;">
+      <svg width="358" height="200" viewBox="0 0 358 200" aria-hidden="true" style="position: absolute; left: 0; top: 0; pointer-events: none;"><defs><radialGradient id="e3pt-halo" cx="50%" cy="10%" r="60%"><stop offset="0%" stop-color="#f2b134" stop-opacity="0.28"></stop><stop offset="100%" stop-color="#f2b134" stop-opacity="0"></stop></radialGradient></defs><rect width="358" height="200" fill="url(#e3pt-halo)"></rect></svg>
+      <span style="position: relative; display: flex; align-items: center; gap: 8px;"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="#f2b134" style="filter: drop-shadow(0 0 10px rgba(242,177,52,0.6));"><path d="M6 3h12v2h3v3a5 5 0 01-5 5h-.3A6 6 0 0113 15.9V18h4v3H7v-3h4v-2.1A6 6 0 018.3 13H8a5 5 0 01-5-5V5h3zm0 4H5v1a3 3 0 001 2.2zm12 0v3.2A3 3 0 0019 8V7z"></path></svg><span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #c9bfa6;">MECZ ZAKOŃCZONY</span></span>
+      <h2 style="position: relative; margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 34px; line-height: 1;">Krzysiek wygrywa</h2>
+      <div style="position: relative; display: flex; align-items: center; gap: 18px;">
+        <span style="width: 46px; height: 46px; border-radius: 50%; background: #ff70b8; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 18px; box-shadow: 0 0 0 3px #2a2420, 0 0 0 5px #f2b134, 0 0 22px rgba(242,177,52,0.55);">XD</span>
+        <span aria-label="Wynik w legach 2 do 1" style="font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 64px; line-height: 0.9; font-variant-numeric: tabular-nums;">2 <span style="color: #a8a08a;">:</span> 1</span>
+        <span style="width: 46px; height: 46px; border-radius: 50%; background: #5aa9ff; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px;">S</span>
+      </div>
+      <div style="position: relative; align-self: stretch; margin-top: 2px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
+        <span style="font-size: 14px; line-height: 1.3; color: #a8a08a;">301 · Double-out<br>Best of 3</span>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 12px; border-radius: 12px; background: rgba(243,236,216,0.07); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-1 3v6.4l5.2 3.1 1-1.7-4.2-2.5V7z"></path></svg>
+          <span style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.18em; color: #a8a08a;">CZAS GRY</span>
+            <span aria-label="21 minut 48 sekund" style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums;">21:48</span>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <ol aria-label="Legi" style="list-style: none; margin: 0; padding: 0; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px;">
+      <sc-for list="{{legs}}" as="leg" hint-placeholder-count="3">
+        <li style="border-radius: 18px; padding: 7px 14px 7px 12px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; align-items: center; gap: 12px;">
+          <span style="{{leg.avatar}}">{{leg.initial}}</span>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.18em; color: #a8a08a;">{{leg.label}}</span>
+              <span aria-label="{{leg.spoken}}" style="display: inline-flex; align-items: center; gap: 5px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; line-height: 1; font-variant-numeric: tabular-nums;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-1 3v6.4l5.2 3.1 1-1.7-4.2-2.5V7z"></path></svg>{{leg.time}}</span>
+            </div>
+            <span style="font-size: 15px; line-height: 1.25; font-weight: 600;">{{leg.result}}</span>
+            <span style="font-size: 13px; line-height: 1.25; color: #a8a08a;">{{leg.averages}}</span>
+          </div>
+        </li>
+      </sc-for>
+    </ol>
+
+    <section aria-labelledby="e3pt-chart" style="flex-shrink: 0; border-radius: 22px; padding: 12px 12px 10px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); display: flex; flex-direction: column; gap: 6px;">
+      <h2 id="e3pt-chart" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">LEG 3 · ZEJŚCIE Z WYNIKU</h2>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <span aria-hidden="true" style="font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 12px; letter-spacing: 0.08em; color: #a8a08a;">POZOSTAŁO</span>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; gap: 14px;">
+          <li style="display: flex; align-items: center; gap: 6px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px;"><svg width="24" height="8" viewBox="0 0 24 8" aria-hidden="true"><line x1="0" y1="4" x2="24" y2="4" stroke="#5aa9ff" stroke-width="3"></line></svg>Szymon</li>
+          <li style="display: flex; align-items: center; gap: 6px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px;"><svg width="24" height="8" viewBox="0 0 24 8" aria-hidden="true"><line x1="0" y1="4" x2="24" y2="4" stroke="#ff70b8" stroke-width="3" stroke-dasharray="8 4"></line></svg>Krzysiek</li>
+        </ul>
+      </div>
+      <div style="display: grid; grid-template-columns: 26px minmax(0, 1fr); column-gap: 6px; row-gap: 3px;">
+        <div aria-hidden="true" style="position: relative; height: 116px;">
+          <sc-for list="{{chart.yLabels}}" as="yl" hint-placeholder-count="7">
+            <span style="{{yl.style}}">{{yl.v}}</span>
+          </sc-for>
+        </div>
+        <div style="position: relative; height: 116px;">
+          <svg width="302" height="116" viewBox="0 0 302 116" role="img" aria-label="Zejście z wyniku w legu 3: Szymon 26 lotek do 40, Krzysiek 26 lotek do 0" style="display: block; border-radius: 12px; background: #0a0908; box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;">
+            <sc-for list="{{chart.xGrid}}" as="g" hint-placeholder-count="10">
+              <line x1="{{g.x}}" y1="0" x2="{{g.x}}" y2="116" stroke="rgba(243,236,216,0.11)" stroke-width="1"></line>
+            </sc-for>
+            <sc-for list="{{chart.yGrid}}" as="g" hint-placeholder-count="8">
+              <line x1="0" y1="{{g.y}}" x2="302" y2="{{g.y}}" stroke="rgba(243,236,216,0.11)" stroke-width="1"></line>
+            </sc-for>
+            <path d="{{chart.pathS}}" fill="none" stroke="#5aa9ff" stroke-width="2.5" stroke-linejoin="round"></path>
+            <path d="{{chart.pathK}}" fill="none" stroke="#ff70b8" stroke-width="2.5" stroke-dasharray="8 4" stroke-linejoin="round"></path>
+            <sc-for list="{{chart.dotsS}}" as="d" hint-placeholder-count="10">
+              <circle cx="{{d.x}}" cy="{{d.y}}" r="3.2" fill="#5aa9ff"></circle>
+            </sc-for>
+            <sc-for list="{{chart.dotsK}}" as="d" hint-placeholder-count="10">
+              <circle cx="{{d.x}}" cy="{{d.y}}" r="3.2" fill="#ff70b8"></circle>
+            </sc-for>
+          </svg>
+          <span style="{{chart.bustStyle}}"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M6.4 4L12 9.6 17.6 4 20 6.4 14.4 12 20 17.6 17.6 20 12 14.4 6.4 20 4 17.6 9.6 12 4 6.4z"></path></svg>BUST</span>
+        </div>
+        <div aria-hidden="true" style="grid-column: 2; position: relative; height: 13px;">
+          <sc-for list="{{chart.xLabels}}" as="xl" hint-placeholder-count="10">
+            <span style="{{xl.style}}">{{xl.v}}</span>
+          </sc-for>
+        </div>
+        <span aria-hidden="true" style="grid-column: 2; text-align: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 12px; letter-spacing: 0.08em; color: #a8a08a;">LOTKI</span>
+      </div>
+    </section>
+
+    <section aria-label="Statystyki meczu" style="flex-shrink: 0; border-radius: 22px; padding: 6px 14px 4px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85);">
+      <table style="width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums;">
+        <caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Podsumowanie meczu</caption>
+        <thead>
+          <tr style="height: 44px;">
+            <td></td>
+            <th scope="col" style="text-align: right; padding: 0 0 0 8px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;"><span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 24px; height: 24px; border-radius: 50%; background: #ff70b8; color: #111111; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;">XD</span>Krzysiek</span></th>
+            <th scope="col" style="text-align: right; padding: 0 0 0 8px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: #c9bfa6;"><span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 24px; height: 24px; border-radius: 50%; background: #5aa9ff; color: #111111; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;">S</span>Szymon</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{stats}}" as="s" hint-placeholder-count="10">
+            <tr style="height: 38px;">
+              <th scope="row" style="padding: 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: left; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 14px; line-height: 1.2; color: #a8a08a;">{{s.label}}</th>
+              <td style="padding: 0 0 0 8px; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; white-space: nowrap; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 18px; color: #f3ecd8;">{{s.a}}</td>
+              <td style="padding: 0 0 0 8px; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; white-space: nowrap; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 18px; color: #a8a08a;">{{s.b}}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <div style="position: relative; flex-shrink: 0; box-sizing: border-box; padding: 10px 16px 10px; border-top: 1px solid rgba(243,236,216,0.11); background: linear-gradient(180deg, #16120f 0%, #0a0908 100%); display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+      <a href="#" style="height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #c9bfa6; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"></path></svg>Zapisz i wyjdź</a>
+      <button type="button" style="height: 44px; border: 0; border-radius: 12px; background: transparent; box-shadow: 0 0 0 1px rgba(243,236,216,0.12) inset; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; font-variant-numeric: tabular-nums; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M9 4L3 9.5 9 15v-4h5a4 4 0 010 8h-3v2h3a6 6 0 000-12H9z"></path></svg>Cofnij (4:12)</button>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+      <a href="#" style="height: 52px; border-radius: 12px; background: rgba(243,236,216,0.07); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; display: flex; align-items: center; justify-content: center; color: #f3ecd8; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px;">Nowy mecz</a>
+      <button type="button" style="height: 52px; border: 0; border-radius: 12px; background: linear-gradient(135deg, #e8483a 0%, #d8352a 60%, #a8231b 100%); color: #fff7e6; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.04em; box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 30px 60px -20px rgba(216,53,42,0.5); cursor: pointer;">Rewanż</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const players = { S: { initial: 'S', color: '#5aa9ff' }, K: { initial: 'XD', color: '#ff70b8' } };
+const legRows = [
+{ n: 1, w: 'S', name: 'Szymon', darts: '24 rzutki', checkout: 32, time: '6:12', spoken: 'Czas lega 6 minut 12 sekund', avgS: '37,63', avgK: '30,57' },
+{ n: 2, w: 'K', name: 'Krzysiek', darts: '21 rzutek', checkout: 40, time: '5:41', spoken: 'Czas lega 5 minut 41 sekund', avgS: '38,83', avgK: '43,00' },
+{ n: 3, w: 'K', name: 'Krzysiek', darts: '26 rzutek', checkout: 16, time: '8:37', spoken: 'Czas lega 8 minut 37 sekund', avgS: '30,12', avgK: '34,73' }
+];
+const legs = legRows.map((l) => ({
+label: 'LEG ' + l.n,
+initial: players[l.w].initial,
+avatar: 'width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: ' + players[l.w].color + '; color: #111111; display: flex; align-items: center; justify-content: center; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: ' + (players[l.w].initial.length > 1 ? 13 : 16) + 'px;',
+time: l.time,
+spoken: l.spoken,
+result: l.name + ' · ' + l.darts + ' · zamknięcie ' + l.checkout,
+averages: 'Szymon ' + l.avgS + ' · Krzysiek ' + l.avgK
+}));
+
+const W = 302, H = 116, pad = 7, start = 301, maxDarts = 27;
+const x = (d) => Math.round((pad + d * (W - 2 * pad) / maxDarts) * 10) / 10;
+const y = (r) => Math.round((H - pad - r / start * (H - 2 * pad)) * 10) / 10;
+const S = [[0, 301], [3, 266], [6, 221], [9, 181], [12, 155], [15, 100], [18, 85], [21, 60], [24, 40], [26, 40, 1]];
+const K = [[0, 301], [3, 256], [6, 196], [9, 170], [12, 130], [15, 89], [18, 60], [21, 41], [24, 16], [26, 0]];
+const perDart = (L) => { const W = [[0.5, 0.15, 0.35], [0.34, 0.33, 0.33], [0.62, 0.38, 0], [0.2, 0.5, 0.3]]; const out = [[L[0][0], L[0][1]]]; for (let i = 1; i < L.length; i++) { const a = L[i - 1], b = L[i], n = b[0] - a[0]; if (b[2]) { for (let k = 1; k < n; k++) out.push([a[0] + k, Math.max(2, a[1] - Math.round(a[1] * 0.45 * k))]); out.push([b[0], b[1]]); continue; } const w = W[i % 4].slice(0, n); const sum = w.reduce((s, v) => s + v, 0) || 1; let acc = 0; for (let k = 0; k < n; k++) { acc += w[k] / sum; out.push([a[0] + k + 1, k === n - 1 ? b[1] : Math.round(a[1] - (a[1] - b[1]) * acc)]); } } return out; };
+const path = (pts) => pts.map((p, i) => (i === 0 ? 'M' : 'L') + x(p[0]) + ' ' + y(p[1])).join(' ');
+const xGrid = [];
+for (let d = 0; d <= maxDarts; d += 3) { xGrid.push({ x: x(d) }); }
+const yGrid = [0, 50, 100, 150, 200, 250, 300, 301].map((v) => ({ y: y(v) }));
+const yLabels = [301, 250, 200, 150, 100, 50, 0].map((v) => ({
+v: String(v),
+style: 'position: absolute; right: 0; top: ' + y(v) + 'px; transform: translateY(-50%); font-family: Barlow Condensed, sans-serif; font-weight: 500; font-size: 12px; line-height: 1; color: #a8a08a; font-variant-numeric: tabular-nums;'
+}));
+const xLabels = [];
+for (let d = 0; d <= maxDarts; d += 3) {
+xLabels.push({
+v: String(d),
+style: 'position: absolute; top: 0; left: ' + Math.min(Math.max(x(d), 5), W - 6) + 'px; transform: translateX(-50%); font-family: Barlow Condensed, sans-serif; font-weight: 500; font-size: 12px; line-height: 1; color: #a8a08a; font-variant-numeric: tabular-nums;'
+});
+}
+const bustStyle = 'position: absolute; left: ' + x(26) + 'px; top: ' + y(40) + 'px; transform: translate(-100%, -120%); display: inline-flex; align-items: center; gap: 3px; padding: 1px 5px; border-radius: 8px; background: #1b1714; box-shadow: 0 0 0 1px #d8352a inset; font-family: Barlow Condensed, sans-serif; font-weight: 700; font-size: 12px; line-height: 1.2; color: #f3ecd8; white-space: nowrap;';
+const chart = {
+pathS: path(perDart(S)),
+pathK: path(perDart(K)),
+dotsS: S.map((p) => ({ x: x(p[0]), y: y(p[1]) })),
+dotsK: K.map((p) => ({ x: x(p[0]), y: y(p[1]) })),
+xGrid, yGrid, yLabels, xLabels, bustStyle
+};
+
+const stats = [
+['Średnia (3 rzutki)', '36,00', '35,07'],
+['First 9', '41,22', '38,67'],
+['180', '0', '0'],
+['140+', '0', '0'],
+['100+', '1', '0'],
+['60+', '4', '3'],
+['Najwyższe zamknięcie', '40', '32'],
+['% doubli', '28,6% (2/7)', '11,1% (1/9)'],
+['Najlepszy leg', '21 rzutek', '24 rzutki'],
+['Wygrane legi', '2', '1']
+].map((r) => ({ label: r[0], a: r[1], b: r[2] }));
+
+return { legs, chart, stats };
+}
+}
+</script>
+</body>
+</html>

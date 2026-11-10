@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 3, koniec meczu 1v1</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#fff7e6}
+</style>
+</helmet>
+<div style="width: 1600px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 1000px 700px at 62% -10%, #2b201a 0%, #16120f 45%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column;">
+  <svg width="1000" height="1000" viewBox="-500 -500 1000 1000" aria-hidden="true" style="position: absolute; left: 980px; top: 300px; opacity: 0.07; pointer-events: none;">
+    <circle r="490" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="455" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="430" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="270" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="252" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <sc-for list="{{wires}}" as="w" hint-placeholder-count="20"><line x1="0" y1="-275" x2="0" y2="-490" stroke="#f3ecd8" stroke-width="1" transform="{{w}}"></line></sc-for>
+  </svg>
+
+  <header style="position: relative; height: 68px; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid rgba(243,236,216,0.11);">
+    <a href="#" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 6px; color: #c9bfa6; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#c9bfa6" stroke-width="2.2"><path d="M15 6l-6 6 6 6"></path></svg>Zamknij</a>
+    <span style="width: 1px; height: 24px; background: rgba(243,236,216,0.11); margin: 0 8px;"></span>
+    <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="#d8352a"></circle><circle cx="17" cy="17" r="10" fill="#0f0f0f"></circle><circle cx="17" cy="17" r="6" fill="#f3ecd8"></circle><circle cx="17" cy="17" r="2.4" fill="#d8352a"></circle></svg>
+    <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; line-height: 1;">Podsumowanie</h1>
+    <span style="flex-grow: 1;"></span>
+    <button type="button" aria-label="Głos: włączony" aria-pressed="true" style="width: 44px; height: 44px; background: rgba(243,236,216,0.07); border: 0; border-radius: 999px; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M3 9h4l5-5v16l-5-5H3zm11-1v8a4.5 4.5 0 000-8zm0-4.8v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z"></path></svg></button>
+    <button type="button" aria-label="Efekty dźwiękowe: włączone" aria-pressed="true" style="width: 44px; height: 44px; background: rgba(243,236,216,0.07); border: 0; border-radius: 999px; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg></button>
+  </header>
+
+  <main style="position: relative; flex-grow: 1; box-sizing: border-box; padding: 6px 28px 0; display: flex; gap: 24px; min-height: 0;">
+    <section style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+      <div style="height: 292px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+        <svg width="1000" height="292" viewBox="0 0 1000 292" aria-hidden="true" style="position: absolute; left: 50%; top: 0; margin-left: -500px; pointer-events: none;">
+          <defs><radialGradient id="halo1v1" cx="50%" cy="20%" r="45%"><stop offset="0%" stop-color="#f2b134" stop-opacity="0.32"></stop><stop offset="100%" stop-color="#f2b134" stop-opacity="0"></stop></radialGradient></defs>
+          <rect width="1000" height="292" fill="url(#halo1v1)"></rect>
+                  </svg>
+        <svg width="220" height="220" viewBox="0 0 200 200" aria-hidden="true" style="position: absolute; right: -60px; bottom: -70px; opacity: 0.07; pointer-events: none;"><circle cx="100" cy="100" r="95" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="58" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="22" fill="#f3ecd8"></circle></svg>
+        <svg width="48" height="48" viewBox="0 0 24 24" aria-hidden="true" fill="#f2b134" style="position: relative; filter: drop-shadow(0 0 16px rgba(242,177,52,0.8));"><path d="M6 3h12v2h3v3a5 5 0 01-5 5h-.3A6 6 0 0113 15.9V18h4v3H7v-3h4v-2.1A6 6 0 018.3 13H8a5 5 0 01-5-5V5h3zm0 4H5v1a3 3 0 001 2.2zm12 0v3.2A3 3 0 0019 8V7z"></path></svg>
+        <span style="position: relative; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #c9bfa6;">MECZ ZAKOŃCZONY</span>
+        <span style="position: relative; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 52px; line-height: 1;">Krzysiek wygrywa</span>
+        <div style="position: relative; display: flex; align-items: center; gap: 26px; margin-top: 4px;">
+          <span style="width: 60px; height: 60px; border-radius: 50%; background: #ff70b8; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; box-shadow: 0 0 0 4px #1b1714, 0 0 0 6px #f2b134, 0 0 28px #f2b134;">XD</span>
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 86px; line-height: 0.9; font-variant-numeric: tabular-nums;">2 <span style="color: #a8a08a;">:</span> 1</span>
+          <span style="width: 60px; height: 60px; border-radius: 50%; background: #5aa9ff; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px;">S</span>
+        </div>
+        <div style="position: relative; display: flex; align-items: center; gap: 18px; margin-top: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 6px 18px 6px 14px; border-radius: 999px; background: rgba(243,236,216,0.07); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;">
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-1 3v6.4l5.2 3.1 1-1.7-4.2-2.5V7z"></path></svg>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">CZAS GRY</span>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums;">15:02</span>
+          </div>
+          <span style="font-size: 15px; color: #a8a08a;">301 · Double-out · Best of 3</span>
+        </div>
+      </div>
+
+      <ol aria-label="Legi" style="list-style: none; margin: 0; padding: 0; height: 104px; flex-shrink: 0; display: flex; gap: 14px;">
+        <sc-for list="{{legs}}" as="l" hint-placeholder-count="3">
+          <li style="flex: 1; min-width: 0; box-sizing: border-box; border-radius: 18px; padding: 12px 18px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 24px 48px -16px rgba(0,0,0,0.8), 0 0 0 1px rgba(243,236,216,0.11); display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden;">
+            <svg width="140" height="140" viewBox="0 0 200 200" aria-hidden="true" style="position: absolute; right: -44px; bottom: -60px; opacity: 0.07; pointer-events: none;"><circle cx="100" cy="100" r="95" fill="none" stroke="#f3ecd8" stroke-width="10"></circle><circle cx="100" cy="100" r="58" fill="none" stroke="#f3ecd8" stroke-width="10"></circle><circle cx="100" cy="100" r="22" fill="#f3ecd8"></circle></svg>
+            <div style="display: flex; align-items: center; gap: 12px; height: 36px; margin-bottom: 4px; position: relative;">
+              <span style="{{l.avatar}}">{{l.initial}}</span>
+              <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+                <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.18em; color: #a8a08a; line-height: 1;">{{l.label}}</span>
+                <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; line-height: 1;">{{l.winner}}</span>
+              </div>
+              <span style="flex-grow: 1;"></span>
+              <span style="display: flex; align-items: center; gap: 7px; padding: 5px 12px 5px 9px; border-radius: 999px; background: rgba(243,236,216,0.07); font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 21px; line-height: 1; font-variant-numeric: tabular-nums;"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-1 3v6.4l5.2 3.1 1-1.7-4.2-2.5V7z"></path></svg><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">Czas lega </span>{{l.time}}</span>
+            </div>
+            <span style="font-size: 15px; color: #c9bfa6; position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{l.result}}</span>
+            <span style="font-size: 14px; color: #a8a08a; position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{l.averages}}</span>
+          </li>
+        </sc-for>
+      </ol>
+
+      <section aria-labelledby="chart-title" style="flex-grow: 1; min-height: 0; box-sizing: border-box; border-radius: 22px; padding: 14px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 22px; height: 24px;">
+          <h2 id="chart-title" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; line-height: 1;">Leg 3 · zejście z wyniku</h2>
+          <span style="flex-grow: 1;"></span>
+          <span style="display: flex; align-items: center; gap: 8px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;"><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="#5aa9ff" stroke-width="3" stroke-dasharray="12 6"></line></svg><span style="width: 22px; height: 22px; border-radius: 50%; background: #5aa9ff; color: #111111; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;">S</span>Szymon</span>
+          <span style="display: flex; align-items: center; gap: 8px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;"><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="#ff70b8" stroke-width="3"></line></svg><span style="width: 22px; height: 22px; border-radius: 50%; background: #ff70b8; color: #111111; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center;">XD</span>Krzysiek</span>
+        </div>
+        <svg width="1006" height="248" viewBox="0 0 1006 248" role="img" aria-label="Zejście z wyniku w legu 3: Szymon 30 lotek do 36, Krzysiek 28 lotek do 0">
+          <text x="0" y="10" font-family="Barlow Condensed" font-weight="600" font-size="12" letter-spacing="1.5" fill="#a8a08a">POZOSTAŁO</text>
+          <rect x="46" y="20" width="950" height="186" rx="10" fill="#0a0908" fill-opacity="0.55"></rect>
+          <sc-for list="{{chart.vgrid}}" as="g" hint-placeholder-count="11"><line x1="{{g.x}}" y1="20" x2="{{g.x}}" y2="206" stroke="rgba(243,236,216,0.11)" stroke-width="1"></line></sc-for>
+          <sc-for list="{{chart.hgrid}}" as="g" hint-placeholder-count="8"><line x1="46" y1="{{g.y}}" x2="996" y2="{{g.y}}" stroke="rgba(243,236,216,0.11)" stroke-width="1"></line></sc-for>
+          <sc-for list="{{chart.ylabels}}" as="t" hint-placeholder-count="7"><text x="38" y="{{t.y}}" text-anchor="end" font-family="Barlow Condensed" font-weight="600" font-size="15" fill="#a8a08a">{{t.v}}</text></sc-for>
+          <sc-for list="{{chart.xlabels}}" as="t" hint-placeholder-count="11"><text x="{{t.x}}" y="226" text-anchor="middle" font-family="Barlow Condensed" font-weight="600" font-size="15" fill="#a8a08a">{{t.v}}</text></sc-for>
+          <text x="521" y="245" text-anchor="middle" font-family="Barlow Condensed" font-weight="600" font-size="12" letter-spacing="1.5" fill="#a8a08a">LOTKI</text>
+          <polyline points="{{chart.ptsS}}" fill="none" stroke="#5aa9ff" stroke-width="3" stroke-dasharray="12 6" stroke-linejoin="round"></polyline>
+          <polyline points="{{chart.ptsK}}" fill="none" stroke="#ff70b8" stroke-width="3.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(255,112,184,0.6));"></polyline>
+          <sc-for list="{{chart.dotsS}}" as="d" hint-placeholder-count="10"><circle cx="{{d.x}}" cy="{{d.y}}" r="4" fill="#5aa9ff"></circle></sc-for>
+          <sc-for list="{{chart.dotsK}}" as="d" hint-placeholder-count="10"><circle cx="{{d.x}}" cy="{{d.y}}" r="4.5" fill="#ff70b8"></circle></sc-for>
+          <sc-for list="{{chart.busts}}" as="b" hint-placeholder-count="2">
+            <g>
+              <rect x="{{b.rx}}" y="{{b.ry}}" width="62" height="24" rx="8" fill="#1b1714" stroke="#d8352a" stroke-width="1.5"></rect>
+              <path d="{{b.icon}}" stroke="#d8352a" stroke-width="2.6" stroke-linecap="round"></path>
+              <text x="{{b.tx}}" y="{{b.ty}}" font-family="Barlow Condensed" font-weight="700" font-size="15" fill="#f3ecd8">BUST</text>
+            </g>
+          </sc-for>
+        </svg>
+      </section>
+    </section>
+
+    <aside style="width: 470px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; padding: 18px 22px 10px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); align-self: flex-start; position: relative; overflow: hidden;">
+      <svg width="240" height="240" viewBox="0 0 200 200" aria-hidden="true" style="position: absolute; right: -70px; top: -80px; opacity: 0.07; pointer-events: none;"><circle cx="100" cy="100" r="95" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="58" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="22" fill="#f3ecd8"></circle></svg>
+      <table style="width: 100%; border-collapse: collapse; position: relative;">
+        <caption style="text-align: left; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; line-height: 1.1; padding-bottom: 12px;">Statystyki meczu</caption>
+        <thead>
+          <tr style="border-bottom: 1px solid rgba(243,236,216,0.11);">
+            <td style="padding: 0 0 12px;"></td>
+            <th scope="col" style="width: 128px; padding: 0 0 12px; text-align: right; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;"><span style="display: inline-flex; align-items: center; gap: 8px;"><span style="width: 28px; height: 28px; border-radius: 50%; background: #ff70b8; color: #111111; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #2a2420, 0 0 0 4px #f2b134;">XD</span>Krzysiek</span></th>
+            <th scope="col" style="width: 128px; padding: 0 0 12px; text-align: right; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px; color: #c9bfa6;"><span style="display: inline-flex; align-items: center; gap: 8px;"><span style="width: 28px; height: 28px; border-radius: 50%; background: #5aa9ff; color: #111111; font-size: 14px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;">S</span>Szymon</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{stats}}" as="s" hint-placeholder-count="10">
+            <tr style="border-bottom: 1px solid rgba(243,236,216,0.11);">
+              <th scope="row" style="padding: 12px 0; text-align: left; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.12em; color: #a8a08a;">{{s.label}}</th>
+              <td style="padding: 12px 0; text-align: right; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 21px; font-variant-numeric: tabular-nums; white-space: nowrap;">{{s.a}}</td>
+              <td style="padding: 12px 0; text-align: right; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 21px; color: #c9bfa6; font-variant-numeric: tabular-nums; white-space: nowrap;">{{s.b}}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </aside>
+  </main>
+
+  <footer style="position: relative; height: 92px; flex-shrink: 0; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 12px;">
+    <a href="#" style="height: 54px; padding: 0 20px; box-sizing: border-box; border-radius: 12px; color: #c9bfa6; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"></path></svg>Zapisz i wyjdź</a>
+    <button type="button" style="height: 54px; padding: 0 20px; border: 0; border-radius: 12px; background: rgba(243,236,216,0.07); box-shadow: 0 0 0 1px rgba(243,236,216,0.12) inset; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M9 4L3 9.5 9 15v-4h5a4 4 0 010 8h-3v2h3a6 6 0 000-12H9z"></path></svg>Cofnij (4:37)</button>
+    <span style="flex-grow: 1;"></span>
+    <a href="#" style="height: 60px; padding: 0 26px; box-sizing: border-box; border-radius: 12px; background: rgba(243,236,216,0.07); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 10px 20px -10px rgba(0,0,0,0.9); color: #f3ecd8; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; display: flex; align-items: center;">Nowy mecz</a>
+    <button type="button" style="height: 60px; padding: 0 34px; border: 0; border-radius: 12px; background: linear-gradient(135deg, #e8483a 0%, #d8352a 60%, #a8231b 100%); color: #fff7e6; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.04em; display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 30px 60px -20px rgba(216,53,42,0.5);"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff7e6" stroke-width="2.5"><path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"></path></svg>Rewanż</button>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const wires = Array.from({ length: 20 }, (_, i) => 'rotate(' + (i * 18 + 9) + ')');
+const rays = [];
+for (let i = 0; i < 14; i++) { const a = Math.PI + (i + 0.5) * Math.PI / 14; rays.push({ x: Math.round(500 + 700 * Math.cos(a)), y: Math.round(58 - 700 * Math.sin(a)) }); }
+const av = (c, size, font) => 'width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 50%; background: ' + c + '; color: #111111; display: flex; align-items: center; justify-content: center; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: ' + font + 'px;';
+const legs = [
+{ label: 'LEG 1', winner: 'Szymon', initial: 'S', avatar: av('#5aa9ff', 36, 17), time: '4:12', result: '27 rzutek · zamknięcie 40', averages: 'Szymon 33,44 · Krzysiek 29,13' },
+{ label: 'LEG 2', winner: 'Krzysiek', initial: 'XD', avatar: av('#ff70b8', 36, 14), time: '4:48', result: '30 rzutek · zamknięcie 32', averages: 'Szymon 27,22 · Krzysiek 30,10' },
+{ label: 'LEG 3', winner: 'Krzysiek', initial: 'XD', avatar: av('#ff70b8', 36, 14), time: '5:31', result: '28 rzutek · zamknięcie 16', averages: 'Szymon 26,50 · Krzysiek 32,25' }
+];
+const MAX = 30, START = 301;
+const X = (d) => Math.round((46 + d * 950 / MAX) * 10) / 10;
+const Y = (v) => Math.round((206 - v / START * 186) * 10) / 10;
+const S = [[0, 301], [3, 260], [6, 221], [9, 200], [12, 160], [15, 121], [18, 100], [21, 81], [24, 60], [27, 36], [30, 36, 1]];
+const K = [[0, 301], [3, 255], [6, 229], [9, 188], [12, 143], [15, 117], [18, 82], [21, 56], [24, 56, 1], [27, 16], [28, 0]];
+const perDart = (L) => { const W = [[0.5, 0.15, 0.35], [0.34, 0.33, 0.33], [0.62, 0.38, 0], [0.2, 0.5, 0.3]]; const out = [[L[0][0], L[0][1]]]; for (let i = 1; i < L.length; i++) { const a = L[i - 1], b = L[i], n = b[0] - a[0]; if (b[2]) { for (let k = 1; k < n; k++) out.push([a[0] + k, Math.max(2, a[1] - Math.round(a[1] * 0.45 * k))]); out.push([b[0], b[1]]); continue; } const w = W[i % 4].slice(0, n); const sum = w.reduce((s, v) => s + v, 0) || 1; let acc = 0; for (let k = 0; k < n; k++) { acc += w[k] / sum; out.push([a[0] + k + 1, k === n - 1 ? b[1] : Math.round(a[1] - (a[1] - b[1]) * acc)]); } } return out; };
+const pts = (L) => L.map((p) => X(p[0]) + ',' + Y(p[1])).join(' ');
+const dots = (L) => L.slice(1).map((p) => ({ x: X(p[0]), y: Y(p[1]) }));
+const vgrid = []; const xlabels = [];
+for (let d = 0; d <= MAX; d += 3) { vgrid.push({ x: X(d) }); xlabels.push({ x: X(d), v: String(d) }); }
+const hgrid = [0, 50, 100, 150, 200, 250, 300, 301].map((v) => ({ y: Y(v) }));
+const ylabels = [301, 250, 200, 150, 100, 50, 0].map((v) => ({ v: String(v), y: Y(v) + 5 }));
+const bust = (d, v) => {
+const x = X(d), y = Y(v);
+const rx = Math.min(x - 31, 996 - 62), ry = y - 36;
+const ix = rx + 13, iy = ry + 12;
+return { rx, ry, icon: 'M' + (ix - 4) + ' ' + (iy - 4) + 'L' + (ix + 4) + ' ' + (iy + 4) + 'M' + (ix + 4) + ' ' + (iy - 4) + 'L' + (ix - 4) + ' ' + (iy + 4), tx: rx + 23, ty: ry + 17.5 };
+};
+const chart = { vgrid, hgrid, xlabels, ylabels, ptsS: pts(perDart(S)), ptsK: pts(perDart(K)), dotsS: dots(S), dotsK: dots(K), busts: [bust(24, 56), bust(30, 36)] };
+const stats = [
+['ŚREDNIA (3 RZUTKI)', '30,55', '28,96'], ['FIRST 9', '34,67', '31,33'], ['180', '0', '0'], ['140+', '0', '0'], ['100+', '1', '1'], ['60+', '5', '4'],
+['NAJWYŻSZE ZAMKNIĘCIE', '32', '40'], ['% DOUBLI', '28,6% (2/7)', '11,1% (1/9)'], ['NAJLEPSZY LEG', '28 rzutek', '27 rzutek'], ['WYGRANE LEGI', '2', '1']
+].map((r) => ({ label: r[0], a: r[1], b: r[2] }));
+return { wires, rays, legs, chart, stats };
+}
+}
+</script>
+</body>
+</html>

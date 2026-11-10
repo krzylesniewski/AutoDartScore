@@ -188,6 +188,40 @@ describe('HistoryScreen', () => {
     expect(screen.queryByText('Nie udało się porzucić meczu')).toBeNull();
   });
 
+  it('groups the games under day headings with the time on each row', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(2026, 9, 18, 18, 0));
+      const at = (day: number, hour: number, minute: number) => new Date(2026, 9, day, hour, minute).toISOString();
+      games = [
+        listItem({ id: 'm_today_late', updatedAt: at(18, 17, 5) }),
+        listItem({ id: 'm_today_early', status: 'finished', winnerId: 'p1', updatedAt: at(18, 9, 30) }),
+        listItem({ id: 'm_yesterday', status: 'finished', winnerId: 'p2', updatedAt: at(17, 21, 12) }),
+        listItem({ id: 'm_older', status: 'abandoned', updatedAt: at(14, 10, 0) }),
+      ];
+      render(<HistoryScreen />);
+      await screen.findAllByText('Anna 0 : 0 Bartek');
+      expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Typ gry', 'Dziś', 'Wczoraj', '14.10']);
+      expect(rows()).toHaveLength(4);
+      expect(rows().map((item) => item.querySelector('time')?.textContent)).toEqual(['17:05', '09:30', '21:12', '10:00']);
+      expect(within(screen.getByRole('region', { name: 'Dziś' })).getAllByRole('listitem')).toHaveLength(2);
+      expect(within(screen.getByRole('region', { name: 'Wczoraj' })).getAllByRole('listitem')).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('marks a game in progress by its badge and not by an outline', async () => {
+    render(<HistoryScreen />);
+    await screen.findByText('Anna 2 : 1 Bartek');
+    const live = row('W trakcie');
+    const classes = live.getAttribute('class')?.split(' ') ?? [];
+    expect(classes.filter((name) => /^(border|ring|outline)/.test(name))).toEqual([]);
+    const icon = live.querySelector('svg');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(icon?.parentElement?.textContent).toBe('W trakcie');
+  });
+
   it('shows an empty state', async () => {
     games = [];
     render(<HistoryScreen />);

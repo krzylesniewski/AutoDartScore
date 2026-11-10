@@ -31,8 +31,19 @@ describe('AchievementNotices', () => {
     render(<AchievementNotices notices={[notice('Anna')]} />);
     const item = screen.getByRole('listitem');
     expect(item.className.split(' ')).toEqual(
-      expect.arrayContaining(['bg-(--color-surface)', 'border-(--color-accent)', 'text-(--color-text)', 'animate-banner-in', 'motion-reduce:animate-none']),
+      expect.arrayContaining([
+        'bg-linear-to-b',
+        'from-(--color-surface-raised)',
+        'to-(--color-surface)',
+        'shadow-(--shadow-card)',
+        'rounded-(--radius-card)',
+        'text-(--color-text)',
+        'animate-banner-in',
+        'motion-reduce:animate-none',
+      ]),
     );
+    expect(item.className).not.toContain('border-');
+    expect(item.querySelector('svg')?.getAttribute('class')).toContain('text-(--color-accent)');
     expect(item.className).not.toMatch(/#[0-9a-f]{3}/i);
   });
 });

@@ -190,8 +190,16 @@ describe('StatsScreen: ranking', () => {
     expect(urls).toContain('/api/stats/rankings?type=all');
 
     const list = tile('Średnia (3 rzutki)');
-    expect(rows(list)).toEqual(['1.AAnna25 legów61,50', '2.🎯Bartek21 legów55,25', '3.CCelina3 legi40,00', 'DDarek2 legi70,00']);
-    expect(within(list).getByRole('link', { name: /Bartek/ }).getAttribute('href')).toBe('#/stats/p2');
+    expect(rows(within(list).getByRole('list', { name: 'Podium średniej' }))).toEqual(['AAnna61,50Miejsce 125 legów', '🎯Bartek55,25Miejsce 221 legów', 'CCelina40,00Miejsce 33 legi']);
+    expect(rows(within(list).getByRole('list', { name: 'Dalsze miejsca' }))).toEqual(['DDarek2 legi70,00']);
+    for (const [name, id] of [
+      ['Anna', 'p1'],
+      ['Bartek', 'p2'],
+      ['Celina', 'p3'],
+      ['Darek', 'p4'],
+    ] as const) {
+      expect(within(list).getByRole('link', { name: new RegExp(name) }).getAttribute('href')).toBe(`#/stats/${id}`);
+    }
     expect(within(list).getByText('Średnia od 3 ukończonych legów.')).toBeTruthy();
   });
 
@@ -213,7 +221,7 @@ describe('StatsScreen: ranking', () => {
     render(<StatsScreen playerId={null} />);
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
     const leaders = (container: HTMLElement) => [...container.querySelectorAll('[data-leader]')].map((row) => row.textContent);
-    expect(leaders(tile('Średnia (3 rzutki)'))).toEqual(['1.AAnna25 legów61,50']);
+    expect(leaders(tile('Średnia (3 rzutki)'))).toEqual(['AAnna61,50Miejsce 125 legów']);
     expect(leaders(tile('Najwyższe zamknięcie'))).toEqual(['1.🎯Bartek121', '1.CCelina121']);
   });
 
@@ -307,6 +315,24 @@ describe('StatsScreen: overall', () => {
     await screen.findByRole('button', { name: 'Anna' });
     expect(filterButtons()).toEqual(filterLabels);
     expect(screen.queryByRole('button', { name: 'Overall' })).toBeNull();
+  });
+
+  it('separates Overall from the filters with a hidden divider in the ranking only', async () => {
+    const { unmount } = render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const training = screen.getByRole('button', { name: 'Trening' });
+    const divider = training.nextElementSibling;
+    expect(divider?.getAttribute('aria-hidden')).toBe('true');
+    expect(divider?.tagName).not.toBe('BUTTON');
+    expect(divider?.textContent).toBe('');
+    expect(divider?.nextElementSibling).toBe(screen.getByRole('button', { name: 'Overall' }));
+    unmount();
+
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    const bar = screen.getByRole('button', { name: 'Wszystkie' }).parentElement as HTMLElement;
+    expect(bar.querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Trening' }).nextElementSibling).toBeNull();
   });
 
   it('shows the totals and the players above and below the overall average', async () => {
@@ -649,7 +675,7 @@ describe('StatsScreen: responsive layout', () => {
     expect(classes(board)).toEqual(expect.arrayContaining(['grid-cols-1', 'lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]', 'xl:min-h-0', 'xl:flex-1']));
     expect(classes(board)).not.toContain('flex-1');
     expect(classes(tile('Najkrótszy leg').parentElement)).toEqual(expect.arrayContaining(['grid-cols-1', 'sm:grid-cols-2']));
-    const ranking = classes(list.querySelector('ol'));
+    const ranking = classes(within(list).getByRole('list', { name: 'Dalsze miejsca' }));
     expect(ranking).toContain('xl:overflow-y-auto');
     expect(ranking).not.toContain('overflow-y-auto');
     expect(ranking).not.toContain('flex-1');
@@ -664,11 +690,14 @@ describe('StatsScreen: responsive layout', () => {
     const list = tile('Średnia (3 rzutki)');
     expect(classes(list)).toContain('@container');
     expect(classes(tile('Najwyższe zamknięcie'))).toContain('@container');
-    const row = list.querySelector('[data-leader]');
-    expect(classes(row)).toContain('min-h-13');
-    expect(classes(row)).not.toContain('h-13');
-    const variants = [row, ...(row?.querySelectorAll('*') ?? [])].flatMap((element) => classes(element));
-    expect(variants.some((name) => name.startsWith('@max-'))).toBe(true);
+    const variants = (element: Element | null) => [element, ...(element?.querySelectorAll('*') ?? [])].flatMap((item) => classes(item));
+    const row = tile('Najwyższe zamknięcie').querySelector('[data-leader]');
+    expect(classes(row)).toContain('min-h-14');
+    expect(classes(row)).not.toContain('h-14');
+    expect(variants(row).some((name) => name.startsWith('@max-'))).toBe(true);
+    const rest = within(within(list).getByRole('list', { name: 'Dalsze miejsca' })).getByRole('link');
+    expect(classes(rest)).toContain('min-h-14');
+    expect(variants(rest).some((name) => name.startsWith('@max-'))).toBe(true);
     const name = within(list).getByText('Anna');
     expect(classes(name)).toEqual(expect.arrayContaining(['min-w-0', 'truncate']));
     expect(classes(within(list).getByText('61,50'))).toContain('shrink-0');

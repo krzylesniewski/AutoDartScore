@@ -16,7 +16,7 @@ Jeszcze nie ma:
 
 - Statystyk i ekranu podsumowania lega lub meczu.
 - Historii meczów oraz przerywania i wznawiania gry.
-- Działających przycisków „Nowa runda” i „Do weryfikacji”. Na ekranie gry są nieaktywne, z etykietą „Wkrótce”.
+- Działających przycisków „Nowa runda” i „Do weryfikacji”. Nie ma ich na ekranie gry, dopóki nie dostaną działania.
 - Obsługi `confidence`. Serwer zapisuje to pole, ale go nie używa (nie ma jeszcze statusu `pending`).
 - Kamery. Detekcja przyjdzie w etapie 2.
 

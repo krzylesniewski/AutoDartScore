@@ -1,21 +1,24 @@
 import type { Hit } from '@autoscore/schema';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
 import { useFrequentHits } from '../api/use-frequent-hits';
 import { useMatch } from '../api/use-match';
 import { useMatchSummary } from '../api/use-match-summary';
 import { useAnnouncer } from '../audio/use-announcer';
 import { AbandonDialog } from '../components/AbandonDialog';
+import { CheckoutCard } from '../components/CheckoutCard';
 import { CheckoutActions, CheckoutRecentAttempts, CheckoutTargetCard } from '../components/CheckoutPracticePanel';
 import { CheckoutPracticeSummary } from '../components/CheckoutPracticeSummary';
 import { EndPracticeDialog } from '../components/EndPracticeDialog';
 import { EventBanner } from '../components/EventBanner';
 import { Keypad } from '../components/Keypad';
+import { LegInfo } from '../components/LegInfo';
 import { MatchEndView } from '../components/MatchEndView';
 import { MatchHeader } from '../components/MatchHeader';
 import { MatchStatsPanel } from '../components/MatchStatsPanel';
 import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
+import { UndoButton } from '../components/UndoButton';
 import { LockIcon, WarningIcon } from '../components/icons';
 import { canEndPractice } from '../game/can-end-practice';
 import { checkoutControls } from '../game/checkout-practice';
@@ -27,7 +30,7 @@ import { pl } from '../i18n/pl';
 const NEW_GAME_HREF = '#/';
 const HOME_HREF = '#/';
 
-const link = 'text-xl font-semibold uppercase text-(--color-text) underline';
+const noticeLink = 'ml-auto inline-flex min-h-11 items-center underline text-(--color-text)';
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
@@ -44,6 +47,9 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const closeDialog = useCallback(() => setAbandoning(false), []);
   const [ending, setEnding] = useState(false);
   const closeEndDialog = useCallback(() => setEnding(false), []);
+  const [turnsOpen, setTurnsOpen] = useState(false);
+  const turnsButtonRef = useRef<HTMLButtonElement>(null);
+  const legInfoId = useId();
   const undoWindow = useUndoWindow(state);
   const checkouts = checkoutMode ? state.checkouts : null;
   const controls = state ? checkoutControls(state, connection === 'open') : { results: false, skip: false, undo: false };
@@ -72,14 +78,16 @@ export function GameScreen({ matchId }: { matchId: string }) {
 
   if (notFound) {
     return (
-      <main className="flex h-full flex-col items-center justify-center gap-4 p-(--space-page) font-display">
-        <p className="flex items-center gap-2 text-3xl">
-          <WarningIcon className="text-(--color-accent)" />
-          {pl.matchNotFound}
-        </p>
-        <a href={NEW_GAME_HREF} className={link}>
-          {pl.newGame}
-        </a>
+      <main className="flex h-full flex-col items-center justify-center p-(--space-page)">
+        <div className="sc-panel max-w-full items-center gap-5 px-8 py-7 text-center">
+          <p className="flex items-center gap-2.5 font-display text-3xl font-bold text-(--color-text)">
+            <WarningIcon className="shrink-0 text-(--color-accent)" />
+            {pl.matchNotFound}
+          </p>
+          <a href={NEW_GAME_HREF} className="sc-btn sc-btn--outline">
+            {pl.newGame}
+          </a>
+        </div>
       </main>
     );
   }
@@ -112,8 +120,17 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const undoLocked = undoWindow.locked || lockedByServer;
   const shownError = lockedByServer ? null : error;
   const undoCountdown = !undoLocked && undoWindow.secondsLeft !== null ? formatCountdown(undoWindow.secondsLeft) : null;
+  const undoDisabled = busy || abandoned || ended || undoLocked;
+  const legInfoShown = state !== null && !checkoutMode;
+  // Poniżej lg otwarty panel lega zajmuje miejsce paska wyników, panelu tury i karty zamknięcia. Od lg przełącznik nic nie zmienia.
+  const hiddenByTurns = turnsOpen ? 'max-lg:hidden' : '';
 
-  if (state?.type === 'match' && state.finished) {
+  function closeTurns(): void {
+    setTurnsOpen(false);
+    turnsButtonRef.current?.focus();
+  }
+
+  if ((state?.type === 'match' || state?.type === 'casual') && state.finished) {
     return (
       <MatchEndView
         state={state}
@@ -145,29 +162,37 @@ export function GameScreen({ matchId }: { matchId: string }) {
         onAbandon={() => setAbandoning(true)}
         onResume={sendResume}
         onEndPractice={() => setEnding(true)}
+        turns={legInfoShown ? { open: turnsOpen, controls: legInfoId, onToggle: () => setTurnsOpen(!turnsOpen), buttonRef: turnsButtonRef } : undefined}
       />
       {/* Opakowanie nie przewija się, więc baner poniżej lg trzyma się góry widocznego obszaru.
           Poniżej lg main jest kolumną flex, a prawa kolumna ma display: contents. Dok jest wtedy dzieckiem main.
-          Sticky trzyma go na dole przez całe przewijanie, a mt-auto także wtedy, gdy treść jest krótsza niż ekran. */}
+          Sticky trzyma go na dole przez całe przewijanie, a mt-auto także wtedy, gdy treść jest krótsza niż ekran.
+          Karta zamknięcia jest w DOM raz: od lg na dole prawej kolumny pod klawiaturą (lewa kolumna zostaje dla historii tur), poniżej lg przez order między panelem tury a dokiem.
+          Od lg lewa kolumna przewija się sama, więc rosnąca historia tur nie przesuwa karty zamknięcia ani klawiatury.
+          Ujemny margines z równym paddingiem daje miejsce na cień karty rzucającego, który kontener przewijania by przyciął. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
-          <div className="flex flex-col gap-4">
-            {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
-            {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
-            {checkouts && <CheckoutRecentAttempts session={checkouts} />}
+        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:gap-y-(--space-6) lg:grid lg:grid-cols-[340px_1fr] lg:grid-rows-[1fr_auto] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
+          <div className="flex flex-col gap-4 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:-mx-(--space-page) lg:-mt-1 lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:px-(--space-page) lg:pt-1 lg:pb-1">
+            <div className={`contents ${hiddenByTurns}`}>
+              {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
+              {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
+              {checkouts && <CheckoutRecentAttempts session={checkouts} />}
+            </div>
+            {/* Zamknięty panel zostaje w DOM poniżej lg, żeby aria-controls przycisku „Tury” wskazywało istniejący element. */}
+            {state && legInfoShown && (
+              <LegInfo state={state} id={legInfoId} onClose={closeTurns} className={`lg:min-h-[260px] lg:flex-1 ${turnsOpen ? '' : 'max-lg:hidden'}`} />
+            )}
           </div>
-          <div className="contents lg:relative lg:flex lg:flex-col lg:gap-3">
+          {state && !checkoutMode && (
+            <div className={`empty:hidden max-lg:order-1 max-lg:has-[>.invisible]:hidden lg:col-start-2 lg:row-start-2 ${hiddenByTurns}`}>
+              <CheckoutCard state={state} onCheckout={enterCheckout} disabled={keypadDisabled} />
+            </div>
+          )}
+          <div className="contents lg:relative lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-(--space-6)">
             {state && !checkoutMode && (
-              <TurnPanel
-                state={state}
-                lastTurn={lastTurn}
-                busy={busy}
-                undoDisabled={abandoned || ended || undoLocked}
-                undoCountdown={undoCountdown}
-                onUndo={sendUndo}
-                onCheckout={enterCheckout}
-                checkoutDisabled={keypadDisabled}
-              />
+              <div className={`contents ${hiddenByTurns}`}>
+                <TurnPanel state={state} lastTurn={lastTurn} />
+              </div>
             )}
             {checkouts && !ended && <CheckoutTargetCard session={checkouts} />}
             {/* Od lg komunikat o końcu treningu leży na górze prawej kolumny, więc podsumowanie zaczyna się pod nim. */}
@@ -176,11 +201,12 @@ export function GameScreen({ matchId }: { matchId: string }) {
                 <CheckoutPracticeSummary session={checkouts} />
               </div>
             )}
-            {/* TurnPanel zostaje po końcu gry, żeby Cofnij poprawiło źle wpisaną zwycięską rzutkę. */}
+            {/* Tu dochodzi tylko zakończone Solo 501. Klawiatura znika, a Cofnij zostaje osobno, żeby poprawić źle wpisaną zwycięską rzutkę. */}
+            {state?.finished && !checkoutMode && <UndoButton onUndo={sendUndo} disabled={undoDisabled} countdown={undoCountdown} className="h-14" />}
             {state?.finished && <MatchSummaryPanel state={state} summary={stats.summary} error={stats.error} />}
             {/* Od lg dok znika z układu, a komunikaty nakładają się na górę prawej kolumny, żeby nie przesuwać klawiatury. */}
             <div
-              className="sticky bottom-0 z-10 mt-auto flex flex-col gap-3 bg-(--color-bg) pt-3 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:pb-[calc(var(--space-page)_+_env(safe-area-inset-bottom))] lg:contents"
+              className="sticky bottom-0 z-10 mt-auto flex flex-col gap-3 bg-(--color-bg) pt-3 max-lg:order-2 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:pb-[calc(var(--space-page)_+_env(safe-area-inset-bottom))] lg:contents"
             >
               <div className="flex flex-col gap-3 empty:hidden lg:absolute lg:inset-x-0 lg:top-0 lg:z-20">
                 {connection === 'closed' && <Notice text={pl.connectionLost} />}
@@ -188,14 +214,14 @@ export function GameScreen({ matchId }: { matchId: string }) {
                 {undoLocked && <Notice text={pl.matchLocked} icon={<LockIcon className="text-(--color-accent)" />} />}
                 {abandoned && (
                   <Notice text={pl.abandonedReadOnly}>
-                    <a href={HOME_HREF} className="ml-auto underline">
+                    <a href={HOME_HREF} className={noticeLink}>
                       {pl.home}
                     </a>
                   </Notice>
                 )}
                 {ended && (
                   <Notice text={pl.practiceEndedReadOnly}>
-                    <a href={HOME_HREF} className="ml-auto underline">
+                    <a href={HOME_HREF} className={noticeLink}>
                       {pl.home}
                     </a>
                   </Notice>
@@ -218,7 +244,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
                   onRestMiss={sendRestMiss}
                   onUndo={sendUndo}
                   disabled={keypadDisabled}
-                  undoDisabled={busy || abandoned || ended}
+                  undoDisabled={undoDisabled}
                   checkout={busy ? null : checkout}
                   frequent={frequent}
                 />
@@ -254,7 +280,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
 
 function Notice({ text, icon = <WarningIcon className="text-(--color-accent)" />, children }: { text: string; icon?: ReactNode; children?: ReactNode }) {
   return (
-    <p className="flex items-center gap-2 rounded-(--radius-card) border-(length:--border-width) border-(--color-accent) bg-(--color-surface) px-4 py-2 font-display text-xl text-(--color-text)">
+    // Od lg komunikat leży na panelu tury, więc tło musi być kryjące.
+    <p className="flex items-center gap-2 rounded-(--radius-card) bg-linear-to-b from-(--color-surface-raised) to-(--color-surface) px-4 py-2 font-display text-xl text-(--color-text) shadow-(--shadow-card)">
       {icon}
       {text}
       {children}

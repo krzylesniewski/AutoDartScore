@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Gra, zabawa 4 graczy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button:focus-visible{outline:none;box-shadow:0 0 0 2px #0a0908,0 0 0 4px #f3ecd8 !important}
+</style>
+</helmet>
+<div style="width: 1600px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 1000px 700px at 62% -10%, #2b201a 0%, #16120f 45%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column;">
+  <svg width="1000" height="1000" viewBox="-500 -500 1000 1000" aria-hidden="true" style="position: absolute; left: 640px; top: 260px; opacity: 0.07;">
+    <circle r="490" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="455" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="430" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="270" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="252" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <sc-for list="{{wires}}" as="w" hint-placeholder-count="20"><line x1="0" y1="-275" x2="0" y2="-490" stroke="#f3ecd8" stroke-width="1" transform="{{w}}"></line></sc-for>
+  </svg>
+
+  <header style="position: relative; height: 68px; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 14px;">
+    <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="#d8352a"></circle><circle cx="17" cy="17" r="10" fill="#0a0908"></circle><circle cx="17" cy="17" r="6" fill="#f3ecd8"></circle><circle cx="17" cy="17" r="2.4" fill="#d8352a"></circle></svg>
+    <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.08em;">AUTO SCORE</span>
+    <span style="width: 1px; height: 24px; background: rgba(243,236,216,0.11); margin: 0 8px;"></span>
+    <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; color: #c9bfa6;">Zabawa · 301 · double-out · jeden leg, ranking miejsc</span>
+    <span style="flex-grow: 1;"></span>
+    <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; color: #c9bfa6;">Kolejka 6</span>
+    <span role="timer" aria-label="Czas lega 8 minut 47 sekund" style="display: inline-flex; align-items: center; gap: 8px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; background: rgba(243,236,216,0.07); padding: 6px 12px; border-radius: 999px; font-variant-numeric: tabular-nums;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#a8a08a"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-1 3v6.4l5.2 3.1 1-1.7-4.2-2.5V7z"></path></svg>8:47</span>
+    <span style="flex-grow: 1;"></span>
+    <button type="button" aria-label="Głos: włączony" style="width: 44px; height: 44px; background: rgba(243,236,216,0.07); border: 0; border-radius: 999px; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M3 9h4l5-5v16l-5-5H3zm11-1v8a4.5 4.5 0 000-8zm0-4.8v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z"></path></svg></button>
+    <button type="button" aria-label="Efekty dźwiękowe: włączone" style="width: 44px; height: 44px; background: rgba(243,236,216,0.07); border: 0; border-radius: 999px; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg></button>
+    <button type="button" aria-label="Menu gry: porzuć grę" style="width: 44px; height: 44px; background: rgba(243,236,216,0.07); border: 0; border-radius: 999px; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg></button>
+  </header>
+
+  <main style="position: relative; flex-grow: 1; box-sizing: border-box; padding: 8px 28px 28px; display: flex; gap: 28px; min-height: 0;">
+    <section aria-label="Wyniki" style="width: 450px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; min-height: 0;">
+      <ol aria-label="Kolejka rzutów" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+        <li aria-current="true" style="height: 214px; box-sizing: border-box; border-radius: 18px; padding: 20px 26px 18px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 24px 48px -16px rgba(0,0,0,0.8), 0 0 0 1px rgba(243,236,216,0.11); display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; margin-bottom: 2px;">
+          <svg width="260" height="260" viewBox="0 0 200 200" aria-hidden="true" style="position: absolute; right: -70px; top: -70px; opacity: 0.07;"><circle cx="100" cy="100" r="95" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="58" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="22" fill="#f3ecd8"></circle></svg>
+          <div style="display: flex; align-items: center; gap: 14px; position: relative;">
+            <span style="width: 58px; height: 58px; flex-shrink: 0; border-radius: 50%; background: #5aa9ff; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 28px; box-shadow: 0 0 0 3px #1b1714, 0 0 0 5px #5aa9ff, 0 0 24px 2px rgba(90,169,255,0.45);">S</span>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 34px; line-height: 1;">Szymon</span>
+              <span style="font-size: 15px; color: #c9bfa6;">rzuca teraz · rzutka 1 z 3</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; position: relative;">
+            <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px;">
+              <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; color: #f3ecd8; white-space: nowrap;">▼ 227 w 5 turach</span>
+              <span style="font-size: 15px; color: #a8a08a;">śr. <b style="color: #f3ecd8; font-weight: 600;">45,40</b> · first 9 <b style="color: #f3ecd8; font-weight: 600;">43,67</b></span>
+            </div>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 128px; line-height: 0.82; font-variant-numeric: tabular-nums; text-shadow: 0 6px 30px rgba(0,0,0,0.6);">74</span>
+          </div>
+          <div role="img" aria-label="Zostało 74 z 301 punktów" style="position: relative; height: 6px; border-radius: 3px; background: rgba(243,236,216,0.1); overflow: hidden;"><span style="display: block; width: 75.4%; height: 100%; border-radius: 3px; background: #d8352a; box-shadow: 0 0 10px rgba(216,53,42,0.5);"></span></div>
+        </li>
+
+        <li style="height: 78px; box-sizing: border-box; border-radius: 18px; padding: 10px 22px 11px; background: rgba(243,236,216,0.035); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px; position: relative;">
+            <span style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; background: #ff70b8; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;">XD</span>
+            <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+              <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 24px; line-height: 1;">Krzysiek</span>
+              <span style="font-size: 13px; color: #a8a08a; white-space: nowrap;">następny · śr. 38,80 · <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; color: #c9bfa6;">▼ 45</span></span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 56px; line-height: 0.86; color: #c9bfa6; font-variant-numeric: tabular-nums;">107</span>
+          </div>
+          <div role="img" aria-label="Zostało 107 z 301 punktów" style="position: relative; height: 5px; border-radius: 3px; background: rgba(243,236,216,0.1); overflow: hidden;"><span style="display: block; width: 64.5%; height: 100%; border-radius: 3px; background: #a8a08a;"></span></div>
+        </li>
+
+        <li style="height: 78px; box-sizing: border-box; border-radius: 18px; padding: 10px 22px 11px; background: rgba(243,236,216,0.035); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px; position: relative;">
+            <span style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; background: #b28cff; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;">G</span>
+            <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+              <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 24px; line-height: 1;">Grzesiek</span>
+              <span style="font-size: 13px; color: #a8a08a; white-space: nowrap;">śr. 48,20 · <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; color: #c9bfa6;">▼ 55</span></span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 56px; line-height: 0.86; color: #c9bfa6; font-variant-numeric: tabular-nums;">60</span>
+          </div>
+          <div role="img" aria-label="Zostało 60 z 301 punktów" style="position: relative; height: 5px; border-radius: 3px; background: rgba(243,236,216,0.1); overflow: hidden;"><span style="display: block; width: 80.1%; height: 100%; border-radius: 3px; background: #a8a08a;"></span></div>
+        </li>
+
+        <li style="height: 54px; box-sizing: border-box; border-radius: 18px; padding: 0 16px 0 22px; background: rgba(243,236,216,0.035); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; display: flex; align-items: center; gap: 12px;">
+          <span style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: #f2b134; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 14px;">D</span>
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 22px; line-height: 1;">Dzimi</span>
+            <span style="font-size: 13px; color: #a8a08a; white-space: nowrap;">śr. 60,20 · 15 rzutek</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px; background: rgba(243,236,216,0.07); font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; white-space: nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="#f2b134"><path d="M12 2a6 6 0 016 6 6 6 0 01-3 5.2V22l-3-2-3 2v-8.8A6 6 0 016 8a6 6 0 016-6z"></path></svg>1. miejsce</span>
+        </li>
+      </ol>
+
+      <section aria-labelledby="histCasual" style="flex: 1 1 0; min-height: 0; box-sizing: border-box; border-radius: 22px; padding: 10px 16px 12px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px;">
+          <h2 id="histCasual" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; line-height: 1.1;">Historia tur</h2>
+          <span style="font-size: 13px; color: #a8a08a;">po turze (punkty w turze)</span>
+        </div>
+        <table aria-hidden="true" style="width: 100%; border-collapse: collapse; table-layout: fixed; flex-shrink: 0;">
+          <colgroup><col style="width: 40px;"><col><col><col><col></colgroup>
+          <thead>
+            <tr>
+              <th style="padding: 0 0 4px; text-align: left; color: #a8a08a; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px;">Tura</th>
+              <th style="padding: 0 0 4px; text-align: right; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px;">Szymon</th>
+              <th style="padding: 0 0 4px; text-align: right; color: #a8a08a; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px;">Krzysiek</th>
+              <th style="padding: 0 0 4px; text-align: right; color: #a8a08a; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px;">Grzesiek</th>
+              <th style="padding: 0 0 4px; text-align: right; color: #a8a08a; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px;">Dzimi</th>
+            </tr>
+          </thead>
+        </table>
+        <div style="flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; display: flex; flex-direction: column-reverse;">
+          <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;">
+            <caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Historia tur: wynik po turze i punkty w turze</caption>
+            <colgroup><col style="width: 40px;"><col><col><col><col></colgroup>
+            <thead style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">
+              <tr><th scope="col">Tura</th><th scope="col">Szymon</th><th scope="col">Krzysiek</th><th scope="col">Grzesiek</th><th scope="col">Dzimi</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); color: #a8a08a; font-size: 16px;">1</td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right;">256<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(45)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">275<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(26)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">241<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(60)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">241<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(60)</small></td>
+              </tr>
+              <tr>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); color: #a8a08a; font-size: 16px;">2</td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right;">230<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(26)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">234<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(41)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">196<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(45)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">156<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(85)</small></td>
+              </tr>
+              <tr>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); color: #a8a08a; font-size: 16px;">3</td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right;">170<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(60)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">212<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(22)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">115<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(81)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">56<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(100)</small></td>
+              </tr>
+              <tr>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); color: #a8a08a; font-size: 16px;">4</td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right;">129<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(41)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">152<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(60)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6; white-space: nowrap;">115<span style="display: inline-flex; align-items: center; gap: 3px; margin-left: 5px; color: #f3ecd8; font-family: 'Barlow', sans-serif; font-weight: 600; font-size: 13px;"><svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M6.4 4L12 9.6 17.6 4 20 6.4 14.4 12 20 17.6 17.6 20 12 14.4 6.4 20 4 17.6 9.6 12 4 6.4z"></path></svg>Bust</span></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">16<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(40)</small></td>
+              </tr>
+              <tr>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); color: #a8a08a; font-size: 16px;">5</td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right;">74<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(55)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">107<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(45)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6;">60<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(55)</small></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; color: #c9bfa6; white-space: nowrap;"><span style="display: inline-flex; align-items: center; gap: 3px; margin-right: 5px; color: #f3ecd8; font-family: 'Barlow', sans-serif; font-weight: 600; font-size: 13px;"><svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" fill="#f2b134"><path d="M12 2a6 6 0 016 6 6 6 0 01-3 5.2V22l-3-2-3 2v-8.8A6 6 0 016 8a6 6 0 016-6z"></path></svg>1.</span>0<small style="margin-left: 3px; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;">(16)</small></td>
+              </tr>
+              <tr aria-current="true">
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); background: rgba(243,236,216,0.035); color: #a8a08a; font-size: 16px;">6</td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); background: rgba(243,236,216,0.035); text-align: right;">…</td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); background: rgba(243,236,216,0.035); text-align: right; color: #c9bfa6;"></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); background: rgba(243,236,216,0.035); text-align: right; color: #c9bfa6;"></td>
+                <td style="padding: 2px 0; border-top: 1px solid rgba(243,236,216,0.11); background: rgba(243,236,216,0.035); text-align: right; color: #a8a08a; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px;"><span aria-label="poza kolejką">–</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; flex-shrink: 0;">
+          <div style="border-radius: 12px; padding: 6px 10px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
+            <span style="font-size: 13px; font-weight: 500; color: #a8a08a; white-space: nowrap;">Najwyższa tura</span>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums;">100</span>
+          </div>
+          <div style="border-radius: 12px; padding: 6px 10px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
+            <span style="font-size: 13px; font-weight: 500; color: #a8a08a; white-space: nowrap;">Rzutek w legu</span>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums;">59</span>
+          </div>
+          <div style="border-radius: 12px; padding: 6px 10px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+            <span style="font-size: 13px; font-weight: 500; color: #a8a08a; white-space: nowrap;">Busty</span>
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M6.4 4L12 9.6 17.6 4 20 6.4 14.4 12 20 17.6 17.6 20 12 14.4 6.4 20 4 17.6 9.6 12 4 6.4z"></path></svg>1</span>
+          </div>
+        </div>
+      </section>
+
+      <button type="button" aria-label="Zamknięcie w 2 rzutkach: T14, D16. Kliknij albo Enter, aby wpisać T14" aria-keyshortcuts="Enter" style="flex-shrink: 0; border: 0; text-align: left; border-radius: 18px; padding: 16px 22px; background: linear-gradient(135deg, #e8483a 0%, #d8352a 60%, #a8231b 100%); box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 30px 60px -20px rgba(216,53,42,0.5); color: #fff7e6; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden; cursor: pointer;">
+        <svg width="220" height="220" viewBox="0 0 200 200" aria-hidden="true" style="position: absolute; right: -60px; top: -60px; opacity: 0.16;"><circle cx="100" cy="100" r="95" fill="none" stroke="#fff7e6" stroke-width="10"></circle><circle cx="100" cy="100" r="58" fill="none" stroke="#fff7e6" stroke-width="10"></circle><circle cx="100" cy="100" r="22" fill="#fff7e6"></circle></svg>
+        <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; letter-spacing: 0.16em; line-height: 1; position: relative;">ZAMKNIĘCIE W 2 RZUTKACH</span>
+        <span style="display: flex; gap: 10px; position: relative;">
+          <span style="background: rgba(0,0,0,0.28); border-radius: 10px; padding: 0 12px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 58px; line-height: 1.1; white-space: nowrap;">T14</span>
+          <span style="background: rgba(0,0,0,0.28); border-radius: 10px; padding: 0 12px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 58px; line-height: 1.1; white-space: nowrap;">D16</span>
+        </span>
+      <span aria-hidden="true" style="position: absolute; top: 14px; right: 16px; padding: 4px 7px; border-radius: 6px; background: rgba(0,0,0,0.28); color: #fff7e6; font-family: 'Barlow', sans-serif; font-weight: 600; font-size: 12px; line-height: 1;">Enter</span></button>
+    </section>
+
+    <section aria-label="Bieżąca tura i klawiatura" style="flex-grow: 1; display: flex; flex-direction: column; gap: 18px; min-width: 0;">
+      <ol aria-label="Rzutki tury" style="list-style: none; margin: 0; padding: 0; display: flex; gap: 14px; height: 120px; flex-shrink: 0;">
+        <li aria-label="Rzutka 1, czeka na rzutkę" style="flex: 1; min-width: 0; border-radius: 18px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px #d8352a inset, 0 0 40px -10px rgba(216,53,42,0.5) inset; display: flex; align-items: center; justify-content: center; gap: 14px;">
+          <svg width="40" height="40" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="none" stroke="#d8352a" stroke-opacity="0.4" stroke-width="2"></circle><circle cx="28" cy="28" r="15" fill="none" stroke="#d8352a" stroke-opacity="0.7" stroke-width="2"></circle><circle cx="28" cy="28" r="5" fill="#d8352a"></circle></svg>
+          <span style="font-size: 17px; color: #c9bfa6;">rzutka 1</span>
+        </li>
+        <li aria-label="Rzutka 2" style="flex: 1; min-width: 0; border-radius: 18px; background: rgba(243,236,216,0.035);"></li>
+        <li aria-label="Rzutka 3" style="flex: 1; min-width: 0; border-radius: 18px; background: rgba(243,236,216,0.035);"></li>
+        <li style="width: 150px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; padding-right: 6px;">
+          <span style="font-size: 15px; color: #a8a08a;">w tej turze</span>
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 72px; line-height: 1; font-variant-numeric: tabular-nums;">0</span>
+        </li>
+      </ol>
+
+      <div style="flex-grow: 1; display: flex; gap: 20px; min-height: 0;">
+        <div role="group" aria-label="Mnożnik" style="width: 130px; flex-shrink: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 18px; background: rgba(243,236,216,0.07);">
+          <button type="button" aria-pressed="true" aria-keyshortcuts="S" style="position: relative; flex: 1; min-height: 72px; background: #f3ecd8; color: #0a0908; border: 0; border-radius: 13px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7); cursor: pointer;">Single<span aria-hidden="true" style="position: absolute; top: 7px; right: 10px; font-family: 'Barlow', sans-serif; font-weight: 500; font-size: 12px; line-height: 1; opacity: 0.7; pointer-events: none;">S</span></button>
+          <button type="button" aria-pressed="false" aria-keyshortcuts="D" style="position: relative; flex: 1; min-height: 72px; background: transparent; color: #f3ecd8; border: 0; border-radius: 13px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 24px; cursor: pointer;">Double<span aria-hidden="true" style="position: absolute; top: 7px; right: 10px; font-family: 'Barlow', sans-serif; font-weight: 500; font-size: 12px; line-height: 1; opacity: 0.7; pointer-events: none;">D</span></button>
+          <button type="button" aria-pressed="false" aria-keyshortcuts="T" style="position: relative; flex: 1; min-height: 72px; background: transparent; color: #f3ecd8; border: 0; border-radius: 13px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 24px; cursor: pointer;">Treble<span aria-hidden="true" style="position: absolute; top: 7px; right: 10px; font-family: 'Barlow', sans-serif; font-weight: 500; font-size: 12px; line-height: 1; opacity: 0.7; pointer-events: none;">T</span></button>
+        </div>
+        <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; min-width: 0;">
+          <div role="group" aria-label="Klawiatura rzutek" style="position: relative; width: 600px; height: 600px; flex-shrink: 0; border-radius: 50%; background: radial-gradient(circle, rgba(243,236,216,0.03) 0%, rgba(243,236,216,0) 70%);">
+            <svg width="600" height="600" viewBox="0 0 600 600" aria-hidden="true" style="position: absolute; left: 0; top: 0;"><circle cx="300" cy="300" r="296" fill="none" stroke="rgba(243,236,216,0.11)" stroke-width="1"></circle><circle cx="300" cy="300" r="204" fill="none" stroke="rgba(243,236,216,0.11)" stroke-width="1" stroke-dasharray="2 8"></circle></svg>
+            <sc-for list="{{ring}}" as="n" hint-placeholder-count="20">
+              <button type="button" style="{{n.style}}">{{n.label}}</button>
+            </sc-for>
+            <div style="position: absolute; left: 180px; top: 250px; width: 240px; display: flex; gap: 12px;">
+              <button type="button" aria-keyshortcuts="B" style="position: relative; flex: 1; height: 100px; background: linear-gradient(180deg, #2a2420, #1b1714); color: #f3ecd8; border: 0; border-radius: 50px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 10px 20px -10px rgba(0,0,0,0.9); cursor: pointer;">25<span aria-hidden="true" style="position: absolute; top: 7px; right: 10px; font-family: 'Barlow', sans-serif; font-weight: 500; font-size: 12px; line-height: 1; opacity: 0.7; pointer-events: none;">B</span></button>
+              <button type="button" aria-keyshortcuts="Shift+B" style="position: relative; flex: 1; height: 100px; background: linear-gradient(180deg, #2a2420, #1b1714); color: #f3ecd8; border: 0; border-radius: 50px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; box-shadow: 0 0 0 2px #d8352a inset, 0 10px 20px -10px rgba(0,0,0,0.9); cursor: pointer;">Bull<span aria-hidden="true" style="position: absolute; top: 7px; right: 10px; font-family: 'Barlow', sans-serif; font-weight: 500; font-size: 12px; line-height: 1; opacity: 0.7; pointer-events: none;">Shift+B</span></button>
+            </div>
+          </div>
+        </div>
+        <div style="width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-size: 14px; color: #a8a08a;">Najczęstsze: Szymon</span>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+            <sc-for list="{{frequent}}" as="f" hint-placeholder-count="6">
+              <button type="button" style="height: 54px; background: rgba(243,236,216,0.07); color: #f3ecd8; border: 0; border-radius: 12px; box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 21px; cursor: pointer;">{{f}}</button>
+            </sc-for>
+          </div>
+          <button type="button" aria-keyshortcuts="Space" style="position: relative; flex-grow: 1; background: rgba(243,236,216,0.07); color: #f3ecd8; border: 0; border-radius: 18px; box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 36px; cursor: pointer;">Miss<span aria-hidden="true" style="position: absolute; top: 7px; right: 10px; font-family: 'Barlow', sans-serif; font-weight: 500; font-size: 12px; line-height: 1; opacity: 0.7; pointer-events: none;">Spacja</span></button>
+          <button type="button" style="height: 54px; flex-shrink: 0; background: transparent; color: #c9bfa6; border: 0; box-shadow: 0 0 0 1px rgba(243,236,216,0.12) inset; border-radius: 12px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; cursor: pointer;">Reszta tury: Miss</button>
+          <button type="button" aria-keyshortcuts="Backspace" style="position: relative; height: 54px; flex-shrink: 0; background: transparent; color: #f3ecd8; border: 0; box-shadow: 0 0 0 1px rgba(243,236,216,0.12) inset; border-radius: 12px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M9 4L3 9.5 9 15v-4h5a4 4 0 010 8h-3v2h3a6 6 0 000-12H9z"></path></svg>Cofnij<span aria-hidden="true" style="position: absolute; top: 7px; right: 10px; font-family: 'Barlow', sans-serif; font-weight: 500; font-size: 12px; line-height: 1; opacity: 0.7; pointer-events: none;">Backspace</span></button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const order = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+const size = 76, r = 252, c = 300;
+const ring = order.map((n, i) => {
+const a = (i * 18) * Math.PI / 180;
+const left = Math.round(c + r * Math.sin(a) - size / 2);
+const top = Math.round(c - r * Math.cos(a) - size / 2);
+return {
+label: String(n),
+style: 'position: absolute; left: ' + left + 'px; top: ' + top + 'px; width: ' + size + 'px; height: ' + size + 'px; border-radius: 50%; background: linear-gradient(180deg, #2a2420, #1b1714); color: #f3ecd8; border: 0; box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 10px 20px -10px rgba(0,0,0,0.9); font-family: Barlow Condensed, sans-serif; font-weight: 700; font-size: 32px; cursor: pointer;'
+};
+});
+const wires = order.map((n, i) => 'rotate(' + (i * 18 + 9) + ')');
+return { ring, wires, frequent: ['S20', 'T20', 'S5', 'S1', 'D20', 'S19'] };
+}
+}
+</script>
+</body>
+</html>

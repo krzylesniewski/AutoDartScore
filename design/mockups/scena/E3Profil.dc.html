@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 3, karta gracza</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#fff7e6}
+</style>
+</helmet>
+<div style="width: 1600px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 1100px 650px at 22% -10%, #2b201a 0%, #16120f 45%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column;">
+  <svg width="1000" height="1000" viewBox="-500 -500 1000 1000" aria-hidden="true" style="position: absolute; left: 1040px; top: -560px; opacity: 0.07; pointer-events: none;">
+    <circle r="490" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="455" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="430" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="270" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <circle r="252" fill="none" stroke="#f3ecd8" stroke-width="1"></circle>
+    <sc-for list="{{wires}}" as="w" hint-placeholder-count="20"><line x1="0" y1="-275" x2="0" y2="-490" stroke="#f3ecd8" stroke-width="1" transform="{{w}}"></line></sc-for>
+  </svg>
+
+  <header style="position: relative; height: 68px; flex-shrink: 0; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid rgba(243,236,216,0.11);">
+    <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="#d8352a"></circle><circle cx="17" cy="17" r="10" fill="#0f0f0f"></circle><circle cx="17" cy="17" r="6" fill="#f3ecd8"></circle><circle cx="17" cy="17" r="2.4" fill="#d8352a"></circle></svg>
+    <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.08em; margin-right: 18px;">AUTO SCORE</span>
+    <nav aria-label="Główna nawigacja" style="display: flex; gap: 4px; align-self: stretch;">
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Nowa gra</a>
+      <a href="#" aria-current="page" style="position: relative; display: flex; align-items: center; padding: 0 16px; color: #f3ecd8; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Statystyki<span style="position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px; background: #d8352a; box-shadow: 0 0 14px 2px rgba(216,53,42,0.5);"></span></a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Historia</a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Ustawienia</a>
+    </nav>
+    <span style="flex-grow: 1;"></span>
+    <span style="display: inline-flex; align-items: center; gap: 8px; color: #a8a08a; background: rgba(243,236,216,0.035); padding: 8px 14px; border-radius: 999px; font-size: 15px;"><span style="width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box; border: 2px solid #a8a08a;"></span>Kamera: brak</span>
+    <span style="display: inline-flex; align-items: center; gap: 8px; color: #a8a08a; background: rgba(243,236,216,0.035); padding: 8px 14px; border-radius: 999px; font-size: 15px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #3ddc84;"></span>Głos: włączony</span>
+  </header>
+
+  <main style="position: relative; flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 20px 28px 24px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: center; gap: 18px; height: 46px;">
+      <a href="#" style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 8px 0 2px; color: #c9bfa6; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#c9bfa6" stroke-width="2.2"><path d="M15 6l-6 6 6 6"></path></svg>Ranking</a>
+      <span style="flex-grow: 1;"></span>
+      <h2 id="players-label" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">GRACZE</h2>
+      <div role="group" aria-labelledby="players-label" style="display: flex; gap: 8px;">
+        <sc-for list="{{players}}" as="pl" hint-placeholder-count="4">
+          <button type="button" aria-pressed="{{pl.pressed}}" style="{{pl.style}}"><span style="{{pl.avatar}}">{{pl.initial}}</span>{{pl.name}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: stretch; gap: 20px; height: 116px; flex-shrink: 0;">
+      <section aria-label="Krzysiek" style="flex-grow: 1; box-sizing: border-box; border-radius: 22px; padding: 0 24px 0 20px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); display: flex; align-items: center; gap: 20px; position: relative; overflow: hidden;">
+        <svg width="260" height="260" viewBox="0 0 200 200" aria-hidden="true" style="position: absolute; right: 240px; top: -90px; opacity: 0.07; pointer-events: none;"><circle cx="100" cy="100" r="95" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="58" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="22" fill="#f3ecd8"></circle></svg>
+        <span style="width: 84px; height: 84px; flex-shrink: 0; border-radius: 50%; background: #ff70b8; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 32px; box-shadow: 0 0 0 4px #221d19, 0 0 0 6px #ff70b8, 0 0 28px 2px rgba(255,112,184,0.5); position: relative;">XD</span>
+        <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 60px; line-height: 0.9; position: relative;">Krzysiek</h1>
+        <span style="flex-grow: 1;"></span>
+        <button type="button" style="height: 54px; padding: 0 20px; border: 0; border-radius: 12px; background: rgba(243,236,216,0.07); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; position: relative;">Edytuj profil</button>
+        <button type="button" style="height: 54px; padding: 0 20px; border: 0; border-radius: 12px; background: transparent; box-shadow: 0 0 0 1px rgba(243,236,216,0.12) inset; color: #c9bfa6; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; display: flex; align-items: center; gap: 8px; position: relative;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M3 3h18v5H3zm1 6h16v12H4zm5 3v2h6v-2z"></path></svg>Archiwizuj</button>
+      </section>
+      <section aria-labelledby="stats-filter" style="display: flex; flex-direction: column; justify-content: center; gap: 8px; align-items: flex-end;">
+        <h2 id="stats-filter" style="margin: 0 6px 0 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">TYP GIER</h2>
+        <div style="display: flex; padding: 5px; gap: 4px; border-radius: 16px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;">
+          <button type="button" aria-pressed="true" style="height: 46px; padding: 0 20px; border: 0; border-radius: 12px; background: #f3ecd8; color: #0a0908; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7);">Wszystkie</button>
+          <button type="button" aria-pressed="false" style="height: 46px; padding: 0 20px; border: 0; border-radius: 12px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Mecze 1v1</button>
+          <button type="button" aria-pressed="false" style="height: 46px; padding: 0 20px; border: 0; border-radius: 12px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Zabawa</button>
+          <button type="button" aria-pressed="false" style="height: 46px; padding: 0 20px; border: 0; border-radius: 12px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Trening</button>
+        </div>
+      </section>
+    </div>
+
+    <div style="flex-grow: 1; min-height: 0; display: flex; gap: 20px;">
+      <div style="width: 900px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px;">
+        <dl style="margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+          <sc-for list="{{stats}}" as="s" hint-placeholder-count="12">
+            <div style="height: 80px; box-sizing: border-box; border-radius: 18px; padding: 12px 18px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; justify-content: space-between;">
+              <dt style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.14em; color: #a8a08a;">{{s.term}}</dt>
+              <dd style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 32px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap;">{{s.value}}<span style="font-size: 18px; font-weight: 600; color: #a8a08a;">{{s.detail}}</span></dd>
+            </div>
+          </sc-for>
+        </dl>
+
+        <section aria-labelledby="player-form" style="flex-grow: 1; min-height: 0; box-sizing: border-box; border-radius: 22px; padding: 16px 22px 12px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+            <h2 id="player-form" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; line-height: 1.1;">Forma</h2>
+            <span style="font-size: 14px; color: #a8a08a;">Średnia na 3 rzutki z ukończonych legów, ostatnie 20 gier</span>
+          </div>
+          <svg width="856" height="244" viewBox="0 0 856 244" role="img" aria-label="Wykres formy: 20 gier, ostatnia średnia 25,08">
+            <rect x="60" y="8" width="790" height="204" rx="10" fill="#0a0908" fill-opacity="0.55"></rect>
+            <sc-for list="{{form.grid}}" as="g" hint-placeholder-count="5"><line x1="60" y1="{{g.y}}" x2="850" y2="{{g.y}}" stroke="rgba(243,236,216,0.11)" stroke-width="1"></line></sc-for>
+            <sc-for list="{{form.grid}}" as="g" hint-placeholder-count="5"><text x="50" y="{{g.ty}}" text-anchor="end" font-family="Barlow Condensed" font-weight="600" font-size="15" fill="#a8a08a">{{g.v}}</text></sc-for>
+            <sc-for list="{{form.xlabels}}" as="t" hint-placeholder-count="10"><text x="{{t.x}}" y="234" text-anchor="middle" font-family="Barlow Condensed" font-weight="600" font-size="15" fill="#a8a08a">{{t.v}}</text></sc-for>
+            <polyline points="{{form.pts}}" fill="none" stroke="#d8352a" stroke-width="3" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(216,53,42,0.5));"></polyline>
+            <sc-for list="{{form.dots}}" as="d" hint-placeholder-count="20"><circle cx="{{d.x}}" cy="{{d.y}}" r="5" fill="#d8352a" stroke="#1b1714" stroke-width="2"></circle></sc-for>
+          </svg>
+          <ol style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; padding: 0;">
+            <sc-for list="{{form.list}}" as="f" hint-placeholder-count="20"><li>{{f}}</li></sc-for>
+          </ol>
+        </section>
+      </div>
+
+      <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px;">
+        <section aria-labelledby="head-to-head" style="box-sizing: border-box; border-radius: 22px; padding: 16px 22px 18px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden;">
+          <svg width="180" height="180" viewBox="0 0 200 200" aria-hidden="true" style="position: absolute; right: -50px; top: -60px; opacity: 0.07; pointer-events: none;"><circle cx="100" cy="100" r="95" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="58" fill="none" stroke="#f3ecd8" stroke-width="8"></circle><circle cx="100" cy="100" r="22" fill="#f3ecd8"></circle></svg>
+          <div style="display: flex; align-items: center; gap: 14px; position: relative;">
+            <h2 id="head-to-head" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; line-height: 1.1;">Bilans 1v1</h2>
+            <span style="flex-grow: 1;"></span>
+            <div role="group" aria-label="Rywal" style="display: flex; gap: 8px;">
+              <sc-for list="{{opponents}}" as="o" hint-placeholder-count="3">
+                <button type="button" aria-pressed="{{o.pressed}}" style="{{o.style}}"><span style="{{o.avatar}}">{{o.initial}}</span>{{o.name}}</button>
+              </sc-for>
+            </div>
+          </div>
+          <dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; position: relative;">
+            <sc-for list="{{h2h}}" as="h" hint-placeholder-count="4">
+              <div style="box-sizing: border-box; border-radius: 18px; padding: 10px 18px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 10px 20px -10px rgba(0,0,0,0.9); display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+                <dt style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.12em; color: #a8a08a; white-space: nowrap;">{{h.term}}</dt>
+                <dd style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums;">{{h.value}}</dd>
+              </div>
+            </sc-for>
+          </dl>
+        </section>
+
+        <section aria-labelledby="player-history" style="flex-grow: 1; min-height: 0; box-sizing: border-box; border-radius: 22px; padding: 16px 18px 14px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+          <h2 id="player-history" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; line-height: 1.1;">Historia gier</h2>
+          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;">
+            <sc-for list="{{history}}" as="m" hint-placeholder-count="4">
+              <li>
+                <a href="#" style="height: 66px; display: flex; align-items: center; gap: 14px; border-top: 1px solid rgba(243,236,216,0.11); color: #f3ecd8; text-decoration: none;">
+                  <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0;">
+                    <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{m.result}}</span>
+                    <span style="font-size: 14px; color: #a8a08a;">{{m.meta}}</span>
+                  </div>
+                  <span style="display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; padding: 7px 12px; border-radius: 999px; background: rgba(243,236,216,0.07); font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; white-space: nowrap;"><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" fill="{{m.iconColor}}"><path d="{{m.icon}}"></path></svg>{{m.status}}</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#a8a08a" stroke-width="2" style="flex-shrink: 0;"><path d="M9 6l6 6-6 6"></path></svg>
+                </a>
+              </li>
+            </sc-for>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const wires = Array.from({ length: 20 }, (_, i) => 'rotate(' + (i * 18 + 9) + ')');
+const P = {
+S: { name: 'Szymon', initial: 'S', color: '#5aa9ff' },
+K: { name: 'Krzysiek', initial: 'XD', color: '#ff70b8' },
+G: { name: 'Grzesiek', initial: 'G', color: '#b28cff' },
+D: { name: 'Dzimi', initial: 'D', color: '#f2b134' }
+};
+const mini = (id) => 'width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: ' + P[id].color + '; color: #111111; display: inline-flex; align-items: center; justify-content: center; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: ' + (P[id].initial.length > 1 ? 11 : 13) + 'px;';
+const chip = (on) => 'height: 44px; padding: 0 16px 0 9px; border: 0; border-radius: 12px; display: inline-flex; align-items: center; gap: 9px; font-family: Barlow Condensed, sans-serif; font-size: 19px; ' + (on ? 'background: #f3ecd8; color: #0a0908; font-weight: 800; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7);' : 'background: rgba(243,236,216,0.07); color: #f3ecd8; font-weight: 700; box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset;');
+const players = ['S', 'K', 'G', 'D'].map((id) => ({ name: P[id].name, initial: P[id].initial, avatar: mini(id), pressed: id === 'K' ? 'true' : 'false', style: chip(id === 'K') }));
+const opponents = ['S', 'G', 'D'].map((id) => ({ name: P[id].name, initial: P[id].initial, avatar: mini(id), pressed: id === 'S' ? 'true' : 'false', style: chip(id === 'S') }));
+const stats = [
+['RZUTKI', '1084', ''], ['ŚREDNIA (3 RZUTKI)', '30,12', ''], ['FIRST 9', '33,48', ''], ['180', '0', ''],
+['140+', '1', ''], ['100+', '6', ''], ['60+', '38', ''], ['NAJWYŻSZE ZAMKNIĘCIE', '64', ''],
+['% DOUBLI', '23,0%', ' (17/74)'], ['NAJLEPSZY LEG', '21 rzutek', ''], ['WYGRANE LEGI', '17', ''], ['WYGRANE MECZE', '12/24', '']
+].map((s) => ({ term: s[0], value: s[1], detail: s[2] }));
+const values = [27.40, 31.20, 24.50, 29.85, 33.10, 28.00, 30.75, 36.12, 29.30, 32.45, 27.95, 34.20, 26.80, 31.90, 29.10, 33.75, 28.60, 32.05, 30.55, 25.08];
+const LOW = 20, HIGH = 40;
+const fmt = (v) => v.toFixed(2).replace('.', ',');
+const X = (i) => Math.round((60 + 14 + i * (790 - 28) / (values.length - 1)) * 10) / 10;
+const Y = (v) => Math.round((8 + 12 + (HIGH - v) / (HIGH - LOW) * (204 - 24)) * 10) / 10;
+const grid = [20, 25, 30, 35, 40].map((v) => ({ y: Y(v), ty: Y(v) + 5, v: fmt(v) }));
+const xlabels = values.map((_, i) => i).filter((i) => i % 2 === 0).map((i) => ({ x: X(i), v: String(i + 1) }));
+const form = {
+grid, xlabels,
+pts: values.map((v, i) => X(i) + ',' + Y(v)).join(' '),
+dots: values.map((v, i) => ({ x: X(i), y: Y(v) })),
+list: values.map((v, i) => 'Gra ' + (i + 1) + ': ' + fmt(v))
+};
+const h2h = [
+{ term: 'MECZE', value: '7 : 4' },
+{ term: 'LEGI', value: '11 : 7' },
+{ term: 'ŚREDNIA: KRZYSIEK', value: '30,84' },
+{ term: 'ŚREDNIA: SZYMON', value: '28,10' }
+];
+const ICON = {
+trophy: 'M6 3h12v2h3v3a5 5 0 01-5 5h-.3A6 6 0 0113 15.9V18h4v3H7v-3h4v-2.1A6 6 0 018.3 13H8a5 5 0 01-5-5V5h3zm0 4H5v1a3 3 0 001 2.2zm12 0v3.2A3 3 0 0019 8V7z',
+pause: 'M6 4h4v16H6zm8 0h4v16h-4z',
+stop: 'M6 6h12v12H6z'
+};
+const history = [
+{ result: '1. Grzesiek · 2. Dzimi · 3. Krzysiek · 4. Szymon', meta: 'Zabawa · 301 · dziś 16:40', status: 'Wygrywa Grzesiek', icon: ICON.trophy, iconColor: '#f2b134' },
+{ result: 'Szymon 1 : 2 Krzysiek', meta: 'Mecz 1v1 · 301 · dziś 16:12', status: 'Wygrywa Krzysiek', icon: ICON.trophy, iconColor: '#f2b134' },
+{ result: 'Krzysiek · 7/12 · 58%', meta: 'Trening · Końcówki 2-50 · dziś 15:20', status: 'Zakończony', icon: ICON.stop, iconColor: '#a8a08a' },
+{ result: '1. Dzimi · Krzysiek · Szymon', meta: 'Zabawa · 301 · wczoraj', status: 'Porzucony', icon: ICON.pause, iconColor: '#d8352a' }
+];
+return { wires, players, opponents, stats, form, h2h, history };
+}
+}
+</script>
+</body>
+</html>
