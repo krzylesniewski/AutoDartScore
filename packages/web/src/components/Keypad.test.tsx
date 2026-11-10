@@ -100,17 +100,17 @@ describe('Keypad', () => {
     expect(onHit).toHaveBeenCalledWith({ segment: 0, multiplier: 0 });
   });
 
-  it.each(LAYOUTS)('renders each of the 27 keys once in the %s layout', (layout) => {
+  it.each(LAYOUTS)('renders each of the 28 keys once in the %s layout', (layout) => {
     setup({ layout });
-    expect(screen.getAllByRole('button')).toHaveLength(27);
-    for (const name of ['S', 'D', 'T', '25', 'Bull', 'Miss', 'Reszta Miss', ...SEGMENTS]) {
+    expect(screen.getAllByRole('button')).toHaveLength(28);
+    for (const name of ['S', 'D', 'T', '25', 'Bull', 'Miss', 'Reszta Miss', 'Cofnij', ...SEGMENTS]) {
       expect(screen.getAllByRole('button', { name })).toHaveLength(1);
     }
   });
 
   it.each(LAYOUTS)('orders the %s layout from the multiplier to 1-20 in dartboard order and the misses', (layout) => {
     setup({ layout });
-    expect(buttonNames()).toEqual(['S', 'D', 'T', ...SEGMENTS, '25', 'Bull', 'Miss', 'Reszta Miss']);
+    expect(buttonNames()).toEqual(['S', 'D', 'T', ...SEGMENTS, '25', 'Bull', 'Miss', 'Reszta Miss', 'Cofnij']);
     expect(within(screen.getByRole('group', { name: 'Mnożnik' })).getAllByRole('button').map(visibleText)).toEqual(['S', 'D', 'T']);
   });
 
@@ -139,8 +139,117 @@ describe('Keypad', () => {
   it('gives key 20 on the ring a brighter idle border than the other keys', () => {
     const { button } = setup();
     expect(classes(button('20'))).toContain('border-(--color-text-muted)');
-    expect(classes(button('20'))).not.toContain('border-(--color-border-strong)');
-    expect(classes(button('1'))).toContain('border-(--color-border-strong)');
+    expect(classes(button('20'))).not.toContain('border-transparent');
+    expect(classes(button('1'))).toContain('border-transparent');
+  });
+
+  it.each(LAYOUTS)('gives the number keys, 25 and Bull depth without a visible border in the %s layout', (layout) => {
+    const { button } = setup({ layout });
+    for (const name of [...SEGMENTS, '25', 'Bull']) {
+      expect(classes(button(name))).toEqual(
+        expect.arrayContaining(['bg-linear-to-b', 'from-(--color-surface-raised)', 'to-(--color-surface)', 'border-(length:--border-width)']),
+      );
+    }
+    for (const name of [...SEGMENTS, '25']) {
+      expect(classes(button(name))).toContain('shadow-(--shadow-key)');
+    }
+    expect(classes(button('Bull'))).toContain('sc-key--bull');
+    expect(classes(button('Bull')).some((name) => name.startsWith('shadow-'))).toBe(false);
+  });
+
+  it('makes 25 and Bull pill keys in the ring centre', () => {
+    const { button } = setup();
+    expect(classes(button('25'))).toContain('rounded-(--radius-pill)');
+    expect(classes(button('Bull'))).toContain('rounded-(--radius-pill)');
+  });
+
+  it('puts the multiplier keys on a tray and marks the selected one', () => {
+    const { button } = setup();
+    expect(classes(screen.getByRole('group', { name: 'Mnożnik' }))).toEqual(expect.arrayContaining(['bg-(--color-surface-soft)', 'rounded-(--radius-card)', 'p-1.5']));
+    expect(classes(button('S'))).toEqual(expect.arrayContaining(['bg-(--color-text)', 'text-(--color-text-inverse)', 'shadow-(--shadow-selected)', 'rounded-(--radius-segment)']));
+    expect(classes(button('D'))).toEqual(expect.arrayContaining(['bg-transparent', 'text-(--color-text)']));
+  });
+
+  it.each(LAYOUTS)('shows a letter below lg and the full word from lg on the multiplier keys in the %s layout', (layout) => {
+    const { button } = setup({ layout });
+    for (const [name, word] of [
+      ['S', 'Single'],
+      ['D', 'Double'],
+      ['T', 'Treble'],
+    ] as const) {
+      const key = button(name);
+      const shorts = within(key)
+        .getAllByText(name)
+        .filter((element) => !element.hasAttribute('aria-hidden'));
+      expect(shorts).toHaveLength(1);
+      const short = shorts[0] as HTMLElement;
+      expect(short.tagName).toBe('SPAN');
+      expect(classes(short)).toContain('lg:sr-only');
+      expect(short.hasAttribute('aria-hidden')).toBe(false);
+      const long = within(key).getByText(word);
+      expect(long.getAttribute('aria-hidden')).toBe('true');
+      expect(classes(long)).toEqual(expect.arrayContaining(['hidden', 'lg:inline']));
+      expect(key.getAttribute('aria-keyshortcuts')).toBe(name);
+    }
+    expect(screen.queryByRole('button', { name: /Single|Double|Treble/ })).toBeNull();
+  });
+
+  it.each(LAYOUTS)('puts Cofnij in the keypad section in the %s layout', (layout) => {
+    const { onUndo, button } = setup({ layout });
+    const undo = button('Cofnij');
+    expect(screen.getByRole('region', { name: 'Klawiatura rzutek' }).contains(undo)).toBe(true);
+    expect(undo.getAttribute('aria-keyshortcuts')).toBe('Backspace');
+    fireEvent.click(undo);
+    expect(onUndo).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(LAYOUTS)('disables Cofnij with undoDisabled in the %s layout', (layout) => {
+    const { onUndo, button } = setup({ layout, undoDisabled: true });
+    expect(button('Cofnij').disabled).toBe(true);
+    fireEvent.click(button('Cofnij'));
+    expect(onUndo).not.toHaveBeenCalled();
+    expect(button('20').disabled).toBe(false);
+  });
+
+  it('keeps Cofnij enabled on a disabled keypad when undo is allowed', () => {
+    const { button } = setup({ disabled: true });
+    expect(button('Cofnij').disabled).toBe(false);
+  });
+
+  it('puts Miss, Reszta Miss and Cofnij in one column next to the ring from lg and in one row below lg', () => {
+    const { button } = setup();
+    const column = button('Miss').parentElement as HTMLElement;
+    expect(button('Reszta Miss').parentElement).toBe(column);
+    expect(button('Cofnij').parentElement).toBe(column);
+    expect(classes(column)).toEqual(expect.arrayContaining(['grid', 'grid-cols-[3fr_2fr_2fr]', 'lg:flex', 'lg:flex-col']));
+    expect(classes(button('Miss'))).toEqual(expect.arrayContaining(['h-14', 'lg:min-h-14', 'lg:flex-1']));
+    for (const name of ['Reszta Miss', 'Cofnij']) {
+      expect(classes(button(name))).toContain('h-14');
+    }
+  });
+
+  it('puts Cofnij in the last row of the grid layout', () => {
+    const { button } = setup({ layout: 'grid' });
+    const row = button('Cofnij').parentElement as HTMLElement;
+    expect([...row.children].map((element) => visibleText(element as HTMLElement))).toEqual(['25', 'Bull', 'Miss', 'Reszta Miss', 'Cofnij']);
+    for (const name of ['25', 'Bull', 'Miss', 'Reszta Miss', 'Cofnij']) {
+      expect(classes(button(name))).toEqual(expect.arrayContaining(['h-14', 'lg:h-[62px]']));
+    }
+  });
+
+  it('gives Miss and Reszta Miss the Scena look', () => {
+    const { button } = setup();
+    expect(classes(button('Miss'))).toEqual(
+      expect.arrayContaining(['bg-(--color-surface-soft)', 'rounded-(--radius-card)', 'shadow-(--shadow-inset-line)', 'font-extrabold']),
+    );
+    expect(classes(button('Reszta Miss'))).toEqual(expect.arrayContaining(['shadow-(--shadow-outline)', 'text-(--color-text-sub)']));
+  });
+
+  it('bounds the ring side by the height and the width of the keypad', () => {
+    const { button } = setup();
+    const ring = button('20').parentElement as HTMLElement;
+    expect(classes(ring)).toContain('lg:w-[clamp(330px,min(100dvh_-_var(--keypad-ring-reserve),100cqi_-_280px),600px)]');
+    expect(classes(screen.getByRole('region', { name: 'Klawiatura rzutek' }))).toContain('@container');
   });
 
   it('sends Reszta Miss and resets the toggle to S', () => {
@@ -188,7 +297,7 @@ describe('Keypad', () => {
 
     function expectOneColorPerGroup(element: HTMLElement): void {
       expect(classes(element).filter((name) => /^bg-/.test(name))).toHaveLength(1);
-      expect(classes(element).filter((name) => /^border-\(--color-/.test(name))).toHaveLength(1);
+      expect(classes(element).filter((name) => /^border-(\(--color-|transparent$)/.test(name))).toHaveLength(1);
       expect(classes(element).filter((name) => /^text-\(--color-/.test(name))).toHaveLength(1);
     }
 
@@ -222,20 +331,21 @@ describe('Keypad', () => {
       expect(button('20').hasAttribute('data-pressed')).toBe(false);
     });
 
-    it('gives a pressed key the active colors and a motion-safe shrink', () => {
+    it('gives a pressed key the raised colors and a motion-safe 1 px drop', () => {
       const { button } = renderKeypad(false);
       fireEvent.pointerDown(button('20'));
       expect(classes(button('20'))).toEqual(
-        expect.arrayContaining(['bg-(--color-surface-active)', 'text-(--color-text)', 'border-(--color-text)', 'motion-safe:scale-96']),
+        expect.arrayContaining(['bg-(--color-surface-raised)', 'text-(--color-text)', 'border-(--color-text)', 'motion-safe:[transform:translateY(1px)]']),
       );
-      expect(classes(button('20'))).not.toContain('scale-96');
+      expect(classes(button('20')).some((name) => name.includes('scale'))).toBe(false);
+      expect(classes(button('20'))).not.toContain('[transform:translateY(1px)]');
     });
 
     it('keeps the cream colors on the selected multiplier while pressed', () => {
       const { button } = renderKeypad(false);
       fireEvent.pointerDown(button('S'));
-      expect(classes(button('S'))).toEqual(expect.arrayContaining(['bg-(--color-text)', 'border-(--color-text)', 'motion-safe:scale-96']));
-      expect(classes(button('S'))).not.toContain('bg-(--color-surface-active)');
+      expect(classes(button('S'))).toEqual(expect.arrayContaining(['bg-(--color-text)', 'border-(--color-text)', 'motion-safe:[transform:translateY(1px)]']));
+      expect(classes(button('S'))).not.toContain('bg-(--color-surface-raised)');
     });
 
     it('flashes the hit key for the named duration', () => {
@@ -291,7 +401,7 @@ describe('Keypad', () => {
       const { button } = renderKeypad(false);
       fireEvent.pointerDown(button('20'));
       fireEvent.click(button('20'));
-      expect(classes(button('20'))).toEqual(expect.arrayContaining(['bg-(--color-surface-active)', 'border-(--color-accent)']));
+      expect(classes(button('20'))).toEqual(expect.arrayContaining(['bg-(--color-surface-raised)', 'border-(--color-accent)']));
       expect(classes(button('20'))).not.toContain('border-(--color-text)');
     });
 
@@ -425,7 +535,7 @@ describe('Keypad', () => {
         type('2', '0');
         expect(button('20').hasAttribute('data-flash')).toBe(true);
         expect(button('20').hasAttribute('data-pressed')).toBe(true);
-        expect(classes(button('20'))).toEqual(expect.arrayContaining(['bg-(--color-surface-active)', 'border-(--color-accent)']));
+        expect(classes(button('20'))).toEqual(expect.arrayContaining(['bg-(--color-surface-raised)', 'border-(--color-accent)']));
 
         act(() => {
           vi.advanceTimersByTime(HIT_FLASH_MS - 1);
@@ -453,7 +563,8 @@ describe('Keypad', () => {
         for (const [name, badge, keys] of expected) {
           const element = button(name);
           expect(element.getAttribute('aria-keyshortcuts')).toBe(keys);
-          const badges = element.querySelectorAll('[aria-hidden="true"]');
+          // S, D i T mają drugi ukryty span z pełnym słowem, więc odznaka to ten z absolute.
+          const badges = element.querySelectorAll('span[aria-hidden="true"].absolute');
           expect(badges).toHaveLength(1);
           expect(badges[0]?.textContent).toBe(badge);
           expect(classes(badges[0] as HTMLElement)).toEqual(expect.arrayContaining(['absolute', 'hidden', 'lg:block']));
@@ -472,6 +583,15 @@ describe('Keypad', () => {
         expect(classes(button(name))).toContain('absolute');
         expect(classes(button(name))).not.toContain('relative');
       }
+    });
+
+    it('keeps a pressed ring key centred on its position', () => {
+      const { button } = setup();
+      fireEvent.pointerDown(button('20'));
+      expect(button('20').hasAttribute('data-pressed')).toBe(true);
+      expect(classes(button('20'))).toEqual(expect.arrayContaining(['-translate-x-1/2', '-translate-y-1/2', 'motion-safe:[transform:translateY(1px)]']));
+      // Dodatnie translate-y-* dzieli z -translate-y-1/2 jedną właściwość translate i zrzuciłoby klawisz o pół wysokości.
+      expect(classes(button('20')).filter((name) => /(^|:)translate-y-/.test(name))).toEqual([]);
     });
 
     it.each([
@@ -770,7 +890,7 @@ describe('Keypad', () => {
 
     it('gives the row keys at least 44 px and a smaller text than the number keys', () => {
       setup({ layout: 'grid', frequent: anna(SIX) });
-      expect(classes(rowKey('Bull'))).toEqual(expect.arrayContaining(['min-h-11', 'min-w-11', 'text-lg', 'touch-manipulation']));
+      expect(classes(rowKey('Bull'))).toEqual(expect.arrayContaining(['sc-chip', 'bg-(--color-surface-soft)', 'min-h-11', 'min-w-11', 'text-lg', 'touch-manipulation']));
       expect(classes(within(row()).getByText('Najczęstsze: Anna'))).toContain('truncate');
     });
 
@@ -788,7 +908,7 @@ describe('Keypad', () => {
           expect(reservedBlock(layout).getAttribute('aria-hidden')).toBe('true');
           expect(reservedBlock(layout).childElementCount).toBe(0);
           expect(screen.queryByRole('group', { name: /Najczęstsze/ })).toBeNull();
-          expect(screen.getAllByRole('button')).toHaveLength(27);
+          expect(screen.getAllByRole('button')).toHaveLength(28);
         }
         cleanup();
       }

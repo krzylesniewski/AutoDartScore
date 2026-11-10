@@ -6,7 +6,7 @@ import { hitLabel } from '../game/hit-label';
 import { pl } from '../i18n/pl';
 import { BustIcon, CheckIcon, ShuffleIcon, UndoIcon } from './icons';
 import { KeypadKey, type KeypadKeyHandle, type KeypadKeyTone } from './KeypadKey';
-import { ROUTE_CHIP } from './TurnPanel';
+import { ROUTE_CHIP } from './CheckoutCard';
 import { useCheckoutShortcuts } from './use-checkout-shortcuts';
 
 const RECENT_COUNT = 5;

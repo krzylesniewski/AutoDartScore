@@ -1,153 +1,124 @@
-import type { Hit } from '@autoscore/schema';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import type { LastTurn } from '../api/use-match';
 import { player, snapshot } from '../test/snapshots';
-import { ROUTE_CHIP, TurnPanel } from './TurnPanel';
+import { TurnPanel } from './TurnPanel';
 
-const onUndo = () => undefined;
-const onCheckout = () => undefined;
+const twoDarts = snapshot({
+  currentPlayerId: 'p1',
+  currentDarts: [
+    { segment: 20, multiplier: 3 },
+    { segment: 19, multiplier: 3 },
+  ],
+  players: [player('p1', 'Anna', { remaining: 24, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })],
+});
+
+function classes(element: Element): string[] {
+  return element.className.split(' ').filter(Boolean);
+}
+
+function panel(container: HTMLElement): HTMLElement {
+  return container.firstElementChild as HTMLElement;
+}
 
 describe('TurnPanel', () => {
-  it('shows the thrower, the darts with points and the checkout', () => {
-    const state = snapshot({
-      currentPlayerId: 'p1',
-      currentDarts: [
-        { segment: 20, multiplier: 3 },
-        { segment: 19, multiplier: 3 },
-      ],
-      players: [player('p1', 'Anna', { remaining: 24, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })],
-    });
-    render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
-    expect(screen.getByText('Anna rzuca')).toBeTruthy();
-    expect(screen.getByText('Rzutka 3 z 3')).toBeTruthy();
-    expect(screen.getByText('60')).toBeTruthy();
-    expect(screen.getByText('57')).toBeTruthy();
-    expect(screen.getByText('60 + 57')).toBeTruthy();
+  it('shows each dart with its points and the turn total', () => {
+    render(<TurnPanel state={twoDarts} lastTurn={null} />);
+    expect(within(screen.getByLabelText('Rzutka 1')).getByText('T20')).toBeTruthy();
+    expect(within(screen.getByLabelText('Rzutka 1')).getByText('60')).toBeTruthy();
+    expect(within(screen.getByLabelText('Rzutka 2')).getByText('T19')).toBeTruthy();
+    expect(within(screen.getByLabelText('Rzutka 2')).getByText('57')).toBeTruthy();
+    expect(screen.getByText('w tej turze')).toBeTruthy();
     expect(screen.getByText('117')).toBeTruthy();
-    expect(screen.getAllByText('czeka na rzutkę')).toHaveLength(1);
-    expect(screen.getByLabelText('Rzutka 3').textContent).toContain('czeka na rzutkę');
-    expect(screen.getByText('D12')).toBeTruthy();
-    expect(screen.getByText('1 rzutka do wygrania lega')).toBeTruthy();
+    expect(screen.queryByText('60 + 57')).toBeNull();
   });
 
-  it('shows no heading and no waiting slot once the match is over', () => {
+  it('marks exactly one slot as waiting for the next dart', () => {
+    render(<TurnPanel state={twoDarts} lastTurn={null} />);
+    expect(screen.getAllByText('czeka na rzutkę')).toHaveLength(1);
+    const waiting = screen.getByLabelText('Rzutka 3');
+    expect(waiting.textContent).toBe('czeka na rzutkę');
+    expect(classes(waiting)).toEqual(expect.arrayContaining(['sc-slot', 'sc-slot--active']));
+    expect(waiting.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(classes(screen.getByLabelText('Rzutka 1'))).toEqual(expect.arrayContaining(['sc-slot', 'sc-slot--filled']));
+  });
+
+  it('labels the empty slots with their number', () => {
+    render(<TurnPanel state={snapshot()} lastTurn={null} />);
+    expect(screen.getByLabelText('Rzutka 1').textContent).toBe('czeka na rzutkę');
+    for (const name of ['Rzutka 2', 'Rzutka 3']) {
+      const slot = screen.getByLabelText(name);
+      expect(slot.textContent).toBe(name);
+      expect(classes(slot)).toContain('sc-slot');
+      expect(classes(slot)).not.toContain('sc-slot--active');
+      expect(classes(slot)).not.toContain('sc-slot--filled');
+    }
+    expect(screen.getByText('0')).toBeTruthy();
+  });
+
+  it('shows no waiting slot once the game is over', () => {
     const state = snapshot({
       finished: true,
       currentPlayerId: null,
       winnerId: 'p1',
       players: [player('p1', 'Anna', { remaining: 0, legsWon: 2 }), player('p2', 'Bartek', { legsWon: 1 })],
     });
-    render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
-    expect(screen.queryByText(/rzuca/)).toBeNull();
+    render(<TurnPanel state={state} lastTurn={null} />);
     expect(screen.queryByText('czeka na rzutkę')).toBeNull();
+    expect(screen.queryByText(/rzuca/)).toBeNull();
   });
 
-  it('shows the time left on Cofnij in a finished game', () => {
-    const state = snapshot({ finished: true, currentPlayerId: null, winnerId: 'p1' });
-    render(<TurnPanel state={state} lastTurn={null} busy={false} undoCountdown="4:12" onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
-    const button = screen.getByRole('button', { name: 'Cofnij (4:12)' }) as HTMLButtonElement;
-    expect(button.disabled).toBe(false);
-    expect(button.className.split(' ')).toContain('tabular-nums');
+  it('shows Bust with its icon instead of the total', () => {
+    const state = snapshot({ eventSeq: 7, currentPlayerId: 'p2' });
+    const lastTurn: LastTurn = { playerId: 'p1', darts: [{ segment: 20, multiplier: 3 }], total: null, bust: true, eventSeq: 7 };
+    render(<TurnPanel state={state} lastTurn={lastTurn} />);
+    const bust = screen.getByText('Bust');
+    expect(bust.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(within(screen.getByLabelText('Rzutka 1')).getByText('T20')).toBeTruthy();
   });
 
-  it('shows a plain Cofnij without a countdown', () => {
-    render(<TurnPanel state={snapshot()} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
-    expect(screen.getByRole('button', { name: 'Cofnij' })).toBeTruthy();
+  it('dims the closed turn and names its thrower in place of the total label', () => {
+    const state = snapshot({ eventSeq: 4, currentPlayerId: 'p2' });
+    const lastTurn: LastTurn = {
+      playerId: 'p1',
+      darts: [
+        { segment: 20, multiplier: 1 },
+        { segment: 5, multiplier: 1 },
+        { segment: 1, multiplier: 1 },
+      ],
+      total: 26,
+      bust: false,
+      eventSeq: 4,
+    };
+    const { container } = render(<TurnPanel state={state} lastTurn={lastTurn} />);
+    expect(classes(screen.getByRole('list'))).toContain('opacity-50');
+    const name = screen.getByText('Anna');
+    expect(classes(name)).toContain('truncate');
+    expect(screen.queryByText('w tej turze')).toBeNull();
+    expect(screen.getByText('26')).toBeTruthy();
+    expect(screen.queryByText('czeka na rzutkę')).toBeNull();
+    expect(classes(panel(container))).toEqual(expect.arrayContaining(['h-[60px]', 'lg:h-[120px]']));
   });
 
-  it('keeps an invisible checkout placeholder without a route', () => {
-    const state = snapshot({ currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: 301, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] });
-    const { container } = render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
-    expect(container.querySelector('[aria-hidden="true"].invisible.max-lg\\:hidden')).not.toBeNull();
-    expect(screen.queryByText('Zamknięcie')).toBeNull();
-    expect(screen.queryByText(/do wygrania lega/)).toBeNull();
-  });
-
-  it('has no checkout placeholder in Free run', () => {
-    const state = snapshot({ startingScore: null, currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: null, legsWon: 0 })] });
-    const { container } = render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
-    expect(container.querySelector('.invisible')).toBeNull();
-  });
-
-  it('keeps an empty name line without a closed turn', () => {
-    const state = snapshot({ currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: 301, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] });
-    const { container } = render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
-    const line = container.querySelector('p[aria-hidden="true"]');
-    expect(line?.className.split(' ')).toContain('max-lg:hidden');
-    expect(line?.textContent).toBe('\u00a0');
-  });
-
-  describe('checkout entry', () => {
-    const state = snapshot({
-      currentPlayerId: 'p1',
-      currentDarts: [{ segment: 20, multiplier: 1 }],
-      players: [player('p1', 'Anna', { remaining: 100, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })],
-    });
-
-    function renderPanel(checkoutDisabled = false) {
-      const onCheckoutHit = vi.fn<(hit: Hit) => void>();
-      render(<TurnPanel state={state} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckoutHit} checkoutDisabled={checkoutDisabled} />);
-      const card = screen.getByRole('button', { name: /Zamknięcie/ }) as HTMLButtonElement;
-      return { onCheckoutHit, card };
+  it('keeps the same fixed height in every state', () => {
+    const closed: LastTurn = { playerId: 'p1', darts: [], total: 0, bust: true, eventSeq: 0 };
+    const states = [
+      { state: snapshot(), lastTurn: null },
+      { state: twoDarts, lastTurn: null },
+      { state: snapshot(), lastTurn: closed },
+      { state: snapshot({ finished: true, currentPlayerId: null, winnerId: 'p1' }), lastTurn: null },
+    ];
+    for (const { state, lastTurn } of states) {
+      const { container, unmount } = render(<TurnPanel state={state} lastTurn={lastTurn} />);
+      const root = classes(panel(container));
+      expect(root).toEqual(expect.arrayContaining(['h-[60px]', 'lg:h-[120px]']));
+      expect(root.filter((name) => /^(lg:)?(min-)?h-/.test(name))).toEqual(['h-[60px]', 'lg:h-[120px]']);
+      unmount();
     }
+  });
 
-    it('renders the route as a button with the hint for the first dart', () => {
-      const { card } = renderPanel();
-      expect(card.getAttribute('type')).toBe('button');
-      expect(card.getAttribute('aria-keyshortcuts')).toBe('Enter');
-      expect(card.textContent).toContain('T20 D20');
-      expect(screen.getByText('Kliknij albo Enter, aby wpisać T20').className.split(' ')).toContain('pointer-coarse:hidden');
-      expect(screen.getByText('Dotknij, aby wpisać T20').className.split(' ')).toEqual(expect.arrayContaining(['hidden', 'pointer-coarse:inline']));
-    });
-
-    it('keeps the hint on one truncated line', () => {
-      renderPanel();
-      const line = screen.getByText('Kliknij albo Enter, aby wpisać T20').parentElement as HTMLElement;
-      expect(line.className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-sm', 'leading-tight']));
-    });
-
-    it('calls onCheckout with the first dart on a click', () => {
-      const { card, onCheckoutHit } = renderPanel();
-      fireEvent.click(card);
-      expect(onCheckoutHit).toHaveBeenCalledExactlyOnceWith({ segment: 20, multiplier: 3 });
-    });
-
-    it('is disabled with checkoutDisabled', () => {
-      const { card, onCheckoutHit } = renderPanel(true);
-      expect(card.disabled).toBe(true);
-      fireEvent.click(card);
-      expect(onCheckoutHit).not.toHaveBeenCalled();
-    });
-
-    it('shows the route in the shared route chip at its larger size', () => {
-      const { card } = renderPanel();
-      expect(within(card).getByText('T20 D20').className.split(' ')).toEqual(expect.arrayContaining(ROUTE_CHIP.split(' ')));
-      expect(ROUTE_CHIP.split(' ')).toContain('text-[clamp(33px,9.5cqi,52px)]');
-    });
-
-    it('keeps the card 80 px high from lg', () => {
-      const { card } = renderPanel();
-      expect(card.className.split(' ')).toContain('lg:h-20');
-    });
-
-    it('keeps the placeholder without a route out of the buttons', () => {
-      const noRoute = snapshot({ currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: 301, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] });
-      const { container } = render(<TurnPanel state={noRoute} lastTurn={null} busy={false} onUndo={onUndo} onCheckout={onCheckout} checkoutDisabled={false} />);
-      const placeholder = container.querySelector('[aria-hidden="true"].invisible');
-      expect(placeholder?.tagName).toBe('DIV');
-      expect(placeholder?.className.split(' ')).toContain('lg:h-20');
-      expect(screen.queryByRole('button', { name: /Zamknięcie/ })).toBeNull();
-      expect(screen.queryByText(/aby wpisać/)).toBeNull();
-    });
-
-    it('gives Cofnij a Backspace badge without changing its name', () => {
-      renderPanel();
-      const undo = screen.getByRole('button', { name: 'Cofnij' });
-      expect(undo.getAttribute('aria-keyshortcuts')).toBe('Backspace');
-      expect(undo.className.split(' ')).toContain('relative');
-      const badge = undo.querySelector('span[aria-hidden="true"]');
-      expect(badge?.textContent).toBe('Backspace');
-      expect(badge?.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'hidden', 'lg:block']));
-    });
+  it('has no button', () => {
+    render(<TurnPanel state={twoDarts} lastTurn={null} />);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });

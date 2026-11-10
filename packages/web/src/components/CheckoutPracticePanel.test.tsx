@@ -4,7 +4,7 @@ import { checkoutHistory, checkoutSession } from '../test/snapshots';
 import { CheckoutActions, CheckoutRecentAttempts, CheckoutTargetCard, type CheckoutActionsProps } from './CheckoutPracticePanel';
 import { CheckoutPracticeSummary } from './CheckoutPracticeSummary';
 import { HIT_FLASH_MS } from './KeypadKey';
-import { ROUTE_CHIP } from './TurnPanel';
+import { ROUTE_CHIP } from './CheckoutCard';
 
 // 7 udanych z 12, ostatnia próba nieudana.
 const SEVEN_OF_TWELVE = [true, true, false, true, false, true, false, true, false, true, true, false];

@@ -876,7 +876,7 @@ describe('checkout practice', () => {
     expect(within(card).getByText('0 z 0 · —')).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Klawiatura rzutek' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Miss' })).toBeNull();
-    expect(screen.queryByText('Suma tury')).toBeNull();
+    expect(screen.queryByText('w tej turze')).toBeNull();
     expect(screen.queryByText('Anna rzuca')).toBeNull();
     await flush();
     expect(frequentCalls).toEqual([]);
@@ -1736,5 +1736,117 @@ describe('achievements', () => {
     const status = screen.getByRole('status');
     expect(within(status).getByRole('list', { name: 'Osiągnięcia' }).textContent).toBe('Bartek Najkrótszy leg: 15 lotek (było 18)');
     expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'pointer-events-none']));
+  });
+});
+
+describe('turn panel, checkout card and keypad', () => {
+  // Bartkowi zostaje 40, więc karta zamknięcia pokazuje D20.
+  const onForty: MatchSnapshot = { ...initial, players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 40, legsWon: 0 })] };
+
+  function finishedCasual() {
+    return casual(['Anna', 'Bartek', 'Cezary'], {
+      id: MATCH_ID,
+      eventSeq: 9,
+      finished: true,
+      currentPlayerId: null,
+      placements: [
+        { playerId: 'p1', place: 1 },
+        { playerId: 'p2', place: 2 },
+        { playerId: 'p3', place: 3 },
+      ],
+      finishedAt: new Date(Date.now() - 60_000).toISOString(),
+      editableUntil: new Date(Date.now() + 240_000).toISOString(),
+    });
+  }
+
+  function keypad(): HTMLElement {
+    return screen.getByRole('region', { name: 'Klawiatura rzutek' });
+  }
+
+  it('shows the shortcut badges on the keys and on the checkout card', () => {
+    connect(onForty);
+    const expected: [RegExp, string, string][] = [
+      [/^S$/, 'S', 'S'],
+      [/^D$/, 'D', 'D'],
+      [/^T$/, 'T', 'T'],
+      [/^25$/, 'B', 'B'],
+      [/^Bull$/, 'Shift+B', 'Shift+B'],
+      [/^Miss$/, 'Spacja', 'Space'],
+      [/^Cofnij$/, 'Backspace', 'Backspace'],
+      [/^Zamknięcie/, 'Enter', 'Enter'],
+    ];
+    for (const [name, badge, keys] of expected) {
+      const element = within(document.body).getAllByRole('button', { name }).find((candidate) => candidate.hasAttribute('aria-keyshortcuts'));
+      expect(element?.getAttribute('aria-keyshortcuts')).toBe(keys);
+      const badges = element?.querySelectorAll('span[aria-hidden="true"]');
+      const found = [...(badges ?? [])].filter((span) => span.textContent === badge && span.className.split(' ').includes('lg:block'));
+      expect(found).toHaveLength(1);
+      expect(found[0]?.className.split(' ')).toContain('hidden');
+    }
+  });
+
+  it('has no Nowa runda, Do weryfikacji or Wkrótce on the game screen', () => {
+    connect(onForty);
+    for (const text of [/Nowa runda/, /Do weryfikacji/, /Wkrótce/]) {
+      expect(screen.queryAllByText(text)).toHaveLength(0);
+      expect(screen.queryAllByRole('button', { name: text })).toHaveLength(0);
+    }
+  });
+
+  it('has exactly one Cofnij in a game in progress, inside the keypad', () => {
+    connect(onForty);
+    const undo = screen.getAllByRole('button', { name: /^Cofnij/ });
+    expect(undo).toHaveLength(1);
+    expect(keypad().contains(undo[0] as HTMLElement)).toBe(true);
+  });
+
+  it('has exactly one Cofnij in a finished casual game', () => {
+    connect(finishedCasual());
+    const undo = screen.getAllByRole('button', { name: /^Cofnij/ });
+    expect(undo).toHaveLength(1);
+    expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
+    expect((undo[0] as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('has exactly one standalone Cofnij under the turn panel in a finished Solo 501', () => {
+    connect(
+      snapshot({
+        id: MATCH_ID,
+        type: 'practice',
+        practiceMode: 'solo_501',
+        legsToWin: null,
+        eventSeq: 4,
+        finished: true,
+        currentPlayerId: null,
+        winnerId: 'p1',
+        players: [player('p1', 'Anna', { remaining: 0 })],
+        finishedAt: new Date(Date.now() - 60_000).toISOString(),
+        editableUntil: new Date(Date.now() + 240_000).toISOString(),
+      }),
+    );
+    const undo = screen.getAllByRole('button', { name: /^Cofnij/ });
+    expect(undo).toHaveLength(1);
+    expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
+    expect((undo[0] as HTMLButtonElement).disabled).toBe(false);
+    expect(undo[0]?.getAttribute('aria-keyshortcuts')).toBe('Backspace');
+    const turnPanel = screen.getByText('w tej turze').closest('section') as HTMLElement;
+    expect(turnPanel.nextElementSibling).toBe(undo[0]);
+  });
+
+  it('keeps the checkout card out of the keypad dock', () => {
+    connect(onForty);
+    const card = screen.getByRole('button', { name: /^Zamknięcie/ });
+    const dock = keypad().parentElement as HTMLElement;
+    expect(dock.contains(card)).toBe(false);
+    expect(dock.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'mt-auto', 'lg:contents', 'max-lg:order-2']));
+    const slot = card.parentElement as HTMLElement;
+    expect(slot.parentElement?.tagName).toBe('MAIN');
+    expect(slot.className.split(' ')).toEqual(expect.arrayContaining(['max-lg:order-1', 'lg:col-start-1', 'lg:row-start-2']));
+  });
+
+  it('shows the turn total and no checkout card without a route', () => {
+    connect();
+    expect(screen.getByText('w tej turze')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Zamknięcie/ })).toBeNull();
   });
 });
