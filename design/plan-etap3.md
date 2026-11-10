@@ -46,6 +46,12 @@ Decyzja autora z 2026-11-10: redesign jest nowym etapem 3 (dwie kamery to teraz 
 | **K1: nowy wygląd** | tokeny i komponenty bazowe, ekran gry z paskiem progresu, nowa gra, podsumowanie, historia, statystyki, pozostałe ekrany i dialogi | cała aplikacja w kierunku „Scena”, funkcje bez zmian |
 | **K2: informacje na ekranie gry** | pole z historią tur lega w snapshocie (schema, server), zbite punkty, mini statystyki lega, historia tur | nowe informacje na żywo w trakcie lega |
 
+## Uwagi autora do makiet (2026-11-10)
+
+- Historia: gra w trakcie bez zielonej obwódki; stan niesie odznaka „W trakcie” z kropką.
+- Podsumowanie: puchar zostaje, promienie z linii wokół niego nie.
+- Wykresy: dokładność z P56 zostaje (punkt co rzutkę, siatka co 3 lotki, co 50/100 punktów, podpisy osi). Redesign zmienia tylko wygląd wykresów (kolory, fonty, tło), nie ich logikę w `score-progress-chart.ts` i `form-chart.ts`.
+
 ## Poza zakresem
 
 Nowe tryby gry, zmiany zasad X01, zmiany w `vision`, jasny motyw, animacje poza obecną zamianą wierszy w pasku wyników.
