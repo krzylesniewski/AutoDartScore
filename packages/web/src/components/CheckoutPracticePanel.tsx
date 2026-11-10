@@ -26,8 +26,9 @@ const undoTone: KeypadKeyTone = { fill: 'bg-(--color-surface-button) text-(--col
 export function CheckoutTargetCard({ session }: { session: CheckoutSession }) {
   const id = useId();
   const route = suggestCheckout(session.target, 3);
+  // Padding od lg jest dobrany do największego chipa trasy (52 px), żeby przyciski treningu pod kartą nie zmieniały miejsca.
   return (
-    <section aria-labelledby={id} className={`@container flex flex-col items-center gap-2 px-4 py-3 sm:gap-3 lg:gap-5 lg:py-10 ${card}`}>
+    <section aria-labelledby={id} className={`@container flex flex-col items-center gap-2 px-4 py-3 sm:gap-3 lg:gap-5 lg:py-9 ${card}`}>
       <h2 id={id} className={label}>
         {pl.checkoutTarget}
       </h2>
