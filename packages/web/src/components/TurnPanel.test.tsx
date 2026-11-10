@@ -1,8 +1,8 @@
 import type { Hit } from '@autoscore/schema';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { player, snapshot } from '../test/snapshots';
-import { TurnPanel } from './TurnPanel';
+import { ROUTE_CHIP, TurnPanel } from './TurnPanel';
 
 const onUndo = () => undefined;
 const onCheckout = () => undefined;
@@ -117,6 +117,12 @@ describe('TurnPanel', () => {
       expect(card.disabled).toBe(true);
       fireEvent.click(card);
       expect(onCheckoutHit).not.toHaveBeenCalled();
+    });
+
+    it('shows the route in the shared route chip at its larger size', () => {
+      const { card } = renderPanel();
+      expect(within(card).getByText('T20 D20').className.split(' ')).toEqual(expect.arrayContaining(ROUTE_CHIP.split(' ')));
+      expect(ROUTE_CHIP.split(' ')).toContain('text-[clamp(33px,9.5cqi,52px)]');
     });
 
     it('keeps the card 80 px high from lg', () => {

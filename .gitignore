@@ -17,3 +17,7 @@ coverage/
 # Wyniki spike'ów (klatki, porównania)
 spikes/**/out/
 .claude/settings.local.json
+
+# Katalog komponentów z testów (describe-me), generowany lokalnie
+.describe-me/
+describe-me-dist/

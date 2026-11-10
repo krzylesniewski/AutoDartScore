@@ -209,6 +209,7 @@ describe('GET /matches/:id/summary', () => {
             { playerId: anna, average: 150.5 },
             { playerId: bartek, average: 0 },
           ],
+          durationMs: expect.any(Number),
         },
       ],
       lastLegProgress: {

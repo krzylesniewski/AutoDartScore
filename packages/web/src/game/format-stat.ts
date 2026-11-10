@@ -17,6 +17,14 @@ export function formatAverage(value: number | null): string {
   return value === null ? NO_VALUE : formatDecimal(value, 2);
 }
 
+// Minus to U+2212, szerszy od łącznika i równy plusowi.
+export function formatDifference(value: number | null): string {
+  if (value === null) {
+    return NO_VALUE;
+  }
+  return value >= 0 ? `+${formatDecimal(value, 2)}` : `−${formatDecimal(Math.abs(value), 2)}`;
+}
+
 export function formatNumber(value: number | null): string {
   return value === null ? NO_VALUE : String(value);
 }

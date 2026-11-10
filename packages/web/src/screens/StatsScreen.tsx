@@ -1,10 +1,11 @@
-import type { MatchListItem, Player, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
+import type { MatchListItem, Player, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsRankings } from '@autoscore/schema';
 import { useEffect, useState, type DependencyList } from 'react';
-import { ApiRequestError, getPlayerForm, getPlayerStats, getRankings, listMatches, listPlayers } from '../api/client';
+import { ApiRequestError, getOverall, getPlayerForm, getPlayerStats, getRankings, listMatches, listPlayers } from '../api/client';
 import { AppNav } from '../components/AppNav';
 import { FormChart } from '../components/FormChart';
 import { HeadToHeadPanel } from '../components/HeadToHeadPanel';
 import { MatchHistoryList } from '../components/MatchHistoryList';
+import { OverallBoard } from '../components/OverallBoard';
 import { PlayerProfile } from '../components/PlayerProfile';
 import { RankingBoard } from '../components/RankingBoard';
 import { WarningIcon } from '../components/icons';
@@ -13,18 +14,29 @@ import { pl } from '../i18n/pl';
 
 const RANKING_HREF = '#/stats';
 
-const FILTERS: readonly { value: StatsFilter; label: string }[] = [
+interface FilterOption<T extends string> {
+  readonly value: T;
+  readonly label: string;
+}
+
+const FILTERS: readonly FilterOption<StatsFilter>[] = [
   { value: 'all', label: pl.filterAll },
   { value: 'match', label: pl.filterMatch },
   { value: 'casual', label: pl.typeCasual },
   { value: 'practice', label: pl.typePractice },
 ];
 
+// Overall to widok ekranu rankingu, a nie filtr statystyk, więc karta gracza go nie ma.
+type RankingView = StatsFilter | 'overall';
+
+const RANKING_VIEWS: readonly FilterOption<RankingView>[] = [...FILTERS, { value: 'overall', label: pl.filterOverall }];
+
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 const choice = 'min-h-12 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-xl';
 // Poniżej sm przyciski filtra tworzą jeden pasek z przegródkami, jak Segmented w kreatorze gry.
+// Bez min-w-0 przycisk nie jest węższy od etykiety, a pięć przycisków przewija się w pasku zamiast przycinać.
 const segment =
-  'max-sm:min-w-0 max-sm:flex-1 max-sm:whitespace-nowrap max-sm:rounded-none max-sm:border-0 max-sm:border-(--color-border) max-sm:px-2 max-sm:text-lg max-sm:not-first:border-l-(length:--border-width)';
+  'max-sm:flex-1 max-sm:whitespace-nowrap max-sm:rounded-none max-sm:border-0 max-sm:border-(--color-border) max-sm:px-2 max-sm:text-lg max-sm:not-first:border-l-(length:--border-width)';
 
 function choiceStyle(selected: boolean): string {
   return `${choice} ${selected ? 'border-(--color-text) bg-(--color-text) text-(--color-text-inverse)' : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text)'}`;
@@ -89,10 +101,16 @@ export function StatsScreen({ playerId }: { playerId: string | null }) {
   );
 }
 
-function FilterButtons({ filter, onChange }: { filter: StatsFilter; onChange(filter: StatsFilter): void }) {
+interface FilterButtonsProps<T extends string> {
+  options: readonly FilterOption<T>[];
+  filter: T;
+  onChange(filter: NoInfer<T>): void;
+}
+
+function FilterButtons<T extends string>({ options, filter, onChange }: FilterButtonsProps<T>) {
   return (
-    <div className="flex flex-wrap gap-2.5 max-sm:w-full max-sm:flex-nowrap max-sm:gap-0 max-sm:overflow-hidden max-sm:rounded-(--radius-card) max-sm:border-(length:--border-width) max-sm:border-(--color-border-strong)">
-      {FILTERS.map((option) => (
+    <div className="flex flex-wrap gap-2.5 max-sm:w-full max-sm:flex-nowrap max-sm:gap-0 max-sm:overflow-x-auto max-sm:rounded-(--radius-card) max-sm:border-(length:--border-width) max-sm:border-(--color-border-strong)">
+      {options.map((option) => (
         <button key={option.value} type="button" aria-pressed={filter === option.value} onClick={() => onChange(option.value)} className={`${choiceStyle(filter === option.value)} ${segment}`}>
           {option.label}
         </button>
@@ -101,50 +119,50 @@ function FilterButtons({ filter, onChange }: { filter: StatsFilter; onChange(fil
   );
 }
 
-function Ranking() {
-  const [filter, setFilter] = useState<StatsFilter>('all');
-  const [rankings, setRankings] = useState<Loaded<StatsRankings>>({ status: 'loading' });
+type RankingData = { view: 'overall'; overall: StatsOverall } | { view: 'ranking'; rankings: StatsRankings };
 
-  useEffect(() => {
-    let cancelled = false;
-    setRankings({ status: 'loading' });
-    getRankings(filter).then(
-      (value) => {
-        if (!cancelled) {
-          setRankings({ status: 'ready', value });
-        }
-      },
-      () => {
-        if (!cancelled) {
-          setRankings({ status: 'error', message: pl.statsFailed });
-        }
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [filter]);
+function loadView(view: RankingView): Promise<RankingData> {
+  if (view === 'overall') {
+    return getOverall().then((overall) => ({ view: 'overall', overall }));
+  }
+  return getRankings(view).then((rankings) => ({ view: 'ranking', rankings }));
+}
+
+function Ranking() {
+  const [view, setView] = useState<RankingView>('all');
+  const data = useLoaded<RankingData>(() => loadView(view), pl.statsFailed, [view]);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 pt-4 pb-6 sm:px-8 lg:px-12 lg:pt-7 lg:pb-8 xl:overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-4 sm:gap-8">
         <div className="flex flex-col gap-1.5">
           <h1 className="font-display text-[length:clamp(2.5rem,10vw,3.5rem)] leading-none font-bold uppercase">{pl.stats}</h1>
-          {rankings.status === 'ready' && <p className="text-[17px] text-(--color-text-muted)">{pl.rankingSubtitle(rankings.value.games, rankings.value.legs)}</p>}
+          {data.status === 'ready' && (
+            <p className="text-[17px] text-(--color-text-muted)">
+              {data.value.view === 'overall' ? pl.overallSubtitle : pl.rankingSubtitle(data.value.rankings.games, data.value.rankings.legs)}
+            </p>
+          )}
         </div>
         <section aria-labelledby="ranking-filter" className="flex flex-col gap-2.5 max-sm:w-full">
           <h2 id="ranking-filter" className={label}>
             {pl.gameType}
           </h2>
-          <FilterButtons filter={filter} onChange={setFilter} />
+          <FilterButtons options={RANKING_VIEWS} filter={view} onChange={setView} />
         </section>
       </div>
-      {rankings.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
-      {rankings.status === 'error' && <ErrorText text={rankings.message} />}
-      {rankings.status === 'ready' && rankings.value.games === 0 && <p className="font-display text-2xl text-(--color-text-muted)">{pl.noGamesInFilter}</p>}
-      {rankings.status === 'ready' && rankings.value.games > 0 && <RankingBoard rankings={rankings.value} />}
+      {data.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
+      {data.status === 'error' && <ErrorText text={data.message} />}
+      {data.status === 'ready' && <RankingContent data={data.value} />}
     </main>
   );
+}
+
+function RankingContent({ data }: { data: RankingData }) {
+  const empty = data.view === 'overall' ? data.overall.darts === 0 : data.rankings.games === 0;
+  if (empty) {
+    return <p className="font-display text-2xl text-(--color-text-muted)">{pl.noGamesInFilter}</p>;
+  }
+  return data.view === 'overall' ? <OverallBoard overall={data.overall} /> : <RankingBoard rankings={data.rankings} />;
 }
 
 function PlayerCard({ playerId }: { playerId: string }) {
@@ -221,7 +239,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
 
         <section className="flex flex-col gap-2">
           <h2 className={label}>{pl.statsFilter}</h2>
-          <FilterButtons filter={filter} onChange={setFilter} />
+          <FilterButtons options={FILTERS} filter={filter} onChange={setFilter} />
         </section>
 
         <StatsCard stats={stats} />

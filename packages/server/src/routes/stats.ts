@@ -38,5 +38,7 @@ export function statsRoutes(app: FastifyInstance, stats: StatsService): void {
     return stats.rankings(parsed.data.type);
   });
 
+  app.get('/stats/overall', async () => stats.overall());
+
   app.get<IdParams>('/matches/:id/summary', async (request) => stats.matchSummary(request.params.id));
 }
