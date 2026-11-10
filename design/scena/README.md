@@ -11,7 +11,7 @@ AUTO Score liczy wynik w darcie przy tarczy: tablet albo monitor w poziomie, gra
 
 ## Kolor
 
-- Tło każdego ekranu to `Stage`: gradient `color-bg-glow` → `color-bg-mid` → `color-bg` i pierścienie tarczy przy `opacity-rings`. Nie stawiaj treści na płaskim kolorze.
+- Tło każdego ekranu to `Stage`: gradient `color-bg-glow` → `color-bg-mid` → `color-bg`, bez pierścieni tarczy (decyzja autora 2026-11-10; token `opacity-rings` zostaje, ale tło go nie używa). Nie stawiaj treści na płaskim kolorze.
 - Tekst główny i wyniki: `color-text`. Tekst drugi (meta, wynik czekającego): `color-text-sub`. Etykiety i jednostki: `color-text-muted`. Każdy z nich ma ≥ 4,5:1 na każdej powierzchni systemu, także na półprzezroczystych `color-surface-soft` i `color-surface-softer` nad kartą.
 - `color-accent` to wypełnienia i obrysy, nie tekst (3,3:1 na karcie): pasek progresu rzucającego, aktywny slot rzutki, podkreślenie zakładki, obwódka Bull. Najmocniejsze użycie to karta zamknięcia z gradientem `color-accent-hi` → `color-accent` → `color-accent-lo`.
 - Na akcencie tekst `color-on-accent`, tylko ≥ 24 px albo pogrubiony ≥ 19 px (3,6:1 na jasnym końcu gradientu). Mniejszy tekst na akcencie stawiaj na `color-route-chip` (6,2:1).
@@ -32,7 +32,7 @@ AUTO Score liczy wynik w darcie przy tarczy: tablet albo monitor w poziomie, gra
 - Płaskie elementy drugiego planu (wiersze historii, kafelki, przełącznik) leżą na `color-surface-softer` z `shadow-inset-line`.
 - Bez grubych obwódek kart i bez kolorowego paska na krawędzi karty.
 - Odstępy: `space-page` (28 px) od krawędzi i między kolumnami, `space-5` (14 px) między kartami w kolumnie, `space-6` (18 px) między sekcjami.
-- Dekoracja: motyw tarczy (pierścienie i druty) w tle sceny i mała tarcza w rogu kart, zawsze `aria-hidden`, przy przezroczystości z tokenów `opacity-*`. Żadnych innych ilustracji.
+- Dekoracja: mała tarcza w rogu kart (tło sceny jest bez tarczy), zawsze `aria-hidden`, przy przezroczystości z tokenów `opacity-*`. Żadnych innych ilustracji.
 
 ## Stany i dostępność
 

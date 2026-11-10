@@ -1843,7 +1843,8 @@ describe('turn panel, checkout card and keypad', () => {
     expect(dock.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'mt-auto', 'lg:contents', 'max-lg:order-2']));
     const slot = card.parentElement as HTMLElement;
     expect(slot.parentElement?.tagName).toBe('MAIN');
-    expect(slot.className.split(' ')).toEqual(expect.arrayContaining(['max-lg:order-1', 'lg:col-start-1', 'lg:row-start-2']));
+    // Od lg karta jest na dole prawej kolumny, pod klawiaturą, a lewa kolumna zostaje dla paska wyników i historii tur.
+    expect(slot.className.split(' ')).toEqual(expect.arrayContaining(['max-lg:order-1', 'lg:col-start-2', 'lg:row-start-2']));
   });
 
   it('shows the turn total and no checkout card without a route', () => {

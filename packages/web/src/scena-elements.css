@@ -1,5 +1,5 @@
 /*
- * Elementy bazowe Sceny: scena (.sc-stage, .sc-stage__rings, .sc-stage__content), panel (.sc-panel),
+ * Elementy bazowe Sceny: scena (.sc-stage, .sc-stage__content), panel (.sc-panel),
  * przyciski (.sc-btn i warianty), przełącznik segmentowy (.sc-seg), karta gracza (.sc-player, .sc-avatar--current,
  * .sc-card-rings), pasek progresu (.sc-progress), pasek aplikacji (.sc-appbar, .sc-nav, .sc-clock, .sc-status),
  * sloty rzutek (.sc-slot), kafelki statystyk lega (.sc-tiles, .sc-tile), karta zamknięcia (.sc-checkout, .sc-route-chip, .sc-kbd--on-accent), klawisze (.sc-key--bull, .sc-chip)
@@ -24,60 +24,33 @@
   );
 }
 
-/* Ekran gry: światło nad klawiaturą, środek pierścieni pod nią. */
+/* Ekran gry: światło nad klawiaturą. */
 .sc-stage[data-stage-light="game"] {
   --stage-light-size: 1000px 700px;
   --stage-light-x: 62%;
   --stage-light-y: -10%;
-  --stage-rings-size: 1000px;
-  --stage-rings-x: 71%;
-  --stage-rings-y: 84%;
 }
 
-/* Listy: światło nad tytułem, pierścienie wychodzą poza prawy górny róg. */
+/* Listy: światło nad tytułem. */
 .sc-stage[data-stage-light="list"] {
   --stage-light-size: 1100px 650px;
   --stage-light-x: 22%;
   --stage-light-y: -10%;
-  --stage-rings-size: 1000px;
-  --stage-rings-x: calc(100% - 50px);
-  --stage-rings-y: -60px;
 }
 
 .sc-stage[data-stage-light="center"] {
   --stage-light-size: 1000px 700px;
   --stage-light-x: 50%;
   --stage-light-y: -10%;
-  --stage-rings-size: 1000px;
-  --stage-rings-x: 50%;
-  --stage-rings-y: 50%;
 }
 
 @media (width < 40rem) {
   .sc-stage[data-stage-light] {
     --stage-light-size: 560px 460px;
     --stage-light-y: -8%;
-    --stage-rings-size: 620px;
-  }
-
-  .sc-stage[data-stage-light="game"] {
-    --stage-rings-x: 50%;
-    --stage-rings-y: 70%;
   }
 }
 
-.sc-stage__rings {
-  position: absolute;
-  left: var(--stage-rings-x);
-  top: var(--stage-rings-y);
-  width: var(--stage-rings-size);
-  height: var(--stage-rings-size);
-  translate: -50% -50%;
-  pointer-events: none;
-  opacity: var(--opacity-rings);
-  fill: none;
-  stroke: var(--color-text);
-}
 
 .sc-stage__content {
   position: relative;

@@ -86,7 +86,7 @@
   --focus-ring: 0 0 0 2px #0a0908, 0 0 0 4px #f3ecd8; /* 2 px przerwy w kolorze tła, potem 2 px kremu */
 
   /* Przezroczystość tarcz w tle */
-  --opacity-rings: 0.07;
+  --opacity-rings: 0.07; /* z tokens.json; tło sceny nie ma już pierścieni (2026-11-10) */
   --opacity-card-rings: 0.07;
   --opacity-checkout-rings: 0.16;
 

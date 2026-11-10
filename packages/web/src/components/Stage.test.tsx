@@ -12,13 +12,9 @@ describe('Stage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Nowa gra' })).toBeTruthy();
   });
 
-  it('draws decorative rings hidden from screen readers and clicks', () => {
+  it('draws no board rings in the background', () => {
     const { container } = render(<Stage light="game">treść</Stage>);
-    const svg = container.querySelector('svg');
-    expect(svg?.getAttribute('aria-hidden')).toBe('true');
-    expect(svg?.getAttribute('pointer-events')).toBe('none');
-    expect(Array.from(svg?.querySelectorAll('circle') ?? [], (circle) => circle.getAttribute('r'))).toEqual(['490', '455', '430', '270', '252']);
-    expect(svg?.querySelectorAll('line')).toHaveLength(20);
+    expect(container.querySelector('svg')).toBeNull();
   });
 
   it('sets the light from the prop', () => {
