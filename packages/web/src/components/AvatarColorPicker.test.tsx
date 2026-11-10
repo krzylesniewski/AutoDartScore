@@ -55,7 +55,7 @@ describe('AvatarColorPicker', () => {
   it('previews on a neutral surface and explains the automatic color without a choice', () => {
     render(<AvatarColorPicker value={null} onChange={vi.fn()} name="anna" avatar="" />);
     const preview = screen.getByText('A');
-    expect(preview.classList).toContain('bg-(--color-surface-button)');
+    expect(preview.classList).toContain('bg-(--color-surface-soft)');
     expect(preview.classList).toContain('text-(--color-text)');
     expect(screen.getByText('Bez wyboru kolor zostanie dobrany automatycznie.')).toBeTruthy();
   });

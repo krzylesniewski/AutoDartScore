@@ -33,4 +33,16 @@ describe('NewPlayerDialog', () => {
     expect(screen.queryByText(message)).toBeNull();
     expect(name.getAttribute('aria-invalid')).toBeNull();
   });
+
+  it('shows the taken name in cream text with a warning icon and marks the field', async () => {
+    render(<NewPlayerDialog onCreated={vi.fn()} onCancel={vi.fn()} />);
+    const name = screen.getByRole('textbox', { name: 'Imię' });
+    fireEvent.change(name, { target: { value: 'Anna' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj' }));
+
+    const error = await screen.findByText(message);
+    expect(error.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    expect(error.classList).not.toContain('text-(--color-accent)');
+    expect(name.classList).toContain('aria-invalid:inset-ring-2');
+  });
 });

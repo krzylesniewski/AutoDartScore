@@ -151,7 +151,7 @@ export function HomeScreen() {
   return (
     <div className="flex h-full flex-col">
       <AppNav current="new-game" />
-      <main className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pt-4 pb-4 sm:gap-8 sm:px-8 lg:flex-row lg:overflow-hidden xl:px-10 xl:pt-5.5 xl:pb-4.5">
+      <main className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pt-4 pb-4 sm:gap-8 sm:px-8 lg:flex-row lg:gap-(--space-page) lg:overflow-hidden lg:px-(--space-page) xl:pt-5.5 xl:pb-4.5">
         <NewGameForm
           setup={setup}
           players={players}

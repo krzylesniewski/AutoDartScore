@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { avatarColorClass } from '../game/avatar-color';
+import { avatarRingClasses } from '../game/avatar-ring';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
 
@@ -10,7 +11,7 @@ export interface AvatarColorPickerProps {
   avatar: string;
 }
 
-const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
+const label = 'font-display text-(length:--text-label) font-bold uppercase tracking-[0.18em] text-(--color-text-muted)';
 const preview = 'flex size-18 shrink-0 items-center justify-center rounded-full font-display text-[38px] font-bold';
 
 // Natywne radio daje strzałki i Tab bez własnej obsługi klawiatury. Zaznaczenie ma obwódkę i ✓, więc kolor nie jest jedyną wskazówką.
@@ -22,11 +23,13 @@ export function AvatarColorPicker({ value, onChange, name, avatar }: AvatarColor
   return (
     <div className="flex flex-wrap items-center gap-4">
       {value === null ? (
-        <span aria-hidden="true" className={`${preview} bg-(--color-surface-button) text-(--color-text)`}>
+        <span aria-hidden="true" className={`${preview} bg-(--color-surface-soft) text-(--color-text)`}>
           {shown ?? name.trim().charAt(0).toUpperCase()}
         </span>
       ) : (
-        <Avatar name={name.trim()} avatar={shown} color={value} size="preview" />
+        <span className={`flex shrink-0 rounded-full ring-2 ring-offset-4 ring-offset-(--color-surface) ${avatarRingClasses(value).ring}`}>
+          <Avatar name={name.trim()} avatar={shown} color={value} size="preview" />
+        </span>
       )}
       <fieldset className="@container flex min-w-0 flex-1 basis-52 flex-col gap-2">
         <legend className={`${label} mb-2`}>{pl.playerColor}</legend>
