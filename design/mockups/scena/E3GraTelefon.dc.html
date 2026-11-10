@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 3, gra na telefonie</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#ffffff}
+button:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 2px #0a0908,0 0 0 4px #f3ecd8}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 560px 460px at 62% -8%, #2b201a 0%, #16120f 45%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column;">
+  <svg width="620" height="620" viewBox="-500 -500 1000 1000" aria-hidden="true" style="position: absolute; left: -115px; top: 281px; opacity: 0.07; pointer-events: none;">
+    <circle r="490" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+    <circle r="455" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+    <circle r="430" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+    <circle r="270" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+    <circle r="252" fill="none" stroke="#f3ecd8" stroke-width="1.6"></circle>
+  </svg>
+
+  <header style="position: relative; height: 48px; flex-shrink: 0; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 10px;">
+    <svg width="26" height="26" viewBox="0 0 34 34" aria-hidden="true" style="flex-shrink: 0;"><circle cx="17" cy="17" r="15" fill="#d8352a"></circle><circle cx="17" cy="17" r="10" fill="#0a0908"></circle><circle cx="17" cy="17" r="6" fill="#f3ecd8"></circle><circle cx="17" cy="17" r="2.4" fill="#d8352a"></circle></svg>
+    <h1 style="margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-weight: 400;">
+      <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; line-height: 1; color: #f3ecd8; white-space: nowrap;">301 · best of 1</span>
+      <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 14px; line-height: 1; color: #c9bfa6; white-space: nowrap;">Leg 1 · kolejka 7</span>
+    </h1>
+    <span style="flex-grow: 1;"></span>
+    <span aria-label="Czas lega 6 minut 48 sekund" style="display: inline-flex; align-items: center; gap: 5px; height: 32px; box-sizing: border-box; padding: 0 10px; border-radius: 999px; background: rgba(243,236,216,0.07); font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-1 3v6.4l5.2 3.1 1-1.7-4.2-2.5V7z"></path></svg>6:48</span>
+    <button type="button" aria-expanded="{{expanded}}" aria-controls="e3gt-turns" onClick="{{toggle}}" style="{{turnsButton}}">Tury</button>
+    <button type="button" aria-label="Menu gry" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; border-radius: 999px; background: rgba(243,236,216,0.07); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg></button>
+  </header>
+
+  <div style="position: relative; height: 298px; flex-shrink: 0; box-sizing: border-box; padding: 6px 16px 0; display: flex; flex-direction: column; gap: 6px;">
+    <section aria-label="Kolejka rzutów" style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="position: relative; overflow: hidden; height: 100px; box-sizing: border-box; border-radius: 18px; padding: 10px 14px 0; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 24px 48px -16px rgba(0,0,0,0.8), 0 0 0 1px rgba(243,236,216,0.11); display: flex; flex-direction: column;">
+        <svg width="150" height="150" viewBox="0 0 200 200" aria-hidden="true" style="position: absolute; right: -46px; top: -52px; opacity: 0.07; pointer-events: none;"><circle cx="100" cy="100" r="95" fill="none" stroke="#f3ecd8" stroke-width="10"></circle><circle cx="100" cy="100" r="58" fill="none" stroke="#f3ecd8" stroke-width="10"></circle><circle cx="100" cy="100" r="22" fill="#f3ecd8"></circle></svg>
+        <div style="position: relative; height: 48px; display: flex; align-items: center; gap: 12px;">
+          <span style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; background: #5aa9ff; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px; box-shadow: 0 0 0 2px #2a2420, 0 0 0 4px #5aa9ff, 0 0 18px 2px rgba(90,169,255,0.45);">S</span>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 24px; line-height: 1;">Szymon</span>
+            <span style="font-size: 13px; line-height: 1.2; color: #c9bfa6; white-space: nowrap;">rzuca teraz · rzutka 1 z 3</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <span aria-label="Legi: 0 z 1" style="display: flex; gap: 6px;"><span style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid #a8a08a;"></span></span>
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 62px; line-height: 0.82; font-variant-numeric: tabular-nums; text-shadow: 0 6px 30px rgba(0,0,0,0.6);">32</span>
+        </div>
+        <div role="progressbar" aria-label="Zostało 32 z 301 punktów" aria-valuemin="0" aria-valuemax="301" aria-valuenow="269" style="position: relative; margin-top: 8px; height: 6px; border-radius: 3px; background: rgba(243,236,216,0.1); overflow: hidden;"><span style="display: block; width: 89.4%; height: 100%; border-radius: 3px; background: #d8352a; box-shadow: 0 0 10px rgba(216,53,42,0.5);"></span></div>
+        <div style="position: relative; margin-top: 8px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; line-height: 1; color: #f3ecd8; white-space: nowrap;">▼ 269 w 6 turach</span>
+          <span style="font-size: 13px; line-height: 1; color: #a8a08a; white-space: nowrap;">śr. <b style="color: #f3ecd8; font-weight: 600;">44,83</b> · first 9 <b style="color: #f3ecd8; font-weight: 600;">44,33</b></span>
+        </div>
+      </div>
+
+      <div style="height: 54px; box-sizing: border-box; border-radius: 18px; padding: 7px 14px 0; background: rgba(243,236,216,0.035); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; display: flex; flex-direction: column;">
+        <div style="height: 32px; display: flex; align-items: center; gap: 10px;">
+          <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: #ff70b8; color: #111111; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 14px;">XD</span>
+          <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px; line-height: 1;">Krzysiek</span>
+            <span style="font-size: 12px; line-height: 1.2; color: #a8a08a; white-space: nowrap;">następny · śr. 43,50</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <span aria-label="Ostatnia tura: bust" style="display: inline-flex; align-items: center; gap: 4px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; color: #c9bfa6; white-space: nowrap;"><svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" fill="#c9bfa6"><path d="M6.4 4L12 9.6 17.6 4 20 6.4 14.4 12 20 17.6 17.6 20 12 14.4 6.4 20 4 17.6 9.6 12 4 6.4z"></path></svg>Bust</span>
+          <span aria-label="Legi: 0 z 1" style="display: flex;"><span style="width: 10px; height: 10px; box-sizing: border-box; border-radius: 50%; border: 2px solid #a8a08a;"></span></span>
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 38px; line-height: 1; color: #c9bfa6; font-variant-numeric: tabular-nums;">40</span>
+        </div>
+        <div role="progressbar" aria-label="Zostało 40 z 301 punktów" aria-valuemin="0" aria-valuemax="301" aria-valuenow="261" style="margin-top: 5px; height: 6px; border-radius: 3px; background: rgba(243,236,216,0.1); overflow: hidden;"><span style="display: block; width: 86.7%; height: 100%; border-radius: 3px; background: #a8a08a;"></span></div>
+      </div>
+    </section>
+
+    <section aria-label="Bieżąca tura" style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="height: 60px; display: flex; gap: 6px;">
+        <ol style="list-style: none; margin: 0; padding: 0; flex-grow: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
+          <li aria-label="Rzutka 1, czeka na rzutkę" style="border-radius: 18px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px #d8352a inset, 0 0 40px -10px rgba(216,53,42,0.5) inset; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+            <svg width="20" height="20" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="none" stroke="#d8352a" stroke-opacity="0.5" stroke-width="3"></circle><circle cx="28" cy="28" r="15" fill="none" stroke="#d8352a" stroke-opacity="0.8" stroke-width="3"></circle><circle cx="28" cy="28" r="6" fill="#d8352a"></circle></svg>
+            <span style="font-size: 13px; line-height: 1; color: #c9bfa6;">rzutka 1</span>
+          </li>
+          <li aria-label="Rzutka 2" style="border-radius: 18px; background: rgba(243,236,216,0.035); display: flex; align-items: center; justify-content: center;"><span style="font-size: 13px; color: #a8a08a;">rzutka 2</span></li>
+          <li aria-label="Rzutka 3" style="border-radius: 18px; background: rgba(243,236,216,0.035); display: flex; align-items: center; justify-content: center;"><span style="font-size: 13px; color: #a8a08a;">rzutka 3</span></li>
+        </ol>
+        <div style="width: 78px; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; padding-right: 2px;">
+          <span style="font-size: 13px; line-height: 1.2; color: #a8a08a;">Suma tury</span>
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 38px; line-height: 1; font-variant-numeric: tabular-nums;">0</span>
+        </div>
+      </div>
+
+      <div style="height: 60px; display: flex; gap: 6px;">
+        <button type="button" aria-label="Zamknięcie D16, 1 rzutka do wygrania lega. Dotknij, aby wpisać D16" style="position: relative; overflow: hidden; flex-grow: 1; min-width: 0; border: 0; border-radius: 18px; padding: 0 12px 0 16px; background: linear-gradient(135deg, #e8483a 0%, #d8352a 60%, #a8231b 100%); box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 30px 60px -20px rgba(216,53,42,0.5); color: #fff7e6; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; text-align: left;">
+          <svg width="150" height="150" viewBox="0 0 200 200" aria-hidden="true" style="position: absolute; right: -40px; top: -45px; opacity: 0.16; pointer-events: none;"><circle cx="100" cy="100" r="95" fill="none" stroke="#fff7e6" stroke-width="10"></circle><circle cx="100" cy="100" r="58" fill="none" stroke="#fff7e6" stroke-width="10"></circle><circle cx="100" cy="100" r="22" fill="#fff7e6"></circle></svg>
+          <span style="position: relative; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; letter-spacing: 0.16em; white-space: nowrap;">ZAMKNIĘCIE</span>
+          <span style="position: relative; background: rgba(0,0,0,0.28); border-radius: 10px; padding: 0 12px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 40px; line-height: 1.1; white-space: nowrap;">D16</span>
+        </button>
+        <button type="button" aria-keyshortcuts="Backspace" style="width: 96px; flex-shrink: 0; border: 0; border-radius: 12px; background: transparent; box-shadow: 0 0 0 1px rgba(243,236,216,0.12) inset; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 19px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M9 4L3 9.5 9 15v-4h5a4 4 0 010 8h-3v2h3a6 6 0 000-12H9z"></path></svg>Cofnij</button>
+      </div>
+    </section>
+  </div>
+
+  <sc-if value="{{open}}" hint-placeholder-val="{{false}}">
+    <section id="e3gt-turns" aria-labelledby="e3gt-turns-title" style="position: absolute; left: 12px; right: 12px; top: 52px; height: 294px; box-sizing: border-box; overflow: hidden; border-radius: 22px; padding: 10px 14px 12px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85), 0 0 0 1px rgba(243,236,216,0.11); display: flex; flex-direction: column; gap: 8px;">
+      <div style="height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 10px;">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;">
+          <h2 id="e3gt-turns-title" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; line-height: 1.1;">Historia tur · leg 1</h2>
+          <span style="font-size: 13px; line-height: 1.2; color: #a8a08a;">pozostało po turze (punkty w turze)</span>
+        </div>
+        <button type="button" aria-label="Zamknij historię tur" onClick="{{toggle}}" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; border-radius: 999px; background: rgba(243,236,216,0.07); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M6.4 4L12 9.6 17.6 4 20 6.4 14.4 12 20 17.6 17.6 20 12 14.4 6.4 20 4 17.6 9.6 12 4 6.4z"></path></svg></button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; flex-shrink: 0;">
+        <div style="border-radius: 12px; padding: 7px 10px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 13px; line-height: 1.1; font-weight: 500; color: #a8a08a;">Najwyższa tura</span>
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums;">79</span>
+        </div>
+        <div style="border-radius: 12px; padding: 7px 10px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 13px; line-height: 1.1; font-weight: 500; color: #a8a08a;">Rzutek w legu</span>
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums;">35</span>
+        </div>
+        <div style="border-radius: 12px; padding: 7px 10px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 13px; line-height: 1.1; font-weight: 500; color: #a8a08a;">Busty</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M6.4 4L12 9.6 17.6 4 20 6.4 14.4 12 20 17.6 17.6 20 12 14.4 6.4 20 4 17.6 9.6 12 4 6.4z"></path></svg>1</span>
+        </div>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums;">
+        <caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Historia tur w legu 1: pozostało po turze i punkty w turze</caption>
+        <thead>
+          <tr style="height: 24px;">
+            <th scope="col" style="width: 44px; padding: 0; text-align: left; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; color: #a8a08a;">Tura</th>
+            <th scope="col" style="padding: 0; text-align: right; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; color: #a8a08a;"><span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 18px; height: 18px; border-radius: 50%; background: #5aa9ff; color: #111111; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;">S</span>Szymon</span></th>
+            <th scope="col" style="padding: 0; text-align: right; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; color: #a8a08a;"><span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 18px; height: 18px; border-radius: 50%; background: #ff70b8; color: #111111; font-size: 9px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;">XD</span>Krzysiek</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{turns}}" as="t" hint-placeholder-count="6">
+            <tr style="height: 23px;">
+              <th scope="row" style="padding: 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: left; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; color: #a8a08a;">{{t.n}}</th>
+              <td style="padding: 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: #f3ecd8;">{{t.a}}<small style="margin-left: 4px; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px; color: #a8a08a;">{{t.aPts}}</small></td>
+              <td style="padding: 0; border-top: 1px solid rgba(243,236,216,0.11); text-align: right; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: #c9bfa6;">{{t.b}}<sc-if value="{{t.bust}}" hint-placeholder-val="{{false}}"><span style="display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; font-family: 'Barlow', sans-serif; font-weight: 600; font-size: 13px; color: #f3ecd8;"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="#f3ecd8"><path d="M6.4 4L12 9.6 17.6 4 20 6.4 14.4 12 20 17.6 17.6 20 12 14.4 6.4 20 4 17.6 9.6 12 4 6.4z"></path></svg>Bust</span></sc-if><sc-if value="{{t.pts}}" hint-placeholder-val="{{true}}"><small style="margin-left: 4px; font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 13px; color: #a8a08a;">{{t.bPts}}</small></sc-if></td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </section>
+  </sc-if>
+
+  <section aria-label="Klawiatura rzutek" style="position: relative; margin-top: 6px; box-sizing: border-box; padding: 0 16px; display: flex; flex-direction: column; gap: 8px;">
+    <div role="group" aria-label="Mnożnik" style="height: 52px; box-sizing: border-box; padding: 4px; border-radius: 18px; background: rgba(243,236,216,0.07); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
+      <button type="button" aria-pressed="true" aria-keyshortcuts="S" style="border: 0; border-radius: 13px; background: #f3ecd8; color: #0a0908; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7); cursor: pointer;">S</button>
+      <button type="button" aria-pressed="false" aria-keyshortcuts="D" style="border: 0; border-radius: 13px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 24px; cursor: pointer;">D</button>
+      <button type="button" aria-pressed="false" aria-keyshortcuts="T" style="border: 0; border-radius: 13px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 24px; cursor: pointer;">T</button>
+    </div>
+    <div style="position: relative; width: 358px; height: 358px; border-radius: 50%; background: radial-gradient(circle, rgba(243,236,216,0.03) 0%, rgba(243,236,216,0) 70%);">
+      <sc-for list="{{ring}}" as="k" hint-placeholder-count="20">
+        <button type="button" style="{{k.style}}">{{k.label}}</button>
+      </sc-for>
+      <div style="position: absolute; left: 89px; top: 156px; width: 180px; height: 46px; display: flex; gap: 8px;">
+        <button type="button" aria-keyshortcuts="B" style="flex: 1; border: 0; border-radius: 999px; background: linear-gradient(180deg, #2a2420, #1b1714); color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 10px 20px -10px rgba(0,0,0,0.9); cursor: pointer;">25</button>
+        <button type="button" aria-keyshortcuts="Shift+B" style="flex: 1; border: 0; border-radius: 999px; background: linear-gradient(180deg, #2a2420, #1b1714); color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; box-shadow: 0 0 0 2px #d8352a inset, 0 10px 20px -10px rgba(0,0,0,0.9); cursor: pointer;">Bull</button>
+      </div>
+    </div>
+    <div style="height: 56px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+      <button type="button" aria-keyshortcuts="Space" style="grid-column: span 3; border: 0; border-radius: 18px; background: rgba(243,236,216,0.07); color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 30px; box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; cursor: pointer;">Miss</button>
+      <button type="button" style="border: 0; border-radius: 12px; background: transparent; box-shadow: 0 0 0 1px rgba(243,236,216,0.12) inset; color: #c9bfa6; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 16px; line-height: 1.05; padding: 0 6px; cursor: pointer;">Reszta Miss</button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"historia":{"editor":"boolean","default":false,"tsType":"boolean"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const open = this.state && typeof this.state.open === 'boolean' ? this.state.open : (this.props.historia ?? false);
+const toggle = () => this.setState({ open: !open });
+const order = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+const side = 358, key = 45, radius = side * 0.43, c = side / 2;
+const ring = order.map((n, i) => {
+const a = (-90 + i * 18) * Math.PI / 180;
+const left = Math.round(c + radius * Math.cos(a) - key / 2);
+const top = Math.round(c + radius * Math.sin(a) - key / 2);
+const edge = i === 0 ? '0 0 0 1px #a8a08a inset, ' : '0 1px 0 rgba(243,236,216,0.11) inset, ';
+return {
+label: String(n),
+style: 'position: absolute; left: ' + left + 'px; top: ' + top + 'px; width: ' + key + 'px; height: ' + key + 'px; padding: 0; border: 0; border-radius: 999px; background: linear-gradient(180deg, #2a2420, #1b1714); color: #f3ecd8; box-shadow: ' + edge + '0 10px 20px -10px rgba(0,0,0,0.9); font-family: Barlow Condensed, sans-serif; font-weight: 700; font-size: 23px; font-variant-numeric: tabular-nums; cursor: pointer;'
+};
+});
+const turns = [
+{ n: '1', a: '256', aPts: '(45)', b: '271', bPts: '(30)', bust: false, pts: true },
+{ n: '2', a: '196', aPts: '(60)', b: '230', bPts: '(41)', bust: false, pts: true },
+{ n: '3', a: '168', aPts: '(28)', b: '170', bPts: '(60)', bust: false, pts: true },
+{ n: '4', a: '89', aPts: '(79)', b: '115', bPts: '(55)', bust: false, pts: true },
+{ n: '5', a: '48', aPts: '(41)', b: '40', bPts: '(75)', bust: false, pts: true },
+{ n: '6', a: '32', aPts: '(16)', b: '40', bPts: '', bust: true, pts: false }
+];
+const turnsButton = 'height: 44px; flex-shrink: 0; padding: 0 16px; border: 0; border-radius: 999px; font-family: Barlow Condensed, sans-serif; font-size: 19px; cursor: pointer; ' + (open
+? 'background: #f3ecd8; color: #0a0908; font-weight: 800; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7);'
+: 'background: rgba(243,236,216,0.07); color: #f3ecd8; font-weight: 700;');
+return { open, toggle, expanded: open ? 'true' : 'false', turnsButton, ring, turns };
+}
+}
+</script>
+</body>
+</html>

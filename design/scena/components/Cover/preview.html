@@ -1,0 +1,54 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>AUTO Score: Scena</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--color-bg); color:var(--color-text); font-family:var(--font-body); overflow:hidden; }
+  .cover { position:relative; width:960px; height:288px; overflow:hidden; background:radial-gradient(ellipse 700px 420px at 70% -20%, var(--color-bg-glow) 0%, var(--color-bg-mid) 45%, var(--color-bg) 100%); }
+  .art { position:absolute; left:0; top:0; width:960px; height:288px; }
+  .accent { fill:var(--color-accent); }
+  .deep { fill:var(--color-surface-raised); }
+  .cream { fill:var(--color-text); }
+  .gold { fill:var(--color-gold); }
+  .card { rx:var(--radius-card); }
+  .panel { rx:var(--radius-panel); }
+  .ring { fill:none; stroke:var(--color-text); stroke-width:1.5; opacity:.35; }
+  .ring.on-accent { stroke:var(--color-on-accent); opacity:.45; }
+  .wire { stroke:var(--color-text); stroke-width:1.5; opacity:.35; }
+  .words { position:absolute; left:var(--space-page); bottom:var(--space-page); max-width:440px; }
+  .name { margin:0; font-family:var(--font-display); font-weight:900; font-size:64px; line-height:.95; letter-spacing:.01em; color:var(--color-text); }
+  .tag { margin:var(--space-3) 0 0 2px; font-size:14px; line-height:20px; color:var(--color-text-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<svg class="art" viewBox="0 0 960 288" width="960" height="288" aria-hidden="true">
+<!--
+  blocks      color-accent 196×230 bled off the top (the drop of red the brand is known by) · color-surface-raised 268×226 bled off the right (the card) · color-text pill 124×42 (the cream) · color-gold disc 42 (the win, small) — ≈38% of 960×288
+  arrangement one red slab and one dark card side by side, a cream pill and a gold disc under the slab; every block right of x = 496
+  pattern     literal motif, the dartboard the Stage draws behind every screen: rings at r 110/102/62/56/14 and 20 wires every 18°, cut into the dark card; two rings cut into the red slab in color-on-accent
+  scales      gutters space-5 (14) and space-page (28); corners radius-card (18) on the slab, radius-panel (22) on the card, pill and disc rx = half of 42
+-->
+<defs><clipPath id="cardClip"><rect x="708" y="40" width="280" height="226" rx="22"/></clipPath><clipPath id="slabClip"><rect x="496" y="-18" width="196" height="230" rx="18"/></clipPath></defs>
+<rect class="accent card" x="496" y="-18" width="196" height="230" rx="18"/>
+<rect class="deep panel" x="708" y="40" width="280" height="226" rx="22"/>
+<rect class="cream" x="496" y="228" width="124" height="42" rx="21"/>
+<circle class="gold" cx="655" cy="249" r="21"/>
+<g clip-path="url(#cardClip)">
+<circle class="ring" cx="842" cy="152" r="110"/><circle class="ring" cx="842" cy="152" r="102"/><circle class="ring" cx="842" cy="152" r="62"/><circle class="ring" cx="842" cy="152" r="56"/><circle class="ring" cx="842" cy="152" r="14"/>
+<line class="wire" x1="851.7" y1="90.8" x2="858.0" y2="51.3"/><line class="wire" x1="870.1" y1="96.8" x2="888.3" y2="61.1"/><line class="wire" x1="885.8" y1="108.2" x2="914.1" y2="79.9"/><line class="wire" x1="897.2" y1="123.9" x2="932.9" y2="105.7"/><line class="wire" x1="903.2" y1="142.3" x2="942.7" y2="136.0"/><line class="wire" x1="903.2" y1="161.7" x2="942.7" y2="168.0"/><line class="wire" x1="897.2" y1="180.1" x2="932.9" y2="198.3"/><line class="wire" x1="885.8" y1="195.8" x2="914.1" y2="224.1"/><line class="wire" x1="870.1" y1="207.2" x2="888.3" y2="242.9"/><line class="wire" x1="851.7" y1="213.2" x2="858.0" y2="252.7"/><line class="wire" x1="832.3" y1="213.2" x2="826.0" y2="252.7"/><line class="wire" x1="813.9" y1="207.2" x2="795.7" y2="242.9"/><line class="wire" x1="798.2" y1="195.8" x2="769.9" y2="224.1"/><line class="wire" x1="786.8" y1="180.1" x2="751.1" y2="198.3"/><line class="wire" x1="780.8" y1="161.7" x2="741.3" y2="168.0"/><line class="wire" x1="780.8" y1="142.3" x2="741.3" y2="136.0"/><line class="wire" x1="786.8" y1="123.9" x2="751.1" y2="105.7"/><line class="wire" x1="798.2" y1="108.2" x2="769.9" y2="79.9"/><line class="wire" x1="813.9" y1="96.8" x2="795.7" y2="61.1"/><line class="wire" x1="832.3" y1="90.8" x2="826.0" y2="51.3"/>
+</g>
+<g clip-path="url(#slabClip)">
+<circle class="ring on-accent" cx="672" cy="10" r="96"/><circle class="ring on-accent" cx="672" cy="10" r="58"/>
+</g>
+</svg>
+<div class="words">
+<h1 class="name">AUTO Score:<br>Scena</h1>
+<p class="tag">Światło nad tarczą: ciepła czerń, krem i czerwień tarczy.</p>
+</div>
+</div>
+</body>
+</html>
