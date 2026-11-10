@@ -33,7 +33,7 @@ const current = summary({
   finished: true,
   eventSeq: 9,
   players: [summaryPlayer('p1', { dartsThrown: 30, average: 50, legsWon: 1 }), summaryPlayer('p2', { dartsThrown: 33, average: 60, legsWon: 2 })],
-  legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [] }],
+  legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [], durationMs: 252_000 }],
 });
 
 function view(overrides: Partial<MatchEndViewProps> = {}) {
@@ -163,19 +163,41 @@ describe('MatchEndView', () => {
     expect(within(leg).getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
   });
 
-  it('ends the setup line with Czas gry without the pauses', () => {
-    view({ state: { ...finished, startedAt: '2026-10-21T18:00:00.000Z', finishedAt: '2026-10-21T19:03:05.000Z', pausedMs: 60_000 } });
-    expect(screen.getByText('501 · Double-out · Best of 3 · Czas gry 1:02:05')).toBeTruthy();
+  const times = { startedAt: '2026-10-21T18:00:00.000Z', finishedAt: '2026-10-21T19:03:05.000Z', pausedMs: 60_000 };
+
+  it('shows Czas gry without the pauses in the winner card and only the settings in the setup line', () => {
+    view({ state: { ...finished, ...times } });
+    const card = screen.getByText('Bartek wygrywa').closest('section') as HTMLElement;
+    expect(within(card).getByText('501 · Double-out · Best of 3')).toBeTruthy();
+    expect(within(card).getByText('Czas gry')).toBeTruthy();
+    expect(within(card).getByText('1:02:05')).toBeTruthy();
   });
 
-  it('leaves Czas gry out of the setup line without a start time', () => {
-    view({ state: { ...finished, startedAt: null, finishedAt: '2026-10-21T19:03:05.000Z' } });
+  it.each([
+    ['a start time', { startedAt: null }],
+    ['a finish time', { finishedAt: null }],
+  ])('shows no Czas gry without %s', (_name, missing) => {
+    view({ state: { ...finished, ...times, ...missing } });
     expect(screen.getByText('501 · Double-out · Best of 3')).toBeTruthy();
     expect(screen.queryByText(/Czas gry/)).toBeNull();
   });
 
+  it('shows the duration of each leg in its card', () => {
+    const legs = [
+      { legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [], durationMs: 252_900 },
+      { legIndex: 1, winnerId: 'p2', checkout: 40, dartsThrown: 15, averages: [], durationMs: 61_000 },
+    ];
+    view({ summary: { ...current, legs } });
+    const first = screen.getByText('Leg 1').closest('li') as HTMLElement;
+    expect(within(first).getByText('4:12')).toBeTruthy();
+    expect(within(first).getByText('Czas lega 4 min 12 s')).toBeTruthy();
+    const second = screen.getByText('Leg 2').closest('li') as HTMLElement;
+    expect(within(second).getByText('1:01')).toBeTruthy();
+    expect(within(second).getByText('Czas lega 1 min 1 s')).toBeTruthy();
+  });
+
   it('shows the checkout and the averages of each player in a leg card', () => {
-    view({ summary: { ...current, legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [{ playerId: 'p1', average: 74.2 }, { playerId: 'p2', average: null }] }] } });
+    view({ summary: { ...current, legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [{ playerId: 'p1', average: 74.2 }, { playerId: 'p2', average: null }], durationMs: 252_000 }] } });
     const legList = screen.getByRole('list', { name: 'Legi' });
     expect(within(legList).getByText('Leg 1')).toBeTruthy();
     expect(within(legList).getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();

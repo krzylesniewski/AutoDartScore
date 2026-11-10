@@ -22,7 +22,7 @@ export interface PlayerTotals {
 
 export interface GameTally {
   readonly players: ReadonlyMap<string, PlayerTotals>;
-  readonly legs: readonly MatchSummaryLeg[];
+  readonly legs: readonly Omit<MatchSummaryLeg, 'durationMs'>[];
   readonly winnerId: string | null; // match_won w 1v1 albo 1. miejsce w zabawie
 }
 
@@ -141,7 +141,7 @@ export function tallyGame(type: MatchType, playerIds: readonly string[], events:
   const totals = new Map(playerIds.map((id) => [id, EMPTY_TOTALS]));
   const turnsInLeg = new Map<string, number>();
   const legPoints = new Map<string, { points: number; darts: number }>();
-  const legs: MatchSummaryLeg[] = [];
+  const legs: Omit<MatchSummaryLeg, 'durationMs'>[] = [];
   let winnerId: string | null = null;
 
   const add = (playerId: string, delta: Partial<PlayerTotals>) => {

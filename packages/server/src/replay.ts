@@ -72,7 +72,7 @@ export function abandonment(log: MatchLog): Abandonment | null {
 export type GameTimes = Pick<MatchSnapshot, 'startedAt' | 'legStartedAt' | 'pausedMs' | 'legPausedMs'>;
 
 // Przerwy od porzucenia do wznowienia. Otwarte porzucenie jeszcze nie jest przerwą, bo nie wiadomo, kiedy się skończy.
-function closedPauses(log: MatchLog): { start: number; end: number }[] {
+export function closedPauses(log: MatchLog): { start: number; end: number }[] {
   const pauses: { start: number; end: number }[] = [];
   let start: number | null = null;
   for (const entry of log.entries) {
