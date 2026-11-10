@@ -1,6 +1,7 @@
 /*
  * Elementy bazowe Sceny: scena (.sc-stage, .sc-stage__rings, .sc-stage__content), panel (.sc-panel),
- * przyciski (.sc-btn i warianty), przełącznik segmentowy (.sc-seg) i pierścień fokusu.
+ * przyciski (.sc-btn i warianty), przełącznik segmentowy (.sc-seg), karta gracza (.sc-player, .sc-avatar--current,
+ * .sc-card-rings), pasek progresu (.sc-progress) i pierścień fokusu.
  * Nazwy klas i wartości jak w design/scena/components/ (bundle.css i README.md komponentów).
  */
 
@@ -207,6 +208,52 @@
     min-height: 72px;
     border-radius: var(--radius-segment);
     font-size: 24px;
+  }
+
+  .sc-card-rings {
+    position: absolute;
+    pointer-events: none;
+    opacity: var(--opacity-card-rings);
+    color: var(--color-text);
+  }
+
+  .sc-avatar--current {
+    box-shadow: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--sc-avatar-color), 0 0 24px 2px var(--sc-avatar-color);
+  }
+
+  .sc-player--current {
+    background: linear-gradient(180deg, var(--color-surface-raised) 0%, var(--color-surface) 100%);
+    box-shadow: var(--shadow-card);
+  }
+
+  .sc-player--waiting {
+    background: var(--color-surface-softer);
+    box-shadow: 0 1px 0 var(--color-border) inset;
+  }
+
+  /* Makieta ma tu czerń z kryciem 60%. Najbliższy token to --color-bg. */
+  .sc-player--current .sc-player__value {
+    text-shadow: 0 6px 30px color-mix(in srgb, var(--color-bg) 60%, transparent);
+  }
+
+  .sc-progress {
+    position: relative;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--color-progress-track);
+    overflow: hidden;
+  }
+
+  .sc-progress > span {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--color-text-muted);
+  }
+
+  .sc-progress--current > span {
+    background: var(--color-accent);
+    box-shadow: 0 0 10px var(--color-accent-glow);
   }
 }
 

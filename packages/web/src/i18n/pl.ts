@@ -165,6 +165,10 @@ export const pl = {
   throwQueue: 'Kolejka rzutów',
   throwerOnTop: 'rzucający zawsze na górze',
   next: 'Następny',
+  nextInQueue: 'następny',
+  throwingNow: (dart: number) => `rzuca teraz · rzutka ${dart} z 3`,
+  throwingNowShort: 'rzuca teraz', // trening końcówek nie ma rzutek w turze
+  progressRemaining: (remaining: number, starting: number) => `Zostało ${remaining} z ${starting} punktów`,
   playerThrows: (name: string) => `${name} rzuca`,
   dartOfTurn: (dart: number) => `Rzutka ${dart} z 3`,
   waitingForDart: 'czeka na rzutkę',

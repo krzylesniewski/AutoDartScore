@@ -4,11 +4,29 @@ import { describe, expect, it } from 'vitest';
 import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot } from '../test/snapshots';
 import { Scoreboard } from './Scoreboard';
 
+const THROWING = 'rzuca teraz · rzutka 1 z 3';
+
+function rowsAbove(current: number, waiting: number, slot: number): string {
+  return `calc(var(--row-current) * ${current} + var(--row-waiting) * ${waiting} + var(--row-placed) * 0 + var(--row-slot) * ${slot})`;
+}
+
+function freeRun() {
+  return snapshot({
+    type: 'practice',
+    practiceMode: 'free_run',
+    startingScore: null,
+    legsToWin: null,
+    countsToStats: false,
+    players: [player('p1', 'Anna', { remaining: null })],
+    freeRun: { dartsThrown: 6, totalPoints: 245, average: 122.5 },
+  });
+}
+
 describe('Scoreboard', () => {
   it('shows legs in a 1v1 match', () => {
     render(<Scoreboard state={snapshot({ players: [player('p1', 'Anna', { legsWon: 1 }), player('p2', 'Bartek', { legsWon: 0 })] })} size="large" />);
-    expect(screen.getAllByText('Legi').length).toBeGreaterThan(0);
     expect(screen.getByText('Legi do 2')).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Legi: 1 z 2' })).toBeTruthy();
   });
 
   it('shows no legs in a casual game', () => {
@@ -35,10 +53,10 @@ describe('Scoreboard', () => {
 
   it('marks the thrower row', () => {
     render(<Scoreboard state={snapshot({ currentPlayerId: 'p2' })} size="large" />);
-    const row = screen.getByText('Rzuca').closest('li');
+    const row = screen.getByText(THROWING).closest('li');
     expect(row?.getAttribute('aria-current')).toBe('true');
     expect(row && within(row).getByText('Bartek')).toBeTruthy();
-    expect(screen.getAllByText('Rzuca')).toHaveLength(1);
+    expect(screen.getAllByText(THROWING)).toHaveLength(1);
   });
 
   it.each([
@@ -57,12 +75,12 @@ describe('Scoreboard', () => {
 
   it('marks only the next player in a rotating 1v1', () => {
     render(<Scoreboard state={snapshot({ currentPlayerId: 'p1' })} size="large" />);
-    const next = screen.getByText('Następny').closest('li');
+    const next = screen.getByText('następny').closest('li');
     expect(next && within(next).getByText('Bartek')).toBeTruthy();
     expect(next?.getAttribute('aria-current')).toBeNull();
-    const thrower = screen.getByText('Rzuca').closest('li');
-    expect(thrower && within(thrower).queryByText('Następny')).toBeNull();
-    expect(screen.getAllByText('Następny')).toHaveLength(1);
+    const thrower = screen.getByText(THROWING).closest('li');
+    expect(thrower && within(thrower).queryByText('następny')).toBeNull();
+    expect(screen.getAllByText('następny')).toHaveLength(1);
   });
 
   it('names the free slots by player number', () => {
@@ -112,19 +130,24 @@ describe('Scoreboard', () => {
     expect(values).toEqual(['0', '0', '—']);
   });
 
-  it('stacks the row only from lg in a narrow container', () => {
-    render(<Scoreboard state={snapshot()} size="large" />);
+  it.each(['large', 'compact'] as const)('sets all four row heights on the list in %s size', (size) => {
+    render(<Scoreboard state={snapshot()} size={size} />);
     const section = screen.getByRole('region', { name: 'Wyniki' });
     expect(section.className.split(' ')).toContain('@container');
-    const card = screen.getByText('Anna').closest('li')?.firstElementChild;
-    expect(card?.className.split(' ')).toEqual(expect.arrayContaining(['lg:@max-md:grid', 'lg:@max-md:content-center']));
+    const list = within(section).getByRole('list');
+    for (const name of ['--row-current', '--row-waiting', '--row-placed', '--row-slot']) {
+      expect(list.className).toContain(`[${name}:`);
+    }
   });
 
-  it('moves the rows by a multiple of the CSS row height', () => {
+  it('moves the rows by the CSS heights of the rows above them', () => {
     render(<Scoreboard state={casual(['Anna', 'Bartek', 'Celina'])} size="large" />);
     const rows = screen.getAllByRole('listitem');
-    expect(rows[1]?.style.transform).toBe('translateY(calc(var(--row-height) * 1))');
-    expect(rows[3]?.style.transform).toBe('translateY(calc(var(--row-height) * 3 + var(--slot-height) * 0))');
+    expect(rows[0]?.style.transform).toBe(`translateY(${rowsAbove(0, 0, 0)})`);
+    expect(rows[2]?.style.transform).toBe(`translateY(${rowsAbove(1, 1, 0)})`);
+    expect(rows[3]?.style.transform).toBe(`translateY(${rowsAbove(1, 2, 0)})`);
+    expect(rows[3]?.className.split(' ')).toContain('h-(--row-slot)');
+    expect(screen.getByRole('list').style.height).toBe(rowsAbove(1, 2, 1));
   });
 
   it('names the leg dots in a 1v1 match', () => {
@@ -133,12 +156,97 @@ describe('Scoreboard', () => {
     expect(screen.getByRole('img', { name: 'Legi: 0 z 2' })).toBeTruthy();
   });
 
-  it('shows no leg dots in a casual game or in compact size', () => {
+  it('shows no leg dots in a casual game but shows them in a 1v1 in compact size', () => {
     const { unmount } = render(<Scoreboard state={casual(['Anna', 'Bartek', 'Celina'])} size="large" />);
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByRole('img', { name: /^Legi:/ })).toBeNull();
     unmount();
 
     render(<Scoreboard state={snapshot({ players: [player('p1', 'Anna', { legsWon: 1 }), player('p2', 'Bartek', { legsWon: 0 })] })} size="compact" />);
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.getByRole('img', { name: 'Legi: 1 z 2' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Legi: 0 z 2' })).toBeTruthy();
+  });
+
+  it('gives each player in a 1v1 a progress bar', () => {
+    const { unmount } = render(<Scoreboard state={snapshot()} size="large" />);
+    expect(screen.getAllByRole('img', { name: 'Zostało 501 z 501 punktów' })).toHaveLength(2);
+    unmount();
+
+    const players = [player('p1', 'Anna', { remaining: 170, legsWon: 0 }), player('p2', 'Bartek', { remaining: 301, legsWon: 0 })];
+    render(<Scoreboard state={snapshot({ startingScore: 301, players })} size="large" />);
+    expect(screen.getByRole('img', { name: 'Zostało 170 z 301 punktów' })).toBeTruthy();
+  });
+
+  it('marks only the thrower bar as current', () => {
+    const players = [player('p1', 'Anna', { remaining: 400, legsWon: 0 }), player('p2', 'Bartek', { remaining: 300, legsWon: 0 })];
+    render(<Scoreboard state={snapshot({ currentPlayerId: 'p2', players })} size="large" />);
+    expect(screen.getByRole('img', { name: 'Zostało 300 z 501 punktów' }).className.split(' ')).toContain('sc-progress--current');
+    expect(screen.getByRole('img', { name: 'Zostało 400 z 501 punktów' }).className.split(' ')).not.toContain('sc-progress--current');
+  });
+
+  it('shows no progress bar in Free run', () => {
+    render(<Scoreboard state={freeRun()} size="large" />);
+    expect(screen.queryByRole('img', { name: /^Zostało/ })).toBeNull();
+  });
+
+  it('shows no progress bar in checkout practice', () => {
+    render(<Scoreboard state={checkoutPractice()} size="large" />);
+    expect(screen.queryByRole('img', { name: /^Zostało/ })).toBeNull();
+  });
+
+  it('shows no progress bar for a finished casual player', () => {
+    const state = casual(['Anna', 'Bartek', 'Celina'], {
+      currentPlayerId: 'p2',
+      players: [player('p1', 'Anna', { place: 1, remaining: 0 }), player('p2', 'Bartek'), player('p3', 'Celina')],
+    });
+    render(<Scoreboard state={state} size="large" />);
+    const placed = screen.getByText('1. miejsce').closest('li');
+    expect(placed && within(placed).queryByRole('img')).toBeNull();
+    expect(screen.getAllByRole('img', { name: /^Zostało/ })).toHaveLength(2);
+  });
+
+  it('counts the darts of the open turn for the thrower', () => {
+    render(<Scoreboard state={snapshot({ currentDarts: [{ segment: 20, multiplier: 1 }] })} size="large" />);
+    const row = screen.getByText('rzuca teraz · rzutka 2 z 3').closest('li');
+    expect(row?.getAttribute('aria-current')).toBe('true');
+  });
+
+  it('shows the thrower without a dart count in checkout practice', () => {
+    render(<Scoreboard state={checkoutPractice()} size="large" />);
+    const row = screen.getByText('rzuca teraz').closest('li');
+    expect(row?.getAttribute('aria-current')).toBe('true');
+    expect(screen.queryByText(/rzutka/)).toBeNull();
+  });
+
+  it('draws the thrower in a raised card that holds its rings and the score', () => {
+    render(<Scoreboard state={snapshot({ players: [player('p1', 'Anna', { remaining: 321, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] })} size="large" />);
+    const card = screen.getByText(THROWING).closest('li')?.firstElementChild;
+    expect(card?.className.split(' ')).toEqual(expect.arrayContaining(['sc-player--current', 'relative', 'overflow-hidden']));
+    expect(card?.querySelector(':scope > svg.sc-card-rings')).not.toBeNull();
+    expect(screen.getByText('321').closest('.sc-player--current')).toBe(card);
+    expect(screen.getByText('321').classList).toContain('sc-player__value');
+  });
+
+  it('draws the waiting players in soft rows', () => {
+    render(<Scoreboard state={snapshot()} size="large" />);
+    const card = screen.getByText('Bartek').closest('li')?.firstElementChild;
+    expect(card?.className.split(' ')).toEqual(expect.arrayContaining(['sc-player--waiting', 'relative', 'overflow-hidden']));
+  });
+
+  it('hides the card rings from screen readers', () => {
+    const { container } = render(<Scoreboard state={snapshot()} size="large" />);
+    const rings = container.querySelectorAll('svg.sc-card-rings');
+    expect(rings.length).toBeGreaterThan(0);
+    for (const svg of rings) {
+      expect(svg.getAttribute('aria-hidden')).toBe('true');
+    }
+  });
+
+  it("rings the thrower avatar in the player's color", () => {
+    const state = snapshot({ currentPlayerId: 'p2', players: [player('p1', 'Anna', { avatar: '🦊', color: 12 }), player('p2', 'Bartek', { avatar: '🎯', color: 7 })] });
+    render(<Scoreboard state={state} size="large" />);
+    const thrower = screen.getByText('🎯');
+    expect(thrower.classList).toContain('sc-avatar--current');
+    expect(thrower.style.getPropertyValue('--sc-avatar-color')).toBe('var(--color-avatar-7)');
+    expect(screen.getByText('🦊').classList).not.toContain('sc-avatar--current');
   });
 });
