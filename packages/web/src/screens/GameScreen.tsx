@@ -167,12 +167,12 @@ export function GameScreen({ matchId }: { matchId: string }) {
       {/* Opakowanie nie przewija się, więc baner poniżej lg trzyma się góry widocznego obszaru.
           Poniżej lg main jest kolumną flex, a prawa kolumna ma display: contents. Dok jest wtedy dzieckiem main.
           Sticky trzyma go na dole przez całe przewijanie, a mt-auto także wtedy, gdy treść jest krótsza niż ekran.
-          Karta zamknięcia jest w DOM raz: od lg na dole lewej kolumny, poniżej lg przez order między panelem tury a dokiem.
+          Karta zamknięcia jest w DOM raz: od lg na dole prawej kolumny pod klawiaturą (lewa kolumna zostaje dla historii tur), poniżej lg przez order między panelem tury a dokiem.
           Od lg lewa kolumna przewija się sama, więc rosnąca historia tur nie przesuwa karty zamknięcia ani klawiatury.
           Ujemny margines z równym paddingiem daje miejsce na cień karty rzucającego, który kontener przewijania by przyciął. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:grid-rows-[1fr_auto] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
-          <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1 lg:-mx-(--space-page) lg:-mt-1 lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:px-(--space-page) lg:pt-1 lg:pb-1">
+        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:gap-y-(--space-6) lg:grid lg:grid-cols-[340px_1fr] lg:grid-rows-[1fr_auto] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
+          <div className="flex flex-col gap-4 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:-mx-(--space-page) lg:-mt-1 lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:px-(--space-page) lg:pt-1 lg:pb-1">
             <div className={`contents ${hiddenByTurns}`}>
               {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
               {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
@@ -184,11 +184,11 @@ export function GameScreen({ matchId }: { matchId: string }) {
             )}
           </div>
           {state && !checkoutMode && (
-            <div className={`empty:hidden max-lg:order-1 max-lg:has-[>.invisible]:hidden lg:col-start-1 lg:row-start-2 ${hiddenByTurns}`}>
+            <div className={`empty:hidden max-lg:order-1 max-lg:has-[>.invisible]:hidden lg:col-start-2 lg:row-start-2 ${hiddenByTurns}`}>
               <CheckoutCard state={state} onCheckout={enterCheckout} disabled={keypadDisabled} />
             </div>
           )}
-          <div className="contents lg:relative lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-(--space-6)">
+          <div className="contents lg:relative lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-(--space-6)">
             {state && !checkoutMode && (
               <div className={`contents ${hiddenByTurns}`}>
                 <TurnPanel state={state} lastTurn={lastTurn} />

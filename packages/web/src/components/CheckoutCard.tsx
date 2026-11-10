@@ -16,7 +16,7 @@ export const ROUTE_CHIP =
 
 // Od sm etykieta i trasa mieszczą się w jednym rzędzie. Od lg karta stoi w wąskiej lewej kolumnie, więc etykieta wraca nad trasę.
 const CARD_BOX =
-  '@container flex w-full flex-col items-start gap-(--space-4) px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-start lg:justify-start lg:px-(--space-7) lg:py-[18px]';
+  '@container flex w-full flex-col items-start gap-(--space-4) px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:pl-(--space-7) lg:pr-20 lg:py-[14px]';
 // Biały tekst na jasnym końcu gradientu ma 3,6:1, więc etykieta jest pogrubiona i ma co najmniej 19 px.
 const LABEL = 'relative font-display text-[19px] leading-none font-bold tracking-[0.16em] whitespace-nowrap uppercase';
 const ROUTE = 'relative flex flex-nowrap gap-(--space-4)';

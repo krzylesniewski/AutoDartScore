@@ -61,6 +61,7 @@ Autor zaakceptował makiety w całości; tam, gdzie makiety różnią się od dz
 - **Mnożnik:** od `lg` pełne nazwy „Single / Double / Treble”, poniżej `lg` „S / D / T” (jak w makietach tabletu i telefonu). Skróty S/D/T bez zmian.
 - **„Nowa runda” i „Do weryfikacji”:** dziś wyłączone przyciski „Wkrótce”; na ekranie gry ich nie ma (makiety). Wracają, gdy dostaną działanie (etap kamery).
 - **Koniec zabawy:** osobny widok podsumowania jak przy 1v1 (`E3PodsumowanieZabawa`), zamiast panelu na ekranie gry; te same dane (`MatchSummaryPanel`).
+- **Po przeglądzie aplikacji (2026-11-10):** tło sceny bez pierścieni tarczy (zostaje samo światło), a karta zamknięcia na ekranie gry od `lg` stoi na dole prawej kolumny, pod klawiaturą, w poziomie, żeby historia tur miała całą lewą kolumnę. Makiety tego jeszcze nie pokazują; w razie różnicy wygrywa ten punkt.
 - **Historia i statystyki:** etykiety dni „DZIŚ / WCZORAJ” z godziną przy każdej grze; filtr typu gry z „Overall” oddzielonym przegródką.
 
 ## Zasady wspólne dla R1-R10

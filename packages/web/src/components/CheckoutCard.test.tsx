@@ -100,7 +100,8 @@ describe('CheckoutCard', () => {
     renderCard(onRemaining(100));
     const sizing = (element: Element) => classes(element).filter((name) => /(^|:)(p[xy]?|h|min-h|gap|flex|flex-col|flex-row|items-\w+)(-|$)/.test(name));
     expect(sizing(placeholder)).toEqual(sizing(card()));
-    expect(sizing(card())).toEqual(expect.arrayContaining(['lg:py-[18px]', 'lg:flex-col', 'gap-(--space-4)']));
+    expect(sizing(card())).toEqual(expect.arrayContaining(['lg:py-[14px]', 'sm:flex-row', 'gap-(--space-4)']));
+    expect(classes(card())).not.toContain('lg:flex-col');
   });
 
   it('renders nothing in Free run', () => {
