@@ -31,6 +31,9 @@
  */
 :root {
   --keypad-ring-reserve: 468px;
+  --color-gold-halo: color-mix(in srgb, var(--color-gold) 30%, transparent);
+  --gradient-winner-halo: radial-gradient(ellipse 60% 75% at 50% 15%, var(--color-gold-halo), transparent);
+  --shadow-winner-avatar: 0 0 0 4px var(--color-surface-raised), 0 0 0 6px var(--color-gold), 0 0 28px var(--color-gold);
 }
 
 /* dvh, bo pasek przeglądarki na telefonie zmienia wysokość okna. Bez tego pasek ze Startem chowa się pod nim. */

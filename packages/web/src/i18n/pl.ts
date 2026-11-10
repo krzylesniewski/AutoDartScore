@@ -338,6 +338,16 @@ export const pl = {
   legTime: (spoken: string) => `Czas lega ${spoken}`,
   sessionTime: (spoken: string) => `Czas sesji ${spoken}`,
   gameTimeLabel: 'Czas gry',
+  casualRankingTitle: 'Zabawa zakończona · ranking miejsc',
+  otherPlaces: 'Pozostałe miejsca',
+  placeNumber: (place: number) => `${place}.`,
+  placeDetail: (dartsThrown: number, checkout: number | null, remaining: number): string => {
+    if (checkout !== null) {
+      return `${darts(dartsThrown)} · zamknięcie ${checkout}`;
+    }
+    return remaining > 0 ? `${darts(dartsThrown)} · zostało ${remaining}` : darts(dartsThrown);
+  },
+  averageShort: (average: string) => `śr. ${average}`,
   scoreProgressHeading: (leg: number) => `Leg ${leg} · zejście z wyniku`,
   scoreProgressRemaining: 'Pozostało',
   scoreProgressDarts: 'Lotki',

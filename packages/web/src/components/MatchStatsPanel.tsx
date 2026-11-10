@@ -27,7 +27,7 @@ export function MatchStatsPanel({ state, summary }: MatchStatsPanelProps) {
   const lastLeg = summary?.legs.at(-1);
 
   return (
-    <section className="@container flex flex-col rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) px-4 py-1.5">
+    <section className="@container flex flex-col rounded-(--radius-card) bg-(--color-surface-softer) shadow-(--shadow-inset-line) px-4 py-1.5">
       <div className="overflow-x-auto">
         <table className="w-full font-display">
           <caption className="sr-only">{pl.matchStats}</caption>
