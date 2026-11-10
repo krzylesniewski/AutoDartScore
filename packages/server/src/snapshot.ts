@@ -1,5 +1,6 @@
 import { currentRound, freeRunAverage, isGameFinished, SOLO_501_STARTING_SCORE, type CheckoutsState, type GameState } from '@autoscore/engine';
-import type { Abandonment, CheckoutSession, MatchSnapshot, MatchSnapshotPlayer, MatchStatus, Player } from '@autoscore/schema';
+import type { Abandonment, CheckoutSession, DomainEvent, MatchSnapshot, MatchSnapshotPlayer, MatchStatus, Player, ThrowRecord } from '@autoscore/schema';
+import { buildLegTurns } from './leg-turns.js';
 import type { GameTimes } from './replay.js';
 import type { StoredMatch } from './store/store.js';
 
@@ -129,6 +130,8 @@ export interface SnapshotTimes extends GameTimes {
   readonly endedAt: string | null;
   readonly finishedAt: string | null;
   readonly lockMs: number;
+  readonly events: readonly DomainEvent[]; // zdarzenia z odtworzenia logu, z nich powstaje legTurns
+  readonly throws: readonly ThrowRecord[]; // liczone rzutki, z nich Free run składa tury
 }
 
 // Porzucona gra i zakończony trening zachowują rzucającego i rzutki tury, żeby podgląd pokazywał stan z chwili przerwania.
@@ -136,7 +139,7 @@ export function toSnapshot(
   match: StoredMatch,
   game: GameState,
   eventSeq: number,
-  { abandonment, endedAt, finishedAt, lockMs, startedAt, legStartedAt, pausedMs, legPausedMs }: SnapshotTimes,
+  { abandonment, endedAt, finishedAt, lockMs, startedAt, legStartedAt, pausedMs, legPausedMs, events, throws }: SnapshotTimes,
 ): MatchSnapshot {
   const finished = isGameFinished(game);
   const { perPlayer, startingScore, ...rest } = progress(game, finished);
@@ -161,6 +164,7 @@ export function toSnapshot(
     legPausedMs,
     eventSeq,
     ...rest,
+    legTurns: buildLegTurns(game, events, throws),
     players: match.players.map((player, index) => ({
       id: player.id,
       name: player.name,
