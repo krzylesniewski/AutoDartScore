@@ -217,6 +217,21 @@ describe('Scoreboard', () => {
     expect(screen.queryByText(/rzutka/)).toBeNull();
   });
 
+  it('draws the thrower in a raised card that holds its rings and the score', () => {
+    render(<Scoreboard state={snapshot({ players: [player('p1', 'Anna', { remaining: 321, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] })} size="large" />);
+    const card = screen.getByText(THROWING).closest('li')?.firstElementChild;
+    expect(card?.className.split(' ')).toEqual(expect.arrayContaining(['sc-player--current', 'relative', 'overflow-hidden']));
+    expect(card?.querySelector(':scope > svg.sc-card-rings')).not.toBeNull();
+    expect(screen.getByText('321').closest('.sc-player--current')).toBe(card);
+    expect(screen.getByText('321').classList).toContain('sc-player__value');
+  });
+
+  it('draws the waiting players in soft rows', () => {
+    render(<Scoreboard state={snapshot()} size="large" />);
+    const card = screen.getByText('Bartek').closest('li')?.firstElementChild;
+    expect(card?.className.split(' ')).toEqual(expect.arrayContaining(['sc-player--waiting', 'relative', 'overflow-hidden']));
+  });
+
   it('hides the card rings from screen readers', () => {
     const { container } = render(<Scoreboard state={snapshot()} size="large" />);
     const rings = container.querySelectorAll('svg.sc-card-rings');

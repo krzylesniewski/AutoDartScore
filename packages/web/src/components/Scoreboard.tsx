@@ -262,7 +262,7 @@ function CurrentCard({ player, state, layout }: RowProps) {
   const { throwingNow, throwingNowShort } = pl;
   return (
     <div
-      className={`sc-player--currentrelative isolate grid h-full items-center overflow-hidden rounded-(--radius-card) text-(--color-text) ${classes(layout, 'currentCard')}`}
+      className={`sc-player--current relative isolate grid h-full items-center overflow-hidden rounded-(--radius-card) text-(--color-text) ${classes(layout, 'currentCard')}`}
     >
       <CardRings className={`-z-10 ${classes(layout, 'currentRings')}`} />
       <span className="col-start-1 row-start-1">
