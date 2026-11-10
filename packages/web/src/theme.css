@@ -26,11 +26,11 @@
 }
 
 /*
- * Wysokość nad kołem klawiatury i pod nim od lg: nagłówek 68 px, górny odstęp main 28 px, panel tury 351 px,
- * odstęp w kolumnie 12 px i dolny odstęp main 12 px. Bok koła to wysokość okna minus ta rezerwa.
+ * Wysokość nad kołem klawiatury i pod nim od lg: nagłówek 68 px, górny odstęp main 28 px, panel tury 120 px,
+ * odstęp w kolumnie 18 px i dolny odstęp main 12 px. Bok koła to wysokość okna minus ta rezerwa.
  */
 :root {
-  --keypad-ring-reserve: 471px;
+  --keypad-ring-reserve: 246px;
   --color-gold-halo: color-mix(in srgb, var(--color-gold) 30%, transparent);
   --gradient-winner-halo: radial-gradient(ellipse 60% 75% at 50% 15%, var(--color-gold-halo), transparent);
   --shadow-winner-avatar: 0 0 0 4px var(--color-surface-raised), 0 0 0 6px var(--color-gold), 0 0 28px var(--color-gold);

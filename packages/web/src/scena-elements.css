@@ -1,7 +1,8 @@
 /*
  * Elementy bazowe Sceny: scena (.sc-stage, .sc-stage__rings, .sc-stage__content), panel (.sc-panel),
  * przyciski (.sc-btn i warianty), przełącznik segmentowy (.sc-seg), karta gracza (.sc-player, .sc-avatar--current,
- * .sc-card-rings), pasek progresu (.sc-progress), pasek aplikacji (.sc-appbar, .sc-nav, .sc-clock, .sc-status)
+ * .sc-card-rings), pasek progresu (.sc-progress), pasek aplikacji (.sc-appbar, .sc-nav, .sc-clock, .sc-status),
+ * sloty rzutek (.sc-slot), karta zamknięcia (.sc-checkout, .sc-route-chip, .sc-kbd--on-accent), klawisze (.sc-key--bull, .sc-chip)
  * i pierścień fokusu.
  * Nazwy klas i wartości jak w design/scena/components/ (bundle.css i README.md komponentów).
  */
@@ -308,6 +309,72 @@
     padding: 8px 14px;
     border-radius: var(--radius-pill);
     font-size: 15px;
+  }
+
+  .sc-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    min-width: 0;
+    border-radius: var(--radius-card);
+    background: var(--color-surface-softer);
+  }
+
+  .sc-slot--active {
+    box-shadow: var(--shadow-slot-active);
+    color: var(--color-text-sub);
+  }
+
+  .sc-slot--filled {
+    background: var(--color-surface-soft);
+  }
+
+  .sc-checkout {
+    position: relative;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-card);
+    background: linear-gradient(135deg, var(--color-accent-hi) 0%, var(--color-accent) 60%, var(--color-accent-lo) 100%);
+    box-shadow: var(--shadow-checkout);
+    color: var(--color-on-accent);
+    text-align: left;
+  }
+
+  .sc-route-chip {
+    padding: 0 12px;
+    border-radius: var(--radius-chip);
+    background: var(--color-route-chip);
+    color: var(--color-on-accent);
+    white-space: nowrap;
+  }
+
+  .sc-kbd--on-accent {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    padding: 4px 7px;
+    border-radius: 6px;
+    background: var(--color-route-chip);
+    color: var(--color-on-accent);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .sc-key--bull {
+    box-shadow: 0 0 0 2px var(--color-accent) inset, var(--shadow-key);
+  }
+
+  .sc-chip {
+    border-radius: var(--radius-button);
+    background: var(--color-surface-soft);
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-weight: 700;
   }
 }
 

@@ -5,6 +5,7 @@ import { useMatch } from '../api/use-match';
 import { useMatchSummary } from '../api/use-match-summary';
 import { useAnnouncer } from '../audio/use-announcer';
 import { AbandonDialog } from '../components/AbandonDialog';
+import { CheckoutCard } from '../components/CheckoutCard';
 import { CheckoutActions, CheckoutRecentAttempts, CheckoutTargetCard } from '../components/CheckoutPracticePanel';
 import { CheckoutPracticeSummary } from '../components/CheckoutPracticeSummary';
 import { EndPracticeDialog } from '../components/EndPracticeDialog';
@@ -16,6 +17,7 @@ import { MatchStatsPanel } from '../components/MatchStatsPanel';
 import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
+import { UndoButton } from '../components/UndoButton';
 import { LockIcon, WarningIcon } from '../components/icons';
 import { canEndPractice } from '../game/can-end-practice';
 import { checkoutControls } from '../game/checkout-practice';
@@ -112,6 +114,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const undoLocked = undoWindow.locked || lockedByServer;
   const shownError = lockedByServer ? null : error;
   const undoCountdown = !undoLocked && undoWindow.secondsLeft !== null ? formatCountdown(undoWindow.secondsLeft) : null;
+  const undoDisabled = busy || abandoned || ended || undoLocked;
 
   if ((state?.type === 'match' || state?.type === 'casual') && state.finished) {
     return (
@@ -148,27 +151,22 @@ export function GameScreen({ matchId }: { matchId: string }) {
       />
       {/* Opakowanie nie przewija się, więc baner poniżej lg trzyma się góry widocznego obszaru.
           Poniżej lg main jest kolumną flex, a prawa kolumna ma display: contents. Dok jest wtedy dzieckiem main.
-          Sticky trzyma go na dole przez całe przewijanie, a mt-auto także wtedy, gdy treść jest krótsza niż ekran. */}
+          Sticky trzyma go na dole przez całe przewijanie, a mt-auto także wtedy, gdy treść jest krótsza niż ekran.
+          Karta zamknięcia jest w DOM raz: od lg na dole lewej kolumny, poniżej lg przez order między panelem tury a dokiem. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
-          <div className="flex flex-col gap-4">
+        <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:grid lg:grid-cols-[340px_1fr] lg:grid-rows-[1fr_auto] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
+          <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
             {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
             {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
             {checkouts && <CheckoutRecentAttempts session={checkouts} />}
           </div>
-          <div className="contents lg:relative lg:flex lg:flex-col lg:gap-3">
-            {state && !checkoutMode && (
-              <TurnPanel
-                state={state}
-                lastTurn={lastTurn}
-                busy={busy}
-                undoDisabled={abandoned || ended || undoLocked}
-                undoCountdown={undoCountdown}
-                onUndo={sendUndo}
-                onCheckout={enterCheckout}
-                checkoutDisabled={keypadDisabled}
-              />
-            )}
+          {state && !checkoutMode && (
+            <div className="empty:hidden max-lg:order-1 max-lg:has-[>.invisible]:hidden lg:col-start-1 lg:row-start-2">
+              <CheckoutCard state={state} onCheckout={enterCheckout} disabled={keypadDisabled} />
+            </div>
+          )}
+          <div className="contents lg:relative lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-(--space-6)">
+            {state && !checkoutMode && <TurnPanel state={state} lastTurn={lastTurn} />}
             {checkouts && !ended && <CheckoutTargetCard session={checkouts} />}
             {/* Od lg komunikat o końcu treningu leży na górze prawej kolumny, więc podsumowanie zaczyna się pod nim. */}
             {checkouts && ended && (
@@ -176,11 +174,12 @@ export function GameScreen({ matchId }: { matchId: string }) {
                 <CheckoutPracticeSummary session={checkouts} />
               </div>
             )}
-            {/* TurnPanel zostaje po końcu gry, żeby Cofnij poprawiło źle wpisaną zwycięską rzutkę. */}
+            {/* Tu dochodzi tylko zakończone Solo 501. Klawiatura znika, a Cofnij zostaje osobno, żeby poprawić źle wpisaną zwycięską rzutkę. */}
+            {state?.finished && !checkoutMode && <UndoButton onUndo={sendUndo} disabled={undoDisabled} countdown={undoCountdown} className="h-14" />}
             {state?.finished && <MatchSummaryPanel state={state} summary={stats.summary} error={stats.error} />}
             {/* Od lg dok znika z układu, a komunikaty nakładają się na górę prawej kolumny, żeby nie przesuwać klawiatury. */}
             <div
-              className="sticky bottom-0 z-10 mt-auto flex flex-col gap-3 bg-(--color-bg) pt-3 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:pb-[calc(var(--space-page)_+_env(safe-area-inset-bottom))] lg:contents"
+              className="sticky bottom-0 z-10 mt-auto flex flex-col gap-3 bg-(--color-bg) pt-3 max-lg:order-2 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:pb-[calc(var(--space-page)_+_env(safe-area-inset-bottom))] lg:contents"
             >
               <div className="flex flex-col gap-3 empty:hidden lg:absolute lg:inset-x-0 lg:top-0 lg:z-20">
                 {connection === 'closed' && <Notice text={pl.connectionLost} />}
@@ -218,7 +217,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
                   onRestMiss={sendRestMiss}
                   onUndo={sendUndo}
                   disabled={keypadDisabled}
-                  undoDisabled={busy || abandoned || ended}
+                  undoDisabled={undoDisabled}
                   checkout={busy ? null : checkout}
                   frequent={frequent}
                 />

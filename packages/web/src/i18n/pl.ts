@@ -30,6 +30,15 @@ function wonLegs(count: number): string {
   return `${count} ${plural(count, 'wygranego lega', 'wygranych legów', 'wygranych legów')}`;
 }
 
+// Miejscownik: w 1 rzutce, w 2 rzutkach. Trasa zamknięcia ma najwyżej 3 rzutki.
+function checkoutInDarts(count: number): string {
+  return `Zamknięcie w ${count} ${count === 1 ? 'rzutce' : 'rzutkach'}`;
+}
+
+function checkoutClickHint(label: string): string {
+  return `Kliknij albo Enter, aby wpisać ${label}`;
+}
+
 // Serwer wysyła previous null tylko dla first_*, ale typ go dopuszcza, więc rekord bez poprzedniej wartości nie pokazuje nawiasu.
 function previousRecord(previous: number | null): string {
   return previous === null ? '' : ` (było ${previous})`;
@@ -119,15 +128,14 @@ export const pl = {
   total: 'Suma',
   average: 'Średnia',
   dartsThrown: 'Rzutki',
-  turnTotal: 'Suma tury',
   checkout: 'Zamknięcie',
+  checkoutInDarts,
+  checkoutCardLabel: (route: readonly string[], first: string) => `${checkoutInDarts(route.length)}: ${route.join(', ')}. ${checkoutClickHint(first)}`,
+  thisTurn: 'w tej turze',
   undo: 'Cofnij',
   undoWithTime: (time: string) => `Cofnij (${time})`,
   matchLocked: 'Mecz zamknięty, nie można go już zmienić',
-  nextRound: 'Nowa runda',
-  toReview: 'Do weryfikacji',
   voice: 'Głos',
-  soon: 'Wkrótce',
   addPlayerSlot: 'Dodaj gracza',
   bust: 'Bust',
   legWon: 'Leg wygrany',
@@ -138,10 +146,14 @@ export const pl = {
   multiplierSingle: 'S',
   multiplierDouble: 'D',
   multiplierTreble: 'T',
+  multiplierSingleLong: 'Single',
+  multiplierDoubleLong: 'Double',
+  multiplierTrebleLong: 'Treble',
   shortcutB: 'B',
   shortcutShiftB: 'Shift+B',
   shortcutSpace: 'Spacja',
   shortcutBackspace: 'Backspace',
+  shortcutEnter: 'Enter',
   shortcutEnterOr1: 'Enter / 1',
   keypad: 'Klawiatura rzutek',
   gameMenu: 'Menu gry',
@@ -169,12 +181,8 @@ export const pl = {
   throwingNow: (dart: number) => `rzuca teraz · rzutka ${dart} z 3`,
   throwingNowShort: 'rzuca teraz', // trening końcówek nie ma rzutek w turze
   progressRemaining: (remaining: number, starting: number) => `Zostało ${remaining} z ${starting} punktów`,
-  playerThrows: (name: string) => `${name} rzuca`,
-  dartOfTurn: (dart: number) => `Rzutka ${dart} z 3`,
   waitingForDart: 'czeka na rzutkę',
-  toWinLeg: 'do wygrania lega',
-  checkoutClickHint: (label: string) => `Kliknij albo Enter, aby wpisać ${label}`,
-  checkoutTapHint: (label: string) => `Dotknij, aby wpisać ${label}`,
+  checkoutClickHint,
   doubleOut: 'Double-out',
   legNumber: (leg: number) => `Leg ${leg}`,
   voiceOn: 'włączony',
