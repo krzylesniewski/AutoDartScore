@@ -73,10 +73,33 @@ describe('ScoreProgressChart', () => {
     expect(lines.map((line) => line.getAttribute('class'))).toEqual(['fill-none stroke-(--color-avatar-3)', 'fill-none stroke-(--color-avatar-9)']);
   });
 
-  it('labels the axes with the starting score, 0 and the longest line', () => {
+  it('draws a grid line every turn and every 50 points inside the chart', () => {
+    render(<ScoreProgressChart progress={progress} players={players} />);
+    const lines = [...chart().querySelectorAll('line')];
+    expect(lines).toHaveLength(11);
+    const vertical = lines.filter((line) => line.getAttribute('x1') === line.getAttribute('x2'));
+    expect(vertical).toHaveLength(3);
+    expect(lines.filter((line) => line.getAttribute('y1') === line.getAttribute('y2'))).toHaveLength(8);
+    for (const line of lines) {
+      expect(line.getAttribute('class')).toBe('stroke-(--color-border)');
+      expect(line.getAttribute('vector-effect')).toBe('non-scaling-stroke');
+      expect(line.getAttribute('stroke-dasharray')).toBeNull();
+    }
+  });
+
+  it('draws the grid under the player lines', () => {
+    render(<ScoreProgressChart progress={progress} players={players} />);
+    const children = [...chart().children].map((child) => child.tagName.toLowerCase());
+    expect(children.lastIndexOf('line')).toBeLessThan(children.indexOf('g'));
+  });
+
+  it('labels the axes with numbers outside the chart, hidden from screen readers', () => {
     const { container } = render(<ScoreProgressChart progress={progress} players={players} />);
-    const axes = [...container.querySelectorAll('[aria-hidden="true"]')].map((element) => element.textContent);
-    expect(axes).toContain(`301${pl.scoreProgressRemaining}0`);
-    expect(axes).toContain(`0${pl.scoreProgressDarts}6`);
+    const axes = [...container.querySelectorAll('[aria-hidden="true"]')];
+    const labels = axes.map((axis) => [...axis.querySelectorAll('span.absolute')].map((label) => label.textContent));
+    expect(labels).toContainEqual(['301', '250', '200', '150', '100', '50', '0']);
+    expect(labels).toContainEqual(['0', '3', '6']);
+    expect(chart().querySelector('text')).toBeNull();
+    expect(axes.map((axis) => axis.textContent)).toEqual(expect.arrayContaining([pl.scoreProgressRemaining, pl.scoreProgressDarts]));
   });
 });
