@@ -4,6 +4,7 @@ import { checkoutHistory, checkoutSession } from '../test/snapshots';
 import { CheckoutActions, CheckoutRecentAttempts, CheckoutTargetCard, type CheckoutActionsProps } from './CheckoutPracticePanel';
 import { CheckoutPracticeSummary } from './CheckoutPracticeSummary';
 import { HIT_FLASH_MS } from './KeypadKey';
+import { ROUTE_CHIP } from './TurnPanel';
 
 // 7 udanych z 12, ostatnia próba nieudana.
 const SEVEN_OF_TWELVE = [true, true, false, true, false, true, false, true, false, true, true, false];
@@ -70,6 +71,12 @@ describe('CheckoutTargetCard', () => {
     render(<CheckoutTargetCard session={checkoutSession([], { target: 64 })} />);
     expect(screen.getByRole('region', { name: 'Końcówka' }).className.split(' ')).toContain('@container');
     expect(screen.getByText('64').className).toMatch(/text-\[clamp\(/);
+  });
+
+  it('shows the route in the shared route chip and trims the padding from lg', () => {
+    render(<CheckoutTargetCard session={checkoutSession([], { target: 100 })} />);
+    expect(screen.getByText('T20 D20').className).toBe(ROUTE_CHIP);
+    expect(screen.getByRole('region', { name: 'Końcówka' }).className.split(' ')).toContain('lg:py-9');
   });
 });
 
