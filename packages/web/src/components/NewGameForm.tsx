@@ -98,11 +98,12 @@ export function NewGameForm(props: NewGameFormProps) {
                   aria-pressed={selected}
                   disabled={!selected && full}
                   onClick={() => props.onPlayerToggle(player.id)}
-                  className={`${tile} h-18 gap-3.5 px-4 ${selected ? `${raised} inset-ring-2 ${avatarRingClasses(player.color).insetRing}` : flat}`}
+                  className={`${tile} @container relative h-18 gap-2.5 pr-7 pl-3 @2xs:gap-3.5 @2xs:pr-4 @2xs:pl-4 ${selected ? `${raised} inset-ring-2 ${avatarRingClasses(player.color).insetRing}` : flat}`}
                 >
                   <Avatar name={player.name} avatar={player.avatar} color={player.color} size="tile" />
-                  {/* Avatar ma zostać pierwszym, a imię ostatnim dzieckiem kafla. Znaczek stoi między nimi, a na koniec przenosi go order-last. */}
-                  {selected && <CheckBadge className="order-last size-7 text-base" />}
+                  {/* Avatar ma zostać pierwszym, a imię ostatnim dzieckiem kafla. Znaczek stoi między nimi, a na koniec przenosi go order-last.
+                      W wąskim kaflu (telefon, 3 kolumny na tablecie) znaczek w rogu zostawia miejsce na imię. */}
+                  {selected && <CheckBadge className="absolute top-1.5 right-1.5 order-last size-5.5 text-sm @2xs:static @2xs:size-7 @2xs:text-base" />}
                   <span className="min-w-0 flex-1 truncate text-left font-display text-[22px] font-bold xl:text-2xl">{player.name}</span>
                 </button>
               );
