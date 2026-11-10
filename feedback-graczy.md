@@ -28,6 +28,30 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-11-10: czas trwania meczu w podsumowaniu
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / statystyki
+- **Co powiedział:** „Do podsumowania meczu dodaj długość jego trwania”
+- **Kontekst:** ekran końca meczu 1v1 i podsumowanie zabawy
+- **Status:** zaplanowany (P57, `design/plan-p55-p57.md`; decyzja autora 2026-11-10: czas gry wyraźniej w karcie wyniku oraz czas każdego lega na liście legów)
+- **Uwagi:** czas gry już jest (P39), ale tylko małym drukiem w linii ustawień pod wynikiem („301 · Double-out · Best of 1 · Czas gry 9:07”, `setupLine` w `MatchEndView.tsx`) i jako zwykła linia w `MatchSummaryPanel.tsx`. Czasu legów nie ma: `MatchSummaryLeg` (`packages/schema/src/stats.ts`) nie ma pola czasu, a `tallyGame` (`packages/server/src/stats/tally.ts`) liczy ze zdarzeń bez czasu. Kierunek: `durationMs` lega liczone w serwerze z `receivedAt` rzutek minus przerwy, jak zegar lega z P39 (`closedPauses`, `pausedSince` w `replay.ts`); czas gry jako osobny element w karcie zwycięzcy.
+
+### 2026-11-10: dokładniejsze wykresy, zwłaszcza oś lotek
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** utrudnienie / statystyki
+- **Co powiedział:** „Wykresy dokładniejsze, zwłaszcza pozioma z ilością lotek w podsumowaniu meczu”
+- **Kontekst:** wykres „Zejście z wyniku” na ekranie końca meczu, też „Forma” na karcie gracza
+- **Status:** zaplanowany (P56, `design/plan-p55-p57.md`; decyzja autora 2026-11-10: siatka co turę na osi lotek, co 50 lub 100 punktów na osi wyniku, bez podglądu punktu)
+- **Uwagi:** `ScoreProgressChart.tsx` podpisuje oś poziomą tylko „0 · Lotki · max”, a pionową „wynik startowy · Pozostało · 0”; siatka to dwie linie (góra i dół). `FormChart.tsx` ma na osi tylko min i max średniej. Kierunek: linie i podpisy liczone czystymi funkcjami w `score-progress-chart.ts` i `form-chart.ts`, podpisy w HTML poza SVG (przez `preserveAspectRatio="none"`).
+
+### 2026-11-10: większe proponowane zakończenie
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** utrudnienie / ekran gry
+- **Co powiedział:** „Proponowane zakończenia tak ok. 15-20% większe”
+- **Kontekst:** karta zamknięcia na ekranie gry
+- **Status:** zaplanowany (P55, `design/plan-p55-p57.md`; decyzja autora 2026-11-10: wspólny chip rośnie w grze i w treningu „Końcówki”)
+- **Uwagi:** chip trasy `ROUTE_CHIP` w `TurnPanel.tsx` ma `clamp(28px,8cqi,44px)` i jest wspólny z `CheckoutPracticePanel.tsx`. Kierunek: około +18% (`clamp(33px,9.5cqi,52px)`), karta od `lg` zostaje przy `lg:h-20`, więc klawiatura się nie przesuwa (P31).
+
 ### 2026-10-29: „Brak odczytu” zamiast „Potwierdź Miss” dla rzutki z kamery bez odczytu
 - **Zgłosił:** autor (z pytania recenzenta briefu C8)
 - **Rodzaj / obszar:** utrudnienie / ekran gry

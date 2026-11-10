@@ -5,8 +5,8 @@
 # Stan rolloutu (ledger, logi, inbox, briefy) zostaje w ~/.rollouts/autoscore-etap2/.
 rollout: autoscore-etap2
 model: opus
-# claude jest binarką natywną zainstalowaną pod Node 22; działa niezależnie od wersji Node.
-claudeBin: ~/.nvm/versions/node/v22.18.0/bin/claude
+# claude jest binarką natywną zainstalowaną pod Node 24.22.2 (od 2026-11-10; instalacja pod Node 22.18 jest uszkodzona); działa niezależnie od wersji Node.
+claudeBin: ~/.nvm/versions/node/v24.22.2/bin/claude
 
 repo:
   path: ~/Documents/00_Nauka/AutoScoreDart
