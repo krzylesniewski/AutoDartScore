@@ -405,23 +405,36 @@ describe('GameScreen', () => {
     expect(screen.queryByText('Mecz zakończony')).toBeNull();
   });
 
-  it('keeps the summary panel without Rewanż in a finished casual game', () => {
-    connect(
-      casual(['Anna', 'Bartek', 'Celina'], {
-        id: MATCH_ID,
-        eventSeq: 4,
-        finished: true,
-        currentPlayerId: null,
-        placements: [
-          { playerId: 'p2', place: 1 },
-          { playerId: 'p1', place: 2 },
-          { playerId: 'p3', place: 3 },
-        ],
-      }),
-    );
-    expect(screen.getByText('Koniec meczu')).toBeTruthy();
-    expect(screen.getByText('Koniec meczu').closest('.sticky')).toBeNull();
+  const finishedCasualGame = casual(['Anna', 'Bartek', 'Celina'], {
+    id: MATCH_ID,
+    eventSeq: 4,
+    finished: true,
+    currentPlayerId: null,
+    placements: [
+      { playerId: 'p2', place: 1 },
+      { playerId: 'p1', place: 2 },
+      { playerId: 'p3', place: 3 },
+    ],
+  });
+
+  it('shows the casual end view without Rewanż in a finished casual game', () => {
+    connect(finishedCasualGame);
+    const heading = screen.getByRole('heading', { name: 'Zabawa zakończona · ranking miejsc' });
+    expect(heading.closest('.sticky')).toBeNull();
+    expect(screen.queryByText('Koniec meczu')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Rewanż' })).toBeNull();
+  });
+
+  it('brings the game screen back after Cofnij on the casual end view', async () => {
+    respond = async () =>
+      json(200, { undoneThrowId: 't4', state: { ...finishedCasualGame, eventSeq: 5, finished: false, status: 'in_progress', currentPlayerId: 'p3', placements: [] } });
+    connect(finishedCasualGame);
+    tap('Cofnij');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+    expect(await screen.findByRole('region', { name: 'Klawiatura rzutek' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Zabawa zakończona · ranking miejsc' })).toBeNull();
   });
 
   it('keeps the summary panel without Rewanż in a finished Solo 501', () => {

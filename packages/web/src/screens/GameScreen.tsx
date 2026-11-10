@@ -113,7 +113,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const shownError = lockedByServer ? null : error;
   const undoCountdown = !undoLocked && undoWindow.secondsLeft !== null ? formatCountdown(undoWindow.secondsLeft) : null;
 
-  if (state?.type === 'match' && state.finished) {
+  if ((state?.type === 'match' || state?.type === 'casual') && state.finished) {
     return (
       <MatchEndView
         state={state}
