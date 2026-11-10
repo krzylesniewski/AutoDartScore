@@ -294,7 +294,7 @@ Głos wyzwalany ze **zdarzenia silnika gry**, nie z kliknięcia w UI. Dzięki te
 ## Sprzęt i pomiary (2026-10-16)
 
 - **Kamera:** Logitech HD Pro Webcam C920 (USB `046d:0892`), jedna, podpięta do Maca przez hub USB (link 480 Mb/s, pełne USB 2.0). Na stojaku, tarcza przyklejona na stałe.
-- **Decyzja:** zostajemy przy jednej kamerze na Macu. Druga dopiero w etapie 3.
+- **Decyzja:** zostajemy przy jednej kamerze na Macu. Druga dopiero w etapie 4 (do 2026-11-10 był to etap 3; redesign wszedł jako nowy etap 3).
 - **Klatki na Macu:** AVFoundation udostępnia dla C920 tylko formaty nieskompresowane (`uyvy422` itd.), bez MJPEG i H.264. Zmierzone: 1080p ≈ 5 kl./s, 720p ≈ 10 kl./s, w obu przypadkach ≈ 20 MB/s, czyli limit nieskompresowanego obrazu na USB 2.0. 30 kl./s z ulotki dotyczy trybów skompresowanych.
 - **Decyzja:** 1080p przy 5 kl./s. Analizujemy nieruchome klatki przed i po wbiciu, więc liczba klatek ma małe znaczenie, a rozdzielczość dużą (≈ 3 px/mm, pierścień double ≈ 24 px). Na mini PC (Linux, v4l2) da się włączyć MJPEG i 30 kl./s.
 - **Kamerę wskazujemy po nazwie** (`"HD Pro Webcam C920:none"`), a nie po indeksie, bo indeksy AVFoundation zmieniają się po restarcie.
@@ -630,9 +630,10 @@ Uwagi:
 |---|---|---|
 | 1 | Mac, bez kamery | Silnik X01, API, front z symulatorem trafień, zapis meczów i statystyki, audio |
 | 2 | Mac + jedna kamera USB | Kalibracja, wykrywanie rzutek, weryfikacja i zestaw testowy |
-| 3 | Mac + dwie kamery USB | Fuzja odczytów, mniej błędów przy zasłanianiu |
-| 4 | Mini PC | Przeniesienie na docelowy sprzęt, autostart, praca bez monitora |
-| 5 | Dowolny | Wersja online: konta, zdalny multiplayer (Supabase/Postgres) |
+| 3 | Dowolny (front) | Redesign wyglądu w kierunku „Scena” (`design/plan-etap3.md`), bez nowych funkcji poza informacjami na ekranie gry |
+| 4 | Mac + dwie kamery USB | Fuzja odczytów, mniej błędów przy zasłanianiu |
+| 5 | Mini PC | Przeniesienie na docelowy sprzęt, autostart, praca bez monitora |
+| 6 | Dowolny | Wersja online: konta, zdalny multiplayer (Supabase/Postgres) |
 
 Każdy etap ma kończyć się działającą rzeczą, którą da się użyć, bo przy pracy po godzinach to chroni przed utknięciem w połowie.
 
@@ -646,7 +647,7 @@ Każdy etap ma kończyć się działającą rzeczą, którą da się użyć, bo 
 
 - Trzymać wszystko przenośne: czysty Node, WASM zamiast natywnych bindingów, jeden plik SQLite do skopiowania.
 - Konfiguracja przez zmienne środowiskowe (porty, ścieżka bazy, indeks kamery), bez ścieżek zaszytych w kodzie.
-- Autostart jako usługa (systemd) lub kontener, ale to dopiero w etapie 4.
+- Autostart jako usługa (systemd) lub kontener, ale to dopiero w etapie 5.
 
 ---
 

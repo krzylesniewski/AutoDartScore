@@ -41,7 +41,7 @@ Szczegółowe pomysły i decyzje: `auto-score-dart-pomysly.md`.
 ## Środowisko i etapy
 
 - **Local-first:** backend, baza i detekcja działają na jednym urządzeniu przy tarczy, bez zależności od internetu. Teraz Mac autora, później mini PC (Linux).
-- Etapy: (1) Mac bez kamery: silnik, API, front z symulatorem, statystyki, audio; (2) Mac + jedna kamera USB; (3) dwie kamery USB; (4) mini PC; (5) wersja online.
+- Etapy: (1) Mac bez kamery: silnik, API, front z symulatorem, statystyki, audio; (2) Mac + jedna kamera USB; (3) redesign wyglądu (kierunek „Scena”, plan `design/plan-etap3.md`); (4) dwie kamery USB; (5) mini PC; (6) wersja online. Redesign wstawiony jako etap 3 decyzją autora 2026-11-10, dalsze etapy przesunięte o jeden.
 - Projekt jest rozwijany po godzinach, więc każdy krok ma kończyć się działającą, testowalną rzeczą. Nie zaczynaj kolejnego etapu, dopóki poprzedni nie działa end-to-end.
 - Kod ma być przenośny: czysty Node, WASM zamiast natywnych bindingów, konfiguracja przez zmienne środowiskowe (porty, ścieżka bazy, indeks kamery), źródło klatek za interfejsem `CameraSource` (macOS: AVFoundation, Linux: v4l2).
 
