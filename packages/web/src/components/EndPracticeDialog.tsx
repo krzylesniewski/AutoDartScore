@@ -50,7 +50,7 @@ export function EndPracticeDialog({ onConfirm, onCancel }: EndPracticeDialogProp
           {pl.endPracticeTitle}
         </h2>
         <p className="relative text-[17px] leading-snug text-(--color-text-sub)">{pl.endPracticeText}</p>
-        <form onSubmit={confirm} className="relative mt-1.5 grid grid-cols-2 gap-3">
+        <form onSubmit={confirm} className="relative mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button type="submit" className="sc-btn sc-btn--primary h-15 rounded-(--radius-button) text-[26px]">
             {pl.endPractice}
           </button>

@@ -102,7 +102,7 @@ export function AbandonDialog({ state, onConfirm, onCancel }: AbandonDialogProps
             <span className={label}>{pl.abandonReason}</span>
             <input value={reason} maxLength={200} onChange={(event) => setReason(event.target.value)} className={`${input} text-[22px]`} />
           </label>
-          <div className="mt-1.5 grid grid-cols-2 gap-3">
+          <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button type="submit" className="sc-btn sc-btn--primary h-15 rounded-(--radius-button) text-[26px]">
               {pl.abandonMatch}
             </button>

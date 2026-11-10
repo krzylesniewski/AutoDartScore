@@ -26,17 +26,18 @@ const failurePressedTone: KeypadKeyTone = { fill: 'bg-(--color-surface-raised) t
 const successTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse) shadow-(--shadow-selected)', border: 'border-(--color-text)' };
 // Jak klawisz „Reszta tury”: przezroczysta ramka zostaje w spoczynku, żeby błysk akcentu nie przesuwał treści.
 const secondaryButton =
-  'flex min-h-12 items-center justify-center gap-2.5 rounded-(--radius-button) border-(length:--border-width) px-3 font-display text-[22px] leading-none font-semibold shadow-(--shadow-outline) disabled:opacity-40 lg:min-h-16';
+  'flex min-h-12 items-center justify-center gap-2 rounded-(--radius-button) border-(length:--border-width) px-3 font-display text-lg leading-none font-semibold shadow-(--shadow-outline) disabled:opacity-40 sm:text-[22px] lg:min-h-16 lg:gap-2.5';
 const secondaryTone: KeypadKeyTone = { fill: 'bg-transparent text-(--color-text)', border: 'border-transparent' };
 
 export function CheckoutTargetCard({ session }: { session: CheckoutSession }) {
   const id = useId();
   const route = suggestCheckout(session.target, 3);
   // Od lg karta wypełnia wolną wysokość kolumny, więc przyciski treningu pod nią nie zmieniają miejsca przy kolejnych celach.
+  // overflow-hidden zeruje minimalną wysokość elementu flex, więc bez shrink-0 kolumna telefonu ściskałaby kartę i blok trasy.
   return (
     <section
       aria-labelledby={id}
-      className={`@container relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-(--radius-panel) px-4 py-4 shadow-(--shadow-panel) sm:gap-4 lg:min-h-0 lg:flex-1 lg:gap-5 lg:p-7 ${raisedFill}`}
+      className={`@container relative flex shrink-0 flex-col items-center justify-center gap-3 overflow-hidden rounded-(--radius-panel) px-4 py-4 shadow-(--shadow-panel) sm:gap-4 lg:min-h-0 lg:flex-1 lg:gap-5 lg:p-7 ${raisedFill}`}
     >
       <CornerRings className="-top-20 -right-20 size-60 lg:-top-30 lg:-right-30 lg:size-105" />
       <h2 id={id} className={`relative ${label}`}>
@@ -44,7 +45,7 @@ export function CheckoutTargetCard({ session }: { session: CheckoutSession }) {
       </h2>
       <p className="relative font-display text-[clamp(64px,24cqi,200px)] leading-[0.8] font-extrabold tabular-nums">{session.target}</p>
       {route && (
-        <div className="sc-checkout flex max-w-full flex-col items-center gap-2.5 px-4 pt-3 pb-4 lg:px-5.5 lg:pt-4 lg:pb-5">
+        <div className="sc-checkout flex max-w-full shrink-0 flex-col items-center gap-2.5 px-4 pt-3 pb-4 lg:px-5.5 lg:pt-4 lg:pb-5">
           <CardRings className="-top-12 -right-12 size-40 text-(--color-on-accent) opacity-(--opacity-checkout-rings)" />
           <span className={ROUTE_LABEL}>{pl.checkoutInDarts(route.length)}</span>
           <span className="relative flex flex-nowrap gap-3">
