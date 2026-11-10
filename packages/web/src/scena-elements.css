@@ -1,7 +1,8 @@
 /*
  * Elementy bazowe Sceny: scena (.sc-stage, .sc-stage__rings, .sc-stage__content), panel (.sc-panel),
  * przyciski (.sc-btn i warianty), przełącznik segmentowy (.sc-seg), karta gracza (.sc-player, .sc-avatar--current,
- * .sc-card-rings), pasek progresu (.sc-progress) i pierścień fokusu.
+ * .sc-card-rings), pasek progresu (.sc-progress), pasek aplikacji (.sc-appbar, .sc-nav, .sc-clock, .sc-status)
+ * i pierścień fokusu.
  * Nazwy klas i wartości jak w design/scena/components/ (bundle.css i README.md komponentów).
  */
 
@@ -254,6 +255,59 @@
   .sc-progress--current > span {
     background: var(--color-accent);
     box-shadow: 0 0 10px var(--color-accent-glow);
+  }
+
+  .sc-appbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    padding: 0 var(--space-page);
+  }
+
+  .sc-nav {
+    display: flex;
+    gap: var(--space-1);
+    align-self: stretch;
+  }
+
+  .sc-nav a {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  /* bottom: -1px kładzie kreskę na dolnej linii paska. */
+  .sc-nav a[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: -1px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--color-accent);
+    box-shadow: var(--shadow-tab-glow);
+  }
+
+  .sc-clock {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    background: var(--color-surface-soft);
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-text-muted);
+    background: var(--color-surface-softer);
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 15px;
   }
 }
 

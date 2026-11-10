@@ -178,11 +178,11 @@ describe('MatchHeader', () => {
 
     it('opens and closes the panel with the toggle', () => {
       render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
-      expect(toggle().classList.contains('lg:hidden')).toBe(true);
+      expect(toggle().classList.contains('lg:hidden')).toBe(false);
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
       expect(panel().classList.contains('hidden')).toBe(true);
       expect(panel().classList.contains('lg:contents')).toBe(true);
-      expect(panel().contains(screen.getByText('Best of 3'))).toBe(true);
+      expect(panel().contains(screen.getByText('Best of 3'))).toBe(false);
 
       fireEvent.click(toggle());
       expect(toggle().getAttribute('aria-expanded')).toBe('true');
@@ -225,11 +225,10 @@ describe('MatchHeader', () => {
       const state = snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T19:00:00.000Z' } });
       render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onResume={onResume} />);
       expect(panel().contains(screen.getByText('Porzucony'))).toBe(false);
-      const order = (element: Element | null | undefined) => element?.className.split(' ').find((name) => name.startsWith('lg:order-'));
-      expect(order(screen.getByText('501').closest('ul'))).toBe('lg:order-1');
-      expect(order(screen.getByRole('timer').parentElement)).toBe('lg:order-2');
-      expect(order(screen.getByText('Porzucony').closest('span'))).toBe('lg:order-3');
-      expect(order(screen.getByRole('button', { name: 'Wznów mecz' }).parentElement)).toBe('lg:order-4');
+      const header = screen.getByRole('banner');
+      expect(screen.getByText('Porzucony').parentElement).toBe(header);
+      expect(screen.getByRole('timer').parentElement).toBe(header);
+      expect(screen.getByRole('button', { name: 'Wznów mecz' }).parentElement).toBe(panel());
       for (const name of ['Wznów mecz', 'Głos', 'Efekty dźwiękowe', 'Menu gry']) {
         expect(screen.getAllByRole('button', { name })).toHaveLength(1);
       }
@@ -376,6 +375,37 @@ describe('MatchHeader', () => {
       expect(panel?.classList.contains('hidden')).toBe(true);
       expect(panel?.contains(screen.getByText('Kolejka 7'))).toBe(false);
       expect(panel?.contains(screen.getByRole('timer'))).toBe(false);
+    });
+  });
+
+  describe('bar', () => {
+    const abandoned = () => snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T19:00:00.000Z' } });
+
+    function renderHeader(state: MatchSnapshot) {
+      return render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+    }
+
+    it('lists the 1v1 settings without separators in the text and keeps leg and round outside the list', () => {
+      renderHeader(snapshot({ round: 4 }));
+      const list = screen.getByRole('list');
+      expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Mecz 1v1', '501', 'Double-out', 'Best of 3']);
+      expect(list.textContent).not.toContain('·');
+      expect(list.contains(screen.getByText('Leg 1'))).toBe(false);
+      expect(list.contains(screen.getByText('Kolejka 4'))).toBe(false);
+      expect(screen.getByRole('timer').classList.contains('sc-clock')).toBe(true);
+      expect(screen.getByRole('button', { name: 'Głos' }).classList.contains('sc-btn--icon')).toBe(true);
+    });
+
+    it.each([
+      ['a 1v1 in progress', snapshot(), false],
+      ['an abandoned 1v1', abandoned(), true],
+      ['a finished 1v1', snapshot({ finished: true }), true],
+    ])('hides the menu toggle from lg only without menu actions in %s', (_name, state, hidden) => {
+      renderHeader(state);
+      const toggle = screen.getByRole('button', { name: 'Menu gry' });
+      expect(toggle.classList.contains('lg:hidden')).toBe(hidden);
+      expect(toggle.classList.contains('sc-btn--icon')).toBe(true);
+      expect(toggle.querySelector('svg')).not.toBeNull();
     });
   });
 });

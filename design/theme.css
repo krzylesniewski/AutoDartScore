@@ -82,6 +82,7 @@
   --shadow-checkout: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 30px 60px -20px rgba(216, 53, 42, 0.5);
   --shadow-slot-active: 0 0 0 1px #d8352a inset, 0 0 40px -10px rgba(216, 53, 42, 0.5) inset;
   --shadow-selected: 0 8px 20px -8px rgba(0, 0, 0, 0.7);
+  --shadow-tab-glow: 0 0 14px 2px var(--color-accent-glow); /* poświata pod kreską aktywnej zakładki */
   --focus-ring: 0 0 0 2px #0a0908, 0 0 0 4px #f3ecd8; /* 2 px przerwy w kolorze tła, potem 2 px kremu */
 
   /* Przezroczystość tarcz w tle */
