@@ -484,7 +484,7 @@ describe('StatsScreen: player profile', () => {
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
     expect((within(dialog).getByLabelText('Imię') as HTMLInputElement).value).toBe('Anna');
     fireEvent.change(within(dialog).getByLabelText('Imię'), { target: { value: ' Ania ' } });
-    fireEvent.change(within(dialog).getByLabelText('Avatar (emoji)'), { target: { value: '🦊' } });
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Inne emoji' }), { target: { value: '🦊' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Ania' })).toBeTruthy();
@@ -504,14 +504,14 @@ describe('StatsScreen: player profile', () => {
     render(<StatsScreen playerId="p2" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Edytuj profil' }));
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
-    const checked = (within(dialog).getAllByRole('radio') as HTMLInputElement[]).filter((radio) => radio.checked);
+    const checked = (within(within(dialog).getByRole('group', { name: 'Kolor' })).getAllByRole('radio') as HTMLInputElement[]).filter((radio) => radio.checked);
     expect(checked.map((radio) => radio.getAttribute('aria-label'))).toEqual(['Różowy']);
     expect(checked[0]?.nextElementSibling?.textContent).toBe('✓');
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Błękitny' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([{ url: '/api/players/p2', method: 'PATCH', body: { name: 'Bartek', avatar: '🎯', color: 12 } }]);
+    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([{ url: '/api/players/p2', method: 'PATCH', body: { name: 'Bartek', color: 12 } }]);
     await vi.waitFor(() => expect(within(screen.getByRole('region', { name: 'Bartek' })).getByText('🎯').classList).toContain('bg-(--color-avatar-12)'));
   });
 
@@ -535,8 +535,8 @@ describe('StatsScreen: player profile', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Edytuj profil' }));
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
-    expect((within(dialog).getByLabelText('Avatar (emoji)') as HTMLInputElement).value).toBe('🎯');
-    fireEvent.change(within(dialog).getByLabelText('Avatar (emoji)'), { target: { value: '' } });
+    expect((within(dialog).getByRole('radio', { name: '🎯' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(dialog).getByRole('radio', { name: /Bez emoji/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
     await vi.waitFor(() => expect(requests.find((request) => request.method === 'PATCH')?.body).toEqual({ name: 'Anna', avatar: null, color: 1 }));
   });

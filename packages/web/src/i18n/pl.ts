@@ -72,6 +72,11 @@ export const pl = {
   playerName: 'Imię',
   playerNameTaken: (name: string) => `Gracz o imieniu „${name}” już istnieje`,
   playerAvatar: 'Avatar (emoji)',
+  avatarNone: 'Bez emoji',
+  avatarNoneHint: 'inicjał',
+  avatarGroups: ['Film i gry', 'Sport', 'Postaci'] as const,
+  avatarCustom: 'Inne emoji',
+  avatarCustomInvalid: 'Wpisz jedno emoji, np. 🐙',
   playerColor: 'Kolor',
   playerColorAuto: 'Bez wyboru kolor zostanie dobrany automatycznie.',
   // Indeks to kolor gracza minus 1.

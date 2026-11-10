@@ -45,4 +45,18 @@ describe('NewPlayerDialog', () => {
     expect(error.classList).not.toContain('text-(--color-accent)');
     expect(name.classList).toContain('aria-invalid:inset-ring-2');
   });
+
+  it('creates the player with the emoji picked from the grid', async () => {
+    const created = { id: 'p9', name: 'Ola', avatar: '👾', color: 3, guest: false, archivedAt: null, createdAt: '2026-11-10T20:00:00.000Z' };
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(created), { status: 201, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const onCreated = vi.fn();
+    render(<NewPlayerDialog onCreated={onCreated} onCancel={vi.fn()} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Imię' }), { target: { value: 'Ola' } });
+    fireEvent.click(screen.getByRole('radio', { name: '👾' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj' }));
+    await vi.waitFor(() => expect(onCreated).toHaveBeenCalledWith(created));
+    const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as Record<string, unknown>;
+    expect(body).toEqual({ name: 'Ola', guest: false, avatar: '👾' });
+  });
 });
