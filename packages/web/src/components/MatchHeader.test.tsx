@@ -193,6 +193,17 @@ describe('MatchHeader', () => {
       expect(panel().classList.contains('hidden')).toBe(true);
     });
 
+    it('lifts the bar above the keypad dock only while the menu is open', () => {
+      render(<MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
+      const header = screen.getByRole('banner');
+      expect(header.classList.contains('z-10')).toBe(true);
+      fireEvent.click(toggle());
+      expect(header.classList.contains('z-30')).toBe(true);
+      expect(header.classList.contains('z-10')).toBe(false);
+      fireEvent.click(screen.getByRole('button', { name: 'Porzuć mecz' }));
+      expect(header.classList.contains('z-10')).toBe(true);
+    });
+
     it('closes on Escape and returns the focus to the toggle', () => {
       render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
       fireEvent.click(toggle());

@@ -61,8 +61,11 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
     };
   }
 
+  // Otwarte menu musi przykryć dok klawiatury (sticky z-10) i baner od lg (z-20), które stoją dalej w DOM.
+  // Zamknięty pasek wraca do z-10, więc okna dialogowe (fixed z-10, dalej w DOM) przykrywają pasek.
+  // Akcja menu zamyka menu w tym samym kliknięciu, w którym otwiera okno dialogowe.
   return (
-    <header className="sc-appbar relative z-10 shrink-0 max-lg:h-12 max-lg:gap-2.5 max-lg:px-4 lg:h-17">
+    <header className={`sc-appbar relative ${open ? 'z-30' : 'z-10'} shrink-0 max-lg:h-12 max-lg:gap-2.5 max-lg:px-4 lg:h-17`}>
       <a href="#/" aria-label={pl.home} className="flex shrink-0 items-center gap-(--space-5) text-(--color-text)">
         <AppMark className="size-[26px] lg:size-8" />
         <span className="font-display text-[24px] font-extrabold tracking-[0.08em] whitespace-nowrap uppercase max-lg:sr-only">{pl.appName}</span>
