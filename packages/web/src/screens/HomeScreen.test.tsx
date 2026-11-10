@@ -483,7 +483,7 @@ describe('HomeScreen: new player dialog', () => {
     fireEvent.click(button('+ Nowy gracz'));
     expect(dialog().getAttribute('aria-modal')).toBe('true');
     expect(within(dialog()).getByLabelText('Imię')).toBeTruthy();
-    expect(within(dialog()).getByLabelText('Avatar (emoji)')).toBeTruthy();
+    expect(within(dialog()).getByRole('group', { name: 'Avatar (emoji)' })).toBeTruthy();
     expect(within(dialog()).getByRole('group', { name: 'Kolor' })).toBeTruthy();
     expect(within(dialog()).queryByRole('checkbox')).toBeNull();
     expect(screen.queryByText('Gość')).toBeNull();
@@ -497,7 +497,7 @@ describe('HomeScreen: new player dialog', () => {
     fireEvent.click(button('Anna'));
     fireEvent.click(button('+ Nowy gracz'));
     fireEvent.change(within(dialog()).getByLabelText('Imię'), { target: { value: ' Gosia ' } });
-    fireEvent.change(within(dialog()).getByLabelText('Avatar (emoji)'), { target: { value: '🦊' } });
+    fireEvent.change(within(dialog()).getByRole('textbox', { name: 'Inne emoji' }), { target: { value: '🦊' } });
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Dodaj' }));
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
@@ -514,7 +514,7 @@ describe('HomeScreen: new player dialog', () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('+ Nowy gracz'));
-    const radios = within(dialog()).getAllByRole('radio') as HTMLInputElement[];
+    const radios = within(within(dialog()).getByRole('group', { name: 'Kolor' })).getAllByRole('radio') as HTMLInputElement[];
     expect(radios.map((radio) => radio.getAttribute('aria-label'))).toEqual([
       'Bursztynowy',
       'Niebieski',

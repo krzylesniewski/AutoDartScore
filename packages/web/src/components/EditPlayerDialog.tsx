@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ApiRequestError, updatePlayer } from '../api/client';
 import { pl } from '../i18n/pl';
 import { AvatarColorPicker } from './AvatarColorPicker';
+import { AvatarEmojiPicker } from './AvatarEmojiPicker';
 import { CornerRings } from './CornerRings';
 import { WarningIcon } from './icons';
 
@@ -46,8 +47,9 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
     setError(null);
     setNameError(null);
     try {
-      // Puste pole avatara usuwa avatar.
-      onSaved(await updatePlayer(player.id, { name: name.trim(), avatar: avatar.trim() || null, color }));
+      // Puste pole avatara usuwa avatar. Niezmieniony avatar nie idzie do serwera, bo starszy avatar z tekstem nie przeszedłby sprawdzenia emoji.
+      const nextAvatar = avatar.trim() || null;
+      onSaved(await updatePlayer(player.id, { name: name.trim(), ...(nextAvatar === player.avatar ? {} : { avatar: nextAvatar }), color }));
     } catch (caught) {
       if (caught instanceof ApiRequestError && caught.code === 'player_name_taken') {
         setNameError(pl.playerNameTaken(name.trim()));
@@ -93,10 +95,7 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
               {nameError}
             </p>
           )}
-          <label className="flex flex-col gap-2">
-            <span className={label}>{pl.playerAvatar}</span>
-            <input value={avatar} maxLength={16} onChange={(event) => setAvatar(event.target.value)} className={`${input} w-28 text-[26px]`} />
-          </label>
+          <AvatarEmojiPicker value={avatar} onChange={setAvatar} />
           <AvatarColorPicker value={color} onChange={setColor} name={name} avatar={avatar} />
           {error && (
             <p className="flex items-center gap-2.5 font-display text-xl font-bold text-(--color-text)">

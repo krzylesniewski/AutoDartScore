@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CreatePlayerRequest, ListPlayersQuery, Player, UpdatePlayerRequest } from './index.js';
+import { CreatePlayerRequest, isSingleEmoji, ListPlayersQuery, Player, UpdatePlayerRequest } from './index.js';
 
 describe('CreatePlayerRequest', () => {
   it('defaults guest to false and trims the name', () => {
@@ -22,6 +22,8 @@ describe('CreatePlayerRequest', () => {
     ['a name over 40 characters', { name: 'a'.repeat(41) }],
     ['an empty avatar', { name: 'Anna', avatar: '' }],
     ['an avatar over 16 characters', { name: 'Anna', avatar: 'x'.repeat(17) }],
+    ['a text avatar', { name: 'Anna', avatar: 'KL' }],
+    ['two emoji', { name: 'Anna', avatar: '🎯🎯' }],
     ['color 0', { name: 'Anna', color: 0 }],
     ['color 17', { name: 'Anna', color: 17 }],
     ['a fractional color', { name: 'Anna', color: 1.5 }],
@@ -89,6 +91,8 @@ describe('UpdatePlayerRequest', () => {
     ['a name over 40 characters', { name: 'a'.repeat(41) }],
     ['an empty avatar', { avatar: '' }],
     ['an avatar over 16 characters', { avatar: 'x'.repeat(17) }],
+    ['a text avatar', { avatar: 'abc' }],
+    ['an emoji with text', { avatar: '🎯x' }],
     ['color 0', { color: 0 }],
     ['color 17', { color: 17 }],
     ['a fractional color', { color: 1.5 }],
@@ -106,5 +110,15 @@ describe('ListPlayersQuery', () => {
 
   it('rejects another archived value', () => {
     expect(ListPlayersQuery.safeParse({ archived: 'bogus' }).success).toBe(false);
+  });
+});
+
+describe('isSingleEmoji', () => {
+  it.each(['🎯', '🕹️', '⚔️', '👍🏽', '👨‍👩‍👧', '🇵🇱', '🏴‍☠️'])('accepts %s', (value) => {
+    expect(isSingleEmoji(value)).toBe(true);
+  });
+
+  it.each(['', ' ', 'a', 'KL', '7', '#', '🎯🎯', '🎯 ', ' 🎯', '🎯x'])('rejects %j', (value) => {
+    expect(isSingleEmoji(value)).toBe(false);
   });
 });
