@@ -1,0 +1,220 @@
+/*
+ * Elementy bazowe Sceny: scena (.sc-stage, .sc-stage__rings, .sc-stage__content), panel (.sc-panel),
+ * przyciski (.sc-btn i warianty), przełącznik segmentowy (.sc-seg) i pierścień fokusu.
+ * Nazwy klas i wartości jak w design/scena/components/ (bundle.css i README.md komponentów).
+ */
+
+/*
+ * Bez transform, filter i contain na scenie i jej treści: okna dialogowe mają position: fixed
+ * i muszą zostać przypięte do okna przeglądarki, a nie do sceny.
+ */
+.sc-stage {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse var(--stage-light-size) at var(--stage-light-x) var(--stage-light-y),
+    var(--color-bg-glow) 0%,
+    var(--color-bg-mid) 45%,
+    var(--color-bg) 100%
+  );
+}
+
+/* Ekran gry: światło nad klawiaturą, środek pierścieni pod nią. */
+.sc-stage[data-stage-light="game"] {
+  --stage-light-size: 1000px 700px;
+  --stage-light-x: 62%;
+  --stage-light-y: -10%;
+  --stage-rings-size: 1000px;
+  --stage-rings-x: 71%;
+  --stage-rings-y: 84%;
+}
+
+/* Listy: światło nad tytułem, pierścienie wychodzą poza prawy górny róg. */
+.sc-stage[data-stage-light="list"] {
+  --stage-light-size: 1100px 650px;
+  --stage-light-x: 22%;
+  --stage-light-y: -10%;
+  --stage-rings-size: 1000px;
+  --stage-rings-x: calc(100% - 50px);
+  --stage-rings-y: -60px;
+}
+
+.sc-stage[data-stage-light="center"] {
+  --stage-light-size: 1000px 700px;
+  --stage-light-x: 50%;
+  --stage-light-y: -10%;
+  --stage-rings-size: 1000px;
+  --stage-rings-x: 50%;
+  --stage-rings-y: 50%;
+}
+
+@media (width < 40rem) {
+  .sc-stage[data-stage-light] {
+    --stage-light-size: 560px 460px;
+    --stage-light-y: -8%;
+    --stage-rings-size: 620px;
+  }
+
+  .sc-stage[data-stage-light="game"] {
+    --stage-rings-x: 50%;
+    --stage-rings-y: 70%;
+  }
+}
+
+.sc-stage__rings {
+  position: absolute;
+  left: var(--stage-rings-x);
+  top: var(--stage-rings-y);
+  width: var(--stage-rings-size);
+  height: var(--stage-rings-size);
+  translate: -50% -50%;
+  pointer-events: none;
+  opacity: var(--opacity-rings);
+  fill: none;
+  stroke: var(--color-text);
+}
+
+.sc-stage__content {
+  position: relative;
+  height: 100%;
+}
+
+/* W warstwie components, żeby utility Tailwinda na tym samym elemencie zawsze wygrywały. */
+@layer components {
+  .sc-panel {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    padding: 20px 22px;
+    border-radius: var(--radius-panel);
+    background: linear-gradient(180deg, var(--color-surface-raised) 0%, var(--color-surface) 100%);
+    box-shadow: var(--shadow-panel);
+  }
+
+  .sc-panel--flat {
+    background: var(--color-surface-softer);
+    box-shadow: var(--shadow-inset-line);
+  }
+
+  .sc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    height: 54px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: var(--radius-button);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 19px;
+    cursor: pointer;
+    color: var(--color-text);
+    background: var(--color-surface-soft);
+  }
+
+  .sc-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .sc-btn--primary {
+    background: linear-gradient(135deg, var(--color-accent-hi) 0%, var(--color-accent) 60%, var(--color-accent-lo) 100%);
+    color: var(--color-on-accent);
+    font-weight: 800;
+    font-size: 24px;
+    box-shadow: var(--shadow-checkout);
+  }
+
+  .sc-btn--outline {
+    background: transparent;
+    box-shadow: var(--shadow-outline);
+  }
+
+  .sc-btn--outline.sc-btn--quiet {
+    color: var(--color-text-sub);
+  }
+
+  .sc-btn--large {
+    height: 96px;
+    border-radius: var(--radius-card);
+    font-weight: 800;
+    font-size: 36px;
+  }
+
+  .sc-btn--icon {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: var(--radius-pill);
+  }
+
+  .sc-btn--icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sc-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .sc-seg {
+    display: flex;
+    gap: var(--space-1);
+    padding: 5px;
+    border-radius: 16px;
+    background: var(--color-surface-softer);
+    box-shadow: var(--shadow-inset-line);
+  }
+
+  .sc-seg button {
+    height: 46px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: var(--radius-button);
+    background: transparent;
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  .sc-seg button[aria-pressed="true"] {
+    background: var(--color-text);
+    color: var(--color-text-inverse);
+    font-weight: 800;
+    box-shadow: var(--shadow-selected);
+  }
+
+  .sc-seg--multiplier {
+    flex-direction: column;
+    width: 130px;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--radius-card);
+    background: var(--color-surface-soft);
+    box-shadow: none;
+  }
+
+  .sc-seg--multiplier button {
+    flex: 1;
+    min-height: 72px;
+    border-radius: var(--radius-segment);
+    font-size: 24px;
+  }
+}
+
+/*
+ * Poza warstwami, żeby podczas fokusu wygrywał z utility cieni. Radio i checkbox są pominięte:
+ * aplikacja chowa część z nich i rysuje fokus na sąsiednim elemencie albo etykiecie, więc pierścień by się zdublował.
+ */
+:where(a[href], button, input:not([type="radio"], [type="checkbox"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
