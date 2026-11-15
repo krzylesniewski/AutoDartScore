@@ -8,6 +8,7 @@ import type { Database } from './db/database.js';
 import { toApiError } from './errors.js';
 import { createLiveHub } from './live-hub.js';
 import { createMatchService } from './match-service.js';
+import { createReplayCache, REPLAY_CACHE_MAX_MATCHES } from './replay-cache.js';
 import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
 import { LIVE_MAX_PAYLOAD_BYTES, LIVE_MAX_PENDING_CONNECTIONS, liveRoutes } from './routes/live.js';
@@ -31,6 +32,7 @@ export interface AppOptions {
   readonly livePingIntervalMs?: number;
   readonly webDir?: string | null; // katalog zbudowanego frontu. null wyłącza serwowanie plików
   readonly matchLockMinutes?: number; // ile minut po ostatniej rzutce da się cofać w zakończonej grze. Domyślnie 5
+  readonly replayCacheSize?: number; // najwięcej gier w pamięci podręcznej odtworzeń. 0 ją wyłącza. Domyślnie REPLAY_CACHE_MAX_MATCHES
 }
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
@@ -61,6 +63,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   );
 
   const store = createStore(options.db);
+  const cache = createReplayCache({ store, log: app.log, maxEntries: options.replayCacheSize ?? REPLAY_CACHE_MAX_MATCHES });
   const service = createMatchService({
     store,
     hub: createLiveHub(),
@@ -68,6 +71,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     random: options.random ?? Math.random,
     now,
     matchLockMs: (options.matchLockMinutes ?? 5) * 60_000,
+    cache,
   });
   healthRoutes(app);
   if (auth !== null) {
@@ -82,7 +86,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     pingIntervalMs: options.livePingIntervalMs ?? 30_000,
     maxPendingConnections: options.liveMaxPendingConnections ?? LIVE_MAX_PENDING_CONNECTIONS,
   });
-  statsRoutes(app, createStatsService({ store, now }));
+  statsRoutes(app, createStatsService({ store, cache, now }));
   if (webDir !== null) {
     await webAppRoutes(app, { webDir, webRoutes, apiSegments });
   }

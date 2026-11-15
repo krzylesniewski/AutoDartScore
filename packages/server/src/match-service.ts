@@ -14,18 +14,8 @@ import {
 import { createAchievementReference } from './achievement-reference.js';
 import { HttpError, invalidRequest, notFound } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
-import {
-  abandonment,
-  effectiveCheckoutSteps,
-  effectiveThrows,
-  finishedAt,
-  gameConfig,
-  gameTimes,
-  lastActivityAt,
-  lastSeq,
-  practiceEndedAt,
-  replayMatch,
-} from './replay.js';
+import type { ReplayCache } from './replay-cache.js';
+import { finishedAt, gameConfig, gameTimes, replayLog, replayMatch, type ReplayedMatch } from './replay.js';
 import type { SerialQueue } from './serial-queue.js';
 import { toSnapshot } from './snapshot.js';
 import { detectAchievements, type DetectedAchievement, type PlayerRecords } from './stats/achievements.js';
@@ -53,10 +43,11 @@ interface Dependencies {
   readonly random: () => number;
   readonly now: () => number;
   readonly matchLockMs: number; // tyle po rzutce kończącej grę da się jeszcze cofać
+  readonly cache: ReplayCache; // tylko dla listy gier i rekordów do osiągnięć
 }
 
-export function createMatchService({ store, hub, queue, random, now, matchLockMs }: Dependencies): MatchService {
-  const references = createAchievementReference({ store });
+export function createMatchService({ store, hub, queue, random, now, matchLockMs, cache }: Dependencies): MatchService {
+  const references = createAchievementReference({ store, cache });
 
   async function requireMatch(id: string): Promise<StoredMatch> {
     const match = await store.findMatch(id);
@@ -66,30 +57,18 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     return match;
   }
 
-  // Stan zawsze z odtworzenia logu.
-  async function load(match: StoredMatch) {
-    const log = await store.loadLog(match.id);
-    const throws = effectiveThrows(log);
-    const checkoutSteps = effectiveCheckoutSteps(log);
-    const { state: game, events } = replayMatch(match, throws, checkoutSteps);
-    return {
-      log,
-      throws,
-      checkoutSteps,
-      seq: lastSeq(log),
-      game,
-      events,
-      finishedAt: finishedAt(game, throws),
-      abandonment: abandonment(log),
-      endedAt: practiceEndedAt(log),
-      updatedAt: lastActivityAt(log, match),
-      times: gameTimes(log, throws, game),
-    };
+  // Komendy, GET /matches/:id i subskrypcja zawsze odtwarzają świeżo wczytany log, bez pamięci podręcznej.
+  async function load(match: StoredMatch): Promise<ReplayedMatch> {
+    return replayLog(match, await store.loadLog(match.id));
+  }
+
+  // Profile graczy zawsze z przekazanej gry, nawet gdy odtworzenie pochodzi z pamięci podręcznej.
+  function toState(match: StoredMatch, { game, events, throws, seq, abandonment, endedAt, finishedAt, times }: ReplayedMatch): MatchSnapshot {
+    return toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, events, throws, ...times });
   }
 
   async function snapshot(match: StoredMatch): Promise<MatchSnapshot> {
-    const { game, events, throws, seq, abandonment, endedAt, finishedAt, times } = await load(match);
-    return toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, events, throws, ...times });
+    return toState(match, await load(match));
   }
 
   function abandoned(id: string): HttpError {
@@ -338,23 +317,24 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (finishTime !== null && now() >= Date.parse(finishTime) + matchLockMs) {
           throw locked(id);
         }
-        const last = throws.pop();
+        const last = throws.at(-1);
         if (!last) {
           throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no throw to undo`);
         }
+        const remaining = throws.slice(0, -1);
         const seq = await store.appendUndo(id, last.id);
         if (match.type === 'match' && isGameFinished(before)) {
           references.invalidate();
         }
-        const { state: game, events } = replayMatch(match, throws);
+        const { state: game, events } = replayMatch(match, remaining);
         const state = toSnapshot(match, game, seq, {
           abandonment: null,
           endedAt: null,
-          finishedAt: finishedAt(game, throws),
+          finishedAt: finishedAt(game, remaining),
           lockMs: matchLockMs,
           events,
-          throws,
-          ...gameTimes(log, throws, game),
+          throws: remaining,
+          ...gameTimes(log, remaining, game),
         });
         const meta = { matchId: id, eventSeq: seq };
         hub.publish(id, [
@@ -434,15 +414,11 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
 
     async list(query) {
       const items: MatchListItem[] = [];
-      for (const match of await store.listMatches()) {
-        if (query.type !== undefined && match.type !== query.type) {
-          continue;
-        }
-        if (query.playerId !== undefined && !match.players.some((player) => player.id === query.playerId)) {
-          continue;
-        }
-        const { game, events, throws, seq, abandonment, endedAt, finishedAt, updatedAt, times } = await load(match);
-        const state = toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, events, throws, ...times });
+      const matches = await store.listMatches({ types: query.type === undefined ? undefined : [query.type], playerId: query.playerId });
+      // Status wynika z odtworzenia, więc ten filtr działa dopiero po nim.
+      for (const { match, replay } of await cache.many(matches)) {
+        const { abandonment, endedAt, updatedAt } = replay;
+        const state = toState(match, replay);
         if (query.status === 'unfinished' && (state.status === 'finished' || state.status === 'ended')) {
           continue;
         }

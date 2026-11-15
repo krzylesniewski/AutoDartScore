@@ -83,6 +83,18 @@ Stan gry podaje też `round` (kolejka rzucającego w bieżącym legu, liczona od
 
 Pole `legTurns` to zamknięte tury bieżącego lega w kolejności rzutów. Każdy wpis ma gracza (`playerId`), numer tury (`turnIndex`), rzutki (`darts`), zdobyte punkty (`points`), wynik po turze (`remainingAfter`) i znacznik `bust`. Otwarta tura nie trafia na listę, jej rzutki są w `currentDarts`. Bust ma `points: 0` i `remainingAfter` równe wynikowi sprzed tury. Nowy leg zaczyna się z pustą listą, a po rzutce kończącej mecz zostają tury ostatniego lega. W Free run turą jest każde pełne podejście po 3 rzutki, a `remainingAfter` jest `null`. W treningu checkoutów lista jest zawsze pusta. Cofnięcie rzutki przelicza listę z logu razem z resztą stanu.
 
+## Lista gier i statystyki
+
+Lista gier, ranking, `GET /stats/overall`, statystyki gracza i rekordy do osiągnięć odtwarzają logi wielu gier. Żeby nie robić tego przy każdym żądaniu, serwer trzyma w procesie pamięć podręczną odtworzeń. Wpis to wynik odtworzenia logu jednej gry (rzutki, które się liczą, stan silnika, zdarzenia, czasy), zapisany pod kluczem `(matchId, seq)`, gdzie `seq` to ostatni wpis wczytanego logu.
+
+Przed użyciem wpisu serwer jednym zapytaniem czyta najwyższy `seq` każdej gry. Gra z nowym wpisem w logu jest wczytywana i odtwarzana od nowa, także gdy zapis przyszedł z innego procesu. Pamięć mieści najwyżej 500 gier (`REPLAY_CACHE_MAX_MATCHES`) i usuwa najdawniej używaną. Testy mogą ją wyłączyć przez `AppOptions.replayCacheSize: 0`. Po restarcie jest pusta.
+
+To nie jest licznik. Migawki, profile graczy i sumy statystyk są liczone przy każdym żądaniu z odtworzenia, więc zmianę imienia widać od razu. Komendy, `GET /matches/:id` i kanał na żywo zawsze odtwarzają świeżo wczytany log i nie używają pamięci podręcznej.
+
+Gracze i logi gier z listy są wczytywane zbiorczo, a filtry `type` i `playerId` listy gier działają już w zapytaniu. Filtr `status` wymaga odtworzenia, więc działa po nim. Migracja `0007_list_indexes` dodaje indeksy na `throws(match_id)` i `match_players(player_id)`. `match_events` nie potrzebuje osobnego indeksu, bo wyszukiwanie po `match_id` obsługuje klucz główny `(match_id, seq)`.
+
+Uszkodzona gra (log, którego nie da się odtworzyć, albo brak wymaganego pola w wierszu gry) trafia do logu serwera jako ostrzeżenie i jest pomijana w liście gier, rankingu, `GET /stats/overall`, statystykach gracza, bilansie, formie, najczęstszych trafieniach i rekordach do osiągnięć. `GET /matches/:id` i podsumowanie `GET /matches/:id/summary` dla takiej gry nadal kończą się błędem 500.
+
 ## Struktura
 
 - `src/main.ts`: start procesu (konfiguracja, baza, migracje, nasłuch).
@@ -92,7 +104,8 @@ Pole `legTurns` to zamknięte tury bieżącego lega w kolejności rzutów. Każd
 - `src/auth/`: `credentials.ts` (tokeny HMAC i porównanie hasła), `login-limiter.ts` (limit nieudanych logowań), `access.ts` (CORS i sprawdzanie tokenu przed trasami).
 - `src/routes/`: `health.ts` (`GET /health`), `web-app.ts` (pliki frontu z `AUTOSCORE_WEB_DIR`), `auth.ts` (`POST /auth/login`), `players.ts` (utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu), `matches.ts` (gry, lista gier z filtrami `status`, `playerId` i `type`, rzutki, próby i pominięcia checkoutu, cofnięcie, porzucenie, wznowienie i zakończenie treningu), `live.ts` (WebSocket z wiadomością `auth` i pingiem), `stats.ts` (statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, `GET /players/:id/frequent-hits`, podsumowanie meczu, ranking graczy i `GET /stats/overall`). Statystyki gracza, bilans, forma, ranking i `GET /stats/overall` przyjmują `?period=30d`, `90d` albo `all` (domyślnie `all`).
 - `src/match-service.ts`: komendy gry (utworzenie, rzutka, próba i pominięcie checkoutu, cofnięcie, porzucenie, wznowienie, zakończenie treningu, lista, subskrypcja).
-- `src/replay.ts`: wybór rzutek oraz prób i pominięć checkoutu, które się liczą, stan porzucenia, czas zakończenia treningu i odtworzenie stanu w silniku.
+- `src/replay.ts`: wybór rzutek oraz prób i pominięć checkoutu, które się liczą, stan porzucenia, czas zakończenia treningu i odtworzenie stanu w silniku. `replayLog` daje z wczytanego logu cały wynik odtworzenia (`ReplayedMatch`).
+- `src/replay-cache.ts`: pamięć podręczna odtworzeń dla list i statystyk (`createReplayCache`, `REPLAY_CACHE_MAX_MATCHES`), opisana wyżej w „Lista gier i statystyki”.
 - `src/snapshot.ts`: budowa `MatchSnapshot` ze stanu silnika.
 - `src/leg-turns.ts`: `buildLegTurns`, czyli zamknięte tury bieżącego lega (`legTurns`) ze zdarzeń odtworzenia, a w Free run z pełnych podejść po 3 rzutki.
 - `src/stats-service.ts` i `src/stats/`: statystyki liczone z odtworzenia logu. W `src/stats/` są `tally.ts` (sumy gracza w grze, także trafienia T20), `completed-legs.ts` (punkty i rzutki w ukończonych legach), `rankings.ts` (ranking graczy, rekordy oraz listy procentu wygranych i trafień T20), `overall.ts` (łączna liczba lotek, średnia ze średnich graczy, gracze powyżej i poniżej niej), `head-to-head.ts` (bilans dwóch graczy z ukończonych meczów 1v1), `form.ts` (średnia z każdej z ostatnich gier), `frequent-hits.ts` (do 6 najczęstszych trafień gracza bez Miss, według liczby, potem punktów, potem segmentu), `leg-progress.ts` (pozostały wynik po każdej rzutce ostatniego lega z zamkniętych tur, do podsumowania gry), `leg-durations.ts` (czas każdego wygranego lega z rzutek, które się liczą, bez przerw przyciętych do lega), `achievements.ts` (rekordy gracza i wykrywanie osiągnięć) i `period.ts` (`periodStart`, czyli najstarsze `createdAt` gry w okresie statystyk liczone od zegara serwera z `AppOptions.now`). Gry spoza okresu odrzuca już zapytanie w `store.ts`, więc nie są odtwarzane. Średnia na 3 rzutki na karcie gracza, w rankingu, w bilansie i na wykresie formy liczy tylko ukończone legi.
@@ -109,3 +122,9 @@ pnpm --filter @autoscore/server test
 ```
 
 Testy budują aplikację na bazie SQLite w pamięci (`:memory:`, zobacz `src/test-helpers.ts`). `src/restart.test.ts` używa pliku w katalogu tymczasowym, żeby sprawdzić stan po ponownym uruchomieniu.
+
+```sh
+pnpm --filter @autoscore/server bench
+```
+
+`scripts/bench-lists.ts` wypełnia przez HTTP bazę w katalogu tymczasowym (ponad 300 gier wszystkich typów i ponad 45 tys. rzutek) i mierzy `GET /matches`, `GET /matches?status=unfinished`, `GET /stats/rankings`, `GET /stats/overall` i `GET /players/:id/stats`. Dla każdego adresu podaje pierwsze wywołanie na świeżej aplikacji i medianę z 5 kolejnych. Katalog jest na końcu usuwany.

@@ -41,8 +41,11 @@ export interface MatchLog {
 
 export type NewThrow = Omit<ThrowRecord, 'id' | 'receivedAt'>;
 
-export interface MatchRange {
-  readonly createdFrom?: string | null;
+export interface MatchFilter {
+  readonly createdFrom?: string | null | undefined;
+  readonly types?: readonly MatchType[] | undefined;
+  readonly playerId?: string | undefined;
+  readonly countsToStats?: boolean | undefined;
 }
 
 export interface Store {
@@ -55,11 +58,14 @@ export interface Store {
   updatePlayer(id: string, request: UpdatePlayerRequest): Promise<Player | null>;
   createMatch(match: NewMatch): Promise<string>;
   findMatch(id: string): Promise<StoredMatch | null>;
-  // Gry gracza, które wchodzą do statystyk, w kolejności utworzenia.
+  // Gry w kolejności utworzenia. Gry gracza, które wchodzą do statystyk, to filtr z playerId, types i countsToStats: true.
   // createdFrom to najstarsze dozwolone created_at (ISO, włącznie). null albo brak znaczy bez dolnej granicy.
-  findMatchIdsForPlayer(playerId: string, types: readonly MatchType[], options?: MatchRange): Promise<string[]>;
-  listMatches(options?: MatchRange): Promise<StoredMatch[]>;
+  listMatches(filter?: MatchFilter): Promise<StoredMatch[]>;
   loadLog(matchId: string): Promise<MatchLog>;
+  // Najwyższy seq w logu każdej gry, 0 dla gry bez wpisów.
+  lastSeqs(matchIds: readonly string[]): Promise<Map<string, number>>;
+  // Uszkodzony wpis zamienia w Error tylko log swojej gry.
+  loadLogs(matchIds: readonly string[]): Promise<Map<string, MatchLog | Error>>;
   findThrowByEventId(eventId: string): Promise<ThrowRecord | null>;
   appendThrow(hit: NewThrow): Promise<{ throw: ThrowRecord; seq: number }>;
   appendUndo(matchId: string, throwId: string): Promise<number>;
@@ -70,6 +76,17 @@ export interface Store {
   appendCheckoutUndo(matchId: string): Promise<number>;
   appendCheckoutSkip(matchId: string): Promise<number>;
   appendCheckoutSkipUndo(matchId: string): Promise<number>;
+}
+
+// Najwyżej tyle wartości w jednym in (...), żeby zapytanie mieściło się w limicie parametrów SQLite i PostgreSQL.
+const IN_LIST_CHUNK = 500;
+
+function chunks<T>(values: readonly T[]): T[][] {
+  const result: T[][] = [];
+  for (let start = 0; start < values.length; start += IN_LIST_CHUNK) {
+    result.push(values.slice(start, start + IN_LIST_CHUNK));
+  }
+  return result;
 }
 
 function now(): string {
@@ -133,7 +150,9 @@ function toMatch(row: Selectable<MatchesTable>, players: readonly Player[]): Sto
   };
 }
 
-function toLogEntry(row: Pick<Selectable<MatchEventsTable>, 'seq' | 'type' | 'throw_id' | 'player_id' | 'reason' | 'success' | 'created_at'>): LogEntry {
+const LOG_COLUMNS = ['seq', 'type', 'throw_id', 'player_id', 'reason', 'success', 'created_at'] as const;
+
+function toLogEntry(row: Pick<Selectable<MatchEventsTable>, (typeof LOG_COLUMNS)[number]>): LogEntry {
   const { seq, type, created_at: createdAt } = row;
   switch (type) {
     case 'throw':
@@ -172,16 +191,33 @@ export function createStore(db: Kysely<Database>): Store {
     return Number(row?.seq ?? 0) + 1;
   }
 
-  // Ostatnia zmiana każdego z graczy. Bez ids dla wszystkich graczy.
+  // Ostatnia zmiana każdego z graczy, bez czytania całej historii. Bez ids dla wszystkich graczy.
   async function latestChanges(trx: Kysely<Database>, ids?: readonly string[]): Promise<Map<string, PlayerChange>> {
-    if (ids?.length === 0) {
-      return new Map();
+    async function latest(chunk?: string[]): Promise<PlayerChange[]> {
+      let maxSeq = trx
+        .selectFrom('player_changes')
+        .select('player_id')
+        .select((eb) => eb.fn.max('seq').as('seq'))
+        .groupBy('player_id');
+      if (chunk) {
+        maxSeq = maxSeq.where('player_id', 'in', chunk);
+      }
+      return trx
+        .selectFrom('player_changes')
+        .innerJoin(maxSeq.as('latest'), (join) =>
+          join.onRef('latest.player_id', '=', 'player_changes.player_id').onRef('latest.seq', '=', 'player_changes.seq'),
+        )
+        .selectAll('player_changes')
+        .execute();
     }
-    let query = trx.selectFrom('player_changes').selectAll().orderBy('player_id').orderBy('seq');
+    const rows = [];
     if (ids) {
-      query = query.where('player_id', 'in', [...ids]);
+      for (const chunk of chunks([...new Set(ids)])) {
+        rows.push(...(await latest(chunk)));
+      }
+    } else {
+      rows.push(...(await latest()));
     }
-    const rows = await query.execute();
     return new Map(rows.map((row) => [row.player_id, row]));
   }
 
@@ -204,15 +240,30 @@ export function createStore(db: Kysely<Database>): Store {
     return rows.map((row) => toPlayer(row, changes.get(row.id)));
   }
 
-  async function matchPlayers(matchId: string): Promise<Player[]> {
-    const rows = await db
-      .selectFrom('match_players')
-      .innerJoin('players', 'players.id', 'match_players.player_id')
-      .selectAll('players')
-      .where('match_players.match_id', '=', matchId)
-      .orderBy('match_players.position')
-      .execute();
-    return withProfiles(rows);
+  // Gracze każdej z gier w kolejności position, z jednym odczytem profili dla wszystkich.
+  async function matchPlayers(matchIds: readonly string[]): Promise<Map<string, Player[]>> {
+    const rows = [];
+    for (const chunk of chunks(matchIds)) {
+      rows.push(
+        ...(await db
+          .selectFrom('match_players')
+          .innerJoin('players', 'players.id', 'match_players.player_id')
+          .selectAll('players')
+          .select('match_players.match_id')
+          .where('match_players.match_id', 'in', chunk)
+          .orderBy('match_players.match_id')
+          .orderBy('match_players.position')
+          .execute()),
+      );
+    }
+    const changes = await latestChanges(db, rows.map((row) => row.id));
+    const players = new Map<string, Player[]>();
+    for (const row of rows) {
+      const list = players.get(row.match_id) ?? [];
+      list.push(toPlayer(row, changes.get(row.id)));
+      players.set(row.match_id, list);
+    }
+    return players;
   }
 
   function appendLifecycle(matchId: string, entry: Pick<Insertable<MatchEventsTable>, 'type' | 'player_id' | 'reason' | 'success'>): Promise<number> {
@@ -343,46 +394,96 @@ export function createStore(db: Kysely<Database>): Store {
 
     async findMatch(id) {
       const row = await db.selectFrom('matches').selectAll().where('id', '=', id).executeTakeFirst();
-      return row ? toMatch(row, await matchPlayers(id)) : null;
+      return row ? toMatch(row, (await matchPlayers([id])).get(id) ?? []) : null;
     },
 
-    async listMatches(options) {
-      const createdFrom = options?.createdFrom ?? null;
-      let query = db.selectFrom('matches').selectAll();
-      if (createdFrom !== null) {
-        query = query.where('created_at', '>=', createdFrom);
-      }
-      const rows = await query.orderBy('created_at').orderBy('id').execute();
-      const matches = [];
-      for (const row of rows) {
-        matches.push(toMatch(row, await matchPlayers(row.id)));
-      }
-      return matches;
-    },
-
-    async findMatchIdsForPlayer(playerId, types, options) {
-      if (types.length === 0) {
+    async listMatches(filter = {}) {
+      const { createdFrom, types, playerId, countsToStats } = filter;
+      if (types?.length === 0) {
         return [];
       }
-      const createdFrom = options?.createdFrom ?? null;
-      let query = db
-        .selectFrom('matches')
-        .innerJoin('match_players', 'match_players.match_id', 'matches.id')
-        .select('matches.id')
-        .where('match_players.player_id', '=', playerId)
-        .where('matches.counts_to_stats', '=', 1)
-        .where('matches.type', 'in', [...types]);
-      if (createdFrom !== null) {
-        query = query.where('matches.created_at', '>=', createdFrom);
+      let query = db.selectFrom('matches').selectAll();
+      if (createdFrom !== undefined && createdFrom !== null) {
+        query = query.where('created_at', '>=', createdFrom);
       }
-      const rows = await query.orderBy('matches.created_at').orderBy('matches.id').execute();
-      return rows.map((row) => row.id);
+      if (types !== undefined) {
+        query = query.where('type', 'in', [...types]);
+      }
+      if (countsToStats !== undefined) {
+        query = query.where('counts_to_stats', '=', countsToStats ? 1 : 0);
+      }
+      if (playerId !== undefined) {
+        // exists zamiast złączenia, żeby gra nigdy nie pojawiła się dwa razy.
+        query = query.where((eb) =>
+          eb.exists(
+            eb
+              .selectFrom('match_players')
+              .select('match_players.match_id')
+              .whereRef('match_players.match_id', '=', 'matches.id')
+              .where('match_players.player_id', '=', playerId),
+          ),
+        );
+      }
+      const rows = await query.orderBy('created_at').orderBy('id').execute();
+      const players = await matchPlayers(rows.map((row) => row.id));
+      return rows.map((row) => toMatch(row, players.get(row.id) ?? []));
+    },
+
+    async lastSeqs(matchIds) {
+      const seqs = new Map(matchIds.map((id) => [id, 0]));
+      for (const chunk of chunks([...seqs.keys()])) {
+        const rows = await db
+          .selectFrom('match_events')
+          .select('match_id')
+          .select((eb) => eb.fn.max('seq').as('seq'))
+          .where('match_id', 'in', chunk)
+          .groupBy('match_id')
+          .execute();
+        for (const row of rows) {
+          seqs.set(row.match_id, Number(row.seq));
+        }
+      }
+      return seqs;
+    },
+
+    async loadLogs(matchIds) {
+      const logs = new Map<string, { entries: LogEntry[]; throws: Map<string, ThrowRecord> } | Error>(
+        matchIds.map((id) => [id, { entries: [], throws: new Map() }]),
+      );
+      for (const chunk of chunks([...logs.keys()])) {
+        const entries = await db
+          .selectFrom('match_events')
+          .select(['match_id', ...LOG_COLUMNS])
+          .where('match_id', 'in', chunk)
+          .orderBy('match_id')
+          .orderBy('seq')
+          .execute();
+        const throws = await db.selectFrom('throws').selectAll().where('match_id', 'in', chunk).execute();
+        for (const row of entries) {
+          const log = logs.get(row.match_id);
+          if (log === undefined || log instanceof Error) {
+            continue;
+          }
+          try {
+            log.entries.push(toLogEntry(row));
+          } catch (error) {
+            logs.set(row.match_id, error instanceof Error ? error : new Error(String(error)));
+          }
+        }
+        for (const row of throws) {
+          const log = logs.get(row.match_id);
+          if (log !== undefined && !(log instanceof Error)) {
+            log.throws.set(row.id, toThrow(row));
+          }
+        }
+      }
+      return logs;
     },
 
     async loadLog(matchId) {
       const entries = await db
         .selectFrom('match_events')
-        .select(['seq', 'type', 'throw_id', 'player_id', 'reason', 'success', 'created_at'])
+        .select(LOG_COLUMNS)
         .where('match_id', '=', matchId)
         .orderBy('seq')
         .execute();
