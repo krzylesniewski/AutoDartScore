@@ -19,6 +19,9 @@ import { handleUnauthorized, readToken } from './session';
 // VITE_API_URL wskazuje osobny serwer API.
 export const API_BASE = resolveApiBase(import.meta.env.VITE_API_URL);
 
+// Zawieszone żądanie nie może trzymać ekranu gry w stanie zajętości bez końca.
+export const REQUEST_TIMEOUT_MS = 8000;
+
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly code: string;
@@ -43,7 +46,9 @@ function withToken(init: RequestInit, token: string): RequestInit {
 
 async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {}): Promise<T> {
   const sentToken = readToken();
-  const response = await fetch(`${API_BASE}${path}`, sentToken === null ? init : withToken(init, sentToken));
+  // Przekroczenie czasu nie jest ApiRequestError, więc wywołujący traktują je jak błąd sieci.
+  const timed: RequestInit = { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) };
+  const response = await fetch(`${API_BASE}${path}`, sentToken === null ? timed : withToken(timed, sentToken));
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const error = ApiError.safeParse(body);
