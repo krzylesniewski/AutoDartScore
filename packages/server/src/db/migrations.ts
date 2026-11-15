@@ -34,6 +34,11 @@ async function rebuildMatchEvents(db: Kysely<LifecycleMigrationTables>): Promise
   await db.schema.alterTable('match_events_next').renameTo('match_events').execute();
 }
 
+async function createListIndexes(db: Kysely<unknown>): Promise<void> {
+  await db.schema.createIndex('throws_match_id_idx').on('throws').column('match_id').execute();
+  await db.schema.createIndex('match_players_player_id_idx').on('match_players').column('player_id').execute();
+}
+
 // Tylko typy text, integer i real oraz brak funkcji JSON, żeby migracje działały też na PostgreSQL.
 const migrations: Record<string, Migration> = {
   '0001_initial': {
@@ -141,6 +146,17 @@ const migrations: Record<string, Migration> = {
       const typed = db as Kysely<CheckoutRuleMigrationTables>;
       await typed.schema.alterTable('matches').addColumn('checkout_rule', 'text').execute();
       await typed.updateTable('matches').set({ checkout_rule: 'new_each_attempt' }).where('practice_mode', '=', 'checkouts').execute();
+    },
+  },
+  // match_events nie potrzebuje indeksu, bo wyszukiwanie po match_id obsługuje już klucz główny (match_id, seq).
+  '0007_list_indexes': {
+    async up(db: Kysely<unknown>) {
+      // Jak w 0002_match_lifecycle: SQLite nie dostaje transakcji od migratora, PostgreSQL już ją przekazuje.
+      if (db.isTransaction) {
+        await createListIndexes(db);
+        return;
+      }
+      await db.transaction().execute(createListIndexes);
     },
   },
 };

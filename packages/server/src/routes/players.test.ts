@@ -129,3 +129,22 @@ describe('duplicate player names', () => {
     await createPlayer(t.app, 'Anna');
   });
 });
+
+describe('profile changes', () => {
+  it('shows only the latest of three changes in the players and the match list', async () => {
+    const anna = await createPlayer(t.app, 'Anna');
+    const bartek = await createPlayer(t.app, 'Bartek');
+    const game = await createGame(t.app, { type: 'match', playerIds: [anna.id, bartek.id], startingScore: 301, bestOf: 1 });
+    for (const change of [{ name: 'Ania' }, { avatar: '🎯', color: 5 }, { name: 'Anka', color: 11 }]) {
+      expect((await patchPlayer(t.app, anna.id, change)).statusCode).toBe(200);
+    }
+    const latest = { ...anna, name: 'Anka', avatar: '🎯', color: 11 };
+
+    const players = await t.app.inject({ method: 'GET', url: '/players' });
+    expect(players.json()).toContainEqual(latest);
+    expect(players.json()).toHaveLength(2);
+
+    const matches = await t.app.inject({ method: 'GET', url: '/matches' });
+    expect(matches.json()).toMatchObject([{ id: game.id, players: [{ id: anna.id, name: 'Anka', avatar: '🎯', color: 11 }, { id: bartek.id, name: 'Bartek' }] }]);
+  });
+});

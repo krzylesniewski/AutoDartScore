@@ -1,7 +1,9 @@
 import { checkoutTarget } from '@autoscore/engine';
+import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
 import { defaultPlayerColor } from '../store/player-color.js';
+import { LEG_301 } from '../test-helpers.js';
 import { migrateTo, migrateToLatest, openDatabase } from './index.js';
 
 describe('migrateToLatest', () => {
@@ -277,6 +279,94 @@ describe('migrateToLatest', () => {
       for (const player of players) {
         expect(player.color).toBe(defaultPlayerColor(player.id));
       }
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('adds the list indexes under 0007_list_indexes and keeps the games written under 0006_checkout_rule', async () => {
+    const db = openDatabase(':memory:');
+    await migrateTo(db, '0006_checkout_rule');
+    const createdAt = '2026-11-15T18:30:00.000Z';
+    await db
+      .insertInto('players')
+      .values([
+        { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: 0, created_at: createdAt },
+        { id: 'p2', name: 'Bartek', avatar: null, color: 2, guest: 0, created_at: createdAt },
+      ])
+      .execute();
+    await db
+      .insertInto('matches')
+      .values({
+        id: 'm1',
+        type: 'match',
+        practice_mode: null,
+        starting_score: 301,
+        legs_to_win: 1,
+        first_player_index: 0,
+        counts_to_stats: 1,
+        checkout_range: null,
+        checkout_seed: null,
+        checkout_rule: null,
+        created_at: createdAt,
+      })
+      .execute();
+    await db
+      .insertInto('match_players')
+      .values([
+        { match_id: 'm1', player_id: 'p1', position: 0 },
+        { match_id: 'm1', player_id: 'p2', position: 1 },
+      ])
+      .execute();
+    const darts = LEG_301.map(([segment, multiplier], index) => ({
+      id: `t${index + 1}`,
+      match_id: 'm1',
+      event_id: `00000000-0000-4000-8000-00000000000${index + 1}`,
+      source: 'keypad',
+      sequence: index,
+      segment,
+      multiplier,
+      confidence: 1,
+      detected_at: createdAt,
+      received_at: createdAt,
+    }));
+    await db.insertInto('throws').values(darts).execute();
+    await db
+      .insertInto('match_events')
+      .values(darts.map((dart, index) => ({ match_id: 'm1', seq: index + 1, type: 'throw' as const, throw_id: dart.id, player_id: null, reason: null, success: null, created_at: createdAt })))
+      .execute();
+    const rows = async () => ({
+      matches: await db.selectFrom('matches').selectAll().execute(),
+      matchPlayers: await db.selectFrom('match_players').selectAll().orderBy('position').execute(),
+      throws: await db.selectFrom('throws').selectAll().orderBy('id').execute(),
+      events: await db.selectFrom('match_events').selectAll().orderBy('seq').execute(),
+    });
+    const indexes = async () =>
+      (await sql<{ name: string }>`select name from sqlite_master where type = 'index' and name like '%_idx' order by name`.execute(db)).rows.map((row) => row.name);
+    const migrations = async () => (await sql<{ name: string }>`select name from kysely_migration order by name`.execute(db)).rows.map((row) => row.name);
+    const before = await rows();
+    expect(await indexes()).toEqual([]);
+
+    await migrateToLatest(db);
+    expect(await indexes()).toEqual(['match_players_player_id_idx', 'throws_match_id_idx']);
+    expect(await rows()).toEqual(before);
+    const applied = await migrations();
+    expect(applied.at(-1)).toBe('0007_list_indexes');
+
+    await migrateToLatest(db);
+    expect(await migrations()).toEqual(applied);
+    expect(await indexes()).toEqual(['match_players_player_id_idx', 'throws_match_id_idx']);
+    expect(await rows()).toEqual(before);
+
+    const app = await buildApp({ db, random: () => 0 });
+    try {
+      const list = await app.inject({ method: 'GET', url: '/matches' });
+      expect(list.statusCode).toBe(200);
+      expect(list.json()).toMatchObject([{ id: 'm1', status: 'finished', winnerId: 'p1' }]);
+      const rankings = await app.inject({ method: 'GET', url: '/stats/rankings' });
+      expect(rankings.statusCode).toBe(200);
+      expect(rankings.json()).toMatchObject({ games: 1, legs: 1 });
     } finally {
       await app.close();
       await db.destroy();

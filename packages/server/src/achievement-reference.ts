@@ -1,5 +1,5 @@
 import { isGameFinished } from '@autoscore/engine';
-import { effectiveThrows, replayMatch } from './replay.js';
+import type { ReplayCache } from './replay-cache.js';
 import { buildRecords, EMPTY_RECORDS, mergeRecords, type PlayerRecords } from './stats/achievements.js';
 import type { Store } from './store/store.js';
 
@@ -15,32 +15,27 @@ export interface AchievementReference {
 
 interface Dependencies {
   readonly store: Store;
+  readonly cache: ReplayCache;
 }
 
 // Rekordy gracza z ukończonych meczów 1v1, trzymane tylko w pamięci. Po restarcie serwera budujemy je od nowa z logu.
-export function createAchievementReference({ store }: Dependencies): AchievementReference {
+export function createAchievementReference({ store, cache: replays }: Dependencies): AchievementReference {
   const cache = new Map<string, PlayerReference>();
   let generation = 0;
 
+  // Uszkodzony wcześniejszy mecz jest pomijany, więc nie blokuje rzutek w nowym meczu.
   async function build(playerId: string, currentMatchId: string): Promise<PlayerReference> {
     let finishedMatches = 0;
     let records = EMPTY_RECORDS;
-    for (const matchId of await store.findMatchIdsForPlayer(playerId, ['match'])) {
-      if (matchId === currentMatchId) {
-        continue;
-      }
-      const match = await store.findMatch(matchId);
-      if (!match) {
-        continue;
-      }
-      const { state, events } = replayMatch(match, effectiveThrows(await store.loadLog(matchId)));
+    const matches = (await store.listMatches({ playerId, types: ['match'], countsToStats: true })).filter((match) => match.id !== currentMatchId);
+    for (const { match, replay } of await replays.many(matches)) {
       // Porzucona gra nigdy nie jest ukończona, więc też tu odpada.
-      if (!isGameFinished(state)) {
+      if (!isGameFinished(replay.game)) {
         continue;
       }
       finishedMatches += 1;
       const playerIds = match.players.map((player) => player.id);
-      records = mergeRecords(records, buildRecords(playerIds, events).get(playerId) ?? EMPTY_RECORDS);
+      records = mergeRecords(records, buildRecords(playerIds, replay.events).get(playerId) ?? EMPTY_RECORDS);
     }
     return { finishedMatches, records };
   }
