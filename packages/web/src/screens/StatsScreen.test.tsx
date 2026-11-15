@@ -17,6 +17,7 @@ const players: Player[] = [
 const emptyHeadToHead: HeadToHead = {
   playerId: 'p1',
   opponentId: 'p2',
+  period: 'all',
   matchesPlayed: 0,
   matchesWon: 0,
   opponentMatchesWon: 0,
@@ -47,6 +48,7 @@ function stats(playerId: string, overrides: Partial<PlayerStats> = {}): PlayerSt
     }),
     playerId,
     filter: 'all',
+    period: 'all',
     matchesPlayed: 2,
     matchesWon: 1,
     ...overrides,
@@ -59,6 +61,7 @@ function entry(playerId: string, name: string, position: number, value: number):
 
 const rankingsFixture: StatsRankings = {
   filter: 'all',
+  period: 'all',
   games: 23,
   legs: 61,
   players: [
@@ -74,6 +77,7 @@ const rankingsFixture: StatsRankings = {
 };
 
 const overallFixture: StatsOverall = {
+  period: 'all',
   games: 23,
   legs: 61,
   darts: 1234,
@@ -140,7 +144,7 @@ beforeEach(() => {
       }
       const formRequest = /^\/api\/players\/([^/]+)\/form\?type=(\w+)$/.exec(url);
       if (formRequest) {
-        return json(200, { playerId: formRequest[1], filter: formRequest[2], points: form });
+        return json(200, { playerId: formRequest[1], filter: formRequest[2], period: 'all', points: form });
       }
       const headToHeadRequest = /\/head-to-head\/([^/]+)$/.exec(url);
       if (headToHeadRequest) {
@@ -374,7 +378,7 @@ describe('StatsScreen: overall', () => {
   });
 
   it('shows one message without darts', async () => {
-    overall = () => json(200, { games: 0, legs: 0, darts: 0, average: null, players: [] });
+    overall = () => json(200, { period: 'all', games: 0, legs: 0, darts: 0, average: null, players: [] });
     await openOverall();
     expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
     expect(screen.getByText('Wszystkie gry liczone do statystyk razem')).toBeTruthy();

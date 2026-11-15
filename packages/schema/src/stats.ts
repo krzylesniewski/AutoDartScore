@@ -11,8 +11,15 @@ import { PlayerColor } from './player.js';
 export const StatsFilter = z.enum(['all', 'match', 'casual', 'practice']);
 export type StatsFilter = z.infer<typeof StatsFilter>;
 
+// Okres liczony wstecz od zegara serwera. Gra wchodzi, gdy createdAt >= teraz minus N dni. all nie ma granicy.
+export const StatsPeriod = z.enum(['30d', '90d', 'all']);
+export type StatsPeriod = z.infer<typeof StatsPeriod>;
+
+export const STATS_PERIOD_DAYS: Record<StatsPeriod, number | null> = { '30d': 30, '90d': 90, all: null };
+
 export const PlayerStatsQuery = z.object({
   type: StatsFilter.default('all'),
+  period: StatsPeriod.default('all'),
 });
 export type PlayerStatsQuery = z.infer<typeof PlayerStatsQuery>;
 
@@ -42,6 +49,7 @@ const PlayerId = z.string().min(1);
 export const PlayerStats = PlayerStatLine.extend({
   playerId: PlayerId,
   filter: StatsFilter,
+  period: StatsPeriod,
   matchesPlayed: Count,
   matchesWon: Count,
 });
@@ -96,7 +104,7 @@ export type MatchSummary = z.infer<typeof MatchSummary>;
 // Ranking graczy. Średnia liczy tylko ukończone legi, a pozycję dostaje gracz z co najmniej MIN_LEGS_FOR_AVERAGE legami.
 export const MIN_LEGS_FOR_AVERAGE = 3;
 
-export const RankingsQuery = z.object({ type: StatsFilter.default('all') });
+export const RankingsQuery = z.object({ type: StatsFilter.default('all'), period: StatsPeriod.default('all') });
 export type RankingsQuery = z.infer<typeof RankingsQuery>;
 
 export const RankedPlayer = z.object({
@@ -123,6 +131,7 @@ export type RankingEntry = z.infer<typeof RankingEntry>;
 
 export const StatsRankings = z.object({
   filter: StatsFilter,
+  period: StatsPeriod,
   games: Count,
   legs: Count,
   players: z.array(RankedPlayer),
@@ -134,6 +143,9 @@ export const StatsRankings = z.object({
 export type StatsRankings = z.infer<typeof StatsRankings>;
 
 // Overall: wszystkie gry liczone do statystyk razem, bez filtra po typie.
+export const OverallQuery = z.object({ period: StatsPeriod.default('all') });
+export type OverallQuery = z.infer<typeof OverallQuery>;
+
 export const OverallPlayer = z.object({
   playerId: PlayerId,
   name: z.string().min(1),
@@ -147,6 +159,7 @@ export const OverallPlayer = z.object({
 export type OverallPlayer = z.infer<typeof OverallPlayer>;
 
 export const StatsOverall = z.object({
+  period: StatsPeriod,
   games: Count,
   legs: Count,
   darts: Count, // tylko zapisani gracze, bez gości
@@ -156,9 +169,13 @@ export const StatsOverall = z.object({
 export type StatsOverall = z.infer<typeof StatsOverall>;
 
 // Bilans dwóch graczy z ukończonych meczów 1v1. Porzucona gra nie ma zwycięzcy, więc nie wchodzi do bilansu.
+export const HeadToHeadQuery = z.object({ period: StatsPeriod.default('all') });
+export type HeadToHeadQuery = z.infer<typeof HeadToHeadQuery>;
+
 export const HeadToHead = z.object({
   playerId: PlayerId,
   opponentId: PlayerId,
+  period: StatsPeriod,
   matchesPlayed: Count,
   matchesWon: Count,
   opponentMatchesWon: Count,
@@ -173,7 +190,7 @@ export type HeadToHead = z.infer<typeof HeadToHead>;
 // Forma gracza: średnia na 3 rzutki z ukończonych legów każdej z ostatnich gier.
 export const FORM_GAMES = 20;
 
-export const PlayerFormQuery = z.object({ type: StatsFilter.default('all') });
+export const PlayerFormQuery = z.object({ type: StatsFilter.default('all'), period: StatsPeriod.default('all') });
 export type PlayerFormQuery = z.infer<typeof PlayerFormQuery>;
 
 export const PlayerFormPoint = z.object({
@@ -188,6 +205,7 @@ export type PlayerFormPoint = z.infer<typeof PlayerFormPoint>;
 export const PlayerForm = z.object({
   playerId: PlayerId,
   filter: StatsFilter,
+  period: StatsPeriod,
   points: z.array(PlayerFormPoint).max(FORM_GAMES), // od najstarszej gry
 });
 export type PlayerForm = z.infer<typeof PlayerForm>;

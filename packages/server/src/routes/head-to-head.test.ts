@@ -32,6 +32,7 @@ describe('GET /players/:id/head-to-head/:opponentId', () => {
     expect(await headToHead(anna, bartek)).toEqual({
       playerId: anna,
       opponentId: bartek,
+      period: 'all',
       matchesPlayed: 1,
       matchesWon: 1,
       opponentMatchesWon: 0,
@@ -56,6 +57,7 @@ describe('GET /players/:id/head-to-head/:opponentId', () => {
     expect(await headToHead(anna, bartek)).toEqual({
       playerId: anna,
       opponentId: bartek,
+      period: 'all',
       matchesPlayed: 0,
       matchesWon: 0,
       opponentMatchesWon: 0,

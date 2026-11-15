@@ -8,6 +8,7 @@ function overallPlayer(playerId: string, name: string, darts: number, average: n
 }
 
 const overall: StatsOverall = {
+  period: 'all',
   games: 4,
   legs: 7,
   darts: 1234,

@@ -22,7 +22,7 @@ interface Side {
   darts: number;
 }
 
-export function buildHeadToHead({ playerId, opponentId, games }: HeadToHeadInput): Omit<HeadToHead, 'lastPlayedAt'> {
+export function buildHeadToHead({ playerId, opponentId, games }: HeadToHeadInput): Omit<HeadToHead, 'period' | 'lastPlayedAt'> {
   const own: Side = { matches: 0, legs: 0, points: 0, darts: 0 };
   const opponent: Side = { matches: 0, legs: 0, points: 0, darts: 0 };
   const side = (id: string | null): Side | null => (id === playerId ? own : id === opponentId ? opponent : null);

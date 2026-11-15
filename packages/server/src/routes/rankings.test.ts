@@ -33,6 +33,7 @@ describe('GET /stats/rankings', () => {
   it('answers zeros and empty lists for an empty database', async () => {
     expect(await rankings()).toEqual({
       filter: 'all',
+      period: 'all',
       games: 0,
       legs: 0,
       players: [],

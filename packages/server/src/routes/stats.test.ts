@@ -90,12 +90,12 @@ const noThrows = {
 describe('GET /players/:id/stats', () => {
   it('counts the LEG_301 match for both players', async () => {
     await playLeg301();
-    expect(await stats(anna)).toEqual({ ...annaLeg301, playerId: anna, filter: 'all', matchesPlayed: 1, matchesWon: 1 });
-    expect(await stats(bartek)).toEqual({ ...bartekLeg301, playerId: bartek, filter: 'all', matchesPlayed: 1, matchesWon: 0 });
+    expect(await stats(anna)).toEqual({ ...annaLeg301, playerId: anna, filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 1 });
+    expect(await stats(bartek)).toEqual({ ...bartekLeg301, playerId: bartek, filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 0 });
   });
 
   it('gives zeros and nulls to a player without throws', async () => {
-    expect(await stats(anna)).toEqual({ ...noThrows, playerId: anna, filter: 'all', matchesPlayed: 0, matchesWon: 0 });
+    expect(await stats(anna)).toEqual({ ...noThrows, playerId: anna, filter: 'all', period: 'all', matchesPlayed: 0, matchesWon: 0 });
   });
 
   it('counts a Solo 501 under practice, but not under match', async () => {
@@ -115,7 +115,7 @@ describe('GET /players/:id/stats', () => {
       matchesPlayed: 0,
       matchesWon: 0,
     });
-    expect(await stats(anna, 'match')).toEqual({ ...noThrows, playerId: anna, filter: 'match', matchesPlayed: 0, matchesWon: 0 });
+    expect(await stats(anna, 'match')).toEqual({ ...noThrows, playerId: anna, filter: 'match', period: 'all', matchesPlayed: 0, matchesWon: 0 });
   });
 
   it('adds Solo 501 to checkouts and best leg, but not to legs or matches won', async () => {
@@ -130,7 +130,7 @@ describe('GET /players/:id/stats', () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     await throwDarts(t.app, id, [T(20), T(20), T(20), T(20), T(20), T(20)]);
     expect(await stats(anna)).toEqual(before);
-    expect(await stats(anna, 'practice')).toEqual({ ...noThrows, playerId: anna, filter: 'practice', matchesPlayed: 0, matchesWon: 0 });
+    expect(await stats(anna, 'practice')).toEqual({ ...noThrows, playerId: anna, filter: 'practice', period: 'all', matchesPlayed: 0, matchesWon: 0 });
   });
 
   it('does not count an undone throw', async () => {

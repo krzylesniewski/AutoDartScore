@@ -4,7 +4,7 @@ import { round, threeDartAverage } from './tally.js';
 
 // Czysta logika widoku Overall, bez I/O. Lotki liczą każdą zamkniętą turę, a średnie tylko ukończone legi, jak w rankingu.
 
-export function buildOverall({ players, games }: RankingsInput): StatsOverall {
+export function buildOverall({ players, games }: RankingsInput): Omit<StatsOverall, 'period'> {
   const legs = new Map<string, { points: number; darts: number; legs: number }>();
   const darts = new Map<string, number>();
   let gameCount = 0;
