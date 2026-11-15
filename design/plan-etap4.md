@@ -122,8 +122,8 @@ Równolegle mogą iść: Q1, Q2, Q4, Q5, Q6. Reszta czeka na pliki, które dziel
 **Zależy od:** Q4, Q7.
 
 **Zmiana:**
-1. `useMatch` wysyła `expectedSeq` z każdą komendą z Q7. Odpowiedź 409 `stale_state` przyjmuje stan z odpowiedzi i nie pokazuje błędu (cofnięcie już się wykonało albo stan się zmienił), poza przypadkiem, gdy gracz ma zobaczyć, że nic nie cofnięto.
-2. „Reszta Miss” to jedno zapytanie `rest-miss`; pętla i logika tury znikają z frontu.
+1. `useMatch` wysyła `expectedSeq` z każdą komendą z Q7. Odpowiedź 409 `stale_state` na Cofnij, próbę i pominięcie końcówki (oraz ich cofnięcia) i „Resztę Miss” przyjmuje stan z odpowiedzi i nie pokazuje błędu: ekran pokazuje aktualny stan, a komenda nie jest ponawiana. Komendy potwierdzane w oknie (porzucenie, wznowienie, koniec treningu) po `stale_state` są ponawiane jeden raz z `eventSeq` ze stanu z odpowiedzi; druga odmowa pokazuje dotychczasowy tekst błędu tej komendy (decyzja 2026-11-15).
+2. „Reszta Miss” to jedno zapytanie `rest-miss`; pętla znika z frontu. Zostaje dzisiejsza mała blokada (ten sam rzucający i liczba rzutek), żeby zakolejkowana „Reszta Miss” nie trafiła do następnego gracza.
 
 **Testy:** podwójne Cofnij wysyła drugie zapytanie z tym samym `expectedSeq` i po 409 stan jest spójny; „Reszta Miss” wysyła jedno zapytanie; błąd „Reszty Miss” nie zostawia częściowej tury.
 

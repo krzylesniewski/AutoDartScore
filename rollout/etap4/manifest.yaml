@@ -89,6 +89,7 @@ prs:
     priority: 90
     effort: { brief: high, implement: high, verify: high }
     changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
     scope: ['packages/server/**', '.github/workflows/**', 'deploy/**', 'package.json', 'packages/*/package.json', 'README.md', 'packages/*/README.md']
     briefTags: [deploy]
 
@@ -162,6 +163,7 @@ prs:
     priority: 70
     effort: { brief: high, implement: high, verify: high }
     changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
     scope: ['deploy/**', '.github/workflows/**', 'README.md']
     briefTags: [deploy]
 
@@ -173,6 +175,7 @@ prs:
     priority: 50
     effort: { brief: medium, implement: medium, verify: high }
     changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
     scope: ['deploy/**', '.github/workflows/**']
     briefTags: [deploy]
 
@@ -185,6 +188,7 @@ prs:
     priority: 60
     effort: { brief: high, implement: high, verify: high }
     changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
     scope: ['e2e/**', 'packages/web/**', 'packages/server/**', '.github/workflows/**', 'package.json', 'packages/*/package.json', 'pnpm-workspace.yaml', '.gitignore', 'README.md', 'packages/*/README.md']
     briefTags: [web]
 
@@ -207,6 +211,7 @@ prs:
     priority: 45
     effort: { brief: high, implement: high, verify: high }
     changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
     scope: ['package.json', 'packages/*/package.json', '.github/**', 'README.md']
 
   - id: Q14
@@ -250,5 +255,6 @@ prs:
     priority: 20
     effort: { brief: high, implement: high, verify: high }
     changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
     # Jednorazowe formatowanie dotyka całego repo; forbid dalej chroni plan, CLAUDE.md i design/scena.
     scope: ['**']
