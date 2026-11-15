@@ -78,8 +78,9 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 | `GET` | `/matches/:id` | Bieżący stan gry (`MatchSnapshot`). |
 | `POST` | `/matches/:id/throws` | Rzutka (`HitEvent`). Odpowiedź 201 z `{ throw, events, state }`. |
 | `POST` | `/matches/:id/checkout-attempts` | Próba w treningu checkoutów (`CheckoutAttemptRequest`: `{ success }`). Odpowiedź 201 z `MatchSnapshot`. Po udanej próbie `checkouts` ma nowy cel, po nieudanej ten sam. Sesje zapisane przed wprowadzeniem tej zasady dostają nowy cel po każdej próbie. Inna gra daje 409 `not_checkouts`, zakończony trening 409 `practice_ended`, a porzucony 409 `match_abandoned`. |
-| `POST` | `/matches/:id/checkout-skips` | Pominięcie celu w treningu checkoutów: nowy cel bez próby. Body jest ignorowane. Odpowiedź 201 z `MatchSnapshot`, w którym `attempts`, `successes` i `history` się nie zmieniają, a `skips` rośnie o 1. Błędy jak przy próbie, nieznana gra daje 404 `not_found`. |
-| `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki. Body jest ignorowane. Odpowiedź 200 z `{ undoneThrowId, state }`. W zakończonej grze działa do `editableUntil` ze stanu gry (`finishedAt` plus `AUTOSCORE_MATCH_LOCK_MINUTES`), potem daje 409 `match_locked`. W treningu checkoutów cofa ostatnią próbę albo ostatnie pominięcie, przywraca poprzedni cel i zwraca `undoneThrowId: null`. |
+| `POST` | `/matches/:id/checkout-skips` | Pominięcie celu w treningu checkoutów: nowy cel bez próby. Body jest opcjonalne (`CommandRequest`: `{ expectedSeq }`, patrz niżej). Odpowiedź 201 z `MatchSnapshot`, w którym `attempts`, `successes` i `history` się nie zmieniają, a `skips` rośnie o 1. Błędy jak przy próbie, nieznana gra daje 404 `not_found`. |
+| `POST` | `/matches/:id/rest-miss` | Miss na resztę tury rzucającego (`RestMissRequest`: `{ eventId, expectedSeq? }`). Zapisuje 3, 2 albo 1 rzutkę (przy 0, 1 albo 2 rzutkach w turze) w jednej transakcji, ze `source: "rest-miss"`. Pierwsza dostaje `eventId` z żądania. Odpowiedź 201 z `{ throws, events, state }` (`RestMissResult`). Ponowne wysłanie tego samego `eventId` daje 200 z `throws: []`. Błędy jak przy rzutce: zakończona gra daje 409 `match_finished`, trening checkoutów 409 `throws_not_allowed`. |
+| `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki. Body jest opcjonalne (`CommandRequest`: `{ expectedSeq }`, patrz niżej). Odpowiedź 200 z `{ undoneThrowId, state }`. W zakończonej grze działa do `editableUntil` ze stanu gry (`finishedAt` plus `AUTOSCORE_MATCH_LOCK_MINUTES`), potem daje 409 `match_locked`. W treningu checkoutów cofa ostatnią próbę albo ostatnie pominięcie, przywraca poprzedni cel i zwraca `undoneThrowId: null`. |
 | `GET` | `/matches/:id/summary` | Podsumowanie gry (`MatchSummary`). Każdy wygrany leg w `legs` ma `durationMs`: czas od pierwszej do zamykającej rzutki lega w milisekundach, bez przerw między porzuceniem a wznowieniem. Zabawa ma pustą listę `legs`. Nieznana gra daje 404 `not_found`. |
 | `GET` | `/players/:id/stats` | Statystyki gracza (`PlayerStats`), w tym `winRate` (procent wygranych z ukończonych meczów 1v1 i gier w zabawie, z jednym miejscem po przecinku, `null` bez ukończonych gier) i `t20Hits` (trafienia T20 w zamkniętych turach, także z bustem). Parametry: `type` (`all`, `match`, `casual` albo `practice`, domyślnie `all`) i `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. Odpowiedź ma pola `filter` i `period`. Nieznana wartość parametru daje 400 `invalid_request`, nieznany gracz 404 `not_found`. |
 | `GET` | `/players/:id/form` | Forma gracza (`PlayerForm`): średnia z ukończonych legów każdej z ostatnich 20 gier. Parametry: `type` (`all`, `match`, `casual` albo `practice`, domyślnie `all`) i `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. Odpowiedź ma pola `filter` i `period`. Nieznana wartość parametru daje 400 `invalid_request`. |
@@ -122,9 +123,11 @@ Kodowanie: miss to `segment: 0, multiplier: 0`. Outer Bull to `segment: 25, mult
 
 ### Idempotencja i błędy
 
-Ponowne wysłanie rzutki z tym samym `eventId` do tej samej gry daje 200 z zapisaną rzutką i `events: []`. Serwer nic wtedy nie zapisuje i nic nie wysyła przez WebSocket. Cofnięcie jest nowym wpisem w logu. Wiersz rzutki zostaje w bazie.
+Ponowne wysłanie rzutki z tym samym `eventId` do tej samej gry daje 200 z zapisaną rzutką i `events: []`, jeśli `source`, `sequence`, `segment`, `multiplier`, `confidence` i `detectedAt` są takie same jak w zapisanej rzutce. Inna treść daje 409 `event_id_conflict`. W obu przypadkach serwer nic nie zapisuje i nic nie wysyła przez WebSocket. Ponowne wysłanie `rest-miss` z tym samym `eventId` działa tak samo i daje 200 z `throws: []`. Cofnięcie jest nowym wpisem w logu. Wiersz rzutki zostaje w bazie.
 
-Każdy błąd ma postać `{ "error": "<kod>", "message": "<opis>" }` (`ApiError`).
+Siedem komend przyjmuje opcjonalne `expectedSeq`: cofnięcie, próba i pominięcie checkoutu, `rest-miss`, porzucenie (`POST /matches/:id/abandon`, `AbandonMatchRequest`), wznowienie (`POST /matches/:id/resume`) i koniec treningu (`POST /matches/:id/end`). `expectedSeq` to ostatni `eventSeq`, który widział klient. Inna wartość niż bieżący `eventSeq` gry daje 409 `stale_state` z bieżącym stanem, a serwer nic nie zapisuje i nic nie wysyła przez WebSocket. Bez `expectedSeq` komenda działa na bieżącym stanie, więc dwa cofnięcia z rzędu zdejmują dwie rzutki. Cofnięcie, wznowienie, koniec treningu i pominięcie checkoutu czytają body jako JSON przy każdym `content-type`. Pusty albo niepoprawny JSON i wartość, która nie jest obiektem, znaczą brak body. Obiekt z niepoprawnym `expectedSeq`, na przykład `-1` albo `"3"`, daje 400 `invalid_request`. Kolejność sprawdzeń: błąd body (400), nieznana gra (404), błędy, które nie zależą od logu (`not_checkouts`, `not_practice`, `not_a_participant`, `throws_not_allowed`), w `rest-miss` ponowne wysłanie, potem `stale_state`, a na końcu błędy zależne od logu, na przykład `match_finished` albo `nothing_to_undo`. Dlatego powtórzony `rest-miss` daje 200 także z nieaktualnym `expectedSeq`.
+
+Każdy błąd ma postać `{ "error": "<kod>", "message": "<opis>" }` (`ApiError`). `stale_state` ma dodatkowo pole `state` z bieżącym `MatchSnapshot` (`StaleStateError`).
 
 | Kod | HTTP | Kiedy |
 |---|---|---|
@@ -136,21 +139,23 @@ Każdy błąd ma postać `{ "error": "<kod>", "message": "<opis>" }` (`ApiError`
 | `match_finished` | 409 | Rzutka po końcu gry. |
 | `throws_not_allowed` | 409 | Rzutka w treningu checkoutów. Ten tryb przyjmuje tylko próby. |
 | `not_checkouts` | 409 | Próba albo pominięcie checkoutu w grze, która nie jest treningiem checkoutów. |
-| `event_id_conflict` | 409 | `eventId` jest już użyty w innej grze. |
+| `event_id_conflict` | 409 | `eventId` jest już użyty w innej grze albo w tej samej grze z innym trafieniem. |
+| `stale_state` | 409 | `expectedSeq` różni się od bieżącego `eventSeq` gry. Body ma pole `state` z bieżącym stanem. Serwer nic nie zapisuje. |
 | `nothing_to_undo` | 409 | W logu nie ma rzutki do cofnięcia, a w treningu checkoutów próby ani pominięcia. |
 | `player_name_taken` | 409 | Imię zajęte przez innego zapisanego, niezarchiwizowanego gracza. Wielkość liter i nadmiarowe spacje się nie liczą. |
 | `match_locked` | 409 | Cofnięcie w zakończonej grze po `editableUntil`. Serwer nic nie zapisuje. |
 | `internal_error` | 500 | Nieoczekiwany błąd serwera. |
 
-Żądania POST z body muszą mieć nagłówek `content-type: application/json`. Bez niego curl wysyła dane formularza, a serwer odpowiada 400 `invalid_request` („Unsupported Media Type”). Cofnięcie działa z tym nagłówkiem i bez niego.
+Żądania POST z body muszą mieć nagłówek `content-type: application/json`. Bez niego curl wysyła dane formularza, a serwer odpowiada 400 `invalid_request` („Unsupported Media Type”). Cofnięcie, wznowienie, koniec treningu i pominięcie checkoutu działają z tym nagłówkiem i bez niego.
 
 ### WebSocket
 
 Adres bezpośredni: `ws://localhost:3000/matches/:id/live`. Przez proxy frontu: `/api/matches/:id/live`.
 
 - Po połączeniu serwer wysyła jedno `state_updated` z bieżącym stanem.
-- Po każdej nowej rzutce: `throw_registered`, potem zdarzenia domenowe, potem `state_updated`. Wszystkie mają ten sam `eventSeq`.
-- W meczu 1v1 po zdarzeniach domenowych, a przed `state_updated`, mogą przyjść wiadomości `achievement` (rekord gracza albo pierwsza tura 100+, 120+, 140+ lub 180), z tym samym `eventSeq`.
+- Po każdej nowej rzutce z `POST /matches/:id/throws`: `throw_registered`, potem zdarzenia domenowe, potem `state_updated`. Wszystkie mają ten sam `eventSeq`.
+- Po `rest-miss`: jedno `throw_registered` na każdą zapisaną rzutkę, każde z `eventSeq` swojej rzutki, potem zdarzenia domenowe i `state_updated` z `eventSeq` ostatniej rzutki. Wcześniejszy `eventSeq` mają tylko `throw_registered` poprzednich rzutek.
+- W meczu 1v1 po zdarzeniach domenowych, a przed `state_updated`, mogą przyjść wiadomości `achievement` (rekord gracza albo pierwsza tura 100+, 120+, 140+ lub 180), z tym samym `eventSeq` co `state_updated`.
 - Po cofnięciu: `throw_undone`, potem `state_updated`. W treningu checkoutów po próbie, pominięciu i cofnięciu tylko `state_updated`.
 - Nieznana gra: serwer zamyka połączenie z kodem 4404.
 

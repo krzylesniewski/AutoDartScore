@@ -1,6 +1,7 @@
-import { LiveMessage } from '@autoscore/schema';
+import { randomUUID } from 'node:crypto';
+import { LiveMessage, RestMissResult } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { D, LEG_301, S, createGame, createPlayers, hitEvent, postThrow, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
+import { D, LEG_301, S, createGame, createPlayers, hitEvent, postThrow, restMiss, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
 import { MATCH_NOT_FOUND_CLOSE_CODE } from './live.js';
 
 // Typy ws nie są zależnością pakietu, więc opisujemy tylko to, czego używa test.
@@ -103,6 +104,39 @@ describe('GET /matches/:id/live', () => {
       { type: 'throw_undone', matchId: id, eventSeq: 2, throwId: thrown.throw.id },
       expect.objectContaining({ type: 'state_updated', eventSeq: 2 }),
     ]);
+  });
+
+  it('sends one throw_registered per Miss, then turn_completed and state_updated with the last seq after a rest-miss', async () => {
+    const { id } = await match301(3);
+    await throwDarts(t.app, id, [S(20)]);
+    const subscriber = await subscribe(id);
+    await received(subscriber, 1);
+
+    const response = await restMiss(t.app, id, { eventId: randomUUID() });
+    expect(response.statusCode).toBe(201);
+    const result = RestMissResult.parse(response.json());
+    const messages = (await received(subscriber, 5)).slice(1);
+    expect(messages.map((message) => message.type)).toEqual(['throw_registered', 'throw_registered', 'turn_completed', 'state_updated']);
+    expect(messages.map((message) => message.eventSeq)).toEqual([2, 3, 3, 3]);
+    expect(messages.slice(0, 2)).toEqual(result.throws.map((record, index) => ({ type: 'throw_registered', matchId: id, eventSeq: 2 + index, throw: record })));
+    expect(messages[2]).toEqual({ ...result.events[0], matchId: id, eventSeq: 3 });
+    expect(messages[3]).toEqual({ type: 'state_updated', matchId: id, eventSeq: 3, state: result.state });
+  });
+
+  it('sends nothing for a stale command or a repeated rest-miss', async () => {
+    const { id } = await match301(3);
+    await throwDarts(t.app, id, [S(20)]);
+    const eventId = randomUUID();
+    expect((await restMiss(t.app, id, { eventId })).statusCode).toBe(201);
+    const subscriber = await subscribe(id);
+    await received(subscriber, 1);
+
+    expect((await undo(t.app, id, { expectedSeq: 1 })).statusCode).toBe(409);
+    expect((await restMiss(t.app, id, { eventId })).statusCode).toBe(200);
+    expect((await undo(t.app, id, { expectedSeq: 3 })).statusCode).toBe(200);
+    const messages = await received(subscriber, 3);
+    expect(messages.map((message) => message.type)).toEqual(['state_updated', 'throw_undone', 'state_updated']);
+    expect(messages[1]?.eventSeq).toBe(4);
   });
 
   it('delivers every message to two subscribers and skips idempotent resends', async () => {

@@ -88,28 +88,33 @@ export async function throwDarts(app: FastifyInstance, matchId: string, darts: r
   return results;
 }
 
-export function undo(app: FastifyInstance, matchId: string) {
-  return app.inject({ method: 'POST', url: `/matches/${matchId}/undo` });
+// Bez payload żądanie idzie bez body, jak dotąd.
+export function undo(app: FastifyInstance, matchId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/undo`, ...(payload && { payload }) });
 }
 
 export function checkoutAttempt(app: FastifyInstance, matchId: string, success: boolean) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-attempts`, payload: { success } });
 }
 
-export function checkoutSkip(app: FastifyInstance, matchId: string) {
-  return app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-skips` });
+export function checkoutSkip(app: FastifyInstance, matchId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-skips`, ...(payload && { payload }) });
 }
 
 export function abandon(app: FastifyInstance, matchId: string, payload: object) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/abandon`, payload });
 }
 
-export function resume(app: FastifyInstance, matchId: string) {
-  return app.inject({ method: 'POST', url: `/matches/${matchId}/resume` });
+export function resume(app: FastifyInstance, matchId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/resume`, ...(payload && { payload }) });
 }
 
-export function endPractice(app: FastifyInstance, matchId: string) {
-  return app.inject({ method: 'POST', url: `/matches/${matchId}/end` });
+export function endPractice(app: FastifyInstance, matchId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/end`, ...(payload && { payload }) });
+}
+
+export function restMiss(app: FastifyInstance, matchId: string, payload: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/rest-miss`, payload });
 }
 
 export function patchPlayer(app: FastifyInstance, playerId: string, payload: object) {
