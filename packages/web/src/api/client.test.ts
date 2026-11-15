@@ -1,6 +1,54 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { snapshot } from '../test/snapshots';
-import { ApiRequestError, REQUEST_TIMEOUT_MS, getMatch } from './client';
+import { ApiRequestError, REQUEST_TIMEOUT_MS, StaleStateRequestError, getMatch, undo } from './client';
+
+function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+}
+
+describe('409 replies', () => {
+  it('rejects a stale_state body with StaleStateRequestError carrying the parsed state', async () => {
+    const state = snapshot({ id: 'm1', eventSeq: 9 });
+    vi.stubGlobal('fetch', vi.fn(async () => json(409, { error: 'stale_state', message: 'Match state changed', state })));
+    const caught: unknown = await undo('m1', 7).catch((error: unknown) => error);
+    expect(caught).toBeInstanceOf(StaleStateRequestError);
+    expect(caught).toBeInstanceOf(ApiRequestError);
+    expect(caught).toMatchObject({ name: 'StaleStateRequestError', status: 409, code: 'stale_state', message: 'Match state changed', state });
+  });
+
+  it('rejects a 409 with another code with a plain ApiRequestError', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(409, { error: 'nothing_to_undo', message: 'Match has no throw to undo' })));
+    const caught: unknown = await undo('m1', 7).catch((error: unknown) => error);
+    expect(caught).toBeInstanceOf(ApiRequestError);
+    expect(caught).not.toBeInstanceOf(StaleStateRequestError);
+    expect(caught).toMatchObject({ status: 409, code: 'nothing_to_undo' });
+  });
+});
+
+describe('undo request', () => {
+  function stubUndo() {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => json(200, { undoneThrowId: 't1', state: snapshot({ id: 'm1', eventSeq: 8 }) }));
+    vi.stubGlobal('fetch', fetch);
+    return fetch;
+  }
+
+  it('sends no body without expectedSeq', async () => {
+    const fetch = stubUndo();
+    await undo('m1');
+    const init = fetch.mock.calls[0]?.[1];
+    expect(init?.method).toBe('POST');
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('sends expectedSeq as JSON', async () => {
+    const fetch = stubUndo();
+    await undo('m1', 7);
+    const init = fetch.mock.calls[0]?.[1];
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({ expectedSeq: 7 });
+    expect(new Headers(init?.headers).get('content-type')).toBe('application/json');
+  });
+});
 
 afterEach(() => {
   vi.restoreAllMocks();

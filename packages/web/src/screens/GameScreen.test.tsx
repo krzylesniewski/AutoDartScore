@@ -237,7 +237,7 @@ describe('GameScreen', () => {
     connect();
     tap('Cofnij');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: { expectedSeq: 4 } });
   });
 
   it('shows Nie ma czego cofnąć on 409 nothing_to_undo', async () => {
@@ -422,7 +422,7 @@ describe('GameScreen', () => {
     });
     tap('Cofnij');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: { expectedSeq: 4 } });
     expect(await screen.findByRole('region', { name: 'Klawiatura rzutek' })).toBeTruthy();
     expect(screen.queryByText('Mecz zakończony')).toBeNull();
   });
@@ -454,7 +454,7 @@ describe('GameScreen', () => {
     connect(finishedCasualGame);
     tap('Cofnij');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: { expectedSeq: 4 } });
     expect(await screen.findByRole('region', { name: 'Klawiatura rzutek' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Zabawa zakończona · ranking miejsc' })).toBeNull();
   });
@@ -525,7 +525,7 @@ describe('keyboard shortcuts and checkout entry', () => {
     connect();
     fireEvent.keyDown(window, { key: 'Backspace' });
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: { expectedSeq: 4 } });
   });
 
   it('posts a Space as a Miss', async () => {
@@ -620,88 +620,26 @@ describe('keyboard shortcuts and checkout entry', () => {
 });
 
 describe('Reszta Miss', () => {
-  // Odpowiedź jak z serwera: rzutka dopisana do tury, a po trzeciej tura przechodzi na drugiego gracza.
-  function advancing(start: MatchSnapshot): (call: Call) => Promise<Response> {
-    let current = start;
-    return async (call) => {
-      const hit = HitEvent.parse(call.body);
-      const darts = [...current.currentDarts, { segment: hit.segment, multiplier: hit.multiplier }];
-      current =
-        darts.length === 3
-          ? { ...current, eventSeq: current.eventSeq + 1, currentDarts: [], currentPlayerId: 'p1' }
-          : { ...current, eventSeq: current.eventSeq + 1, currentDarts: darts };
-      return json(201, throwResult(call, current));
-    };
-  }
+  const restMissUrl = `/api/matches/${MATCH_ID}/rest-miss`;
 
-  function misses() {
-    return calls.map((call) => HitEvent.parse(call.body));
-  }
-
-  it.each([
-    [0, 3],
-    [1, 2],
-    [2, 1],
-  ])('posts the rest of the turn as misses with %i darts thrown', async (thrown, expected) => {
+  // Liczbę brakujących rzutek wylicza serwer, więc klient wysyła jedną komendę niezależnie od stanu tury.
+  it.each([0, 1, 2])('posts one rest-miss command with %i darts thrown', async (thrown) => {
     const start: MatchSnapshot = { ...initial, currentDarts: Array.from({ length: thrown }, () => ({ segment: 20, multiplier: 1 }) as const) };
-    respond = advancing(start);
+    respond = async () => json(200, { throws: [], events: [], state: { ...start, eventSeq: 5, currentDarts: [], currentPlayerId: 'p1' } });
     connect(start);
-    tap('Reszta Miss');
-    await vi.waitFor(() => expect(calls).toHaveLength(expected));
-    await flush();
-    expect(calls).toHaveLength(expected);
-    expect(calls.every((call) => call.url === `/api/matches/${MATCH_ID}/throws`)).toBe(true);
-    expect(misses().map(({ segment, multiplier }) => ({ segment, multiplier }))).toEqual(Array.from({ length: expected }, () => ({ segment: 0, multiplier: 0 })));
-    expect(new Set(misses().map((hit) => hit.eventId)).size).toBe(expected);
-    expect(misses().map((hit) => hit.sequence)).toEqual(Array.from({ length: expected }, (_, index) => index));
-  });
-
-  it('sends the next miss only after the previous response', async () => {
-    const next = advancing(initial);
-    const pending: (() => void)[] = [];
-    respond = (call) => new Promise((resolve) => pending.push(() => resolve(next(call))));
-    connect();
     tap('Reszta Miss');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
     await flush();
-    expect(calls).toHaveLength(1);
-    pending.shift()?.();
-    await vi.waitFor(() => expect(calls).toHaveLength(2));
-    await flush();
-    expect(calls).toHaveLength(2);
-    pending.shift()?.();
-    await vi.waitFor(() => expect(calls).toHaveLength(3));
-    pending.shift()?.();
-    await flush();
-    expect(calls).toHaveLength(3);
+    expect(calls).toEqual([{ url: restMissUrl, body: { eventId: expect.any(String) as unknown, expectedSeq: 4 } }]);
   });
 
-  it('stops at the first failed miss', async () => {
+  it('shows a failed throw after 409 match_finished', async () => {
     respond = async () => json(409, { error: 'match_finished', message: 'Match is finished' });
     connect();
     tap('Reszta Miss');
     expect(await screen.findByText('Nie udało się wysłać rzutki')).toBeTruthy();
     await flush();
-    expect(calls).toHaveLength(1);
-  });
-
-  it('stops when a response shows another thrower', async () => {
-    respond = async (call) => json(201, throwResult(call, { ...initial, eventSeq: 5, currentDarts: [], currentPlayerId: 'p1' }));
-    connect();
-    tap('Reszta Miss');
-    await vi.waitFor(() => expect(calls).toHaveLength(1));
-    await flush();
-    await flush();
-    expect(calls).toHaveLength(1);
-  });
-
-  it('stops when a response shows the same turn without the miss', async () => {
-    connect();
-    tap('Reszta Miss');
-    await vi.waitFor(() => expect(calls).toHaveLength(1));
-    await flush();
-    await flush();
-    expect(calls).toHaveLength(1);
+    expect(calls.map((call) => call.url)).toEqual([restMissUrl]);
   });
 
   it('is disabled and posts nothing while the connection is not open', async () => {
@@ -744,7 +682,7 @@ describe('abandon and resume', () => {
 
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Porzuć mecz' }));
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/abandon`, body: { playerId: 'p2' } });
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/abandon`, body: { playerId: 'p2', expectedSeq: 4 } });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(await screen.findByText('Mecz porzucony. Tylko do odczytu.')).toBeTruthy();
   });
@@ -757,7 +695,7 @@ describe('abandon and resume', () => {
     fireEvent.change(within(dialog()).getByRole('textbox', { name: 'Powód (opcjonalnie)' }), { target: { value: ' koniec prądu ' } });
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Porzuć mecz' }));
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]?.body).toEqual({ playerId: 'p1', reason: 'koniec prądu' });
+    expect(calls[0]?.body).toEqual({ playerId: 'p1', reason: 'koniec prądu', expectedSeq: 4 });
   });
 
   it('closes on Anuluj and on Escape without a request', () => {
@@ -786,7 +724,7 @@ describe('abandon and resume', () => {
 
     tap('Wznów mecz');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/resume`, body: undefined });
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/resume`, body: { expectedSeq: 5 } });
     await vi.waitFor(() => expect((screen.getByRole('button', { name: '20' }) as HTMLButtonElement).disabled).toBe(false));
     expect(screen.queryByText('Mecz porzucony. Tylko do odczytu.')).toBeNull();
   });
@@ -905,7 +843,7 @@ describe('end practice', () => {
 
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Zakończ trening' }));
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/end`, body: undefined });
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/end`, body: { expectedSeq: 2 } });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(await screen.findByText('Trening zakończony. Tylko do odczytu.')).toBeTruthy();
     expect(screen.getByText('Zakończony')).toBeTruthy();
@@ -977,11 +915,16 @@ describe('checkout practice', () => {
   it('posts a success and a failure and shows the next target', async () => {
     connect(fresh);
     tap('Udało się');
-    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true }]));
+    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true, expectedSeq: 1 }]));
     expect(await screen.findByText('1 z 1 · 100%')).toBeTruthy();
     expect(within(screen.getByRole('region', { name: 'Końcówka' })).getByText('64')).toBeTruthy();
     tap('Nie udało się');
-    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true }, { success: false }]));
+    await vi.waitFor(() =>
+      expect(attemptBodies()).toEqual([
+        { success: true, expectedSeq: 1 },
+        { success: false, expectedSeq: 2 },
+      ]),
+    );
   });
 
   it('sends one request for a double click', async () => {
@@ -995,7 +938,7 @@ describe('checkout practice', () => {
     pending.shift()?.();
     await flush();
     await flush();
-    expect(attemptBodies()).toEqual([{ success: true }]);
+    expect(attemptBodies()).toEqual([{ success: true, expectedSeq: 1 }]);
   });
 
   it('undoes one attempt for a double click on Cofnij', async () => {
@@ -1008,7 +951,7 @@ describe('checkout practice', () => {
     pending.shift()?.();
     await flush();
     await flush();
-    expect(calls).toEqual([{ url: `/api/matches/${MATCH_ID}/undo`, body: undefined }]);
+    expect(calls).toEqual([{ url: `/api/matches/${MATCH_ID}/undo`, body: { expectedSeq: 2 } }]);
   });
 
   it('disables Cofnij before the first attempt', () => {
@@ -1027,7 +970,11 @@ describe('checkout practice', () => {
     await flush();
     fireEvent.keyDown(window, { key: '0' });
     await vi.waitFor(() => expect(attemptBodies()).toHaveLength(3));
-    expect(attemptBodies()).toEqual([{ success: true }, { success: true }, { success: false }]);
+    expect(attemptBodies()).toEqual([
+      { success: true, expectedSeq: 1 },
+      { success: true, expectedSeq: 2 },
+      { success: false, expectedSeq: 2 },
+    ]);
   });
 
   it.each(['Głos', 'Menu gry'])('leaves Enter to the focused %s', async (name) => {
@@ -1044,7 +991,7 @@ describe('checkout practice', () => {
     const failure = screen.getByRole('button', { name: 'Nie udało się' });
     failure.focus();
     expect(fireEvent.keyDown(failure, { key: 'Enter' })).toBe(false);
-    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true }]));
+    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true, expectedSeq: 1 }]));
   });
 
   it('records a success for 1 with focus on the voice toggle', async () => {
@@ -1052,14 +999,14 @@ describe('checkout practice', () => {
     const toggle = screen.getByRole('button', { name: 'Głos' });
     toggle.focus();
     fireEvent.keyDown(toggle, { key: '1' });
-    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true }]));
+    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true, expectedSeq: 1 }]));
   });
 
   it('undoes on Backspace', async () => {
     connect(tried);
     fireEvent.keyDown(window, { key: 'Backspace' });
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+    expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: { expectedSeq: 2 } });
   });
 
   describe('Nowa końcówka', () => {
@@ -1074,7 +1021,7 @@ describe('checkout practice', () => {
         .map((row) => row.textContent ?? '');
     }
 
-    it('posts once without a body on a click and on N', async () => {
+    it('posts once with the last eventSeq on a click and on N', async () => {
       respond = async () => json(201, skippedFresh);
       connect(fresh);
       tap('Nowa końcówka');
@@ -1084,8 +1031,8 @@ describe('checkout practice', () => {
       await vi.waitFor(() => expect(calls).toHaveLength(2));
       await flush();
       expect(calls).toEqual([
-        { url: skipUrl, body: undefined },
-        { url: skipUrl, body: undefined },
+        { url: skipUrl, body: { expectedSeq: 1 } },
+        { url: skipUrl, body: { expectedSeq: 2 } },
       ]);
     });
 
@@ -1100,7 +1047,7 @@ describe('checkout practice', () => {
       pending.shift()?.();
       await flush();
       await flush();
-      expect(calls).toEqual([{ url: skipUrl, body: undefined }]);
+      expect(calls).toEqual([{ url: skipUrl, body: { expectedSeq: 1 } }]);
     });
 
     it('shows the new target and keeps the counter and the recent attempts', async () => {
@@ -1127,7 +1074,7 @@ describe('checkout practice', () => {
       expect(within(screen.getByRole('region', { name: 'Końcówka' })).getByText('0 z 0 · —')).toBeTruthy();
       tap('Cofnij');
       await vi.waitFor(() => expect(calls).toHaveLength(2));
-      expect(calls[1]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: undefined });
+      expect(calls[1]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: { expectedSeq: 2 } });
     });
 
     it('shows a failed skip', async () => {
