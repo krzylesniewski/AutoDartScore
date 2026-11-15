@@ -1,4 +1,4 @@
-import type { MatchListItem, Player, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsRankings } from '@autoscore/schema';
+import type { MatchListItem, Player, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsPeriod, StatsRankings } from '@autoscore/schema';
 import { Fragment, useEffect, useState, type DependencyList } from 'react';
 import { ApiRequestError, getOverall, getPlayerForm, getPlayerStats, getRankings, listMatches, listPlayers } from '../api/client';
 import { AppNav } from '../components/AppNav';
@@ -11,6 +11,7 @@ import { PlayerProfile } from '../components/PlayerProfile';
 import { RankingBoard } from '../components/RankingBoard';
 import { WarningIcon } from '../components/icons';
 import { formatAverage, formatBestLeg, formatDoublesParts, formatNumber, formatPercent } from '../game/format-stat';
+import { readStatsPeriod, writeStatsPeriod } from '../game/stats-period';
 import { pl } from '../i18n/pl';
 
 const RANKING_HREF = '#/stats';
@@ -32,6 +33,14 @@ type RankingView = StatsFilter | 'overall';
 
 const RANKING_VIEWS: readonly FilterOption<RankingView>[] = [...FILTERS, { value: 'overall', label: pl.filterOverall }];
 
+const PERIODS: readonly FilterOption<StatsPeriod>[] = [
+  { value: '30d', label: pl.period30d },
+  { value: '90d', label: pl.period90d },
+  { value: 'all', label: pl.periodAll },
+];
+
+// Poniżej sm filtry stoją jeden pod drugim na całą szerokość, od sm obok siebie.
+const filterRow = 'flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-x-8';
 const label = 'font-display text-[15px] font-bold tracking-[0.18em] text-(--color-text-muted) uppercase';
 const title = 'font-display text-[length:clamp(2.5rem,10vw,4rem)] leading-[0.9] font-black tracking-[0.01em]';
 const panelHeading = 'font-display text-[26px] leading-tight font-extrabold';
@@ -100,13 +109,27 @@ function useLoaded<T>(load: () => Promise<T>, errorMessage: string, deps: Depend
   return loaded;
 }
 
+// Okres jest tu, a nie w widokach, bo App renderuje ten ekran w tym samym miejscu drzewa dla rankingu i karty gracza.
+// Dzięki temu wybór przechodzi między nimi bez ponownego czytania localStorage.
 export function StatsScreen({ playerId }: { playerId: string | null }) {
+  const [period, setPeriod] = useState<StatsPeriod>(readStatsPeriod);
+
+  function changePeriod(next: StatsPeriod): void {
+    setPeriod(next);
+    writeStatsPeriod(next);
+  }
+
   return (
     <div className="flex h-full flex-col">
       <AppNav current="stats" />
-      {playerId === null ? <Ranking /> : <PlayerCard playerId={playerId} />}
+      {playerId === null ? <Ranking period={period} onPeriodChange={changePeriod} /> : <PlayerCard playerId={playerId} period={period} onPeriodChange={changePeriod} />}
     </div>
   );
+}
+
+interface PeriodProps {
+  period: StatsPeriod;
+  onPeriodChange(period: StatsPeriod): void;
 }
 
 interface FilterButtonsProps<T extends string> {
@@ -135,16 +158,21 @@ function FilterButtons<T extends string>({ options, filter, onChange, labelledBy
 
 type RankingData = { view: 'overall'; overall: StatsOverall } | { view: 'ranking'; rankings: StatsRankings };
 
-function loadView(view: RankingView): Promise<RankingData> {
+function loadView(view: RankingView, period: StatsPeriod): Promise<RankingData> {
   if (view === 'overall') {
-    return getOverall().then((overall) => ({ view: 'overall', overall }));
+    return getOverall(period).then((overall) => ({ view: 'overall', overall }));
   }
-  return getRankings(view).then((rankings) => ({ view: 'ranking', rankings }));
+  return getRankings(view, period).then((rankings) => ({ view: 'ranking', rankings }));
 }
 
-function Ranking() {
+// Okres z odpowiedzi, a nie z przycisku, więc tekst zawsze pasuje do liczb na ekranie.
+function rankingSubtitle(data: RankingData): string {
+  return data.view === 'overall' ? pl.overallSubtitle(data.overall.period) : pl.rankingSubtitle(data.rankings.games, data.rankings.legs, data.rankings.period);
+}
+
+function Ranking({ period, onPeriodChange }: PeriodProps) {
   const [view, setView] = useState<RankingView>('all');
-  const data = useLoaded<RankingData>(() => loadView(view), pl.statsFailed, [view]);
+  const data = useLoaded<RankingData>(() => loadView(view, period), pl.statsFailed, [view, period]);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col gap-(--space-6) overflow-auto px-4 pt-4 pb-6 sm:px-8 lg:px-(--space-page) lg:pt-6 xl:overflow-hidden">
@@ -152,17 +180,23 @@ function Ranking() {
         <div className="flex flex-col gap-2">
           <h1 className={title}>{pl.stats}</h1>
           {data.status === 'ready' && (
-            <p className="text-[17px] text-(--color-text-sub)">
-              {data.value.view === 'overall' ? pl.overallSubtitle : pl.rankingSubtitle(data.value.rankings.games, data.value.rankings.legs)}
-            </p>
+            <p className="text-[17px] text-(--color-text-sub)">{rankingSubtitle(data.value)}</p>
           )}
         </div>
-        <section aria-labelledby="ranking-filter" className="flex flex-col gap-2 max-sm:w-full sm:items-end">
-          <h2 id="ranking-filter" className={`${label} sm:mr-1.5`}>
-            {pl.gameType}
-          </h2>
-          <FilterButtons options={RANKING_VIEWS} filter={view} onChange={setView} labelledBy="ranking-filter" dividerBefore="overall" />
-        </section>
+        <div className={`${filterRow} max-sm:w-full`}>
+          <section aria-labelledby="ranking-filter" className="flex flex-col gap-2 max-sm:w-full sm:items-end">
+            <h2 id="ranking-filter" className={`${label} sm:mr-1.5`}>
+              {pl.gameType}
+            </h2>
+            <FilterButtons options={RANKING_VIEWS} filter={view} onChange={setView} labelledBy="ranking-filter" dividerBefore="overall" />
+          </section>
+          <section aria-labelledby="ranking-period" className="flex flex-col gap-2 max-sm:w-full sm:items-end">
+            <h2 id="ranking-period" className={`${label} sm:mr-1.5`}>
+              {pl.statsPeriod}
+            </h2>
+            <FilterButtons options={PERIODS} filter={period} onChange={onPeriodChange} labelledBy="ranking-period" />
+          </section>
+        </div>
       </div>
       {data.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
       {data.status === 'error' && <ErrorText text={data.message} />}
@@ -179,14 +213,15 @@ function RankingContent({ data }: { data: RankingData }) {
   return data.view === 'overall' ? <OverallBoard overall={data.overall} /> : <RankingBoard rankings={data.rankings} />;
 }
 
-function PlayerCard({ playerId }: { playerId: string }) {
+// Okres zawęża statystyki, formę i bilans 1v1, a historia gier zostaje pełna.
+function PlayerCard({ playerId, period, onPeriodChange }: { playerId: string } & PeriodProps) {
   // Zmiana profilu zwiększa version, co odświeża chipy graczy, profil i historię z nowym imieniem.
   // Lista graczy zostaje na ekranie w trakcie odświeżania, więc profil i wybrany rywal nie znikają.
   const [version, setVersion] = useState(0);
   const players = useLoaded<Player[]>(() => listPlayers({ archived: 'include' }), pl.loadPlayersFailed, [version], true);
   const [filter, setFilter] = useState<StatsFilter>('all');
   const [stats, setStats] = useState<Loaded<PlayerStats>>({ status: 'loading' });
-  const form = useLoaded<PlayerForm>(() => getPlayerForm(playerId, filter), pl.formFailed, [playerId, filter]);
+  const form = useLoaded<PlayerForm>(() => getPlayerForm(playerId, filter, period), pl.formFailed, [playerId, filter, period]);
   const history = useLoaded<MatchListItem[]>(() => listMatches({ playerId }), pl.loadMatchesFailed, [playerId, version]);
   const known = players.status === 'ready' ? players.value : [];
   const current = known.find((player) => player.id === playerId);
@@ -194,7 +229,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
   useEffect(() => {
     let cancelled = false;
     setStats({ status: 'loading' });
-    getPlayerStats(playerId, filter).then(
+    getPlayerStats(playerId, filter, period).then(
       (value) => {
         if (!cancelled) {
           setStats({ status: 'ready', value });
@@ -210,7 +245,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [playerId, filter]);
+  }, [playerId, filter, period]);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-auto">
@@ -251,12 +286,20 @@ function PlayerCard({ playerId }: { playerId: string }) {
           )}
         </section>
 
-        <section className="flex flex-col gap-2">
-          <h2 id="stats-filter" className={label}>
-            {pl.statsFilter}
-          </h2>
-          <FilterButtons options={FILTERS} filter={filter} onChange={setFilter} labelledBy="stats-filter" />
-        </section>
+        <div className={filterRow}>
+          <section aria-labelledby="stats-filter" className="flex flex-col gap-2 max-sm:w-full">
+            <h2 id="stats-filter" className={label}>
+              {pl.statsFilter}
+            </h2>
+            <FilterButtons options={FILTERS} filter={filter} onChange={setFilter} labelledBy="stats-filter" />
+          </section>
+          <section aria-labelledby="stats-period" className="flex flex-col gap-2 max-sm:w-full">
+            <h2 id="stats-period" className={label}>
+              {pl.statsPeriod}
+            </h2>
+            <FilterButtons options={PERIODS} filter={period} onChange={onPeriodChange} labelledBy="stats-period" />
+          </section>
+        </div>
 
         {/* Na monitorze dwie kolumny jak w makiecie, niżej jedna w tej samej kolejności. */}
         <div className="flex flex-col gap-5 sm:gap-6 xl:grid xl:grid-cols-[minmax(0,9fr)_minmax(0,7fr)] xl:items-start">
@@ -277,7 +320,7 @@ function PlayerCard({ playerId }: { playerId: string }) {
           </div>
 
           <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
-            {current && <HeadToHeadPanel key={playerId} player={current} opponents={known.filter((player) => player.id !== playerId)} />}
+            {current && <HeadToHeadPanel key={playerId} player={current} period={period} opponents={known.filter((player) => player.id !== playerId)} />}
 
             <section aria-labelledby="player-history" className="sc-panel sc-panel--flat gap-2.5">
               <h2 id="player-history" className={panelHeading}>

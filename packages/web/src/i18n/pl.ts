@@ -1,4 +1,5 @@
 import { FORM_GAMES, MIN_GAMES_FOR_WIN_RATE, MIN_LEGS_FOR_AVERAGE } from '@autoscore/schema';
+import type { StatsPeriod } from '@autoscore/schema';
 
 // Polska odmiana po liczbie: 1, 2-4 (bez 12-14), reszta.
 function plural(count: number, one: string, few: string, many: string): string {
@@ -52,6 +53,13 @@ function pointsCount(count: number): string {
 function inTurns(count: number): string {
   return `${count} ${count === 1 ? 'turze' : 'turach'}`;
 }
+
+// Dopełnienie po „Ranking graczy” i „Wszystkie gry”.
+const periodPhrase: Record<StatsPeriod, string> = {
+  '30d': 'z ostatnich 30 dni',
+  '90d': 'z ostatniego kwartału',
+  all: 'z całej historii',
+};
 
 // Wszystkie teksty widoczne dla użytkownika.
 export const pl = {
@@ -252,7 +260,7 @@ export const pl = {
   freeRunDetail: (name: string, dartsThrown: number) => `${name} · ${darts(dartsThrown)}`,
   activityToday: (time: string) => `dziś ${time}`,
   activityYesterday: 'wczoraj',
-  rankingSubtitle: (gameCount: number, legCount: number) => `Ranking graczy z całej historii · ${games(gameCount)}, ${legsCount(legCount)}`,
+  rankingSubtitle: (gameCount: number, legCount: number, period: StatsPeriod) => `Ranking graczy ${periodPhrase[period]} · ${games(gameCount)}, ${legsCount(legCount)}`,
   ranking: 'Ranking',
   averageFootnote: `Średnia od ${MIN_LEGS_FOR_AVERAGE} ukończonych legów.`,
   tileBestLeg: 'Rekordowy leg (średnia)',
@@ -270,8 +278,13 @@ export const pl = {
   tileT20HitsUnit: 'rzutki za 60',
   recordsRegion: 'Rekordy',
   noGamesInFilter: 'Brak gier w tym filtrze.',
+  statsPeriod: 'Okres',
+  period30d: '30 dni',
+  period90d: 'Kwartał',
+  periodAll: 'Cały czas',
+  periodPhrase,
   filterOverall: 'Overall',
-  overallSubtitle: 'Wszystkie gry liczone do statystyk razem',
+  overallSubtitle: (period: StatsPeriod) => (period === 'all' ? 'Wszystkie gry liczone do statystyk razem' : `Wszystkie gry ${periodPhrase[period]} liczone do statystyk razem`),
   overallDarts: 'Lotki łącznie',
   overallAverage: 'Średnia ogólna (3 rzutki)',
   overallGames: 'Gry',
