@@ -6,9 +6,9 @@ describe('ArchivePlayerDialog', () => {
   it('opens as a focused modal dialog on a dimmed screen', () => {
     render(<ArchivePlayerDialog name="Anna" onConfirm={vi.fn()} onCancel={vi.fn()} />);
     const dialog = screen.getByRole('dialog', { name: 'Zarchiwizować gracza?' });
-    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect((dialog as HTMLDialogElement).open).toBe(true);
     expect(document.activeElement).toBe(dialog);
-    expect(dialog.parentElement?.classList).toContain('bg-(--color-bg)/80');
+    expect(dialog.classList).toContain('bg-(--color-bg)/80');
     expect(dialog.querySelector('svg[aria-hidden="true"]')?.querySelectorAll('circle')).toHaveLength(3);
   });
 
@@ -19,7 +19,7 @@ describe('ArchivePlayerDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Archiwizuj' }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledTimes(2);
   });
 });

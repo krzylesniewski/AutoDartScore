@@ -37,10 +37,9 @@ describe('AbandonDialog', () => {
     expect(screen.getByRole('radio', { name: 'Anna' }).closest('label')?.className.split(' ')).toContain('inset-ring-(--color-text)');
   });
 
-  it('scrolls inside itself when the window is short and describes itself with the text', () => {
+  it('describes itself with the text and focuses the window', () => {
     renderDialog();
     const dialog = screen.getByRole('dialog', { name: 'Porzucić mecz?' });
-    expect(dialog.className.split(' ')).toEqual(expect.arrayContaining(['max-h-full', 'overflow-y-auto', 'overflow-x-hidden', 'rounded-(--radius-panel)']));
     const textId = dialog.getAttribute('aria-describedby');
     expect(textId).toBeTruthy();
     expect(document.getElementById(textId ?? '')?.textContent).toContain('porzucona');

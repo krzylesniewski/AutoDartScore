@@ -487,7 +487,7 @@ describe('Keypad', () => {
 
     afterEach(() => {
       vi.useRealTimers();
-      for (const extra of document.querySelectorAll('body > input, body > [role="dialog"]')) {
+      for (const extra of document.querySelectorAll('body > input, body > dialog')) {
         extra.remove();
       }
     });
@@ -765,8 +765,8 @@ describe('Keypad', () => {
 
     it('ignores shortcuts while a dialog is open', () => {
       const { onHit, onUndo } = setup();
-      const dialog = document.createElement('div');
-      dialog.setAttribute('role', 'dialog');
+      const dialog = document.createElement('dialog');
+      dialog.open = true;
       document.body.append(dialog);
       for (const name of [' ', 'b', '3', 'Backspace']) {
         expect(key(name)).toBe(true);

@@ -1,6 +1,7 @@
 import type { Player } from '@autoscore/schema';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { pl } from '../i18n/pl';
 import { EditPlayerDialog } from './EditPlayerDialog';
 
 const message = 'Gracz o imieniu „Anna” już istnieje';
@@ -16,6 +17,10 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+}
 
 describe('EditPlayerDialog', () => {
   it('shows a taken name under the name field and stays open until the name changes', async () => {
@@ -58,5 +63,36 @@ describe('EditPlayerDialog', () => {
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
     const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as Record<string, unknown>;
     expect(body).toEqual({ name: 'Bartek', avatar: '🎮', color: 7 });
+  });
+
+  it('ignores Escape and disables Anuluj while the save is pending', async () => {
+    let finish: (response: Response) => void = () => undefined;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => (finish = resolve))));
+    const onCancel = vi.fn();
+    render(<EditPlayerDialog player={bartek} onSaved={vi.fn()} onCancel={onCancel} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    await vi.waitFor(() => expect((screen.getByRole('button', { name: 'Anuluj' }) as HTMLButtonElement).disabled).toBe(true));
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
+    expect(onCancel).not.toHaveBeenCalled();
+    expect((screen.getByRole('dialog') as HTMLDialogElement).open).toBe(true);
+    finish(json(500, { error: 'internal_error', message: 'Internal server error' }));
+    await vi.waitFor(() => expect((screen.getByRole('button', { name: 'Anuluj' }) as HTMLButtonElement).disabled).toBe(false));
+  });
+
+  it('shows a Polish alert instead of the server message on a 500', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(500, { error: 'internal_error', message: 'Internal server error' })));
+    render(<EditPlayerDialog player={bartek} onSaved={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(pl.requestFailed);
+    expect(screen.queryByText('Internal server error')).toBeNull();
+  });
+
+  it('shows a Polish text instead of the English message on a 400 invalid_request', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(400, { error: 'invalid_request', message: 'Invalid request: name: Too big' })));
+    render(<EditPlayerDialog player={bartek} onSaved={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(pl.invalidRequest);
+    expect(screen.queryByText(/Invalid request/)).toBeNull();
   });
 });

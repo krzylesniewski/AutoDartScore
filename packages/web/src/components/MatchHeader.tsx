@@ -44,6 +44,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const abandonable = state !== null && canAbandon(state);
   const endable = state !== null && canEndPractice(state);
   // Trening końcówek nie ma kolejek, a zegar stałby na 0:00, bo serwer nie podaje legStartedAt.
@@ -59,19 +60,32 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
         toggleRef.current?.focus();
       }
     }
+    // Klik poza menu zamyka je bez przenoszenia fokusu, żeby kliknięta kontrolka go dostała.
+    function onPointerDown(event: PointerEvent): void {
+      const target = event.target;
+      if (target instanceof Node && !panelRef.current?.contains(target) && !toggleRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    }
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
   }, [open]);
 
+  // Pozycja menu znika razem z menu, więc fokus idzie najpierw na przycisk menu. Okno otwarte przez akcję oddaje go właśnie tam.
   function closeAfter(action: (() => void) | undefined): () => void {
     return () => {
+      toggleRef.current?.focus();
       action?.();
       setOpen(false);
     };
   }
 
   // Otwarte menu musi przykryć dok klawiatury (sticky z-10) i baner od lg (z-20), które stoją dalej w DOM.
-  // Zamknięty pasek wraca do z-10, więc okna dialogowe (fixed z-10, dalej w DOM) przykrywają pasek.
+  // Okna dialogowe leżą w top layer, więc przykrywają pasek bez względu na jego z-index.
   // Akcja menu zamyka menu w tym samym kliknięciu, w którym otwiera okno dialogowe.
   return (
     <header className={`sc-appbar relative ${open ? 'z-30' : 'z-10'} shrink-0 max-lg:h-12 max-lg:gap-2.5 max-lg:px-4 lg:h-17`}>
@@ -118,6 +132,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
       )}
       <span aria-hidden="true" className="hidden lg:block lg:grow" />
       <div
+        ref={panelRef}
         id={panelId}
         className={`${open ? 'flex' : 'hidden'} ${card} absolute top-full right-4 left-4 flex-col gap-2 sm:left-auto sm:w-80 lg:contents`}
       >

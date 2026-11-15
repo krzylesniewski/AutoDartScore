@@ -1,6 +1,7 @@
 import { CreateMatchRequest, type MatchListItem, type Player } from '@autoscore/schema';
 import { useCallback, useEffect, useState } from 'react';
-import { ApiRequestError, abandonMatch, createMatch, endPractice, listMatches, listPlayers, resumeMatch } from '../api/client';
+import { abandonMatch, createMatch, endPractice, listMatches, listPlayers, resumeMatch } from '../api/client';
+import { apiErrorText } from '../api/error-text';
 import { AbandonDialog } from '../components/AbandonDialog';
 import { AppNav } from '../components/AppNav';
 import { EndPracticeDialog } from '../components/EndPracticeDialog';
@@ -95,7 +96,7 @@ export function HomeScreen() {
       const match = await createMatch(request.data);
       window.location.hash = matchHref(match.id);
     } catch (caught) {
-      setStartError(caught instanceof ApiRequestError ? caught.message : pl.requestFailed);
+      setStartError(apiErrorText(caught));
       setSubmitting(false);
     }
   }

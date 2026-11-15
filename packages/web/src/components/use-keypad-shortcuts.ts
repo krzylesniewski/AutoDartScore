@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { keypadShortcut } from '../game/keypad-shortcut';
 import { DIGIT_WAIT_MS, typeDigit, type PendingDigit } from '../game/shortcut-number';
-import { isOtherControl, isTextField } from './shortcut-target';
+import { OPEN_DIALOG, isOtherControl, isTextField } from './shortcut-target';
 
 export interface KeypadShortcutOptions {
   enabled: boolean;
@@ -60,7 +60,7 @@ export function useKeypadShortcuts(options: KeypadShortcutOptions): void {
         return;
       }
       const shortcut = keypadShortcut(event);
-      if (!shortcut || isTextField(event.target) || document.querySelector('[role="dialog"]')) {
+      if (!shortcut || isTextField(event.target) || document.querySelector(OPEN_DIALOG)) {
         return;
       }
       if ((event.key === ' ' || event.key === 'Enter') && isOtherControl(event.target)) {

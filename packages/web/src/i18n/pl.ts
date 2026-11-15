@@ -142,6 +142,8 @@ export const pl = {
   startBarPlayers: (count: number) => `${count} graczy`,
   loadPlayersFailed: 'Nie udało się pobrać listy graczy',
   requestFailed: 'Nie udało się połączyć z serwerem',
+  invalidRequest: 'Serwer odrzucił dane. Sprawdź je i spróbuj ponownie.',
+  unknownPlayer: 'Nie znaleziono jednego z graczy. Odśwież stronę i wybierz graczy jeszcze raz.',
   loading: 'Ładowanie…',
   throwing: 'Rzuca',
   legs: 'Legi',

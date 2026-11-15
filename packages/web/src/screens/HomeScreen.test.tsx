@@ -1,6 +1,7 @@
 import { CreateMatchRequest, type MatchListItem } from '@autoscore/schema';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { pl } from '../i18n/pl';
 import { player, snapshot } from '../test/snapshots';
 import { HomeScreen } from './HomeScreen';
 
@@ -400,15 +401,15 @@ describe('HomeScreen: new game form', () => {
     expect(request?.body).toEqual({ type: 'practice', playerIds: ['p1'], practiceMode: 'checkouts', checkoutRange: '51-100' });
   });
 
-  it('shows the server message when the game cannot start', async () => {
+  it('shows a Polish text instead of the server message when the game cannot start', async () => {
     respond = (call) => (call.url === '/api/matches' ? Promise.resolve(json(400, { error: 'unknown_player', message: 'Unknown player p2' })) : null);
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('Anna'));
     fireEvent.click(button('Bartek'));
     fireEvent.click(button('Start gry'));
-    expect(await screen.findByText('Unknown player p2')).toBeTruthy();
-    expect(within(startBar()).getByText('Unknown player p2')).toBeTruthy();
+    expect((await within(startBar()).findByRole('alert')).textContent).toBe(pl.unknownPlayer);
+    expect(screen.queryByText('Unknown player p2')).toBeNull();
     expect(window.location.hash).toBe('#/');
   });
 });
@@ -481,13 +482,13 @@ describe('HomeScreen: new player dialog', () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('+ Nowy gracz'));
-    expect(dialog().getAttribute('aria-modal')).toBe('true');
+    expect((dialog() as HTMLDialogElement).open).toBe(true);
     expect(within(dialog()).getByLabelText('Imię')).toBeTruthy();
     expect(within(dialog()).getByRole('group', { name: 'Avatar (emoji)' })).toBeTruthy();
     expect(within(dialog()).getByRole('group', { name: 'Kolor' })).toBeTruthy();
     expect(within(dialog()).queryByRole('checkbox')).toBeNull();
     expect(screen.queryByText('Gość')).toBeNull();
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -730,7 +731,7 @@ describe('HomeScreen: games to finish', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
 
       fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
-      fireEvent.keyDown(window, { key: 'Escape' });
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(calls.some((call) => call.method === 'POST')).toBe(false);
     });

@@ -1,5 +1,5 @@
 import type { Hit } from '@autoscore/schema';
-import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import { useFrequentHits } from '../api/use-frequent-hits';
 import { useMatch } from '../api/use-match';
 import { useMatchSummary } from '../api/use-match-summary';
@@ -16,6 +16,7 @@ import { MatchEndView } from '../components/MatchEndView';
 import { MatchHeader } from '../components/MatchHeader';
 import { MatchStatsPanel } from '../components/MatchStatsPanel';
 import { MatchSummaryPanel } from '../components/MatchSummaryPanel';
+import { Notice } from '../components/Notice';
 import { Scoreboard } from '../components/Scoreboard';
 import { TurnPanel } from '../components/TurnPanel';
 import { UndoButton } from '../components/UndoButton';
@@ -209,18 +210,18 @@ export function GameScreen({ matchId }: { matchId: string }) {
               className="sticky bottom-0 z-10 mt-auto flex flex-col gap-3 bg-(--color-bg) pt-3 max-lg:order-2 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:pb-[calc(var(--space-page)_+_env(safe-area-inset-bottom))] lg:contents"
             >
               <div className="flex flex-col gap-3 empty:hidden lg:absolute lg:inset-x-0 lg:top-0 lg:z-20">
-                {connection === 'closed' && <Notice text={pl.connectionLost} />}
-                {shownError && <Notice text={shownError} />}
-                {undoLocked && <Notice text={pl.matchLocked} icon={<LockIcon className="text-(--color-accent)" />} />}
+                {connection === 'closed' && <Notice text={pl.connectionLost} appearance="raised" />}
+                {shownError && <Notice text={shownError} appearance="raised" />}
+                {undoLocked && <Notice text={pl.matchLocked} tone="status" appearance="raised" icon={<LockIcon className="text-(--color-accent)" />} />}
                 {abandoned && (
-                  <Notice text={pl.abandonedReadOnly}>
+                  <Notice text={pl.abandonedReadOnly} tone="status" appearance="raised">
                     <a href={HOME_HREF} className={noticeLink}>
                       {pl.home}
                     </a>
                   </Notice>
                 )}
                 {ended && (
-                  <Notice text={pl.practiceEndedReadOnly}>
+                  <Notice text={pl.practiceEndedReadOnly} tone="status" appearance="raised">
                     <a href={HOME_HREF} className={noticeLink}>
                       {pl.home}
                     </a>
@@ -275,16 +276,5 @@ export function GameScreen({ matchId }: { matchId: string }) {
         />
       )}
     </div>
-  );
-}
-
-function Notice({ text, icon = <WarningIcon className="text-(--color-accent)" />, children }: { text: string; icon?: ReactNode; children?: ReactNode }) {
-  return (
-    // Od lg komunikat leży na panelu tury, więc tło musi być kryjące.
-    <p className="flex items-center gap-2 rounded-(--radius-card) bg-linear-to-b from-(--color-surface-raised) to-(--color-surface) px-4 py-2 font-display text-xl text-(--color-text) shadow-(--shadow-card)">
-      {icon}
-      {text}
-      {children}
-    </p>
   );
 }
