@@ -6,7 +6,7 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
     "start": "node --import jiti/register src/main.ts",
-    "dev": "node --watch --import jiti/register src/main.ts",
+    "dev": "AUTOSCORE_AUTH=${AUTOSCORE_AUTH:-off} node --watch --import jiti/register src/main.ts",
     "bench": "node --import jiti/register scripts/bench-lists.ts"
   },
   "dependencies": {

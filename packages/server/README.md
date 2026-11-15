@@ -10,18 +10,19 @@ Baza to SQLite przez wbudowany moduł `node:sqlite` i Kysely, bez natywnych bind
 
 ```sh
 pnpm --filter @autoscore/server dev     # node --watch, restart po zmianie kodu
-pnpm --filter @autoscore/server start
+AUTOSCORE_AUTH=off pnpm --filter @autoscore/server start
 ```
 
-Oba skrypty uruchamiają `src/main.ts` przez `jiti`, bez kroku budowania. Przy starcie serwer wykonuje migracje. Zmienne `PORT`, `HOST` i `DATABASE_PATH`, trasy API i przykład z curl opisuje [README w katalogu głównym](../../README.md).
+Oba skrypty uruchamiają `src/main.ts` przez `jiti`, bez kroku budowania. Przy starcie serwer wykonuje migracje. `start` bez hasła wymaga `AUTOSCORE_AUTH=off`, inaczej serwer nie wstaje. `dev` ustawia `AUTOSCORE_AUTH=off`, chyba że zmienna jest już ustawiona. Z hasłem ustawionym w powłoce `pnpm dev` wymaga więc `AUTOSCORE_AUTH=on`, inaczej zatrzymuje się na błędzie konfliktu (niżej). Zmienne `PORT`, `HOST` i `DATABASE_PATH`, trasy API i przykład z curl opisuje [README w katalogu głównym](../../README.md).
 
 ## Hasło i CORS
 
-Serwer może działać w internecie za jednym wspólnym hasłem. Bez poniższych zmiennych działa jak wcześniej, bez hasła i bez nagłówków CORS, więc lokalne `pnpm dev` niczego nie wymaga (front w trybie dev woła API przez proxy Vite).
+Serwer może działać w internecie za jednym wspólnym hasłem. Hasło jest domyślnie wymagane: bez `AUTOSCORE_PASSWORD` serwer wstaje tylko z jawnym `AUTOSCORE_AUTH=off`, przeznaczonym do pracy lokalnej. Nagłówki CORS są domyślnie wyłączone (front w trybie dev woła API przez proxy Vite).
 
 | Zmienna | Domyślnie | Znaczenie |
 |---|---|---|
-| `AUTOSCORE_PASSWORD` | brak (wyłączone) | Wspólne hasło. Pusta wartość wyłącza hasło, a wtedy `AUTOSCORE_TOKEN_SECRET` jest pomijany. |
+| `AUTOSCORE_AUTH` | `on` | `on` wymaga hasła. `off` wyłącza logowanie, a serwer zapisuje przy starcie ostrzeżenie `Authentication is off (AUTOSCORE_AUTH=off)` w logu. `off` razem z niepustym `AUTOSCORE_PASSWORD` zatrzymuje start błędem `AUTOSCORE_AUTH=off conflicts with AUTOSCORE_PASSWORD`. Pusta wartość znaczy `on`, a każda inna niż `on` i `off` daje `Invalid AUTOSCORE_AUTH`. |
+| `AUTOSCORE_PASSWORD` | brak | Wspólne hasło. Przy `AUTOSCORE_AUTH=on` brak hasła albo pusta wartość zatrzymuje start błędem `Missing AUTOSCORE_PASSWORD`, a hasło przykładowe z `deploy/autoscore.env.example` (także ze spacjami wokół) błędem `Invalid AUTOSCORE_PASSWORD`. Przy `AUTOSCORE_AUTH=off` musi być puste, a `AUTOSCORE_TOKEN_SECRET` jest wtedy pomijany. |
 | `AUTOSCORE_TOKEN_SECRET` | brak | Klucz do podpisu tokenów, co najmniej 32 znaki. Wymagany, gdy hasło jest ustawione. Bez niego serwer nie wstaje (`Missing AUTOSCORE_TOKEN_SECRET`), a za krótki daje `Invalid AUTOSCORE_TOKEN_SECRET`. |
 | `AUTOSCORE_CORS_ORIGIN` | brak (wyłączone) | Lista originów frontu po przecinku, np. `https://front.example,http://localhost:5173`. Spacje i puste wpisy są pomijane. |
 
@@ -125,7 +126,7 @@ Uszkodzona gra (log, którego nie da się odtworzyć, albo brak wymaganego pola 
 pnpm --filter @autoscore/server test
 ```
 
-Testy budują aplikację na bazie SQLite w pamięci (`:memory:`, zobacz `src/test-helpers.ts`). `src/restart.test.ts` używa pliku w katalogu tymczasowym, żeby sprawdzić stan po ponownym uruchomieniu.
+Testy budują aplikację na bazie SQLite w pamięci (`:memory:`, zobacz `src/test-helpers.ts`). `AppOptions.auth` jest wymagane, więc każde wywołanie `buildApp` wybiera tryb logowania jawnie. `setup()` buduje aplikację z wpisanym `auth: null`, a test z hasłem podaje własne `auth`. `src/restart.test.ts` używa pliku w katalogu tymczasowym, żeby sprawdzić stan po ponownym uruchomieniu.
 
 ```sh
 pnpm --filter @autoscore/server bench

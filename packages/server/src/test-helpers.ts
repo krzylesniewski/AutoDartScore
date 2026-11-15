@@ -27,7 +27,7 @@ export async function setup(options: Partial<Omit<AppOptions, 'db'>> & { path?: 
   const { path, ...appOptions } = options;
   const db = openDatabase(path ?? ':memory:');
   await migrateToLatest(db);
-  const app = await buildApp({ random: () => 0, ...appOptions, db });
+  const app = await buildApp({ random: () => 0, auth: null, ...appOptions, db });
   await app.ready(); // injectWS, w przeciwieństwie do inject, nie uruchamia aplikacji
   return {
     app,

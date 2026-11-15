@@ -175,7 +175,7 @@ const db = openDatabase(join(dir, 'bench.db'));
 try {
   await migrateToLatest(db);
   const seeding = performance.now();
-  const seeder = await buildApp({ db, random: prng(7) });
+  const seeder = await buildApp({ db, auth: null, random: prng(7) });
   const { matches, playerId } = await seed(seeder);
   await seeder.close();
   console.log(`Seed: ${matches} matches, ${throwCount} throws in ${((performance.now() - seeding) / 1000).toFixed(1)} s`);
@@ -185,7 +185,7 @@ try {
   console.log('|---|---|---|');
   for (const url of urls) {
     // Każdy adres na świeżej aplikacji, żeby pierwsze wywołanie zawsze trafiało na pustą pamięć w procesie.
-    const app = await buildApp({ db });
+    const app = await buildApp({ db, auth: null });
     try {
       const first = await time(app, url);
       const runs = [];

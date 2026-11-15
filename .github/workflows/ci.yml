@@ -80,6 +80,8 @@ jobs:
         env:
           HOST: 127.0.0.1
           PORT: 3100
+          # Quoted, because YAML 1.1 reads a bare off as the boolean false.
+          AUTOSCORE_AUTH: 'off'
         run: |
           set -euo pipefail
           dir=$(mktemp -d "$RUNNER_TEMP/smoke.XXXXXX")
@@ -105,6 +107,14 @@ jobs:
             code=$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$PORT/players" || true)
             if [ "$code" = "200" ]; then
               echo "GET /players returned 200 after $i s"
+              # grep -c exits 1 when nothing matches, which set -e would treat as a failure.
+              warnings=$(grep -cF 'Authentication is off (AUTOSCORE_AUTH=off)' "$log" || true)
+              if [ "$warnings" != "1" ]; then
+                cat "$log"
+                echo "Expected the auth-off warning once in the server log, found it $warnings times"
+                exit 1
+              fi
+              echo "Auth-off warning logged once"
               exit 0
             fi
             if ! kill -0 "$pid" 2>/dev/null; then

@@ -15,7 +15,11 @@ export interface ServerConfig {
   readonly matchLockMinutes: number;
 }
 
+type AuthMode = 'on' | 'off';
+
 const MIN_TOKEN_SECRET_LENGTH = 32;
+// Hasło z deploy/autoscore.env.example. Nietknięta kopia wzoru nie może otworzyć serwera.
+const EXAMPLE_PASSWORD = 'zmien-to-haslo';
 // Rok. Większa wartość mogłaby wyprowadzić finishedAt + blokada poza zakres poprawnej daty.
 const MAX_MATCH_LOCK_MINUTES = 525_600;
 
@@ -25,7 +29,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     host: env.HOST || '0.0.0.0',
     port: parsePort(env.PORT),
     databasePath: env.DATABASE_PATH || 'autoscore.sqlite',
-    auth: parseAuth(env.AUTOSCORE_PASSWORD, env.AUTOSCORE_TOKEN_SECRET),
+    auth: parseAuth(parseAuthMode(env.AUTOSCORE_AUTH), env.AUTOSCORE_PASSWORD, env.AUTOSCORE_TOKEN_SECRET),
     corsOrigins: parseCorsOrigins(env.AUTOSCORE_CORS_ORIGIN),
     webDir: parseWebDir(env.AUTOSCORE_WEB_DIR),
     matchLockMinutes: parseMatchLockMinutes(env.AUTOSCORE_MATCH_LOCK_MINUTES),
@@ -60,10 +64,30 @@ function parseWebDir(value: string | undefined): string | null {
   return trimmed === '' ? null : path.resolve(trimmed);
 }
 
+function parseAuthMode(value: string | undefined): AuthMode {
+  const mode = (value ?? '').trim();
+  if (mode === '' || mode === 'on') {
+    return 'on';
+  }
+  if (mode === 'off') {
+    return 'off';
+  }
+  throw new Error(`Invalid AUTOSCORE_AUTH: ${mode}`);
+}
+
 // Komunikaty błędów nie zawierają hasła ani sekretu, bo trafiają do logów.
-function parseAuth(password: string | undefined, tokenSecret: string | undefined): AuthConfig | null {
-  if (!password) {
+function parseAuth(mode: AuthMode, password: string | undefined, tokenSecret: string | undefined): AuthConfig | null {
+  if (mode === 'off') {
+    if (password) {
+      throw new Error('AUTOSCORE_AUTH=off conflicts with AUTOSCORE_PASSWORD');
+    }
     return null;
+  }
+  if (!password) {
+    throw new Error('Missing AUTOSCORE_PASSWORD (set AUTOSCORE_AUTH=off to run without a password)');
+  }
+  if (password.trim() === EXAMPLE_PASSWORD) {
+    throw new Error('Invalid AUTOSCORE_PASSWORD: replace the example value from deploy/autoscore.env.example');
   }
   if (!tokenSecret) {
     throw new Error('Missing AUTOSCORE_TOKEN_SECRET');

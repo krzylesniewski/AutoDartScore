@@ -24,7 +24,7 @@ export interface AppOptions {
   readonly db: Kysely<Database>;
   readonly random?: () => number; // losowanie, kto zaczyna, i ziarna celów treningu checkoutów. Domyślnie Math.random
   readonly logger?: boolean;
-  readonly auth?: AuthConfig | null;
+  readonly auth: AuthConfig | null;
   readonly corsOrigins?: readonly string[] | null;
   readonly now?: () => number; // zegar dla tokenów, limitu logowań, blokady zakończonej gry i okresu statystyk. Domyślnie Date.now
   readonly liveAuthTimeoutMs?: number;
@@ -47,7 +47,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     });
   }
   await app.register(websocket, { options: { maxPayload: LIVE_MAX_PAYLOAD_BYTES } });
-  const auth = options.auth ?? null;
+  const auth = options.auth;
   const now = options.now ?? Date.now;
   await registerAccessControl(app, { auth, corsOrigins: options.corsOrigins ?? null, now, webRoutes });
 

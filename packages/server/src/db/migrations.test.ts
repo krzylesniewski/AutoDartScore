@@ -63,7 +63,7 @@ describe('migrateToLatest', () => {
       { match_id: 'm1', seq: 3, type: 'undo', throw_id: 't2', player_id: null, reason: null, success: null, created_at: createdAt },
     ]);
 
-    const app = await buildApp({ db });
+    const app = await buildApp({ db, auth: null });
     try {
       const response = await app.inject({ method: 'GET', url: '/matches/m1' });
       expect(response.statusCode).toBe(200);
@@ -88,7 +88,7 @@ describe('migrateToLatest', () => {
       .execute();
 
     await migrateToLatest(db);
-    const app = await buildApp({ db });
+    const app = await buildApp({ db, auth: null });
     try {
       const response = await app.inject({ method: 'GET', url: '/players' });
       expect(response.statusCode).toBe(200);
@@ -155,7 +155,7 @@ describe('migrateToLatest', () => {
     const events = await db.selectFrom('match_events').select('success').execute();
     expect(events).toEqual([{ success: null }, { success: null }, { success: null }]);
 
-    const app = await buildApp({ db, random: () => 0 });
+    const app = await buildApp({ db, auth: null, random: () => 0 });
     try {
       const match = await app.inject({ method: 'GET', url: '/matches/m1' });
       expect(match.statusCode).toBe(200);
@@ -223,7 +223,7 @@ describe('migrateToLatest', () => {
       { id: 'f1', checkout_rule: null },
     ]);
 
-    const app = await buildApp({ db, random: () => 0 });
+    const app = await buildApp({ db, auth: null, random: () => 0 });
     try {
       const session = await app.inject({ method: 'GET', url: '/matches/c1' });
       expect(session.statusCode).toBe(200);
@@ -267,7 +267,7 @@ describe('migrateToLatest', () => {
       .execute();
 
     await migrateToLatest(db);
-    const app = await buildApp({ db });
+    const app = await buildApp({ db, auth: null });
     try {
       const response = await app.inject({ method: 'GET', url: '/players' });
       expect(response.statusCode).toBe(200);
@@ -359,7 +359,7 @@ describe('migrateToLatest', () => {
     expect(await indexes()).toEqual(['match_players_player_id_idx', 'throws_match_id_idx']);
     expect(await rows()).toEqual(before);
 
-    const app = await buildApp({ db, random: () => 0 });
+    const app = await buildApp({ db, auth: null, random: () => 0 });
     try {
       const list = await app.inject({ method: 'GET', url: '/matches' });
       expect(list.statusCode).toBe(200);
