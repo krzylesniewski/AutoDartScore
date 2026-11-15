@@ -47,7 +47,10 @@ curl -s https://api.example/players -H "authorization: Bearer $TOKEN"
 - Przeglądarka nie ustawi nagłówka na WebSocket, a token w adresie trafiłby do logów proxy. Dlatego z ustawionym hasłem pierwsza wiadomość klienta to `{ "type": "auth", "token": "…" }`. Token w adresie jest pomijany.
 - Bez tej wiadomości w ciągu 5 s, z niepoprawnym JSON, inną wiadomością albo złym tokenem serwer zamyka połączenie z kodem 4401. Do tego czasu serwer nie wysyła żadnej wiadomości. Po poprawnym `auth` pierwszą wiadomością jest `state_updated`, a nieznana gra zamyka połączenie z kodem 4404. Kolejne wiadomości klienta są pomijane.
 - Z ustawionym `AUTOSCORE_CORS_ORIGIN` połączenie z nagłówkiem `Origin` spoza listy dostaje 403 przed zmianą protokołu. Brak nagłówka `Origin` (curl, skrypty) jest dopuszczony.
-- Serwer wysyła ramkę ping co 30 s na każdym połączeniu, z hasłem i bez, żeby reverse proxy nie zamknął bezczynnego połączenia.
+- Wiadomość klienta może mieć najwyżej 4 KiB. Większa zamyka połączenie z kodem 1009, zanim serwer ją odczyta.
+- Z ustawionym hasłem na wiadomość `auth` może czekać naraz najwyżej 20 połączeń. Kolejne serwer zamyka od razu z kodem 4429. Miejsce zwalnia się po pierwszej wiadomości, po upływie 5 s albo po zamknięciu połączenia. Bez hasła ten limit nie obowiązuje.
+- Serwer wysyła ramkę ping co 30 s na każdym połączeniu, z hasłem i bez, żeby reverse proxy nie zamknął bezczynnego połączenia. Połączenie, które nie odpowie ramką pong przed kolejnym pingiem, serwer zrywa.
+- Klienta z ponad 1 MiB niewysłanych danych serwer rozłącza bez ramki zamknięcia, żeby wolny klient nie trzymał pamięci serwera. Klient w przeglądarce łączy się ponownie i dostaje świeży `state_updated`.
 
 ## Front z serwera
 
