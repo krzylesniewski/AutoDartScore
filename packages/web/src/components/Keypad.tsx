@@ -269,7 +269,7 @@ function RingKeypad({ keys }: { keys: Keys }) {
   const centreHeight = { height: `max(${MIN_KEY_PX}px, ${RING_CENTER_HEIGHT_PERCENT}cqi)` };
 
   return (
-    <section aria-label={pl.keypad} className="@container flex flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(160px,1fr)] lg:gap-3">
+    <section aria-label={pl.keypad} data-shortcut-keys="" className="@container flex flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(160px,1fr)] lg:gap-3">
       {keys.multipliers(`grid h-14 grid-cols-3 ${multiplierTray} lg:h-auto lg:w-full lg:max-w-40 lg:grid-cols-1 lg:grid-rows-3 lg:justify-self-end`, 'lg:min-h-14')}
       <div className={`@container relative ${ringSide}`}>
         {DARTBOARD_ORDER.map((segment, index) => {
@@ -301,7 +301,7 @@ const gridKey = 'rounded-(--radius-button) text-(length:--text-heading)';
 
 function GridKeypad({ keys }: { keys: Keys }) {
   return (
-    <section aria-label={pl.keypad} className="flex flex-col gap-2">
+    <section aria-label={pl.keypad} data-shortcut-keys="" className="flex flex-col gap-2">
       {keys.multipliers(`grid h-14 grid-cols-3 ${multiplierTray} lg:h-[62px]`, '')}
       {keys.frequent('flex h-18 shrink-0 flex-col gap-2', 'grid flex-1 grid-cols-6 gap-2')}
       <div className="grid grid-cols-5 gap-2 lg:grid-cols-10">{DARTBOARD_ORDER.map((segment) => keys.segment(segment, `h-14 lg:h-[78px] ${gridKey}`))}</div>

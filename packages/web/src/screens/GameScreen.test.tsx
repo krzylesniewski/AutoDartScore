@@ -526,6 +526,75 @@ describe('keyboard shortcuts and checkout entry', () => {
     await flush();
     expect(calls).toEqual([]);
   });
+
+  describe.each(['Głos', 'Menu gry', 'Tury'])('with focus on %s', (name) => {
+    it('leaves Space to the control', async () => {
+      connect(onForty);
+      const control = screen.getByRole('button', { name });
+      control.focus();
+      expect(fireEvent.keyDown(control, { key: ' ' })).toBe(true);
+      expect(fireEvent.keyUp(control, { key: ' ' })).toBe(true);
+      await flush();
+      expect(calls).toEqual([]);
+    });
+
+    it('leaves Enter to the control', async () => {
+      connect(onForty);
+      const control = screen.getByRole('button', { name });
+      control.focus();
+      expect(fireEvent.keyDown(control, { key: 'Enter' })).toBe(true);
+      await flush();
+      expect(calls).toEqual([]);
+    });
+  });
+
+  it('posts a Miss for Space on the focused key 20', async () => {
+    connect(onForty);
+    const key = screen.getByRole('button', { name: '20' });
+    key.focus();
+    expect(fireEvent.keyDown(key, { key: ' ' })).toBe(false);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    expect(posted()).toEqual([{ url: `/api/matches/${MATCH_ID}/throws`, segment: 0, multiplier: 0 }]);
+  });
+
+  it('posts the route dart for Enter on the focused key 20', async () => {
+    connect(onForty);
+    const key = screen.getByRole('button', { name: '20' });
+    key.focus();
+    expect(fireEvent.keyDown(key, { key: 'Enter' })).toBe(false);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    expect(posted()).toEqual([{ url: `/api/matches/${MATCH_ID}/throws`, segment: 20, multiplier: 2 }]);
+  });
+
+  it('posts a Miss for Space on the body', async () => {
+    connect(onForty);
+    expect(fireEvent.keyDown(document.body, { key: ' ' })).toBe(false);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    expect(posted()).toEqual([{ url: `/api/matches/${MATCH_ID}/throws`, segment: 0, multiplier: 0 }]);
+  });
+
+  it('posts the route dart for Enter on the body', async () => {
+    connect(onForty);
+    expect(fireEvent.keyDown(document.body, { key: 'Enter' })).toBe(false);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    expect(posted()).toEqual([{ url: `/api/matches/${MATCH_ID}/throws`, segment: 20, multiplier: 2 }]);
+  });
+
+  it('posts T20 for T, 2 and 0 with focus on the voice toggle', async () => {
+    connect(onForty);
+    const toggle = screen.getByRole('button', { name: 'Głos' });
+    toggle.focus();
+    for (const key of ['T', '2', '0']) {
+      fireEvent.keyDown(toggle, { key });
+    }
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await flush();
+    expect(posted()).toEqual([{ url: `/api/matches/${MATCH_ID}/throws`, segment: 20, multiplier: 3 }]);
+  });
 });
 
 describe('Reszta Miss', () => {
@@ -937,6 +1006,31 @@ describe('checkout practice', () => {
     fireEvent.keyDown(window, { key: '0' });
     await vi.waitFor(() => expect(attemptBodies()).toHaveLength(3));
     expect(attemptBodies()).toEqual([{ success: true }, { success: true }, { success: false }]);
+  });
+
+  it.each(['Głos', 'Menu gry'])('leaves Enter to the focused %s', async (name) => {
+    connect(fresh);
+    const control = screen.getByRole('button', { name });
+    control.focus();
+    expect(fireEvent.keyDown(control, { key: 'Enter' })).toBe(true);
+    await flush();
+    expect(attemptBodies()).toEqual([]);
+  });
+
+  it('records a success for Enter on the focused Nie udało się', async () => {
+    connect(fresh);
+    const failure = screen.getByRole('button', { name: 'Nie udało się' });
+    failure.focus();
+    expect(fireEvent.keyDown(failure, { key: 'Enter' })).toBe(false);
+    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true }]));
+  });
+
+  it('records a success for 1 with focus on the voice toggle', async () => {
+    connect(fresh);
+    const toggle = screen.getByRole('button', { name: 'Głos' });
+    toggle.focus();
+    fireEvent.keyDown(toggle, { key: '1' });
+    await vi.waitFor(() => expect(attemptBodies()).toEqual([{ success: true }]));
   });
 
   it('undoes on Backspace', async () => {
