@@ -113,6 +113,7 @@ export function statLine(overrides: Partial<PlayerStatLine> = {}): PlayerStatLin
     scores140: 0,
     scores100: 0,
     scores60: 0,
+    t20Hits: 0,
     highestCheckout: null,
     doubleAttempts: 0,
     doublesHit: 0,

@@ -12,6 +12,7 @@ export interface PlayerTotals {
   readonly scores140: number;
   readonly scores100: number;
   readonly scores60: number;
+  readonly t20Hits: number;
   readonly highestCheckout: number | null;
   readonly highestTurn: number | null;
   readonly doubleAttempts: number;
@@ -37,6 +38,7 @@ export const EMPTY_TOTALS: PlayerTotals = {
   scores140: 0,
   scores100: 0,
   scores60: 0,
+  t20Hits: 0,
   highestCheckout: null,
   highestTurn: null,
   doubleAttempts: 0,
@@ -100,6 +102,7 @@ export function mergeTotals(a: PlayerTotals, b: Partial<PlayerTotals>): PlayerTo
     scores140: add('scores140'),
     scores100: add('scores100'),
     scores60: add('scores60'),
+    t20Hits: add('t20Hits'),
     highestCheckout: maxOrNull(a.highestCheckout, b.highestCheckout ?? null),
     highestTurn: maxOrNull(a.highestTurn, b.highestTurn ?? null),
     doubleAttempts: add('doubleAttempts'),
@@ -118,6 +121,10 @@ export function threeDartAverage(points: number, darts: number): number | null {
   return darts === 0 ? null : round((3 * points) / darts, 2);
 }
 
+export function winRatePercent(won: number, played: number): number | null {
+  return played === 0 ? null : round((100 * won) / played, 1);
+}
+
 export function toStatLine(totals: PlayerTotals): PlayerStatLine {
   return {
     dartsThrown: totals.darts,
@@ -128,6 +135,7 @@ export function toStatLine(totals: PlayerTotals): PlayerStatLine {
     scores140: totals.scores140,
     scores100: totals.scores100,
     scores60: totals.scores60,
+    t20Hits: totals.t20Hits,
     highestCheckout: totals.highestCheckout,
     doubleAttempts: totals.doubleAttempts,
     doublesHit: totals.doublesHit,
@@ -153,7 +161,8 @@ export function tallyGame(type: MatchType, playerIds: readonly string[], events:
     const turn = turnsInLeg.get(key) ?? 0;
     turnsInLeg.set(key, turn + 1);
     const first9 = turn < FIRST_9_TURNS ? { first9Points: points, first9Darts: darts.length } : {};
-    add(playerId, { points, darts: darts.length, doubleAttempts: doubleAttempts(startScore, darts), ...first9 });
+    const t20Hits = darts.filter((dart) => dart.segment === 20 && dart.multiplier === 3).length;
+    add(playerId, { points, darts: darts.length, doubleAttempts: doubleAttempts(startScore, darts), t20Hits, ...first9 });
     const leg = legPoints.get(key) ?? { points: 0, darts: 0 };
     legPoints.set(key, { points: leg.points + points, darts: leg.darts + darts.length });
   };

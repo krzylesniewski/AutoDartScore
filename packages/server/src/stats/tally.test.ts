@@ -1,6 +1,6 @@
 import type { DomainEvent, Hit } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
-import { EMPTY_TOTALS, mergeTotals, tallyGame, toStatLine } from './tally.js';
+import { EMPTY_TOTALS, mergeTotals, tallyGame, toStatLine, winRatePercent } from './tally.js';
 
 const S = (segment: number): Hit => ({ segment, multiplier: 1 }) as Hit;
 const D = (segment: number): Hit => ({ segment, multiplier: 2 }) as Hit;
@@ -44,6 +44,7 @@ describe('tallyGame', () => {
       scores140: 0,
       scores100: 1,
       scores60: 0,
+      t20Hits: 4,
       highestCheckout: 121,
       doubleAttempts: 1,
       doublesHit: 1,
@@ -60,6 +61,7 @@ describe('tallyGame', () => {
       scores140: 0,
       scores100: 0,
       scores60: 0,
+      t20Hits: 0,
       highestCheckout: null,
       doubleAttempts: 0,
       doublesHit: 0,
@@ -170,7 +172,24 @@ describe('tallyGame', () => {
   });
 
   it('ignores darts of an open turn because it has no event yet', () => {
-    expect(line('match', ['anna', 'bartek'], [], 'anna')).toMatchObject({ dartsThrown: 0, average: null, first9Average: null });
+    expect(line('match', ['anna', 'bartek'], [], 'anna')).toMatchObject({ dartsThrown: 0, average: null, first9Average: null, t20Hits: 0 });
+  });
+
+  it('counts T20 in a closed turn and in a bust turn', () => {
+    const events: DomainEvent[] = [turn('anna', 0, [T(20), S(20), T(20)], 140, 61), bust('anna', 0, [T(20)], 61)];
+    expect(line('practice', ['anna'], events, 'anna').t20Hits).toBe(3);
+  });
+
+  it('counts only T20, not T19, D20, S20, 25 or Bull', () => {
+    const events: DomainEvent[] = [
+      turn('anna', 0, [T(19), D(20), S(20)], 117, 384),
+      turn('anna', 0, [S(25), { segment: 25, multiplier: 2 } as Hit, T(20)], 135, 249),
+    ];
+    expect(line('practice', ['anna'], events, 'anna').t20Hits).toBe(1);
+  });
+
+  it('counts T20 per player', () => {
+    expect(tallyGame('match', ['anna', 'bartek'], leg301).players.get('bartek')?.t20Hits).toBe(0);
   });
 
   it('keeps the score buckets apart', () => {
@@ -209,6 +228,11 @@ describe('mergeTotals', () => {
     expect(mergeTotals(a, EMPTY_TOTALS)).toEqual(a);
   });
 
+  it('adds T20 hits', () => {
+    expect(mergeTotals({ ...EMPTY_TOTALS, t20Hits: 4 }, { ...EMPTY_TOTALS, t20Hits: 7 }).t20Hits).toBe(11);
+    expect(mergeTotals({ ...EMPTY_TOTALS, t20Hits: 4 }, {}).t20Hits).toBe(4);
+  });
+
   it('keeps the higher highest turn and treats null as no value', () => {
     const a = { ...EMPTY_TOTALS, highestTurn: 100 };
     expect(mergeTotals(a, { ...EMPTY_TOTALS, highestTurn: 140 }).highestTurn).toBe(140);
@@ -216,5 +240,16 @@ describe('mergeTotals', () => {
     expect(mergeTotals(a, EMPTY_TOTALS).highestTurn).toBe(100);
     expect(mergeTotals(EMPTY_TOTALS, { highestTurn: 0 }).highestTurn).toBe(0);
     expect(mergeTotals(EMPTY_TOTALS, EMPTY_TOTALS).highestTurn).toBeNull();
+  });
+});
+
+describe('winRatePercent', () => {
+  it.each([
+    [0, 0, null],
+    [2, 3, 66.7],
+    [0, 3, 0],
+    [3, 3, 100],
+  ])('gives %i won of %i played as %s', (won, played, expected) => {
+    expect(winRatePercent(won, played)).toBe(expected);
   });
 });

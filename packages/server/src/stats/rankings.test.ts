@@ -23,16 +23,27 @@ function leg(playerId: string, legIndex: number, average: number): PlayerLeg {
   return { playerId, legIndex, points: average, darts: 3 };
 }
 
-function game(legs: PlayerLeg[], totals: Record<string, Partial<PlayerTotals>> = {}, type: MatchType = 'match'): RankedGame {
+function game(
+  legs: PlayerLeg[],
+  totals: Record<string, Partial<PlayerTotals>> = {},
+  type: MatchType = 'match',
+  { finished = true, winnerId = null }: { finished?: boolean; winnerId?: string | null } = {},
+): RankedGame {
   return {
     type,
+    finished,
     legs,
     tally: {
       players: new Map(Object.entries(totals).map(([id, own]) => [id, { ...EMPTY_TOTALS, ...own }])),
       legs: [],
-      winnerId: null,
+      winnerId,
     },
   };
+}
+
+// Gra bez legów i rzutek, tylko z graczami i zwycięzcą, do rankingu wygranych.
+function result(playerIds: string[], winnerId: string | null, type: MatchType = 'match', finished = true): RankedGame {
+  return game([], Object.fromEntries(playerIds.map((id) => [id, {}])), type, { finished, winnerId });
 }
 
 // Trzy legi tej samej gry, każdy z tą samą średnią, żeby gracz miał pozycję.
@@ -50,6 +61,8 @@ describe('buildRankings', () => {
       highestCheckout: [],
       shortestLeg: [],
       highestTurn: [],
+      winRate: [],
+      t20Hits: [],
     });
   });
 
@@ -193,6 +206,61 @@ describe('buildRankings', () => {
     expect(rankings.highestCheckout.map((entry) => entry.playerId)).toEqual(['anna']);
     expect(rankings.highestTurn).toEqual([]);
     expect(rankings.shortestLeg).toEqual([]);
+  });
+
+  it('needs 3 finished games for a win rate', () => {
+    const two = [result(['anna', 'bartek'], 'anna'), result(['anna', 'bartek'], 'anna')];
+    expect(buildRankings({ players: [anna, bartek], games: two }).winRate).toEqual([]);
+    const three = [...two, result(['anna', 'bartek'], 'bartek')];
+    expect(buildRankings({ players: [anna, bartek], games: three }).winRate).toEqual([
+      { playerId: 'anna', name: 'Anna', avatar: null, color: 1, position: 1, value: 66.7 },
+      { playerId: 'bartek', name: 'Bartek', avatar: null, color: 7, position: 2, value: 33.3 },
+    ]);
+  });
+
+  it('shares a win-rate position on a tie', () => {
+    const games = [
+      result(['anna', 'celina'], 'anna'),
+      result(['anna', 'celina'], 'celina'),
+      result(['anna', 'bartek'], 'anna'),
+      result(['anna', 'bartek'], 'bartek'),
+      result(['bartek', 'celina'], 'bartek'),
+      result(['bartek', 'celina'], 'celina'),
+    ];
+    expect(buildRankings({ players: [anna, bartek, celina], games }).winRate.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
+      ['Anna', 1, 50],
+      ['Bartek', 1, 50],
+      ['Celina', 1, 50],
+    ]);
+  });
+
+  it('counts 1st place in a casual game as a win', () => {
+    const games = [result(['anna', 'bartek', 'celina'], 'anna', 'casual'), result(['anna', 'bartek'], 'anna'), result(['anna', 'bartek'], 'bartek')];
+    expect(buildRankings({ players: [anna, bartek, celina], games }).winRate.map((entry) => [entry.name, entry.value])).toEqual([
+      ['Anna', 66.7],
+      ['Bartek', 33.3],
+    ]);
+  });
+
+  it('does not count an unfinished game as played', () => {
+    const games = [result(['anna', 'bartek'], 'anna'), result(['anna', 'bartek'], 'anna'), result(['anna', 'bartek'], null, 'match', false)];
+    expect(buildRankings({ players: [anna, bartek], games }).winRate).toEqual([]);
+  });
+
+  it('gives an empty win rate for practice games only', () => {
+    const games = [result(['anna'], null, 'practice'), result(['anna'], null, 'practice'), result(['anna'], null, 'practice')];
+    expect(buildRankings({ players: [anna], games }).winRate).toEqual([]);
+  });
+
+  it('lists T20 hits descending and leaves out players with 0', () => {
+    const rankings = buildRankings({
+      players: [anna, bartek, celina],
+      games: [game([], { anna: { t20Hits: 4 }, bartek: { t20Hits: 0 }, celina: { t20Hits: 2 } }), game([], { celina: { t20Hits: 5 } }, 'practice')],
+    });
+    expect(rankings.t20Hits.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
+      ['Celina', 1, 7],
+      ['Anna', 2, 4],
+    ]);
   });
 
   it('does not count a game without a completed leg', () => {

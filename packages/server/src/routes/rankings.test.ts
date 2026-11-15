@@ -33,6 +33,7 @@ describe('GET /stats/rankings', () => {
   it('answers zeros and empty lists for an empty database', async () => {
     expect(await rankings()).toEqual({
       filter: 'all',
+      period: 'all',
       games: 0,
       legs: 0,
       players: [],
@@ -40,6 +41,8 @@ describe('GET /stats/rankings', () => {
       highestCheckout: [],
       shortestLeg: [],
       highestTurn: [],
+      winRate: [],
+      t20Hits: [],
     });
   });
 
@@ -150,9 +153,38 @@ describe('GET /stats/rankings', () => {
     const result = await rankings();
     expect(result).toMatchObject({ games: 1, legs: 1 });
     expect(result.players.map((entry) => entry.name)).toEqual(['Anna']);
-    for (const tile of [result.bestLegAverage, result.highestCheckout, result.shortestLeg, result.highestTurn]) {
+    for (const tile of [result.bestLegAverage, result.highestCheckout, result.shortestLeg, result.highestTurn, result.t20Hits]) {
       expect(tile.map((entry) => entry.playerId)).not.toContain(guest.id);
     }
+  });
+
+  it('ranks the win rate after 3 finished games', async () => {
+    for (let game = 0; game < 3; game += 1) {
+      await playLeg301();
+    }
+    expect((await rankings()).winRate).toEqual([
+      { playerId: anna, name: 'Anna', avatar: null, color: 4, position: 1, value: 100 },
+      { playerId: bartek, name: 'Bartek', avatar: null, color: 7, position: 2, value: 0 },
+    ]);
+    expect((await rankings('practice')).winRate).toEqual([]);
+  });
+
+  it('does not count an abandoned game toward the win rate', async () => {
+    await playLeg301();
+    await playLeg301();
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 1 });
+    await throwDarts(t.app, id, [T(20), T(20), T(20)]);
+    expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
+    expect((await rankings()).winRate).toEqual([]);
+  });
+
+  it('lists T20 hits from every game type and leaves out players without one', async () => {
+    await playLeg301();
+    expect((await rankings()).t20Hits).toEqual([{ playerId: anna, name: 'Anna', avatar: null, color: 4, position: 1, value: 4 }]);
+    const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'solo_501', playerIds: [anna] });
+    await throwDarts(t.app, id, SOLO_501);
+    expect((await rankings('practice')).t20Hits).toEqual([{ playerId: anna, name: 'Anna', avatar: null, color: 4, position: 1, value: 7 }]);
+    expect((await rankings()).t20Hits.map((entry) => [entry.name, entry.value])).toEqual([['Anna', 11]]);
   });
 
   it('answers 400 for an unknown filter', async () => {

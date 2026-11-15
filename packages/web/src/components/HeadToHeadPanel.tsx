@@ -1,4 +1,4 @@
-import type { HeadToHead, Player } from '@autoscore/schema';
+import type { HeadToHead, Player, StatsPeriod } from '@autoscore/schema';
 import { useEffect, useState } from 'react';
 import { getHeadToHead } from '../api/client';
 import { formatAverage } from '../game/format-stat';
@@ -10,6 +10,7 @@ import { WarningIcon } from './icons';
 export interface HeadToHeadPanelProps {
   player: Pick<Player, 'id' | 'name'>;
   opponents: readonly Player[];
+  period: StatsPeriod;
 }
 
 const chip = 'flex min-h-11 max-w-full items-center gap-2 rounded-(--radius-button) pr-4 pl-2 font-display text-[19px]';
@@ -20,7 +21,7 @@ function chipStyle(selected: boolean): string {
 
 type Result = { status: 'idle' } | { status: 'loading' } | { status: 'ready'; value: HeadToHead } | { status: 'error' };
 
-export function HeadToHeadPanel({ player, opponents }: HeadToHeadPanelProps) {
+export function HeadToHeadPanel({ player, opponents, period }: HeadToHeadPanelProps) {
   const [opponentId, setOpponentId] = useState<string | null>(null);
   const [result, setResult] = useState<Result>({ status: 'idle' });
   const opponent = opponents.find((candidate) => candidate.id === opponentId);
@@ -31,7 +32,7 @@ export function HeadToHeadPanel({ player, opponents }: HeadToHeadPanelProps) {
     }
     let cancelled = false;
     setResult({ status: 'loading' });
-    getHeadToHead(player.id, opponentId).then(
+    getHeadToHead(player.id, opponentId, period).then(
       (value) => {
         if (!cancelled) {
           setResult({ status: 'ready', value });
@@ -46,7 +47,7 @@ export function HeadToHeadPanel({ player, opponents }: HeadToHeadPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [player.id, opponentId]);
+  }, [player.id, opponentId, period]);
 
   return (
     <section aria-labelledby="head-to-head" className="sc-panel sc-panel--flat">

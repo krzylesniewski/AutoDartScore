@@ -49,6 +49,7 @@ const annaLeg301 = {
   scores140: 0,
   scores100: 1,
   scores60: 0,
+  t20Hits: 4,
   highestCheckout: 121,
   doubleAttempts: 1,
   doublesHit: 1,
@@ -66,6 +67,7 @@ const bartekLeg301 = {
   scores140: 0,
   scores100: 0,
   scores60: 0,
+  t20Hits: 0,
   highestCheckout: null,
   doubleAttempts: 0,
   doublesHit: 0,
@@ -90,12 +92,12 @@ const noThrows = {
 describe('GET /players/:id/stats', () => {
   it('counts the LEG_301 match for both players', async () => {
     await playLeg301();
-    expect(await stats(anna)).toEqual({ ...annaLeg301, playerId: anna, filter: 'all', matchesPlayed: 1, matchesWon: 1 });
-    expect(await stats(bartek)).toEqual({ ...bartekLeg301, playerId: bartek, filter: 'all', matchesPlayed: 1, matchesWon: 0 });
+    expect(await stats(anna)).toEqual({ ...annaLeg301, playerId: anna, filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 1, winRate: 100 });
+    expect(await stats(bartek)).toEqual({ ...bartekLeg301, playerId: bartek, filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 0, winRate: 0 });
   });
 
   it('gives zeros and nulls to a player without throws', async () => {
-    expect(await stats(anna)).toEqual({ ...noThrows, playerId: anna, filter: 'all', matchesPlayed: 0, matchesWon: 0 });
+    expect(await stats(anna)).toEqual({ ...noThrows, playerId: anna, filter: 'all', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null });
   });
 
   it('counts a Solo 501 under practice, but not under match', async () => {
@@ -114,8 +116,10 @@ describe('GET /players/:id/stats', () => {
       legsWon: 0,
       matchesPlayed: 0,
       matchesWon: 0,
+      winRate: null,
+      t20Hits: 7,
     });
-    expect(await stats(anna, 'match')).toEqual({ ...noThrows, playerId: anna, filter: 'match', matchesPlayed: 0, matchesWon: 0 });
+    expect(await stats(anna, 'match')).toEqual({ ...noThrows, playerId: anna, filter: 'match', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null });
   });
 
   it('adds Solo 501 to checkouts and best leg, but not to legs or matches won', async () => {
@@ -130,7 +134,7 @@ describe('GET /players/:id/stats', () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     await throwDarts(t.app, id, [T(20), T(20), T(20), T(20), T(20), T(20)]);
     expect(await stats(anna)).toEqual(before);
-    expect(await stats(anna, 'practice')).toEqual({ ...noThrows, playerId: anna, filter: 'practice', matchesPlayed: 0, matchesWon: 0 });
+    expect(await stats(anna, 'practice')).toEqual({ ...noThrows, playerId: anna, filter: 'practice', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null });
   });
 
   it('does not count an undone throw', async () => {
@@ -144,8 +148,8 @@ describe('GET /players/:id/stats', () => {
   it('separates casual games and counts 1st place as a won leg and match', async () => {
     const { id } = await createGame(t.app, { type: 'casual', playerIds: [anna, bartek], startingScore: 301 });
     await throwDarts(t.app, id, LEG_301);
-    expect(await stats(anna, 'casual')).toMatchObject({ dartsThrown: 6, highestCheckout: 121, legsWon: 1, matchesPlayed: 1, matchesWon: 1 });
-    expect(await stats(bartek, 'casual')).toMatchObject({ dartsThrown: 3, legsWon: 0, matchesPlayed: 1, matchesWon: 0 });
+    expect(await stats(anna, 'casual')).toMatchObject({ dartsThrown: 6, highestCheckout: 121, legsWon: 1, matchesPlayed: 1, matchesWon: 1, winRate: 100 });
+    expect(await stats(bartek, 'casual')).toMatchObject({ dartsThrown: 3, legsWon: 0, matchesPlayed: 1, matchesWon: 0, winRate: 0 });
     expect(await stats(anna, 'match')).toMatchObject({ dartsThrown: 0, matchesPlayed: 0 });
   });
 
@@ -164,7 +168,21 @@ describe('GET /players/:id/stats', () => {
     await throwDarts(t.app, id, [T(20), T(20), T(20)]);
     expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
 
-    expect(await stats(anna)).toMatchObject({ dartsThrown: 3, points: 180, average: null, legsWon: 0, matchesPlayed: 0, matchesWon: 0 });
+    expect(await stats(anna)).toMatchObject({ dartsThrown: 3, points: 180, average: null, legsWon: 0, matchesPlayed: 0, matchesWon: 0, winRate: null });
+  });
+
+  it('takes the win rate from finished games only', async () => {
+    await playLeg301();
+    await playLeg301();
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 1 });
+    await throwDarts(t.app, id, [MISS, MISS, MISS]);
+    expect((await abandon(t.app, id, { playerId: bartek })).statusCode).toBe(200);
+    const casual = await createGame(t.app, { type: 'casual', playerIds: [bartek, anna], startingScore: 301 });
+    await throwDarts(t.app, casual.id, LEG_301);
+
+    expect(await stats(anna)).toMatchObject({ matchesPlayed: 3, matchesWon: 2, winRate: 66.7 });
+    expect(await stats(bartek)).toMatchObject({ matchesPlayed: 3, matchesWon: 1, winRate: 33.3 });
+    expect(await stats(anna, 'practice')).toMatchObject({ matchesPlayed: 0, winRate: null });
   });
 
   it('gives a null average to a Solo 501 ended before zero', async () => {
@@ -298,9 +316,15 @@ describe('GET /matches/:id/summary', () => {
     const result = await summary(id);
     expect(result).toMatchObject({ finished: false, eventSeq: 4, legs: [] });
     expect(result.players).toEqual([
-      { ...noThrows, dartsThrown: 3, points: 180, average: 180, first9Average: 180, scores180: 1, playerId: anna },
+      { ...noThrows, dartsThrown: 3, points: 180, average: 180, first9Average: 180, scores180: 1, t20Hits: 3, playerId: anna },
       { ...noThrows, playerId: bartek },
     ]);
+  });
+
+  it('leaves T20 of the open turn out', async () => {
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf: 1 });
+    await throwDarts(t.app, id, [T(20), S(20), MISS, T(20), T(20)]);
+    expect((await summary(id)).players.map((player) => player.t20Hits)).toEqual([1, 0]);
   });
 
   it('gives zeros and nulls for a Free run', async () => {

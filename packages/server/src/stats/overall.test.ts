@@ -23,6 +23,7 @@ function leg(playerId: string, legIndex: number, points: number, darts: number):
 function game(legs: PlayerLeg[], darts: Record<string, number>): RankedGame {
   return {
     type: 'match',
+    finished: true,
     legs,
     tally: {
       players: new Map(Object.entries(darts).map(([id, count]) => [id, { ...EMPTY_TOTALS, darts: count }])),

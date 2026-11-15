@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORM_GAMES, FREQUENT_HITS_LIMIT, FrequentHitsResponse, HeadToHead, LegProgress, LegProgressPoint, MIN_LEGS_FOR_AVERAGE, MatchSummary, MatchSummaryLeg, OverallPlayer, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, StatsOverall, StatsRankings, type PlayerStatLine } from './index.js';
+import { FORM_GAMES, FREQUENT_HITS_LIMIT, FrequentHitsResponse, HeadToHead, HeadToHeadQuery, LegProgress, LegProgressPoint, MIN_GAMES_FOR_WIN_RATE, MIN_LEGS_FOR_AVERAGE, MatchSummary, MatchSummaryLeg, OverallPlayer, OverallQuery, PlayerForm, PlayerFormQuery, PlayerStats, PlayerStatsQuery, RankedPlayer, RankingEntry, RankingsQuery, STATS_PERIOD_DAYS, StatsOverall, StatsPeriod, StatsRankings, type PlayerStatLine } from './index.js';
 
 const line: PlayerStatLine = {
   dartsThrown: 6,
@@ -10,6 +10,7 @@ const line: PlayerStatLine = {
   scores140: 0,
   scores100: 1,
   scores60: 0,
+  t20Hits: 4,
   highestCheckout: 121,
   doubleAttempts: 1,
   doublesHit: 1,
@@ -27,6 +28,7 @@ const empty: PlayerStatLine = {
   scores140: 0,
   scores100: 0,
   scores60: 0,
+  t20Hits: 0,
   highestCheckout: null,
   doubleAttempts: 0,
   doublesHit: 0,
@@ -37,30 +39,38 @@ const empty: PlayerStatLine = {
 
 describe('PlayerStats', () => {
   it('parses a stat line with the profile totals', () => {
-    const stats = { ...line, playerId: 'p1', filter: 'all', matchesPlayed: 1, matchesWon: 1 };
+    const stats = { ...line, playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 1, winRate: 100 };
     expect(PlayerStats.parse(stats)).toEqual(stats);
   });
 
   it('parses a player without throws', () => {
-    expect(PlayerStats.safeParse({ ...empty, playerId: 'p1', filter: 'match', matchesPlayed: 0, matchesWon: 0 }).success).toBe(true);
+    expect(PlayerStats.safeParse({ ...empty, playerId: 'p1', filter: 'match', period: '30d', matchesPlayed: 0, matchesWon: 0, winRate: null }).success).toBe(true);
   });
 
   it('rejects doublesPercent above 100', () => {
-    expect(PlayerStats.safeParse({ ...line, doublesPercent: 100.1, playerId: 'p1', filter: 'all', matchesPlayed: 1, matchesWon: 1 }).success).toBe(false);
+    expect(PlayerStats.safeParse({ ...line, doublesPercent: 100.1, playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 1, winRate: 100 }).success).toBe(false);
+  });
+
+  it('parses a win rate with one decimal place', () => {
+    expect(PlayerStats.safeParse({ ...line, playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 3, matchesWon: 2, winRate: 66.7 }).success).toBe(true);
+  });
+
+  it('rejects a win rate above 100', () => {
+    expect(PlayerStats.safeParse({ ...line, playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 1, winRate: 100.1 }).success).toBe(false);
   });
 
   it('rejects a checkout above 170', () => {
-    expect(PlayerStats.safeParse({ ...line, highestCheckout: 171, playerId: 'p1', filter: 'all', matchesPlayed: 1, matchesWon: 1 }).success).toBe(false);
+    expect(PlayerStats.safeParse({ ...line, highestCheckout: 171, playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 1, winRate: 100 }).success).toBe(false);
   });
 });
 
 describe('PlayerStatsQuery', () => {
   it('defaults the filter to all', () => {
-    expect(PlayerStatsQuery.parse({})).toEqual({ type: 'all' });
+    expect(PlayerStatsQuery.parse({})).toEqual({ type: 'all', period: 'all' });
   });
 
   it.each(['match', 'casual', 'practice'])('accepts %s', (type) => {
-    expect(PlayerStatsQuery.parse({ type })).toEqual({ type });
+    expect(PlayerStatsQuery.parse({ type })).toEqual({ type, period: 'all' });
   });
 
   it('rejects an unknown filter', () => {
@@ -181,6 +191,7 @@ describe('StatsRankings', () => {
   it('parses a ranking with a ranked and an unranked player', () => {
     const rankings = {
       filter: 'all',
+      period: 'all',
       games: 2,
       legs: 4,
       players: [
@@ -194,8 +205,19 @@ describe('StatsRankings', () => {
       ],
       shortestLeg: [{ ...anna, position: 1, value: 15 }],
       highestTurn: [],
+      winRate: [
+        { ...anna, position: 1, value: 66.7 },
+        { ...bartek, position: 2, value: 0 },
+      ],
+      t20Hits: [{ ...anna, position: 1, value: 12 }],
     };
     expect(StatsRankings.parse(rankings)).toEqual(rankings);
+  });
+
+  it.each(['winRate', 't20Hits'])('requires the %s list', (key) => {
+    const rankings = { filter: 'all', period: 'all', games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [], winRate: [], t20Hits: [] };
+    expect(StatsRankings.safeParse(rankings).success).toBe(true);
+    expect(StatsRankings.safeParse({ ...rankings, [key]: undefined }).success).toBe(false);
   });
 
   it('accepts position null only for a ranked player', () => {
@@ -220,6 +242,10 @@ describe('StatsRankings', () => {
   it('needs 3 legs for an average', () => {
     expect(MIN_LEGS_FOR_AVERAGE).toBe(3);
   });
+
+  it('needs 3 finished games for a win rate', () => {
+    expect(MIN_GAMES_FOR_WIN_RATE).toBe(3);
+  });
 });
 
 describe('StatsOverall', () => {
@@ -228,29 +254,29 @@ describe('StatsOverall', () => {
   const celina = { playerId: 'p3', name: 'Celina', avatar: null, color: 12, darts: 12, legs: 0, average: null, difference: null };
 
   it('parses players above, below and without an average', () => {
-    const overall = { games: 1, legs: 1, darts: 21, average: 75.25, players: [anna, bartek, celina] };
+    const overall = { period: 'all', games: 1, legs: 1, darts: 21, average: 75.25, players: [anna, bartek, celina] };
     expect(StatsOverall.parse(overall)).toEqual(overall);
   });
 
   it('parses an empty overview', () => {
-    const overall = { games: 0, legs: 0, darts: 0, average: null, players: [] };
+    const overall = { period: '30d', games: 0, legs: 0, darts: 0, average: null, players: [] };
     expect(StatsOverall.parse(overall)).toEqual(overall);
   });
 
   it('rejects a negative average', () => {
     expect(OverallPlayer.safeParse({ ...anna, average: -1 }).success).toBe(false);
-    expect(StatsOverall.safeParse({ games: 1, legs: 1, darts: 9, average: -1, players: [] }).success).toBe(false);
+    expect(StatsOverall.safeParse({ period: 'all', games: 1, legs: 1, darts: 9, average: -1, players: [] }).success).toBe(false);
   });
 
   it('rejects a fractional dart count', () => {
     expect(OverallPlayer.safeParse({ ...anna, darts: 6.5 }).success).toBe(false);
-    expect(StatsOverall.safeParse({ games: 1, legs: 1, darts: 9.5, average: 75.25, players: [] }).success).toBe(false);
+    expect(StatsOverall.safeParse({ period: 'all', games: 1, legs: 1, darts: 9.5, average: 75.25, players: [] }).success).toBe(false);
   });
 });
 
 describe('RankingsQuery', () => {
   it('defaults the filter to all', () => {
-    expect(RankingsQuery.parse({})).toEqual({ type: 'all' });
+    expect(RankingsQuery.parse({})).toEqual({ type: 'all', period: 'all' });
   });
 
   it('rejects an unknown filter', () => {
@@ -262,6 +288,7 @@ describe('HeadToHead', () => {
   const headToHead = {
     playerId: 'p1',
     opponentId: 'p2',
+    period: 'all',
     matchesPlayed: 4,
     matchesWon: 3,
     opponentMatchesWon: 1,
@@ -290,24 +317,67 @@ describe('PlayerForm', () => {
   const point = (index: number) => ({ matchId: `m${index}`, type: 'match', createdAt: '2026-10-15T18:30:00.000Z', average: 50 + index, legs: 1 });
 
   it('parses the form points', () => {
-    const form = { playerId: 'p1', filter: 'all', points: [point(1), { ...point(2), type: 'practice', legs: 1 }] };
+    const form = { playerId: 'p1', filter: 'all', period: 'all', points: [point(1), { ...point(2), type: 'practice', legs: 1 }] };
     expect(PlayerForm.parse(form)).toEqual(form);
   });
 
   it(`rejects more than ${FORM_GAMES} points`, () => {
     const points = Array.from({ length: FORM_GAMES + 1 }, (_, index) => point(index));
-    expect(PlayerForm.safeParse({ playerId: 'p1', filter: 'all', points }).success).toBe(false);
-    expect(PlayerForm.safeParse({ playerId: 'p1', filter: 'all', points: points.slice(1) }).success).toBe(true);
+    expect(PlayerForm.safeParse({ playerId: 'p1', filter: 'all', period: 'all', points }).success).toBe(false);
+    expect(PlayerForm.safeParse({ playerId: 'p1', filter: 'all', period: 'all', points: points.slice(1) }).success).toBe(true);
   });
 
   it('rejects a point without a completed leg', () => {
-    expect(PlayerForm.safeParse({ playerId: 'p1', filter: 'all', points: [{ ...point(1), legs: 0 }] }).success).toBe(false);
+    expect(PlayerForm.safeParse({ playerId: 'p1', filter: 'all', period: 'all', points: [{ ...point(1), legs: 0 }] }).success).toBe(false);
   });
 
   it('keeps the last 20 games and defaults the filter to all', () => {
     expect(FORM_GAMES).toBe(20);
-    expect(PlayerFormQuery.parse({})).toEqual({ type: 'all' });
+    expect(PlayerFormQuery.parse({})).toEqual({ type: 'all', period: 'all' });
     expect(PlayerFormQuery.safeParse({ type: 'bogus' }).success).toBe(false);
+  });
+});
+
+describe('StatsPeriod', () => {
+  it('maps each period to its length in days', () => {
+    expect(StatsPeriod.options).toEqual(['30d', '90d', 'all']);
+    expect(STATS_PERIOD_DAYS).toEqual({ '30d': 30, '90d': 90, all: null });
+  });
+
+  describe.each([
+    ['PlayerStatsQuery', PlayerStatsQuery],
+    ['RankingsQuery', RankingsQuery],
+    ['PlayerFormQuery', PlayerFormQuery],
+    ['OverallQuery', OverallQuery],
+    ['HeadToHeadQuery', HeadToHeadQuery],
+  ] as const)('%s', (_name, query) => {
+    it('defaults the period to all', () => {
+      expect(query.parse({}).period).toBe('all');
+    });
+
+    it.each(['30d', '90d', 'all'])('accepts the period %s', (period) => {
+      expect(query.parse({ period }).period).toBe(period);
+    });
+
+    it.each(['7d', 'quarter'])('rejects the period %s', (period) => {
+      expect(query.safeParse({ period }).success).toBe(false);
+    });
+  });
+
+  it('defaults the overall and head-to-head queries to all', () => {
+    expect(OverallQuery.parse({})).toEqual({ period: 'all' });
+    expect(HeadToHeadQuery.parse({})).toEqual({ period: 'all' });
+  });
+
+  it.each([
+    ['PlayerStats', PlayerStats, { ...empty, playerId: 'p1', filter: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null }],
+    ['StatsRankings', StatsRankings, { filter: 'all', games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [], winRate: [], t20Hits: [] }],
+    ['StatsOverall', StatsOverall, { games: 0, legs: 0, darts: 0, average: null, players: [] }],
+    ['HeadToHead', HeadToHead, { playerId: 'p1', opponentId: 'p2', matchesPlayed: 0, matchesWon: 0, opponentMatchesWon: 0, legsWon: 0, opponentLegsWon: 0, average: null, opponentAverage: null, lastPlayedAt: null }],
+    ['PlayerForm', PlayerForm, { playerId: 'p1', filter: 'all', points: [] }],
+  ] as const)('%s requires the period', (_name, schema, response) => {
+    expect(schema.safeParse({ ...response, period: 'all' }).success).toBe(true);
+    expect(schema.safeParse(response).success).toBe(false);
   });
 });
 

@@ -31,9 +31,9 @@ beforeEach(() => {
         return json(200, []);
       }
       if (url.startsWith('/api/stats/rankings')) {
-        return json(200, { filter: 'all', games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [] });
+        return json(200, { filter: 'all', period: 'all', games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [], winRate: [], t20Hits: [] });
       }
-      return json(200, { ...statLine(), playerId: 'p1', filter: 'all', matchesPlayed: 0, matchesWon: 0 });
+      return json(200, { ...statLine(), playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null });
     }),
   );
 });
@@ -92,7 +92,7 @@ describe('App', () => {
     window.location.hash = '#/stats';
     render(<App />);
     expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
-    await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all'));
+    await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all&period=all'));
     expect(stageLight()).toBe('list');
   });
 
@@ -100,7 +100,7 @@ describe('App', () => {
     window.location.hash = `#/stats/${encodeURIComponent('p 2')}`;
     render(<App />);
     expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
-    await vi.waitFor(() => expect(urls).toContain('/api/players/p%202/stats?type=all'));
+    await vi.waitFor(() => expect(urls).toContain('/api/players/p%202/stats?type=all&period=all'));
     expect((await screen.findByRole('button', { name: 'Bartek' })).getAttribute('aria-pressed')).toBe('true');
   });
 });

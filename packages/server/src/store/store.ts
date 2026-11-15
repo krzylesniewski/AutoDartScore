@@ -41,6 +41,10 @@ export interface MatchLog {
 
 export type NewThrow = Omit<ThrowRecord, 'id' | 'receivedAt'>;
 
+export interface MatchRange {
+  readonly createdFrom?: string | null;
+}
+
 export interface Store {
   createPlayer(request: CreatePlayerRequest): Promise<Player>;
   // Bez gości, od ostatnio aktywnego. Gracze bez gier na końcu. Zarchiwizowani tylko z includeArchived.
@@ -52,8 +56,9 @@ export interface Store {
   createMatch(match: NewMatch): Promise<string>;
   findMatch(id: string): Promise<StoredMatch | null>;
   // Gry gracza, które wchodzą do statystyk, w kolejności utworzenia.
-  findMatchIdsForPlayer(playerId: string, types: readonly MatchType[]): Promise<string[]>;
-  listMatches(): Promise<StoredMatch[]>;
+  // createdFrom to najstarsze dozwolone created_at (ISO, włącznie). null albo brak znaczy bez dolnej granicy.
+  findMatchIdsForPlayer(playerId: string, types: readonly MatchType[], options?: MatchRange): Promise<string[]>;
+  listMatches(options?: MatchRange): Promise<StoredMatch[]>;
   loadLog(matchId: string): Promise<MatchLog>;
   findThrowByEventId(eventId: string): Promise<ThrowRecord | null>;
   appendThrow(hit: NewThrow): Promise<{ throw: ThrowRecord; seq: number }>;
@@ -341,8 +346,13 @@ export function createStore(db: Kysely<Database>): Store {
       return row ? toMatch(row, await matchPlayers(id)) : null;
     },
 
-    async listMatches() {
-      const rows = await db.selectFrom('matches').selectAll().orderBy('created_at').orderBy('id').execute();
+    async listMatches(options) {
+      const createdFrom = options?.createdFrom ?? null;
+      let query = db.selectFrom('matches').selectAll();
+      if (createdFrom !== null) {
+        query = query.where('created_at', '>=', createdFrom);
+      }
+      const rows = await query.orderBy('created_at').orderBy('id').execute();
       const matches = [];
       for (const row of rows) {
         matches.push(toMatch(row, await matchPlayers(row.id)));
@@ -350,20 +360,22 @@ export function createStore(db: Kysely<Database>): Store {
       return matches;
     },
 
-    async findMatchIdsForPlayer(playerId, types) {
+    async findMatchIdsForPlayer(playerId, types, options) {
       if (types.length === 0) {
         return [];
       }
-      const rows = await db
+      const createdFrom = options?.createdFrom ?? null;
+      let query = db
         .selectFrom('matches')
         .innerJoin('match_players', 'match_players.match_id', 'matches.id')
         .select('matches.id')
         .where('match_players.player_id', '=', playerId)
         .where('matches.counts_to_stats', '=', 1)
-        .where('matches.type', 'in', [...types])
-        .orderBy('matches.created_at')
-        .orderBy('matches.id')
-        .execute();
+        .where('matches.type', 'in', [...types]);
+      if (createdFrom !== null) {
+        query = query.where('matches.created_at', '>=', createdFrom);
+      }
+      const rows = await query.orderBy('matches.created_at').orderBy('matches.id').execute();
       return rows.map((row) => row.id);
     },
 

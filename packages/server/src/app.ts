@@ -25,7 +25,7 @@ export interface AppOptions {
   readonly logger?: boolean;
   readonly auth?: AuthConfig | null;
   readonly corsOrigins?: readonly string[] | null;
-  readonly now?: () => number; // zegar dla tokenów, limitu logowań i blokady zakończonej gry. Domyślnie Date.now
+  readonly now?: () => number; // zegar dla tokenów, limitu logowań, blokady zakończonej gry i okresu statystyk. Domyślnie Date.now
   readonly liveAuthTimeoutMs?: number;
   readonly livePingIntervalMs?: number;
   readonly webDir?: string | null; // katalog zbudowanego frontu. null wyłącza serwowanie plików
@@ -75,7 +75,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   playerRoutes(app, store);
   await matchRoutes(app, service);
   liveRoutes(app, service, { auth, now, authTimeoutMs: options.liveAuthTimeoutMs ?? 5000, pingIntervalMs: options.livePingIntervalMs ?? 30_000 });
-  statsRoutes(app, createStatsService({ store }));
+  statsRoutes(app, createStatsService({ store, now }));
   if (webDir !== null) {
     await webAppRoutes(app, { webDir, webRoutes, apiSegments });
   }
