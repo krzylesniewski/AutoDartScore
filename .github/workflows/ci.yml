@@ -6,6 +6,9 @@ on:
     branches: [main, feat/redesign, feat/hardening]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -160,3 +163,16 @@ jobs:
       - run: bash deploy/test-migrate-db.sh
       - run: bash deploy/test-deploy.sh
       - run: bash deploy/test-pull-backup.sh
+
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      # No cache: pnpm. The job skips pnpm install, so the pnpm store never exists
+      # and on a cache miss the setup-node post step fails trying to save it.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: pnpm audit --prod --audit-level high

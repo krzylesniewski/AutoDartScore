@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {
-    "vitest": "^5.0.4"
+    "vitest": "^5.1.0"
   },
   "dependencies": {
     "zod": "^4.6.7"
