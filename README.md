@@ -204,6 +204,7 @@ packages/
   server/   API REST i WebSocket, log zdarzeń w SQLite
   web/      front React (ekran gry, kreator, klawiatura)
   audio/    głos i efekty dźwiękowe z wiadomości na żywo
+e2e/        testy end-to-end (Playwright) na konfiguracji produkcyjnej
 design/     tokeny motywu i makiety
 spikes/     eksperymenty z kamerą, poza buildem i lintem
 rollout/    manifest planu PR-ów
@@ -219,10 +220,12 @@ README pakietów: [engine](packages/engine/README.md), [schema](packages/schema/
 pnpm test        # testy wszystkich pakietów (Vitest)
 pnpm typecheck   # tsc w każdym pakiecie
 pnpm lint        # ESLint na całym repo
+pnpm e2e         # testy end-to-end w Chromium (opis w e2e/README.md)
 pnpm --filter @autoscore/engine test   # testy jednego pakietu
 ```
 
 CI uruchamia te same trzy checki: `test`, `typecheck` i `lint`.
+CI uruchamia też job `e2e`, czyli `pnpm e2e` na zbudowanym froncie i serwerze z hasłem.
 
 ## Zasady gry (X01) w skrócie
 
