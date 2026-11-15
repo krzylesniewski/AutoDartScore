@@ -93,7 +93,7 @@ export function CheckoutActions({ resultsDisabled, skipDisabled, undoDisabled, b
   });
 
   return (
-    <div className="flex flex-col gap-3">
+    <div data-shortcut-keys="" className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         <KeypadKey
           ref={failureKey}
