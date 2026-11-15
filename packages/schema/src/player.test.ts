@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CreatePlayerRequest, isSingleEmoji, ListPlayersQuery, Player, UpdatePlayerRequest } from './index.js';
+import { CreatePlayerRequest, isSingleEmoji, ListPlayersQuery, Player, PlayerId, UpdatePlayerRequest } from './index.js';
 
 describe('CreatePlayerRequest', () => {
   it('defaults guest to false and trims the name', () => {
@@ -120,5 +120,15 @@ describe('isSingleEmoji', () => {
 
   it.each(['', ' ', 'a', 'KL', '7', '#', '🎯🎯', '🎯 ', ' 🎯', '🎯x'])('rejects %j', (value) => {
     expect(isSingleEmoji(value)).toBe(false);
+  });
+});
+
+describe('PlayerId', () => {
+  it('rejects an empty id', () => {
+    expect(PlayerId.safeParse('').success).toBe(false);
+  });
+
+  it('accepts a non-empty id', () => {
+    expect(PlayerId.parse('p_1')).toBe('p_1');
   });
 });

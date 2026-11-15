@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { CheckoutAttempt, CheckoutRange, MatchStatus, MatchType, Placement, PracticeMode } from './index.js';
+import {
+  CheckoutAttempt,
+  CheckoutRange,
+  CheckoutRule,
+  MatchStatus,
+  MatchType,
+  Placement,
+  PracticeMode,
+  STARTING_SCORES,
+  StartingScore,
+} from './index.js';
 
 describe('MatchType', () => {
   it.each(['match', 'casual', 'practice'])('accepts %s', (value) => {
@@ -70,5 +80,25 @@ describe('MatchStatus', () => {
 
   it('rejects an unknown status', () => {
     expect(MatchStatus.safeParse('paused').success).toBe(false);
+  });
+});
+
+describe('CheckoutRule', () => {
+  it.each(['new_each_attempt', 'repeat_on_miss'])('accepts %s', (value) => {
+    expect(CheckoutRule.parse(value)).toBe(value);
+  });
+
+  it.each(['', 'repeat', 'NEW_EACH_ATTEMPT'])('rejects %j', (value) => {
+    expect(CheckoutRule.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('STARTING_SCORES', () => {
+  it('lists the starting scores in order', () => {
+    expect(STARTING_SCORES).toEqual([301, 501, 701]);
+  });
+
+  it.each(STARTING_SCORES)('is accepted by StartingScore: %i', (score) => {
+    expect(StartingScore.parse(score)).toBe(score);
   });
 });

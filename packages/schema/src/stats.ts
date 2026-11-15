@@ -3,7 +3,7 @@ import { LegWon } from './domain-events.js';
 import { Hit, MISS_SEGMENT, Multiplier, Segment } from './hit.js';
 import { CheckoutSession } from './match-api.js';
 import { MatchType, StartingScore } from './match.js';
-import { PlayerColor } from './player.js';
+import { PlayerColor, PlayerId } from './player.js';
 
 // Statystyki liczone na żądanie z logu rzutek. Liczą się tylko zamknięte tury.
 
@@ -44,8 +44,6 @@ export const PlayerStatLine = z.object({
   legsWon: Count,
 });
 export type PlayerStatLine = z.infer<typeof PlayerStatLine>;
-
-const PlayerId = z.string().min(1);
 
 export const PlayerStats = PlayerStatLine.extend({
   playerId: PlayerId,
@@ -112,11 +110,14 @@ export const MIN_GAMES_FOR_WIN_RATE = 3;
 export const RankingsQuery = z.object({ type: StatsFilter.default('all'), period: StatsPeriod.default('all') });
 export type RankingsQuery = z.infer<typeof RankingsQuery>;
 
-export const RankedPlayer = z.object({
+const ListedPlayer = z.object({
   playerId: PlayerId,
   name: z.string().min(1),
   avatar: z.string().nullable(),
   color: PlayerColor,
+});
+
+export const RankedPlayer = ListedPlayer.extend({
   position: z.int().min(1).nullable(), // null poniżej MIN_LEGS_FOR_AVERAGE ukończonych legów
   average: Average, // tylko ukończone legi
   legs: Count, // ukończone legi
@@ -124,11 +125,7 @@ export const RankedPlayer = z.object({
 export type RankedPlayer = z.infer<typeof RankedPlayer>;
 
 // Remis daje tę samą pozycję, a następna pozycja jest pomijana (1, 1, 3).
-export const RankingEntry = z.object({
-  playerId: PlayerId,
-  name: z.string().min(1),
-  avatar: z.string().nullable(),
-  color: PlayerColor,
+export const RankingEntry = ListedPlayer.extend({
   position: z.int().min(1),
   value: z.number().min(0),
 });
@@ -153,11 +150,7 @@ export type StatsRankings = z.infer<typeof StatsRankings>;
 export const OverallQuery = z.object({ period: StatsPeriod.default('all') });
 export type OverallQuery = z.infer<typeof OverallQuery>;
 
-export const OverallPlayer = z.object({
-  playerId: PlayerId,
-  name: z.string().min(1),
-  avatar: z.string().nullable(),
-  color: PlayerColor,
+export const OverallPlayer = ListedPlayer.extend({
   darts: Count, // każda zamknięta tura, także z nieukończonych legów i z bustem
   legs: Count, // ukończone legi
   average: Average, // tylko ukończone legi
