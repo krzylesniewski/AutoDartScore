@@ -226,6 +226,7 @@ pnpm --filter @autoscore/engine test   # testy jednego pakietu
 
 CI uruchamia te same trzy checki: `test`, `typecheck` i `lint`.
 CI uruchamia też job `e2e`, czyli `pnpm e2e` na zbudowanym froncie i serwerze z hasłem.
+CI uruchamia też job `audit` (`pnpm audit --prod --audit-level high`, nie przechodzi przy podatnościach wysokich i krytycznych w zależnościach produkcyjnych), a Dependabot co tydzień proponuje aktualizacje npm i GitHub Actions.
 
 ## Zasady gry (X01) w skrócie
 
