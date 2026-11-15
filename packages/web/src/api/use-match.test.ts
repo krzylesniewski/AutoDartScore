@@ -150,20 +150,18 @@ describe('useMatch command queue', () => {
     respond = networkError;
     const { result } = render();
     act(() => {
-      result.current.sendHit(T20);
-      result.current.sendHit(T20);
+      result.current.sendHit({ segment: 20, multiplier: 1 });
+      result.current.sendHit({ segment: 5, multiplier: 1 });
     });
     await settled(result);
-    expect(result.current.errorCode).toBe('throw_failed');
+    expect(result.current.error).toBe('Nie udało się wysłać rzutki');
 
     respond = created;
     act(() => {
       result.current.sendHit({ segment: 19, multiplier: 1 });
     });
     await settled(result);
-    const sent = throwCalls();
-    expect(sent).toHaveLength(3);
-    expect(sent[2]?.segment).toBe(19);
+    expect(throwCalls().map((hit) => hit.segment)).toEqual([20, 20, 19]);
     expect(result.current.errorCode).toBeNull();
     expect(result.current.error).toBeNull();
   });
@@ -194,7 +192,7 @@ describe('useMatch throw retry', () => {
     });
     await settled(result);
     expect(throwCalls()).toHaveLength(1);
-    expect(result.current.errorCode).toBe('throw_failed');
+    expect(result.current.error).toBe('Nie udało się wysłać rzutki');
   });
 
   it('fails the throw after both attempts time out', async () => {
@@ -262,6 +260,6 @@ describe('useMatch other commands', () => {
     });
     await settled(result);
     expect(calls.map((call) => call.url)).toEqual([UNDO_URL, THROWS_URL]);
-    expect(result.current.errorCode).toBeNull();
+    expect(result.current.error).toBeNull();
   });
 });
