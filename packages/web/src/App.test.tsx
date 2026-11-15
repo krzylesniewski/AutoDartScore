@@ -31,9 +31,9 @@ beforeEach(() => {
         return json(200, []);
       }
       if (url.startsWith('/api/stats/rankings')) {
-        return json(200, { filter: 'all', period: 'all', games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [] });
+        return json(200, { filter: 'all', period: 'all', games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [], winRate: [], t20Hits: [] });
       }
-      return json(200, { ...statLine(), playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 0, matchesWon: 0 });
+      return json(200, { ...statLine(), playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null });
     }),
   );
 });

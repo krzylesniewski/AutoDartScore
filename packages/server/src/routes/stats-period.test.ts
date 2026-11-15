@@ -167,6 +167,22 @@ describe.each(routes.filter((route) => route.name !== 'GET /players/:id/head-to-
   });
 });
 
+describe('GET /stats/rankings win rate and T20 hits with period', () => {
+  async function lists(period: string) {
+    const { winRate, t20Hits } = StatsRankings.parse(await getOk(`/stats/rankings?period=${period}`));
+    return { winRate: winRate.map((entry) => entry.playerId), t20Hits: t20Hits.map((entry) => entry.playerId) };
+  }
+
+  // Jedna gra nie wystarcza do rankingu wygranych, więc gracze potrzebują trzech.
+  it('leaves 31-day-old games out of 30d and keeps them in 90d', async () => {
+    for (let game = 0; game < 3; game += 1) {
+      await playGame(31 * DAY_MS);
+    }
+    expect(await lists('30d')).toEqual({ winRate: [], t20Hits: [] });
+    expect(await lists('90d')).toEqual({ winRate: [anna, bartek], t20Hits: [anna] });
+  });
+});
+
 describe('GET /players/:id/head-to-head/:opponentId with period', () => {
   it('takes lastPlayedAt only from games inside the period', async () => {
     await playGame(31 * DAY_MS);

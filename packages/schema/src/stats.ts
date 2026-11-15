@@ -35,6 +35,7 @@ export const PlayerStatLine = z.object({
   scores140: Count,
   scores100: Count,
   scores60: Count,
+  t20Hits: Count, // T20 w zamkniętych turach, także z bustem
   highestCheckout: LegWon.shape.checkout.nullable(),
   doubleAttempts: Count,
   doublesHit: Count,
@@ -52,6 +53,7 @@ export const PlayerStats = PlayerStatLine.extend({
   period: StatsPeriod,
   matchesPlayed: Count,
   matchesWon: Count,
+  winRate: z.number().min(0).max(100).nullable(), // procent wygranych z rozegranych, null bez rozegranych gier
 });
 export type PlayerStats = z.infer<typeof PlayerStats>;
 
@@ -104,6 +106,9 @@ export type MatchSummary = z.infer<typeof MatchSummary>;
 // Ranking graczy. Średnia liczy tylko ukończone legi, a pozycję dostaje gracz z co najmniej MIN_LEGS_FOR_AVERAGE legami.
 export const MIN_LEGS_FOR_AVERAGE = 3;
 
+// Do rankingu wygranych wchodzi gracz z co najmniej tyloma ukończonymi grami (1v1 albo zabawa) w filtrze i okresie.
+export const MIN_GAMES_FOR_WIN_RATE = 3;
+
 export const RankingsQuery = z.object({ type: StatsFilter.default('all'), period: StatsPeriod.default('all') });
 export type RankingsQuery = z.infer<typeof RankingsQuery>;
 
@@ -139,6 +144,8 @@ export const StatsRankings = z.object({
   highestCheckout: z.array(RankingEntry),
   shortestLeg: z.array(RankingEntry),
   highestTurn: z.array(RankingEntry), // tylko mecze 1v1
+  winRate: z.array(RankingEntry), // pusta dla filtra practice
+  t20Hits: z.array(RankingEntry), // bez graczy z 0 trafień
 });
 export type StatsRankings = z.infer<typeof StatsRankings>;
 

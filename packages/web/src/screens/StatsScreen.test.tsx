@@ -51,6 +51,7 @@ function stats(playerId: string, overrides: Partial<PlayerStats> = {}): PlayerSt
     period: 'all',
     matchesPlayed: 2,
     matchesWon: 1,
+    winRate: 50,
     ...overrides,
   };
 }
@@ -74,6 +75,8 @@ const rankingsFixture: StatsRankings = {
   highestCheckout: [entry('p2', 'Bartek', 1, 121), entry('p3', 'Celina', 1, 121), entry('p1', 'Anna', 3, 80), entry('p4', 'Darek', 3, 80)],
   shortestLeg: [entry('p1', 'Anna', 1, 15), entry('p2', 'Bartek', 2, 18)],
   highestTurn: [entry('p2', 'Bartek', 1, 180)],
+  winRate: [entry('p1', 'Anna', 1, 66.7), entry('p2', 'Bartek', 2, 33.3)],
+  t20Hits: [entry('p2', 'Bartek', 1, 42), entry('p1', 'Anna', 2, 17)],
 };
 
 const overallFixture: StatsOverall = {
@@ -260,7 +263,7 @@ describe('StatsScreen: ranking', () => {
   });
 
   it('shows one message instead of the list and tiles without games', async () => {
-    rankings = { ...rankingsFixture, games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [] };
+    rankings = { ...rankingsFixture, games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [], winRate: [], t20Hits: [] };
     render(<StatsScreen playerId={null} />);
     expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
     expect(screen.getByText('Ranking graczy z całej historii · 0 gier, 0 legów')).toBeTruthy();
@@ -444,7 +447,7 @@ describe('StatsScreen: player card', () => {
   });
 
   it('shows Brak rzutów for a player without throws', async () => {
-    respondStats = () => json(200, { ...stats('p1'), ...statLine(), matchesPlayed: 0, matchesWon: 0 });
+    respondStats = () => json(200, { ...stats('p1'), ...statLine(), matchesPlayed: 0, matchesWon: 0, winRate: null });
     render(<StatsScreen playerId="p1" />);
     expect(await screen.findByText('Brak rzutów')).toBeTruthy();
     expect(document.querySelector('dl')).toBeNull();

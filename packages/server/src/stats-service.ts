@@ -12,7 +12,7 @@ import { buildLegProgress } from './stats/leg-progress.js';
 import { buildOverall } from './stats/overall.js';
 import { periodStart } from './stats/period.js';
 import { buildRankings, type RankedGame } from './stats/rankings.js';
-import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine } from './stats/tally.js';
+import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine, winRatePercent } from './stats/tally.js';
 import type { Store, StoredMatch } from './store/store.js';
 
 export interface StatsService {
@@ -99,8 +99,8 @@ export function createStatsService({ store, now }: Dependencies): StatsService {
       if (!match.countsToStats || !types.includes(match.type)) {
         continue;
       }
-      const { playerIds, events, tally } = await replayed(match);
-      games.push({ type: match.type, legs: completedPlayerLegs(match.type, playerIds, events), tally });
+      const { finished, playerIds, events, tally } = await replayed(match);
+      games.push({ type: match.type, finished, legs: completedPlayerLegs(match.type, playerIds, events), tally });
     }
     return games;
   }
@@ -129,7 +129,7 @@ export function createStatsService({ store, now }: Dependencies): StatsService {
           matchesWon += tally.winnerId === playerId ? 1 : 0;
         }
       }
-      return { ...toStatLine(totals), average: threeDartAverage(legPoints, legDarts), playerId, filter, period, matchesPlayed, matchesWon };
+      return { ...toStatLine(totals), average: threeDartAverage(legPoints, legDarts), playerId, filter, period, matchesPlayed, matchesWon, winRate: winRatePercent(matchesWon, matchesPlayed) };
     },
 
     async matchSummary(matchId) {
