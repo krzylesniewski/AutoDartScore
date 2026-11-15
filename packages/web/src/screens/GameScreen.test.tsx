@@ -254,6 +254,28 @@ describe('GameScreen', () => {
     expect(await screen.findByText('Nie udało się wysłać rzutki')).toBeTruthy();
   });
 
+  it('drops the taps queued behind a failed throw and keeps the error', async () => {
+    const pending: (() => void)[] = [];
+    respond = (call) =>
+      calls.length === 1
+        ? new Promise((resolve) => pending.push(() => resolve(json(500, { error: 'internal_error', message: 'Internal error' }))))
+        : Promise.resolve(json(201, throwResult(call, initial)));
+    connect();
+    tap('20');
+    tap('5');
+    tap('1');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    act(() => {
+      pending.shift()?.();
+    });
+    await vi.waitFor(() => expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false));
+    await flush();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe(`/api/matches/${MATCH_ID}/throws`);
+    expect(screen.getByText('Nie udało się wysłać rzutki')).toBeTruthy();
+  });
+
   it('shows a bust banner for 2500 ms', () => {
     vi.useFakeTimers();
     const ws = connect();

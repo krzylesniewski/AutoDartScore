@@ -34,7 +34,7 @@ const noticeLink = 'ml-auto inline-flex min-h-11 items-center underline text-(--
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
-  const { state, lastTurn, banner, achievements, error, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt, sendCheckoutSkip } = useMatch(
+  const { state, lastTurn, banner, achievements, error, errorCode, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt, sendCheckoutSkip } = useMatch(
     matchId,
     audio.onLiveMessage,
   );
@@ -116,7 +116,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
   }
 
   // Odmowa serwera wygrywa z zegarem urządzenia. Tekst blokady pokazujemy raz, zamiast błędu cofnięcia.
-  const lockedByServer = state?.finished === true && error === pl.matchLocked;
+  const lockedByServer = state?.finished === true && errorCode === 'match_locked';
   const undoLocked = undoWindow.locked || lockedByServer;
   const shownError = lockedByServer ? null : error;
   const undoCountdown = !undoLocked && undoWindow.secondsLeft !== null ? formatCountdown(undoWindow.secondsLeft) : null;

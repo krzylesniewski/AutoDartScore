@@ -1,5 +1,5 @@
 import { LiveMessage, MISS_SEGMENT } from '@autoscore/schema';
-import type { Achievement, Hit, HitEvent, LiveAuthMessage, MatchSnapshot } from '@autoscore/schema';
+import type { Achievement, Hit, HitEvent, LiveAuthMessage, MatchSnapshot, ThrowResult } from '@autoscore/schema';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
 import { liveSocketUrl } from './api-url';
@@ -18,6 +18,29 @@ const DARTS_PER_TURN = 3;
 const MISS: Hit = { segment: MISS_SEGMENT, multiplier: 0 };
 
 export type Connection = 'connecting' | 'open' | 'closed';
+
+export type MatchErrorCode =
+  | 'throw_failed'
+  | 'nothing_to_undo'
+  | 'match_locked'
+  | 'undo_failed'
+  | 'abandon_failed'
+  | 'resume_failed'
+  | 'end_practice_failed'
+  | 'checkout_attempt_failed'
+  | 'checkout_skip_failed';
+
+const ERROR_TEXT: Record<MatchErrorCode, string> = {
+  throw_failed: pl.throwFailed,
+  nothing_to_undo: pl.nothingToUndo,
+  match_locked: pl.matchLocked,
+  undo_failed: pl.undoFailed,
+  abandon_failed: pl.abandonFailed,
+  resume_failed: pl.resumeFailed,
+  end_practice_failed: pl.endPracticeFailed,
+  checkout_attempt_failed: pl.checkoutAttemptFailed,
+  checkout_skip_failed: pl.checkoutSkipFailed,
+};
 
 export interface LastTurn {
   readonly playerId: string;
@@ -44,6 +67,7 @@ export interface UseMatch {
   readonly banner: Banner | null;
   readonly achievements: readonly AchievementNotice[];
   readonly error: string | null;
+  readonly errorCode: MatchErrorCode | null;
   readonly busy: boolean;
   readonly connection: Connection;
   readonly notFound: boolean;
@@ -86,12 +110,26 @@ function keypadHit(matchId: string, sequence: number, hit: Hit): HitEvent {
   };
 }
 
+// Serwer rozpoznaje powtórzony eventId i nie zapisuje rzutki drugi raz, więc ponowienie jest bezpieczne, nawet gdy pierwsza próba doszła.
+// Odpowiedź HTTP to decyzja serwera, więc ponawiamy tylko błąd sieci, przekroczenie czasu albo nieczytelną odpowiedź.
+// Cofnij i inne komendy nie mają takiej ochrony, dlatego ponawiamy tylko rzutki.
+async function postThrowWithRetry(matchId: string, event: HitEvent): Promise<ThrowResult> {
+  try {
+    return await postThrow(matchId, event);
+  } catch (caught) {
+    if (caught instanceof ApiRequestError) {
+      throw caught;
+    }
+    return postThrow(matchId, event);
+  }
+}
+
 export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage) => void): UseMatch {
   const [state, setState] = useState<MatchSnapshot | null>(null);
   const [lastTurn, setLastTurn] = useState<LastTurn | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
   const [achievements, setAchievements] = useState<readonly AchievementNotice[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<MatchErrorCode | null>(null);
   const [busy, setBusy] = useState(false);
   const [connection, setConnection] = useState<Connection>('connecting');
   const [notFound, setNotFound] = useState(false);
@@ -102,6 +140,7 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
   const achievementSeq = useRef<number | null>(null);
   const commands = useRef<Promise<void>>(Promise.resolve());
   const queued = useRef(0);
+  const epoch = useRef(0);
   const sequence = useRef(0);
   const liveListener = useRef(onLiveMessage);
 
@@ -232,11 +271,14 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
   }, [matchId, acceptState, showBanner, showAchievement, clearAchievements]);
 
   // Komendy idą po kolei, więc szybkie stuknięcia docierają w kolejności stuknięć.
-  // Błąd jednej komendy nie blokuje następnych.
+  // Nieudana rzutka podnosi epokę i odrzuca wszystko, co czekało za nią. Inaczej gracz zostałby z krótszą turą,
+  // a sukces następnej komendy zgasiłby błąd. Komendy dodane po błędzie mają nową epokę i idą normalnie.
   const enqueue = useCallback((command: () => Promise<void>) => {
+    const queuedEpoch = epoch.current;
     queued.current += 1;
     setBusy(true);
-    commands.current = commands.current.then(command).finally(() => {
+    const guarded = (): Promise<void> => (epoch.current === queuedEpoch ? command() : Promise.resolve());
+    commands.current = commands.current.then(guarded).finally(() => {
       queued.current -= 1;
       if (queued.current === 0) {
         setBusy(false);
@@ -244,20 +286,25 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     });
   }, []);
 
+  const failThrow = useCallback(() => {
+    epoch.current += 1;
+    setErrorCode('throw_failed');
+  }, []);
+
   const sendHit = useCallback(
     (hit: Hit) => {
       const event = keypadHit(matchId, sequence.current++, hit);
       enqueue(async () => {
         try {
-          const result = await postThrow(matchId, event);
-          setError(null);
+          const result = await postThrowWithRetry(matchId, event);
+          setErrorCode(null);
           acceptState(result.state);
         } catch {
-          setError(pl.throwFailed);
+          failThrow();
         }
       });
     },
-    [matchId, enqueue, acceptState],
+    [matchId, enqueue, acceptState, failThrow],
   );
 
   // Stan z chwili kliknięcia. Gdy wcześniejsze stuknięcie albo Cofnij z kolejki zamknęło lub zmieniło turę, nic nie idzie.
@@ -285,26 +332,26 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
           darts = latest.currentDarts.length;
         }
         try {
-          const result = await postThrow(matchId, keypadHit(matchId, sequence.current++, MISS));
+          const result = await postThrowWithRetry(matchId, keypadHit(matchId, sequence.current++, MISS));
           acceptState(result.state);
-          setError(null);
+          setErrorCode(null);
         } catch {
-          setError(pl.throwFailed);
+          failThrow();
           return;
         }
       }
     });
-  }, [matchId, enqueue, acceptState]);
+  }, [matchId, enqueue, acceptState, failThrow]);
 
   const sendUndo = useCallback(() => {
     enqueue(async () => {
       try {
         const result = await undo(matchId);
-        setError(null);
+        setErrorCode(null);
         acceptState(result.state);
       } catch (caught) {
         const code = caught instanceof ApiRequestError && caught.status === 409 ? caught.code : null;
-        setError(code === 'nothing_to_undo' ? pl.nothingToUndo : code === 'match_locked' ? pl.matchLocked : pl.undoFailed);
+        setErrorCode(code === 'nothing_to_undo' || code === 'match_locked' ? code : 'undo_failed');
       }
     });
   }, [matchId, enqueue, acceptState]);
@@ -314,10 +361,10 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
       enqueue(async () => {
         try {
           const state = await abandonMatch(matchId, playerId, reason);
-          setError(null);
+          setErrorCode(null);
           acceptState(state);
         } catch {
-          setError(pl.abandonFailed);
+          setErrorCode('abandon_failed');
         }
       });
     },
@@ -328,10 +375,10 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     enqueue(async () => {
       try {
         const state = await resumeMatch(matchId);
-        setError(null);
+        setErrorCode(null);
         acceptState(state);
       } catch {
-        setError(pl.resumeFailed);
+        setErrorCode('resume_failed');
       }
     });
   }, [matchId, enqueue, acceptState]);
@@ -340,10 +387,10 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     enqueue(async () => {
       try {
         const state = await endPractice(matchId);
-        setError(null);
+        setErrorCode(null);
         acceptState(state);
       } catch {
-        setError(pl.endPracticeFailed);
+        setErrorCode('end_practice_failed');
       }
     });
   }, [matchId, enqueue, acceptState]);
@@ -353,10 +400,10 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
       enqueue(async () => {
         try {
           const state = await postCheckoutAttempt(matchId, success);
-          setError(null);
+          setErrorCode(null);
           acceptState(state);
         } catch {
-          setError(pl.checkoutAttemptFailed);
+          setErrorCode('checkout_attempt_failed');
         }
       });
     },
@@ -367,10 +414,10 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     enqueue(async () => {
       try {
         const state = await postCheckoutSkip(matchId);
-        setError(null);
+        setErrorCode(null);
         acceptState(state);
       } catch {
-        setError(pl.checkoutSkipFailed);
+        setErrorCode('checkout_skip_failed');
       }
     });
   }, [matchId, enqueue, acceptState]);
@@ -380,7 +427,8 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     lastTurn,
     banner,
     achievements,
-    error,
+    error: errorCode === null ? null : ERROR_TEXT[errorCode],
+    errorCode,
     busy,
     connection,
     notFound,
