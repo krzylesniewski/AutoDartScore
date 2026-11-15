@@ -9,6 +9,7 @@ import type {
   LoginRequest,
   MatchListQuery,
   StatsFilter,
+  StatsPeriod,
   UpdatePlayerRequest,
 } from '@autoscore/schema';
 import { resolveApiBase } from './api-url';
@@ -109,28 +110,28 @@ export function undo(matchId: string): Promise<UndoResult> {
   return request(`/matches/${encodeURIComponent(matchId)}/undo`, UndoResult, { method: 'POST' });
 }
 
-export function getPlayerStats(playerId: string, filter: StatsFilter): Promise<PlayerStats> {
-  return request(`/players/${encodeURIComponent(playerId)}/stats?type=${filter}`, PlayerStats);
+export function getPlayerStats(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<PlayerStats> {
+  return request(withQuery(`/players/${encodeURIComponent(playerId)}/stats`, { type: filter, period }), PlayerStats);
 }
 
-export function getHeadToHead(playerId: string, opponentId: string): Promise<HeadToHead> {
-  return request(`/players/${encodeURIComponent(playerId)}/head-to-head/${encodeURIComponent(opponentId)}`, HeadToHead);
+export function getHeadToHead(playerId: string, opponentId: string, period: StatsPeriod): Promise<HeadToHead> {
+  return request(withQuery(`/players/${encodeURIComponent(playerId)}/head-to-head/${encodeURIComponent(opponentId)}`, { period }), HeadToHead);
 }
 
-export function getPlayerForm(playerId: string, filter: StatsFilter): Promise<PlayerForm> {
-  return request(`/players/${encodeURIComponent(playerId)}/form?type=${filter}`, PlayerForm);
+export function getPlayerForm(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<PlayerForm> {
+  return request(withQuery(`/players/${encodeURIComponent(playerId)}/form`, { type: filter, period }), PlayerForm);
 }
 
 export function getFrequentHits(playerId: string): Promise<FrequentHitsResponse> {
   return request(`/players/${encodeURIComponent(playerId)}/frequent-hits`, FrequentHitsResponse);
 }
 
-export function getRankings(filter: StatsFilter): Promise<StatsRankings> {
-  return request(`/stats/rankings?type=${filter}`, StatsRankings);
+export function getRankings(filter: StatsFilter, period: StatsPeriod): Promise<StatsRankings> {
+  return request(withQuery('/stats/rankings', { type: filter, period }), StatsRankings);
 }
 
-export function getOverall(): Promise<StatsOverall> {
-  return request('/stats/overall', StatsOverall);
+export function getOverall(period: StatsPeriod): Promise<StatsOverall> {
+  return request(withQuery('/stats/overall', { period }), StatsOverall);
 }
 
 export function getMatchSummary(matchId: string): Promise<MatchSummary> {

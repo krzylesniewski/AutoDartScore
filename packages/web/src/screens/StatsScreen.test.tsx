@@ -96,18 +96,19 @@ let urls: string[];
 let requests: { url: string; method: string; body: unknown }[];
 let respondStats: (url: string) => Response;
 let rankings: StatsRankings;
-let overall: () => Response;
+let overall: (period: string) => Response;
 let profiles: Player[];
 let form: PlayerFormPoint[];
 let headToHead: (opponentId: string) => HeadToHead;
 let history: MatchListItem[];
 
 beforeEach(() => {
+  localStorage.clear();
   urls = [];
   requests = [];
   respondStats = (url) => json(200, stats(/players\/([^/]+)\/stats/.exec(url)?.[1] ?? ''));
   rankings = rankingsFixture;
-  overall = () => json(200, overallFixture);
+  overall = (period) => json(200, { ...overallFixture, period });
   profiles = players;
   form = [];
   headToHead = (opponentId) => ({ ...emptyHeadToHead, opponentId });
@@ -139,19 +140,20 @@ beforeEach(() => {
       if (url === '/api/players?archived=include') {
         return json(200, profiles);
       }
-      if (url === '/api/stats/overall') {
-        return overall();
+      if (url.startsWith('/api/stats/overall')) {
+        return overall(new URL(url, 'http://localhost').searchParams.get('period') ?? '');
       }
       if (url.startsWith('/api/stats/rankings')) {
-        return json(200, { ...rankings, filter: new URL(url, 'http://localhost').searchParams.get('type') });
+        const query = new URL(url, 'http://localhost').searchParams;
+        return json(200, { ...rankings, filter: query.get('type'), period: query.get('period') });
       }
-      const formRequest = /^\/api\/players\/([^/]+)\/form\?type=(\w+)$/.exec(url);
+      const formRequest = /^\/api\/players\/([^/]+)\/form\?type=(\w+)&period=(\w+)$/.exec(url);
       if (formRequest) {
-        return json(200, { playerId: formRequest[1], filter: formRequest[2], period: 'all', points: form });
+        return json(200, { playerId: formRequest[1], filter: formRequest[2], period: formRequest[3], points: form });
       }
-      const headToHeadRequest = /\/head-to-head\/([^/]+)$/.exec(url);
+      const headToHeadRequest = /\/head-to-head\/([^/?]+)\?period=(\w+)$/.exec(url);
       if (headToHeadRequest) {
-        return json(200, headToHead(decodeURIComponent(headToHeadRequest[1] ?? '')));
+        return json(200, { ...headToHead(decodeURIComponent(headToHeadRequest[1] ?? '')), period: headToHeadRequest[2] });
       }
       if (url.startsWith('/api/matches?')) {
         return json(200, history);
@@ -194,7 +196,7 @@ describe('StatsScreen: ranking', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Statystyki' }).getAttribute('aria-current')).toBe('page');
     expect(await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów')).toBeTruthy();
-    expect(urls).toContain('/api/stats/rankings?type=all');
+    expect(urls).toContain('/api/stats/rankings?type=all&period=all');
 
     const list = tile('Średnia (3 rzutki)');
     expect(rows(within(list).getByRole('list', { name: 'Podium średniej' }))).toEqual(['AAnna61,50Miejsce 125 legów', '🎯Bartek55,25Miejsce 221 legów', 'CCelina40,00Miejsce 33 legi']);
@@ -299,7 +301,7 @@ describe('StatsScreen: ranking', () => {
 
   it('refetches with ?type= on a filter change', async () => {
     render(<StatsScreen playerId={null} />);
-    await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all'));
+    await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all&period=all'));
     expect(screen.getByRole('button', { name: 'Wszystkie' }).getAttribute('aria-pressed')).toBe('true');
     for (const [label, type] of [
       ['Mecze 1v1', 'match'],
@@ -308,7 +310,7 @@ describe('StatsScreen: ranking', () => {
     ] as const) {
       fireEvent.click(screen.getByRole('button', { name: label }));
       expect(screen.getByRole('button', { name: label }).getAttribute('aria-pressed')).toBe('true');
-      await vi.waitFor(() => expect(urls).toContain(`/api/stats/rankings?type=${type}`));
+      await vi.waitFor(() => expect(urls).toContain(`/api/stats/rankings?type=${type}&period=all`));
     }
   });
 
@@ -371,7 +373,7 @@ describe('StatsScreen: overall', () => {
   it('shows the totals and the players above and below the overall average', async () => {
     await openOverall();
     expect(await screen.findByText('Wszystkie gry liczone do statystyk razem')).toBeTruthy();
-    expect(urls).toContain('/api/stats/overall');
+    expect(urls).toContain('/api/stats/overall?period=all');
     expect(window.location.hash).toBe('#/stats');
     expect(screen.getByRole('button', { name: 'Overall' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Wszystkie' }).getAttribute('aria-pressed')).toBe('false');
@@ -382,7 +384,7 @@ describe('StatsScreen: overall', () => {
     expect(value('Legi')).toBe('61');
     expect(within(card()).getAllByRole('term')).toHaveLength(4);
 
-    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Typ gry', 'Powyżej średniej', 'Poniżej średniej', 'Bez ukończonego lega']);
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Typ gry', 'Okres', 'Powyżej średniej', 'Poniżej średniej', 'Bez ukończonego lega']);
     expect(rows(screen.getByRole('region', { name: 'Powyżej średniej' }))).toEqual(['AAnna150,50+75,256 lotek']);
     expect(rows(screen.getByRole('region', { name: 'Poniżej średniej' }))).toEqual(['🎯Bartek0,00−75,253 lotki']);
     expect(rows(screen.getByRole('region', { name: 'Bez ukończonego lega' }))).toEqual(['CCelina—12 lotek']);
@@ -394,7 +396,7 @@ describe('StatsScreen: overall', () => {
     await screen.findByText('Wszystkie gry liczone do statystyk razem');
     fireEvent.click(screen.getByRole('button', { name: 'Zabawa' }));
     expect(await screen.findByRole('region', { name: 'Średnia (3 rzutki)' })).toBeTruthy();
-    expect(urls).toContain('/api/stats/rankings?type=casual');
+    expect(urls).toContain('/api/stats/rankings?type=casual&period=all');
     expect(screen.queryByText('Powyżej średniej')).toBeNull();
     expect(screen.getByRole('button', { name: 'Overall' }).getAttribute('aria-pressed')).toBe('false');
   });
@@ -433,7 +435,7 @@ describe('StatsScreen: player card', () => {
     expect(screen.getByRole('heading', { name: 'Statystyki' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Ranking' }).getAttribute('href')).toBe('#/stats');
     await vi.waitFor(() => expect(document.querySelector('dl')).not.toBeNull());
-    expect(urls).toContain('/api/players/p1/stats?type=all');
+    expect(urls).toContain('/api/players/p1/stats?type=all&period=all');
     expect(screen.getByRole('button', { name: 'Anna' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Wszystkie' }).getAttribute('aria-pressed')).toBe('true');
     expect(value('Rzutki')).toBe('15');
@@ -465,7 +467,7 @@ describe('StatsScreen: player card', () => {
 
   it('sends the chosen filter as ?type=', async () => {
     render(<StatsScreen playerId="p2" />);
-    await vi.waitFor(() => expect(urls).toContain('/api/players/p2/stats?type=all'));
+    await vi.waitFor(() => expect(urls).toContain('/api/players/p2/stats?type=all&period=all'));
     for (const [label, type] of [
       ['Mecze 1v1', 'match'],
       ['Zabawa', 'casual'],
@@ -473,7 +475,7 @@ describe('StatsScreen: player card', () => {
     ] as const) {
       fireEvent.click(screen.getByRole('button', { name: label }));
       expect(screen.getByRole('button', { name: label }).getAttribute('aria-pressed')).toBe('true');
-      await vi.waitFor(() => expect(urls).toContain(`/api/players/p2/stats?type=${type}`));
+      await vi.waitFor(() => expect(urls).toContain(`/api/players/p2/stats?type=${type}&period=all`));
     }
   });
 
@@ -496,7 +498,7 @@ describe('StatsScreen: player card', () => {
     respondStats = () => json(404, { error: 'not_found', message: 'Player nobody not found' });
     render(<StatsScreen playerId="nobody" />);
     expect(await screen.findByText('Nie znaleziono gracza')).toBeTruthy();
-    expect(urls).toContain('/api/players/nobody/stats?type=all');
+    expect(urls).toContain('/api/players/nobody/stats?type=all&period=all');
   });
 
   it('shows an error when the stats request fails', async () => {
@@ -629,7 +631,7 @@ describe('StatsScreen: form chart', () => {
   it('shows an empty state without completed legs', async () => {
     render(<StatsScreen playerId="p1" />);
     expect(await screen.findByText('Brak ukończonych legów.')).toBeTruthy();
-    expect(urls).toContain('/api/players/p1/form?type=all');
+    expect(urls).toContain('/api/players/p1/form?type=all&period=all');
     expect(screen.queryByRole('img')).toBeNull();
   });
 
@@ -654,7 +656,7 @@ describe('StatsScreen: form chart', () => {
     expect(chart.querySelectorAll('circle')).toHaveLength(1);
     expect(chart.querySelector('path')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Mecze 1v1' }));
-    await vi.waitFor(() => expect(urls).toContain('/api/players/p1/form?type=match'));
+    await vi.waitFor(() => expect(urls).toContain('/api/players/p1/form?type=match&period=all'));
   });
 });
 
@@ -673,7 +675,7 @@ describe('StatsScreen: head-to-head', () => {
     fireEvent.click(bartek);
     expect(bartek.getAttribute('aria-pressed')).toBe('true');
     expect(await within(panel()).findByText('3 : 1')).toBeTruthy();
-    expect(urls).toContain('/api/players/p1/head-to-head/p2');
+    expect(urls).toContain('/api/players/p1/head-to-head/p2?period=all');
     const values = [...panel().querySelectorAll('dt')].map((term) => `${term.textContent}=${term.nextElementSibling?.textContent}`);
     expect(values).toEqual(['Mecze=3 : 1', 'Legi=7 : 4', 'Średnia: Anna=61,50', 'Średnia: Bartek=55,25']);
   });
@@ -695,6 +697,131 @@ describe('StatsScreen: player history', () => {
     expect(urls).toContain('/api/matches?playerId=p1');
     expect(within(section).getByText('Wygrywa Anna')).toBeTruthy();
     expect(within(section).getByRole('link', { name: 'Szczegóły: Anna 2 : 1 Bartek' }).getAttribute('href')).toBe('#/matches/m9');
+  });
+});
+
+describe('StatsScreen: period', () => {
+  function periodButton(name: string): HTMLElement {
+    return within(screen.getByRole('region', { name: 'Okres' })).getByRole('button', { name });
+  }
+
+  function pressed(name: string): string | null {
+    return periodButton(name).getAttribute('aria-pressed');
+  }
+
+  it('narrows the ranking to the chosen period', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(
+      within(screen.getByRole('region', { name: 'Okres' }))
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['30 dni', 'Kwartał', 'Cały czas']);
+    expect(pressed('Cały czas')).toBe('true');
+    expect(urls).toContain('/api/stats/rankings?type=all&period=all');
+    for (const [label, period] of [
+      ['30 dni', '30d'],
+      ['Kwartał', '90d'],
+    ] as const) {
+      fireEvent.click(periodButton(label));
+      expect(pressed(label)).toBe('true');
+      expect(pressed('Cały czas')).toBe('false');
+      await vi.waitFor(() => expect(urls).toContain(`/api/stats/rankings?type=all&period=${period}`));
+    }
+  });
+
+  it('names the period and gives the counts of the response in the ranking subtitle', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    rankings = { ...rankingsFixture, games: 5, legs: 12 };
+    fireEvent.click(periodButton('30 dni'));
+    expect(await screen.findByText('Ranking graczy z ostatnich 30 dni · 5 gier, 12 legów')).toBeTruthy();
+  });
+
+  it('narrows Overall to the chosen period', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    fireEvent.click(screen.getByRole('button', { name: 'Overall' }));
+    await screen.findByText('Wszystkie gry liczone do statystyk razem');
+    fireEvent.click(periodButton('30 dni'));
+    expect(await screen.findByText('Wszystkie gry z ostatnich 30 dni liczone do statystyk razem')).toBeTruthy();
+    expect(urls).toContain('/api/stats/overall?period=30d');
+    expect(screen.getByRole('button', { name: 'Overall' }).getAttribute('aria-pressed')).toBe('true');
+    expect(pressed('30 dni')).toBe('true');
+  });
+
+  it('narrows stats, form and head-to-head on the player card but not the history', async () => {
+    render(<StatsScreen playerId="p1" />);
+    const panel = await screen.findByRole('region', { name: 'Bilans 1v1' });
+    expect(pressed('Cały czas')).toBe('true');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Bartek' }));
+    await vi.waitFor(() => expect(urls).toContain('/api/players/p1/head-to-head/p2?period=all'));
+    await vi.waitFor(() => expect(urls).toContain('/api/matches?playerId=p1'));
+
+    fireEvent.click(periodButton('30 dni'));
+    expect(pressed('30 dni')).toBe('true');
+    await vi.waitFor(() => {
+      expect(urls).toContain('/api/players/p1/stats?type=all&period=30d');
+      expect(urls).toContain('/api/players/p1/form?type=all&period=30d');
+      expect(urls).toContain('/api/players/p1/head-to-head/p2?period=30d');
+    });
+    expect(within(screen.getByRole('region', { name: 'Bilans 1v1' })).getByRole('button', { name: 'Bartek' }).getAttribute('aria-pressed')).toBe('true');
+    expect(await within(screen.getByRole('region', { name: 'Bilans 1v1' })).findByText('Brak ukończonych meczów 1v1 z tym graczem.')).toBeTruthy();
+    expect(urls.filter((url) => url.startsWith('/api/matches'))).toEqual(['/api/matches?playerId=p1']);
+  });
+
+  it('keeps the choice from the ranking to the player card and back', async () => {
+    const { rerender } = render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const start = urls.length;
+    fireEvent.click(periodButton('30 dni'));
+    await screen.findByText('Ranking graczy z ostatnich 30 dni · 23 gry, 61 legów');
+
+    rerender(<StatsScreen playerId="p1" />);
+    await vi.waitFor(() => expect(urls).toContain('/api/players/p1/stats?type=all&period=30d'));
+    expect(urls).toContain('/api/players/p1/form?type=all&period=30d');
+    expect(pressed('30 dni')).toBe('true');
+
+    rerender(<StatsScreen playerId={null} />);
+    expect(pressed('30 dni')).toBe('true');
+    await vi.waitFor(() => expect(urls.filter((url) => url === '/api/stats/rankings?type=all&period=30d')).toHaveLength(2));
+    expect(await screen.findByText('Ranking graczy z ostatnich 30 dni · 23 gry, 61 legów')).toBeTruthy();
+    expect(urls.slice(start).filter((url) => url.includes('period=all'))).toEqual([]);
+  });
+
+  it('keeps the choice after a fresh mount through localStorage', async () => {
+    const { unmount } = render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    fireEvent.click(periodButton('30 dni'));
+    await screen.findByText('Ranking graczy z ostatnich 30 dni · 23 gry, 61 legów');
+    expect(localStorage.getItem('autoscore.statsPeriod')).toBe('30d');
+    unmount();
+
+    const start = urls.length;
+    render(<StatsScreen playerId={null} />);
+    expect(pressed('30 dni')).toBe('true');
+    expect(await screen.findByText('Ranking graczy z ostatnich 30 dni · 23 gry, 61 legów')).toBeTruthy();
+    expect(urls.slice(start).filter((url) => url.startsWith('/api/stats/'))).toEqual(['/api/stats/rankings?type=all&period=30d']);
+  });
+
+  it('shows the empty ranking text for a period without games', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    rankings = { ...rankingsFixture, games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [], winRate: [], t20Hits: [] };
+    fireEvent.click(periodButton('30 dni'));
+    expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
+    expect(screen.getByText('Ranking graczy z ostatnich 30 dni · 0 gier, 0 legów')).toBeTruthy();
+    expect(screen.queryByText('Nie udało się pobrać statystyk')).toBeNull();
+  });
+
+  it('shows Brak rzutów for a player without throws in the period', async () => {
+    respondStats = (url) => (url.endsWith('period=30d') ? json(200, { ...stats('p1'), ...statLine(), period: '30d', matchesPlayed: 0, matchesWon: 0, winRate: null }) : json(200, stats('p1')));
+    render(<StatsScreen playerId="p1" />);
+    await vi.waitFor(() => expect(document.querySelector('dl')).not.toBeNull());
+    fireEvent.click(periodButton('30 dni'));
+    expect(await screen.findByText('Brak rzutów')).toBeTruthy();
+    expect(screen.queryByText('Nie udało się pobrać statystyk')).toBeNull();
+    expect(screen.getByText('Brak ukończonych legów.')).toBeTruthy();
   });
 });
 
@@ -828,6 +955,29 @@ describe('StatsScreen: responsive layout', () => {
     await screen.findByRole('button', { name: 'Anna' });
     expectSegmented(screen.getByRole('button', { name: 'Wszystkie' }));
   });
+
+  it('stacks the type and period filters on phones and puts them in a row from sm in both views', async () => {
+    const { unmount } = render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(classes(expectFilterRow('Typ gry'))).toContain('max-sm:w-full');
+    unmount();
+
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    expectFilterRow('Typ gier');
+  });
+
+  function expectFilterRow(typeName: string): HTMLElement {
+    const type = screen.getByRole('region', { name: typeName });
+    const period = screen.getByRole('region', { name: 'Okres' });
+    expect(classes(type)).toContain('max-sm:w-full');
+    expect(classes(period)).toContain('max-sm:w-full');
+    expect(period.parentElement).toBe(type.parentElement);
+    expect(type.nextElementSibling).toBe(period);
+    const row = type.parentElement as HTMLElement;
+    expect(classes(row)).toEqual(expect.arrayContaining(['flex-col', 'sm:flex-row']));
+    return row;
+  }
 
   function expectSegmented(first: HTMLElement): void {
     expect(classes(first.parentElement)).toContain('max-sm:flex-nowrap');

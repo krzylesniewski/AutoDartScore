@@ -92,7 +92,7 @@ describe('App', () => {
     window.location.hash = '#/stats';
     render(<App />);
     expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
-    await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all'));
+    await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all&period=all'));
     expect(stageLight()).toBe('list');
   });
 
@@ -100,7 +100,7 @@ describe('App', () => {
     window.location.hash = `#/stats/${encodeURIComponent('p 2')}`;
     render(<App />);
     expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
-    await vi.waitFor(() => expect(urls).toContain('/api/players/p%202/stats?type=all'));
+    await vi.waitFor(() => expect(urls).toContain('/api/players/p%202/stats?type=all&period=all'));
     expect((await screen.findByRole('button', { name: 'Bartek' })).getAttribute('aria-pressed')).toBe('true');
   });
 });
