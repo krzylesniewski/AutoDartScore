@@ -1,5 +1,5 @@
 import { EngineError } from '@autoscore/engine';
-import type { ApiError } from '@autoscore/schema';
+import { STALE_STATE, type ApiError, type MatchSnapshot, type StaleStateError } from '@autoscore/schema';
 
 export class HttpError extends Error {
   readonly statusCode: number;
@@ -10,6 +10,17 @@ export class HttpError extends Error {
     this.name = 'HttpError';
     this.statusCode = statusCode;
     this.code = code;
+  }
+}
+
+// Komenda z nieaktualnym expectedSeq. Klient dostaje bieżący stan, żeby nie musiał go osobno pobierać.
+export class StaleStateHttpError extends HttpError {
+  readonly state: MatchSnapshot;
+
+  constructor(id: string, expectedSeq: number, state: MatchSnapshot) {
+    super(409, STALE_STATE, `Match ${id} changed since seq ${expectedSeq}`);
+    this.name = 'StaleStateHttpError';
+    this.state = state;
   }
 }
 
@@ -45,7 +56,10 @@ function isClientError(error: unknown): error is { statusCode: number; message: 
   return typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500;
 }
 
-export function toApiError(error: unknown): { statusCode: number; body: ApiError } {
+export function toApiError(error: unknown): { statusCode: number; body: ApiError | StaleStateError } {
+  if (error instanceof StaleStateHttpError) {
+    return { statusCode: error.statusCode, body: { error: STALE_STATE, message: error.message, state: error.state } };
+  }
   if (error instanceof HttpError) {
     return { statusCode: error.statusCode, body: { error: error.code, message: error.message } };
   }

@@ -187,14 +187,26 @@ export const MatchListQuery = z.object({
 });
 export type MatchListQuery = z.infer<typeof MatchListQuery>;
 
+// Ostatni eventSeq, który widział klient. Komenda z innym seq niczego nie zapisuje i dostaje 409 stale_state.
+export const ExpectedSeq = z.int().min(0);
+export type ExpectedSeq = z.infer<typeof ExpectedSeq>;
+
+// Body cofnięcia, wznowienia, końca treningu i pominięcia checkoutu. Nieznane klucze są pomijane.
+export const CommandRequest = z.object({
+  expectedSeq: ExpectedSeq.optional(),
+});
+export type CommandRequest = z.infer<typeof CommandRequest>;
+
 export const AbandonMatchRequest = z.object({
   playerId: PlayerId,
   reason: z.string().trim().min(1).max(200).optional(),
+  expectedSeq: ExpectedSeq.optional(),
 });
 export type AbandonMatchRequest = z.infer<typeof AbandonMatchRequest>;
 
 export const CheckoutAttemptRequest = z.object({
   success: z.boolean(),
+  expectedSeq: ExpectedSeq.optional(),
 });
 export type CheckoutAttemptRequest = z.infer<typeof CheckoutAttemptRequest>;
 
@@ -204,6 +216,23 @@ export const ThrowResult = z.object({
   state: MatchSnapshot,
 });
 export type ThrowResult = z.infer<typeof ThrowResult>;
+
+// source rzutek zapisanych przez POST /matches/:id/rest-miss.
+export const REST_MISS_SOURCE = 'rest-miss';
+
+// eventId trafia do pierwszego Missa i zapewnia idempotencję całej komendy.
+export const RestMissRequest = z.object({
+  eventId: z.uuid(),
+  expectedSeq: ExpectedSeq.optional(),
+});
+export type RestMissRequest = z.infer<typeof RestMissRequest>;
+
+export const RestMissResult = z.object({
+  throws: z.array(ThrowRecord).max(3), // pusta lista przy ponownym wysłaniu
+  events: z.array(DomainEvent), // tylko zdarzenia wywołane tymi rzutkami
+  state: MatchSnapshot,
+});
+export type RestMissResult = z.infer<typeof RestMissResult>;
 
 export const UndoResult = z.object({
   undoneThrowId: z.string().min(1).nullable(), // null, gdy cofnięto próbę albo pominięcie checkoutu
@@ -216,6 +245,16 @@ export const ApiError = z.object({
   message: z.string(),
 });
 export type ApiError = z.infer<typeof ApiError>;
+
+export const STALE_STATE = 'stale_state';
+
+// Odpowiedź 409 na komendę z nieaktualnym expectedSeq. Jest też poprawnym ApiError.
+export const StaleStateError = z.object({
+  error: z.literal(STALE_STATE),
+  message: z.string(),
+  state: MatchSnapshot,
+});
+export type StaleStateError = z.infer<typeof StaleStateError>;
 
 export const HealthResponse = z.object({
   status: z.literal('ok'),

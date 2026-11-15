@@ -5,12 +5,19 @@ import {
   BestOf,
   CheckoutAttemptRequest,
   CheckoutSession,
+  CommandRequest,
   CreateMatchRequest,
+  ExpectedSeq,
   HealthResponse,
   LegTurn,
   MatchListItem,
   MatchListQuery,
   MatchSnapshot,
+  REST_MISS_SOURCE,
+  RestMissRequest,
+  RestMissResult,
+  STALE_STATE,
+  StaleStateError,
   StartingScore,
   ThrowRecord,
   ThrowResult,
@@ -216,6 +223,11 @@ describe('CheckoutAttemptRequest', () => {
   it('accepts a success and a failure', () => {
     expect(CheckoutAttemptRequest.parse({ success: true })).toEqual({ success: true });
     expect(CheckoutAttemptRequest.parse({ success: false })).toEqual({ success: false });
+  });
+
+  it('accepts an optional expectedSeq', () => {
+    expect(CheckoutAttemptRequest.parse({ success: true, expectedSeq: 4 })).toEqual({ success: true, expectedSeq: 4 });
+    expect(CheckoutAttemptRequest.safeParse({ success: true, expectedSeq: -1 }).success).toBe(false);
   });
 
   it.each([
@@ -427,6 +439,11 @@ describe('AbandonMatchRequest', () => {
     expect(AbandonMatchRequest.parse({ playerId: 'p1' })).toEqual({ playerId: 'p1' });
   });
 
+  it('accepts an optional expectedSeq', () => {
+    expect(AbandonMatchRequest.parse({ playerId: 'p1', expectedSeq: 0 })).toEqual({ playerId: 'p1', expectedSeq: 0 });
+    expect(AbandonMatchRequest.safeParse({ playerId: 'p1', expectedSeq: '0' }).success).toBe(false);
+  });
+
   it.each([
     ['an empty reason', { playerId: 'p1', reason: '   ' }],
     ['a reason over 200 characters', { playerId: 'p1', reason: 'x'.repeat(201) }],
@@ -525,6 +542,45 @@ describe('ThrowResult and UndoResult', () => {
   });
 });
 
+describe('ExpectedSeq and CommandRequest', () => {
+  it.each([0, 5])('accepts %j', (value) => {
+    expect(ExpectedSeq.parse(value)).toBe(value);
+  });
+
+  it.each([-1, 1.5, '3'])('rejects %j', (value) => {
+    expect(ExpectedSeq.safeParse(value).success).toBe(false);
+  });
+
+  it('accepts an empty command and strips unknown keys', () => {
+    expect(CommandRequest.parse({})).toEqual({});
+    expect(CommandRequest.parse({ expectedSeq: 7, extra: true })).toEqual({ expectedSeq: 7 });
+    expect(CommandRequest.safeParse({ expectedSeq: -1 }).success).toBe(false);
+  });
+});
+
+describe('RestMissRequest and RestMissResult', () => {
+  const eventId = '7d3f8a52-1c4e-4b9a-9f0e-2a6b5c8d1e3f';
+
+  it('accepts an eventId with and without expectedSeq', () => {
+    expect(RestMissRequest.parse({ eventId })).toEqual({ eventId });
+    expect(RestMissRequest.parse({ eventId, expectedSeq: 3 })).toEqual({ eventId, expectedSeq: 3 });
+  });
+
+  it.each([
+    ['a missing eventId', {}],
+    ['a non-UUID eventId', { eventId: 'abc' }],
+  ])('rejects %s', (_name, value) => {
+    expect(RestMissRequest.safeParse(value).success).toBe(false);
+  });
+
+  it('accepts up to three throws and an empty repeat', () => {
+    const miss = { ...throwRecord, source: REST_MISS_SOURCE, segment: 0, multiplier: 0 };
+    expect(RestMissResult.parse({ throws: [miss, miss, miss], events: [], state: snapshot }).throws).toHaveLength(3);
+    expect(RestMissResult.parse({ throws: [], events: [], state: snapshot }).throws).toEqual([]);
+    expect(RestMissResult.safeParse({ throws: [miss, miss, miss, miss], events: [], state: snapshot }).success).toBe(false);
+  });
+});
+
 describe('ApiError', () => {
   it('accepts an error code with a message', () => {
     expect(ApiError.parse({ error: 'not_found', message: 'Match m1 not found' })).toEqual({ error: 'not_found', message: 'Match m1 not found' });
@@ -532,6 +588,20 @@ describe('ApiError', () => {
 
   it('rejects an empty error code', () => {
     expect(ApiError.safeParse({ error: '', message: 'x' }).success).toBe(false);
+  });
+});
+
+describe('StaleStateError', () => {
+  const body = { error: STALE_STATE, message: 'Match m1 changed since seq 2', state: snapshot };
+
+  it('parses with the current state and also as ApiError', () => {
+    expect(StaleStateError.parse(body)).toEqual(body);
+    expect(ApiError.parse(body)).toEqual({ error: STALE_STATE, message: body.message });
+  });
+
+  it('rejects another error code and a missing state', () => {
+    expect(StaleStateError.safeParse({ ...body, error: 'match_finished' }).success).toBe(false);
+    expect(StaleStateError.safeParse({ error: STALE_STATE, message: 'x' }).success).toBe(false);
   });
 });
 

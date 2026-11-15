@@ -17,7 +17,11 @@ Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (
 
 `player.ts`: `Player`, `CreatePlayerRequest`.
 
-`match-api.ts`: `CreateMatchRequest`, `ThrowRecord`, `MatchSnapshot`, `MatchSnapshotPlayer`, `LegTurn`, `CheckoutSession`, `Abandonment`, `AbandonMatchRequest`, `MatchListQuery`, `MatchListItem`, `CheckoutAttemptRequest`, `ThrowResult`, `UndoResult`, `ApiError`, `HealthResponse`.
+`match-api.ts`: `CreateMatchRequest`, `ThrowRecord`, `MatchSnapshot`, `MatchSnapshotPlayer`, `LegTurn`, `CheckoutSession`, `Abandonment`, `ExpectedSeq`, `CommandRequest`, `AbandonMatchRequest`, `MatchListQuery`, `MatchListItem`, `CheckoutAttemptRequest`, `ThrowResult`, `REST_MISS_SOURCE`, `RestMissRequest`, `RestMissResult`, `UndoResult`, `ApiError`, `STALE_STATE`, `StaleStateError`, `HealthResponse`.
+
+- `ExpectedSeq` to ostatni `eventSeq`, który widział klient (liczba całkowita od 0). `CommandRequest` (`{ expectedSeq? }`) to body cofnięcia, wznowienia, końca treningu i pominięcia checkoutu, bez odrzucania nieznanych kluczy. `AbandonMatchRequest` i `CheckoutAttemptRequest` też mają opcjonalne `expectedSeq`.
+- `RestMissRequest` (`{ eventId, expectedSeq? }`) to body `POST /matches/:id/rest-miss`. `RestMissResult` ma `throws` (do 3 rzutek ze `source` równym `REST_MISS_SOURCE`, czyli `rest-miss`, pusta lista przy ponownym wysłaniu), `events` i `state`.
+- `StaleStateError` to body 409 `stale_state` (`STALE_STATE`) z bieżącym `state`. Parsuje się też jako `ApiError`.
 
 - `CreateMatchRequest` dla treningu `checkouts` wymaga `checkoutRange`, a dla innych trybów go odrzuca.
 - `CheckoutSession` to postęp treningu checkoutów: `range`, bieżący `target`, `attempts`, `successes`, `skips` (pominięte cele, które nadal się liczą) i `history` (zakończone próby w kolejności). Pominięcia nie wchodzą do `attempts`, `successes` ani `history`. Liczniki prób muszą zgadzać się z historią. Ziarna i zasady losowania nie ma w żadnej odpowiedzi.

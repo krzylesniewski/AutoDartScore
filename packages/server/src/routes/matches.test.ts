@@ -227,6 +227,24 @@ describe('idempotency', () => {
     expect(await logEntries(t.db, id)).toHaveLength(9);
   });
 
+  it.each([
+    ['segment', { segment: 19 }],
+    ['detectedAt', { detectedAt: '2026-10-15T18:30:12.345Z' }],
+  ])('rejects the same eventId with a different %s with 409 and writes nothing', async (_name, change) => {
+    const [anna, bartek] = await createPlayers(t.app, 2);
+    const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301 });
+    const hit = hitEvent(id, S(20));
+    expect((await postThrow(t.app, id, hit)).statusCode).toBe(201);
+
+    const response = await postThrow(t.app, id, { ...hit, ...change });
+    expect(response.statusCode).toBe(409);
+    const body = ApiError.parse(response.json());
+    expect(body.error).toBe('event_id_conflict');
+    expect(body.message).toBe(`Event ${hit.eventId} is already stored with a different hit`);
+    expect(await countRows(t.db, 'throws')).toBe(1);
+    expect(await logEntries(t.db, id)).toHaveLength(1);
+  });
+
   it('rejects the same eventId on another match with 409', async () => {
     const [anna, bartek] = await createPlayers(t.app, 2);
     const first = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301 });

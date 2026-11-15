@@ -1,6 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { applyGameThrow, countsToStats, createGame, isGameFinished, MAX_CHECKOUT_SEED } from '@autoscore/engine';
 import {
   HitEvent,
+  MISS_SEGMENT,
+  REST_MISS_SOURCE,
   type AbandonMatchRequest,
   type CreateMatchRequest,
   type DomainEvent,
@@ -8,29 +11,35 @@ import {
   type MatchListItem,
   type MatchListQuery,
   type MatchSnapshot,
+  type RestMissRequest,
+  type RestMissResult,
+  type ThrowRecord,
   type ThrowResult,
   type UndoResult,
 } from '@autoscore/schema';
 import { createAchievementReference } from './achievement-reference.js';
-import { HttpError, invalidRequest, notFound } from './errors.js';
+import { HttpError, invalidRequest, notFound, StaleStateHttpError } from './errors.js';
+import { DARTS_PER_TURN } from './leg-turns.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
 import type { ReplayCache } from './replay-cache.js';
 import { finishedAt, gameConfig, gameTimes, replayLog, replayMatch, type ReplayedMatch } from './replay.js';
 import type { SerialQueue } from './serial-queue.js';
 import { toSnapshot } from './snapshot.js';
 import { detectAchievements, type DetectedAchievement, type PlayerRecords } from './stats/achievements.js';
-import type { NewMatch, Store, StoredMatch } from './store/store.js';
+import type { NewMatch, NewThrow, Store, StoredMatch } from './store/store.js';
 
+// expectedSeq w komendach jest opcjonalne. Bez niego komenda działa na bieżącym stanie, z nim tylko na stanie o tym seq.
 export interface MatchService {
   create(request: CreateMatchRequest): Promise<MatchSnapshot>;
   get(id: string): Promise<MatchSnapshot>;
   registerThrow(id: string, body: unknown): Promise<{ statusCode: 200 | 201; result: ThrowResult }>;
-  registerCheckoutAttempt(id: string, success: boolean): Promise<MatchSnapshot>;
-  registerCheckoutSkip(id: string): Promise<MatchSnapshot>;
-  undo(id: string): Promise<UndoResult>;
+  registerCheckoutAttempt(id: string, success: boolean, expectedSeq?: number): Promise<MatchSnapshot>;
+  registerCheckoutSkip(id: string, expectedSeq?: number): Promise<MatchSnapshot>;
+  undo(id: string, expectedSeq?: number): Promise<UndoResult>;
   abandon(id: string, request: AbandonMatchRequest): Promise<MatchSnapshot>;
-  resume(id: string): Promise<MatchSnapshot>;
-  endPractice(id: string): Promise<MatchSnapshot>;
+  resume(id: string, expectedSeq?: number): Promise<MatchSnapshot>;
+  endPractice(id: string, expectedSeq?: number): Promise<MatchSnapshot>;
+  restMiss(id: string, request: RestMissRequest): Promise<{ statusCode: 200 | 201; result: RestMissResult }>;
   list(query: MatchListQuery): Promise<MatchListItem[]>;
   // null, gdy gry nie ma. Inaczej funkcja do wypisania gniazda.
   subscribe(id: string, socket: LiveSocket): Promise<(() => void) | null>;
@@ -85,6 +94,17 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
 
   function locked(id: string): HttpError {
     return new HttpError(409, 'match_locked', `Match ${id} is locked`);
+  }
+
+  function throwsNotAllowed(id: string): HttpError {
+    return new HttpError(409, 'throws_not_allowed', `Match ${id} is a checkout practice and takes attempts, not throws`);
+  }
+
+  // Sprawdzane po warunkach z wiersza gry, a przed warunkami z logu, żeby kody błędów były przewidywalne.
+  function requireSeq(match: StoredMatch, replayed: ReplayedMatch, expectedSeq: number | undefined): void {
+    if (expectedSeq !== undefined && expectedSeq !== replayed.seq) {
+      throw new StaleStateHttpError(match.id, expectedSeq, toState(match, replayed));
+    }
   }
 
   function isCheckouts(match: StoredMatch): boolean {
@@ -144,13 +164,15 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
   }
 
   // Próba i pominięcie mają te same warunki: tylko trwający, nieporzucony trening checkoutów.
-  function checkoutCommand(id: string, append: () => Promise<number>): Promise<MatchSnapshot> {
+  function checkoutCommand(id: string, expectedSeq: number | undefined, append: () => Promise<number>): Promise<MatchSnapshot> {
     return queue(id, async () => {
       const match = await requireMatch(id);
       if (!isCheckouts(match)) {
         throw new HttpError(409, 'not_checkouts', `Match ${id} is not a checkout practice`);
       }
-      const { abandonment, endedAt } = await load(match);
+      const replayed = await load(match);
+      requireSeq(match, replayed, expectedSeq);
+      const { abandonment, endedAt } = replayed;
       if (endedAt) {
         throw ended(id);
       }
@@ -188,7 +210,9 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     return detectAchievements({ reference, earlierEvents, newEvents, playerIds, eligible });
   }
 
-  async function idempotentReply(id: string, eventId: string) {
+  // null, gdy eventId jest wolny. Rzutka z innej gry albo taka, której same nie uznaje za powtórzenie, to konflikt.
+  // Ponowne wysłanie niczego nie zapisuje i niczego nie rozgłasza, nawet gdy rzutkę cofnięto albo gra już się skończyła.
+  async function idempotentReply(id: string, eventId: string, same: (stored: ThrowRecord) => boolean) {
     const stored = await store.findThrowByEventId(eventId);
     if (!stored) {
       return null;
@@ -196,8 +220,29 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
     if (stored.matchId !== id) {
       throw new HttpError(409, 'event_id_conflict', `Event ${eventId} is already stored for another match`);
     }
-    // Ponowne wysłanie niczego nie zapisuje i niczego nie rozgłasza, nawet gdy rzutkę cofnięto albo gra już się skończyła.
-    return { statusCode: 200 as const, result: { throw: stored, events: [], state: await snapshot(await requireMatch(id)) } };
+    if (!same(stored)) {
+      throw new HttpError(409, 'event_id_conflict', `Event ${eventId} is already stored with a different hit`);
+    }
+    return { stored, state: await snapshot(await requireMatch(id)) };
+  }
+
+  async function repeatedThrow(id: string, hit: HitEvent) {
+    const same = (stored: ThrowRecord) =>
+      stored.source === hit.source &&
+      stored.sequence === hit.sequence &&
+      stored.segment === hit.segment &&
+      stored.multiplier === hit.multiplier &&
+      stored.confidence === hit.confidence &&
+      stored.detectedAt === hit.detectedAt;
+    const repeated = await idempotentReply(id, hit.eventId, same);
+    return repeated ? { statusCode: 200 as const, result: { throw: repeated.stored, events: [], state: repeated.state } } : null;
+  }
+
+  // eventId reszty Missów niesie pierwsza z nich.
+  async function repeatedRestMiss(id: string, eventId: string) {
+    const same = (stored: ThrowRecord) => stored.source === REST_MISS_SOURCE && stored.segment === MISS_SEGMENT && stored.multiplier === 0;
+    const repeated = await idempotentReply(id, eventId, same);
+    return repeated ? { statusCode: 200 as const, result: { throws: [], events: [], state: repeated.state } } : null;
   }
 
   return {
@@ -223,7 +268,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
       return queue(id, async () => {
         const match = await requireMatch(id);
         if (isCheckouts(match)) {
-          throw new HttpError(409, 'throws_not_allowed', `Match ${id} is a checkout practice and takes attempts, not throws`);
+          throw throwsNotAllowed(id);
         }
         const parsed = HitEvent.safeParse(body);
         if (!parsed.success) {
@@ -233,7 +278,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (hit.matchId !== id) {
           throw new HttpError(400, 'match_mismatch', `Hit matchId ${hit.matchId} does not match the URL match ${id}`);
         }
-        const repeated = await idempotentReply(id, hit.eventId);
+        const repeated = await repeatedThrow(id, hit);
         if (repeated) {
           return repeated;
         }
@@ -252,7 +297,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           appended = await store.appendThrow(hit);
         } catch (error) {
           // Ten sam eventId mógł równolegle trafić do innej gry. Wtedy decyduje zapisana rzutka.
-          const raced = await idempotentReply(id, hit.eventId);
+          const raced = await repeatedThrow(id, hit);
           if (raced) {
             return raced;
           }
@@ -284,18 +329,92 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
       });
     },
 
-    registerCheckoutAttempt(id, success) {
-      return checkoutCommand(id, () => store.appendCheckoutAttempt(id, success));
+    registerCheckoutAttempt(id, success, expectedSeq) {
+      return checkoutCommand(id, expectedSeq, () => store.appendCheckoutAttempt(id, success));
     },
 
-    registerCheckoutSkip(id) {
-      return checkoutCommand(id, () => store.appendCheckoutSkip(id));
+    registerCheckoutSkip(id, expectedSeq) {
+      return checkoutCommand(id, expectedSeq, () => store.appendCheckoutSkip(id));
     },
 
-    undo(id) {
+    restMiss(id, request) {
       return queue(id, async () => {
         const match = await requireMatch(id);
-        const { log, throws, checkoutSteps, game: before, abandonment, endedAt, finishedAt: finishTime } = await load(match);
+        if (isCheckouts(match)) {
+          throw throwsNotAllowed(id);
+        }
+        // Przed expectedSeq, bo powtórzona komenda widzi już seq po własnym zapisie.
+        const repeated = await repeatedRestMiss(id, request.eventId);
+        if (repeated) {
+          return repeated;
+        }
+
+        const replayed = await load(match);
+        requireSeq(match, replayed, request.expectedSeq);
+        const { game, events, abandonment, endedAt } = replayed;
+        if (endedAt) {
+          throw ended(id);
+        }
+        if (abandonment) {
+          throw abandoned(id);
+        }
+        if (isGameFinished(game)) {
+          throw finished(id);
+        }
+        // Miss nie daje busta ani końca gry, więc tylko ostatni zamyka turę i tylko on może dać zdarzenia.
+        const count = DARTS_PER_TURN - toState(match, replayed).currentDarts.length;
+        let after = game;
+        const newEvents: DomainEvent[] = [];
+        for (let index = 0; index < count; index++) {
+          const applied = applyGameThrow(after, { segment: MISS_SEGMENT, multiplier: 0 });
+          after = applied.state;
+          newEvents.push(...applied.events);
+        }
+        const detected = await achievements(match, events, newEvents);
+        const detectedAt = new Date(now()).toISOString();
+        const hits = Array.from(
+          { length: count },
+          (_, sequence): NewThrow => ({
+            eventId: sequence === 0 ? request.eventId : randomUUID(),
+            matchId: id,
+            source: REST_MISS_SOURCE,
+            sequence,
+            segment: MISS_SEGMENT,
+            multiplier: 0,
+            confidence: 1,
+            detectedAt,
+          }),
+        );
+        let appended;
+        try {
+          appended = await store.appendThrows(hits);
+        } catch (error) {
+          const raced = await repeatedRestMiss(id, request.eventId);
+          if (raced) {
+            return raced;
+          }
+          throw error;
+        }
+
+        const state = await snapshot(match);
+        // Zdarzenia domenowe mają eventSeq ostatniego state_updated, bo na nim głos czyta wynik, a panel pokazuje ostatnią turę.
+        const meta = { matchId: id, eventSeq: state.eventSeq };
+        hub.publish(id, [
+          ...appended.throws.map((record, index): LiveMessage => ({ type: 'throw_registered', matchId: id, eventSeq: appended.seqs[index] ?? state.eventSeq, throw: record })),
+          ...newEvents.map((event): LiveMessage => ({ ...event, ...meta })),
+          ...detected.map((achievement): LiveMessage => ({ ...achievement, ...meta })),
+          { type: 'state_updated', ...meta, state },
+        ]);
+        return { statusCode: 201 as const, result: { throws: appended.throws, events: newEvents, state } };
+      });
+    },
+
+    undo(id, expectedSeq) {
+      return queue(id, async () => {
+        const match = await requireMatch(id);
+        const replayed = await load(match);
+        requireSeq(match, replayed, expectedSeq);
+        const { log, throws, checkoutSteps, game: before, abandonment, endedAt, finishedAt: finishTime } = replayed;
         if (endedAt) {
           throw ended(id);
         }
@@ -351,7 +470,9 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (!match.players.some((player) => player.id === request.playerId)) {
           throw new HttpError(400, 'not_a_participant', `Player ${request.playerId} does not play in match ${id}`);
         }
-        const { game, abandonment, endedAt } = await load(match);
+        const replayed = await load(match);
+        requireSeq(match, replayed, request.expectedSeq);
+        const { game, abandonment, endedAt } = replayed;
         if (isGameFinished(game)) {
           throw finished(id);
         }
@@ -368,10 +489,12 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
       });
     },
 
-    resume(id) {
+    resume(id, expectedSeq) {
       return queue(id, async () => {
         const match = await requireMatch(id);
-        const { abandonment } = await load(match);
+        const replayed = await load(match);
+        requireSeq(match, replayed, expectedSeq);
+        const { abandonment } = replayed;
         if (!abandonment) {
           throw new HttpError(409, 'match_not_abandoned', `Match ${id} is not abandoned`);
         }
@@ -382,13 +505,15 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
       });
     },
 
-    endPractice(id) {
+    endPractice(id, expectedSeq) {
       return queue(id, async () => {
         const match = await requireMatch(id);
         if (match.type !== 'practice') {
           throw new HttpError(409, 'not_practice', `Match ${id} is not a practice session`);
         }
-        const { game, throws, checkoutSteps, abandonment, endedAt } = await load(match);
+        const replayed = await load(match);
+        requireSeq(match, replayed, expectedSeq);
+        const { game, throws, checkoutSteps, abandonment, endedAt } = replayed;
         if (endedAt) {
           throw ended(id);
         }

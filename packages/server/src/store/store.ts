@@ -68,6 +68,8 @@ export interface Store {
   loadLogs(matchIds: readonly string[]): Promise<Map<string, MatchLog | Error>>;
   findThrowByEventId(eventId: string): Promise<ThrowRecord | null>;
   appendThrow(hit: NewThrow): Promise<{ throw: ThrowRecord; seq: number }>;
+  // Wszystkie rzutki albo żadna, z kolejnymi seq w kolejności hits.
+  appendThrows(hits: readonly NewThrow[]): Promise<{ throws: ThrowRecord[]; seqs: number[] }>;
   appendUndo(matchId: string, throwId: string): Promise<number>;
   appendAbandon(matchId: string, playerId: string, reason: string | null): Promise<number>;
   appendResume(matchId: string): Promise<number>;
@@ -272,6 +274,33 @@ export function createStore(db: Kysely<Database>): Store {
       await trx.insertInto('match_events').values({ match_id: matchId, seq, ...entry, created_at: now() }).execute();
       return seq;
     });
+  }
+
+  async function appendThrows(hits: readonly NewThrow[]): Promise<{ throws: ThrowRecord[]; seqs: number[] }> {
+    const receivedAt = now();
+    const rows = hits.map((hit) => ({
+      id: randomUUID(),
+      match_id: hit.matchId,
+      event_id: hit.eventId,
+      source: hit.source,
+      sequence: hit.sequence,
+      segment: hit.segment,
+      multiplier: hit.multiplier,
+      confidence: hit.confidence,
+      detected_at: hit.detectedAt,
+      received_at: receivedAt,
+    }));
+    const seqs = await db.transaction().execute(async (trx) => {
+      const seqs: number[] = [];
+      for (const row of rows) {
+        const seq = await nextSeq(trx, row.match_id);
+        await trx.insertInto('throws').values(row).execute();
+        await trx.insertInto('match_events').values({ match_id: row.match_id, seq, type: 'throw', throw_id: row.id, created_at: receivedAt }).execute();
+        seqs.push(seq);
+      }
+      return seqs;
+    });
+    return { throws: rows.map(toThrow), seqs };
   }
 
   return {
@@ -500,29 +529,16 @@ export function createStore(db: Kysely<Database>): Store {
     },
 
     async appendThrow(hit) {
-      const row = {
-        id: randomUUID(),
-        match_id: hit.matchId,
-        event_id: hit.eventId,
-        source: hit.source,
-        sequence: hit.sequence,
-        segment: hit.segment,
-        multiplier: hit.multiplier,
-        confidence: hit.confidence,
-        detected_at: hit.detectedAt,
-        received_at: now(),
-      };
-      const seq = await db.transaction().execute(async (trx) => {
-        const seq = await nextSeq(trx, hit.matchId);
-        await trx.insertInto('throws').values(row).execute();
-        await trx
-          .insertInto('match_events')
-          .values({ match_id: hit.matchId, seq, type: 'throw', throw_id: row.id, created_at: row.received_at })
-          .execute();
-        return seq;
-      });
-      return { throw: toThrow(row), seq };
+      const { throws, seqs } = await appendThrows([hit]);
+      const [record] = throws;
+      const [seq] = seqs;
+      if (record === undefined || seq === undefined) {
+        throw new Error('appendThrows returned no throw');
+      }
+      return { throw: record, seq };
     },
+
+    appendThrows,
 
     async appendUndo(matchId, throwId) {
       return db.transaction().execute(async (trx) => {
