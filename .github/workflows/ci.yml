@@ -127,3 +127,14 @@ jobs:
           cat "$log"
           echo "Server did not answer GET /players with 200 within 30 s"
           exit 1
+
+  deploy-scripts:
+    name: deploy-scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck --version
+      - run: sqlite3 --version
+      - run: shellcheck -x deploy/*.sh
+      - run: bash deploy/test-migrate-db.sh
+      - run: bash deploy/test-deploy.sh

@@ -8,6 +8,7 @@ Ten katalog uruchamia aplikację jako usługę systemd na małym serwerze z Ubun
 - `backup.sh`: codzienna kopia bazy, zostaje 14 najnowszych.
 - `pull-backup.sh`: kopiuje najnowszą kopię z serwera na Maca.
 - `migrate-db.sh`: jednorazowe przeniesienie lokalnej bazy na serwer. `test-migrate-db.sh` sprawdza go na bazach tymczasowych.
+- `test-deploy.sh`: próba `deploy.sh` i rollbacku na tymczasowym klonie, bez serwera (patrz [Testy skryptów](#testy-skryptów)).
 
 W przykładach `<host>` to adres serwera, `<port>` to port SSH, a `<admin>` to root albo użytkownik z `sudo` bez hasła.
 
@@ -192,9 +193,19 @@ Kopie sprzed wdrożeń leżą w `/home/autoscore/backups/deploy` z krótkim SHA 
 sudo -u autoscore /home/autoscore/app/deploy/deploy.sh <sha>
 ```
 
-`<sha>` to pełny SHA commitu z `origin/main`. Skrypt odrzuca brudny katalog z kodem i drugi równoległy deploy. Potem przełącza kod, instaluje zależności, buduje front (gdy `AUTOSCORE_WEB_DIR` jest ustawiona), zatrzymuje usługę, kopiuje bazę do `backups/deploy` (zostaje 14 najnowszych), uruchamia usługę i czeka do 30 s na `/health`. Błąd na którymkolwiek z tych kroków, także nieudany build frontu, przywraca poprzedni commit, a gdy kopia powstała, także bazę. Rollback buduje front poprzedniego commitu, a nieudany build w rollbacku kończy się kodem 3. Bazę po nieudanym wdrożeniu skrypt odkłada jako `<baza>.failed-<czas UTC>`. Log trafia do `/home/autoscore/logs/deploy.log`.
+`<sha>` to pełny SHA commitu z `origin/main`. Skrypt odrzuca brudny katalog z kodem i drugi równoległy deploy. Potem przełącza kod, instaluje zależności i, gdy `AUTOSCORE_WEB_DIR` jest ustawiona, buduje front do `packages/web/dist.new`. Przez cały ten czas działa stara wersja. Nieudany checkout, instalacja albo build kończy wdrożenie przed zatrzymaniem usługi: skrypt przywraca poprzedni commit i zależności, a stara wersja działa dalej. Potem skrypt zatrzymuje usługę i kopiuje bazę do `backups/deploy` (zostaje 14 najnowszych). Kopia przechodzi `PRAGMA integrity_check`, a uszkodzona jest usuwana i przerywa wdrożenie. Następnie skrypt podmienia front: dotychczasowy `dist` zostaje jako `dist.prev`, a `dist.new` staje się `dist`. Na koniec uruchamia usługę i czeka do 30 s na `/health`.
 
-Rollback to wdrożenie starszego SHA z `main`. Gdy nowszy commit dodał migrację, starszy kod nie wystartuje na nowszej bazie i `deploy.sh` wróci do nowszego commitu. Wtedy najpierw zatrzymaj usługę i przywróć kopię z `backups/deploy` sprzed wdrożenia nowszego commitu (jak w sekcji wyżej), a potem wdróż starszy SHA. Rzutki zapisane od tamtego wdrożenia zostają tylko w odłożonym pliku.
+Błąd po zatrzymaniu usługi przywraca poprzedni commit, a gdy kopia powstała, także bazę. Rollback przywraca front z `dist.prev` bez budowania. Buduje go tylko wtedy, gdy przed wdrożeniem nie było `dist`. Bazę po nieudanym wdrożeniu skrypt odkłada jako `<baza>.failed-<czas UTC>`. Log trafia do `/home/autoscore/logs/deploy.log`.
+
+Wdrożenie, które przynosi ten sposób budowania frontu, wykonuje jeszcze stary `deploy.sh` i buduje front prosto do `dist`. Nowy przebieg działa od kolejnego wdrożenia.
+
+Rollback do starszej wersji to wdrożenie starszego SHA z `main`. Gdy nowszy commit dodał migrację, starszy kod nie wystartuje na nowszej bazie i `deploy.sh` wróci do nowszego commitu. Wtedy:
+
+1. Zatrzymaj usługę: `sudo systemctl stop autoscore`.
+2. Przywróć kopię z `backups/deploy` zrobioną przed wdrożeniem nowszego commitu (jak w [Przywracanie z kopii](#przywracanie-z-kopii), bez startu usługi).
+3. Uruchom `deploy.sh <starszy sha>`. Skrypt uruchomi usługę na starszym kodzie.
+
+Rzutki zapisane od tamtego wdrożenia zostają tylko w odłożonym pliku.
 
 ## Przełączenie działającego serwera na front z serwera
 
@@ -212,7 +223,17 @@ Wdrożenie, które przynosi tę zmianę, wykonuje jeszcze stary `deploy.sh`. Skr
 |---|---|
 | 0 | Wdrożone, `/health` odpowiada 200. |
 | 1 | Odrzucone albo błąd przed jakąkolwiek zmianą: zły SHA, commit spoza `origin/main`, brudny katalog, trwający deploy, brak albo zły `AUTOSCORE_PUBLIC_URL` przy ustawionej `AUTOSCORE_WEB_DIR`. |
-| 2 | Wdrożenie nie wyszło, rollback się udał. |
+| 2 | Wdrożenie nie wyszło, rollback się udał. Także nieudany build przed zatrzymaniem usługi, stara wersja działa dalej. |
 | 3 | Rollback też nie wyszedł. Usługa może nie działać. |
 
 Przy kodach 2 i 3 skrypt wypisuje ostatnie 50 linii `journalctl -u autoscore`.
+
+## Testy skryptów
+
+Job `deploy-scripts` w CI uruchamia `shellcheck -x deploy/*.sh`, `bash deploy/test-migrate-db.sh` i `bash deploy/test-deploy.sh`. Lokalnie, z katalogu głównego repo:
+
+```sh
+bash deploy/test-deploy.sh
+```
+
+Test potrzebuje tylko `git` i `sqlite3`. Uruchamia `deploy.sh` na tymczasowym klonie z atrapami `systemctl`, `sudo`, `curl` i `pnpm`, więc nie dotyka usługi ani sieci. Sprawdza udane wdrożenie, nieudany build, nieudany start, uszkodzoną bazę i nieudany rollback.
