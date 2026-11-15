@@ -213,6 +213,17 @@ describe('MatchHeader', () => {
       expect(document.activeElement).toBe(toggle());
     });
 
+    it('closes on a pointer down outside the menu and stays open on one inside it', () => {
+      render(<MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
+      fireEvent.click(toggle());
+      fireEvent.pointerDown(screen.getByRole('button', { name: 'Porzuć mecz' }));
+      expect(toggle().getAttribute('aria-expanded')).toBe('true');
+
+      fireEvent.pointerDown(document.body);
+      expect(toggle().getAttribute('aria-expanded')).toBe('false');
+      expect(panel().classList.contains('hidden')).toBe(true);
+    });
+
     it('calls onAbandon from the menu and closes it', () => {
       const onAbandon = vi.fn();
       render(<MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={onAbandon} />);

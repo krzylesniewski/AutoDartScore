@@ -26,7 +26,7 @@ export function StartBar({ setup, players, canStart, error, onStart }: StartBarP
         <span className="hidden min-w-0 truncate text-lg text-(--color-text-muted) sm:block">{setupLine(setup)}</span>
       </div>
       {error && (
-        <p className="flex shrink-0 items-center gap-2.5 font-display text-xl font-bold text-(--color-text)">
+        <p role="alert" className="flex shrink-0 items-center gap-2.5 font-display text-xl font-bold text-(--color-text)">
           <WarningIcon className="text-(--color-accent)" />
           {error}
         </p>

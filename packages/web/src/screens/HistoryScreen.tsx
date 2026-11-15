@@ -95,11 +95,7 @@ export function HistoryScreen() {
             </div>
           </section>
         </div>
-        {notice && (
-          <div role="alert">
-            <Notice text={notice} />
-          </div>
-        )}
+        {notice && <Notice text={notice} />}
         {games.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
         {games.status === 'error' && (
           <p className="flex items-center gap-2 font-display text-xl text-(--color-text)">

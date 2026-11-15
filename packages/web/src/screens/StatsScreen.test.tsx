@@ -1,6 +1,7 @@
 import type { HeadToHead, MatchListItem, Player, PlayerFormPoint, PlayerStats, RankingEntry, StatsOverall, StatsRankings } from '@autoscore/schema';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { pl } from '../i18n/pl';
 import { listItem, player, statLine } from '../test/snapshots';
 import { StatsScreen } from './StatsScreen';
 
@@ -578,7 +579,7 @@ describe('StatsScreen: player profile', () => {
     profiles = [{ ...players[0], avatar: '🎯' } as Player, players[1] as Player];
     render(<StatsScreen playerId="p1" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Edytuj profil' }));
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Edytuj profil' }));
@@ -597,7 +598,8 @@ describe('StatsScreen: player profile', () => {
       vi.fn(async () => json(400, { error: 'invalid_request', message: 'Invalid request: name: Too big' })),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
-    expect(await within(screen.getByRole('dialog')).findByText('Invalid request: name: Too big')).toBeTruthy();
+    expect(await within(screen.getByRole('dialog')).findByText(pl.invalidRequest)).toBeTruthy();
+    expect(screen.queryByText('Invalid request: name: Too big')).toBeNull();
   });
 
   it('asks before archiving and shows the archived badge after it', async () => {

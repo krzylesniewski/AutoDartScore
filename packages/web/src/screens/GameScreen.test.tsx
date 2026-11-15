@@ -327,6 +327,13 @@ describe('GameScreen', () => {
     expect(FakeWebSocket.instances).toHaveLength(2);
   });
 
+  it('announces the lost connection as an alert', () => {
+    vi.useFakeTimers();
+    const ws = connect();
+    ws.serverClose(1006);
+    expect(screen.getByRole('alert').textContent).toBe('Brak połączenia z serwerem. Łączę ponownie…');
+  });
+
   it('pins the connection notice and the keypad in one bottom dock', () => {
     vi.useFakeTimers();
     const ws = connect();
@@ -698,6 +705,16 @@ describe('abandon and resume', () => {
     expect(calls[0]?.body).toEqual({ playerId: 'p1', reason: 'koniec prądu', expectedSeq: 4 });
   });
 
+  it('returns the focus to the menu toggle after the dialog opened from the menu closes', () => {
+    connect(secondLeg);
+    tap('Menu gry');
+    tap('Porzuć mecz');
+    expect(document.activeElement).toBe(dialog());
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Anuluj' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Menu gry' }));
+  });
+
   it('closes on Anuluj and on Escape without a request', () => {
     connect(secondLeg);
     tap('Porzuć mecz');
@@ -705,7 +722,7 @@ describe('abandon and resume', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
 
     tap('Porzuć mecz');
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(calls).toEqual([]);
   });
@@ -862,7 +879,7 @@ describe('end practice', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
 
     tap('Zakończ trening');
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(calls).toEqual([]);
   });
@@ -1566,6 +1583,16 @@ describe('GameScreen undo window', () => {
     expect(screen.getByRole('button', { name: 'Cofnij' })).toBe(undoButton());
     expect(undoButton().disabled).toBe(true);
     expect(screen.getAllByText(LOCKED_TEXT)).toHaveLength(1);
+  });
+
+  it('announces the locked match as a status', async () => {
+    respond = async () => json(409, { error: 'match_locked', message: `Match ${MATCH_ID} is locked` });
+    connect(finishedCasual(new Date(Date.now() + 60_000).toISOString()));
+    fireEvent.click(undoButton());
+    await screen.findByText(LOCKED_TEXT);
+    const notice = screen.getAllByRole('status').find((element) => element.textContent === LOCKED_TEXT);
+    expect(notice).toBeTruthy();
+    expect(screen.queryAllByRole('alert').some((element) => element.textContent === LOCKED_TEXT)).toBe(false);
   });
 
   it('shows the lock notice once on 409 match_locked and disables Cofnij', async () => {

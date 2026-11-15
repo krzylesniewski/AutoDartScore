@@ -21,6 +21,9 @@ const INTERACTIVE = [
 // Atrybut mają sekcja klawiatury rzutek i przyciski „Końcówek”. Na ich kontrolkach Spacja i Enter zostają skrótami, bo inaczej kliknęłyby je drugi raz.
 export const SHORTCUT_KEYS = '[data-shortcut-keys]';
 
+// Natywny <dialog> ma rolę dialog bez atrybutu role, więc otwarte okno rozpoznaje atrybut open.
+export const OPEN_DIALOG = 'dialog[open]';
+
 export function isTextField(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(TEXT_FIELD) !== null;
 }

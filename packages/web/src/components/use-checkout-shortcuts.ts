@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { checkoutShortcut } from '../game/checkout-shortcut';
-import { isOtherControl, isTextField } from './shortcut-target';
+import { OPEN_DIALOG, isOtherControl, isTextField } from './shortcut-target';
 
 export interface CheckoutShortcutOptions {
   enabled: boolean;
@@ -33,7 +33,7 @@ export function useCheckoutShortcuts(options: CheckoutShortcutOptions): void {
         (shortcut === 'skip' && !current.skipEnabled) ||
         (shortcut === 'undo' && !current.undoEnabled) ||
         isTextField(event.target) ||
-        document.querySelector('[role="dialog"]')
+        document.querySelector(OPEN_DIALOG)
       ) {
         return;
       }

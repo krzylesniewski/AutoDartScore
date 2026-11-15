@@ -13,6 +13,7 @@ import { EffectsToggle } from './EffectsToggle';
 import { GameTime } from './GameTime';
 import { CheckIcon, LockIcon, PlusIcon, TrophyIcon, UndoIcon, WarningIcon } from './icons';
 import { LegDuration } from './LegDuration';
+import { Notice } from './Notice';
 import { SaveGuest, SUMMARY_ROWS } from './MatchSummaryPanel';
 import { ScoreProgressChart } from './ScoreProgressChart';
 import { VoiceToggle } from './VoiceToggle';
@@ -84,9 +85,9 @@ export function MatchEndView({
         >
           {(connectionLost || error || undoLocked) && (
             <div className="flex flex-col gap-3 lg:col-span-2">
-              {connectionLost && <Notice text={pl.connectionLost} />}
-              {error && <Notice text={error} />}
-              {undoLocked && <Notice text={pl.matchLocked} icon={<LockIcon className="text-(--color-accent)" />} />}
+              {connectionLost && <Notice text={pl.connectionLost} appearance="soft" />}
+              {error && <Notice text={error} appearance="soft" />}
+              {undoLocked && <Notice text={pl.matchLocked} tone="status" appearance="soft" icon={<LockIcon className="text-(--color-accent)" />} />}
             </div>
           )}
           {isCasual ? (
@@ -360,14 +361,5 @@ function ActionBar({ state, busy, undoLocked, undoCountdown, onUndo }: ActionBar
         </div>
       </div>
     </div>
-  );
-}
-
-function Notice({ text, icon = <WarningIcon className="text-(--color-accent)" /> }: { text: string; icon?: ReactNode }) {
-  return (
-    <p className="flex items-center gap-2 rounded-(--radius-card) bg-(--color-surface-soft) px-4 py-2 font-display text-xl text-(--color-text)">
-      {icon}
-      {text}
-    </p>
   );
 }
