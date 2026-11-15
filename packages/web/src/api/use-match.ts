@@ -1,9 +1,21 @@
-import { LiveMessage, MISS_SEGMENT } from '@autoscore/schema';
-import type { Achievement, Hit, HitEvent, LiveAuthMessage, MatchSnapshot, ThrowResult } from '@autoscore/schema';
+import { LiveMessage } from '@autoscore/schema';
+import type { Achievement, Hit, HitEvent, LiveAuthMessage, MatchSnapshot, RestMissRequest } from '@autoscore/schema';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pl } from '../i18n/pl';
 import { liveSocketUrl } from './api-url';
-import { API_BASE, ApiRequestError, abandonMatch, endPractice, postCheckoutAttempt, postCheckoutSkip, postThrow, resumeMatch, undo } from './client';
+import {
+  API_BASE,
+  ApiRequestError,
+  StaleStateRequestError,
+  abandonMatch,
+  endPractice,
+  postCheckoutAttempt,
+  postCheckoutSkip,
+  postRestMiss,
+  postThrow,
+  resumeMatch,
+  undo,
+} from './client';
 import { newEventId } from './event-id';
 import { handleUnauthorized, readToken } from './session';
 
@@ -13,9 +25,6 @@ export const RECONNECT_DELAY_MS = 1000;
 export const BANNER_DURATION_MS = 2500;
 export const ACHIEVEMENT_DURATION_MS = 5000;
 export const KEYPAD_SOURCE = 'keypad';
-
-const DARTS_PER_TURN = 3;
-const MISS: Hit = { segment: MISS_SEGMENT, multiplier: 0 };
 
 export type Connection = 'connecting' | 'open' | 'closed';
 
@@ -110,17 +119,17 @@ function keypadHit(matchId: string, sequence: number, hit: Hit): HitEvent {
   };
 }
 
-// Serwer rozpoznaje powtórzony eventId i nie zapisuje rzutki drugi raz, więc ponowienie jest bezpieczne, nawet gdy pierwsza próba doszła.
+// Serwer rozpoznaje powtórzony eventId rzutki i Reszty Miss i nie zapisuje ich drugi raz, więc ponowienie jest bezpieczne, nawet gdy pierwsza próba doszła.
 // Odpowiedź HTTP to decyzja serwera, więc ponawiamy tylko błąd sieci, przekroczenie czasu albo nieczytelną odpowiedź.
-// Cofnij i inne komendy nie mają takiej ochrony, dlatego ponawiamy tylko rzutki.
-async function postThrowWithRetry(matchId: string, event: HitEvent): Promise<ThrowResult> {
+// Cofnij i inne komendy nie mają eventId, dlatego ponawiamy tylko rzutki i Resztę Miss.
+async function withNetworkRetry<T>(send: () => Promise<T>): Promise<T> {
   try {
-    return await postThrow(matchId, event);
+    return await send();
   } catch (caught) {
     if (caught instanceof ApiRequestError) {
       throw caught;
     }
-    return postThrow(matchId, event);
+    return send();
   }
 }
 
@@ -296,7 +305,7 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
       const event = keypadHit(matchId, sequence.current++, hit);
       enqueue(async () => {
         try {
-          const result = await postThrowWithRetry(matchId, event);
+          const result = await withNetworkRetry(() => postThrow(matchId, event));
           setErrorCode(null);
           acceptState(result.state);
         } catch {
@@ -307,7 +316,21 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     [matchId, enqueue, acceptState, failThrow],
   );
 
+  // Serwer niczego nie zapisał, a ekran pokazuje już jego bieżący stan, więc wcześniejszy błąd przestaje pasować.
+  const acceptStale = useCallback(
+    (caught: unknown): boolean => {
+      if (!(caught instanceof StaleStateRequestError)) {
+        return false;
+      }
+      setErrorCode(null);
+      acceptState(caught.state);
+      return true;
+    },
+    [acceptState],
+  );
+
   // Stan z chwili kliknięcia. Gdy wcześniejsze stuknięcie albo Cofnij z kolejki zamknęło lub zmieniło turę, nic nie idzie.
+  // expectedSeq pochodzi ze stanu w chwili wysłania, bo klawiatura nie czeka na odpowiedź i rzutka stuknięta tuż przed Resztą Miss zmienia eventSeq.
   const sendRestMiss = useCallback(() => {
     const clicked = stateRef.current;
     if (!clicked) {
@@ -315,112 +338,124 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     }
     const playerId = clicked.currentPlayerId;
     const dartsAtClick = clicked.currentDarts.length;
+    const eventId = newEventId();
     enqueue(async () => {
       const start = stateRef.current;
       if (!start || start.finished || start.status !== 'in_progress' || start.currentPlayerId !== playerId || start.currentDarts.length < dartsAtClick) {
         return;
       }
-      let darts = start.currentDarts.length;
-      const count = DARTS_PER_TURN - darts;
-      for (let index = 0; index < count; index += 1) {
-        // Inne urządzenie mogło zmienić turę między rzutkami.
-        if (index > 0) {
-          const latest = stateRef.current;
-          if (!latest || latest.currentPlayerId !== playerId || latest.currentDarts.length !== darts + 1) {
-            return;
-          }
-          darts = latest.currentDarts.length;
-        }
-        try {
-          const result = await postThrowWithRetry(matchId, keypadHit(matchId, sequence.current++, MISS));
-          acceptState(result.state);
-          setErrorCode(null);
-        } catch {
-          failThrow();
-          return;
-        }
-      }
-    });
-  }, [matchId, enqueue, acceptState, failThrow]);
-
-  const sendUndo = useCallback(() => {
-    enqueue(async () => {
+      const body: RestMissRequest = { eventId, expectedSeq: start.eventSeq };
       try {
-        const result = await undo(matchId);
+        const result = await withNetworkRetry(() => postRestMiss(matchId, body));
         setErrorCode(null);
         acceptState(result.state);
       } catch (caught) {
+        // Bez podnoszenia epoki, bo stuknięcia z kolejki przyszły po tej komendzie i ich odrzucenie bez błędu zgubiłoby wpis.
+        if (acceptStale(caught)) {
+          return;
+        }
+        failThrow();
+      }
+    });
+  }, [matchId, enqueue, acceptState, acceptStale, failThrow]);
+
+  // Cofnij i przyciski checkoutu są zablokowane, gdy komenda czeka na odpowiedź, więc eventSeq z chwili kliknięcia jest aktualny.
+  // Dwa kliknięcia ustawione w kolejce przed odpowiedzią niosą ten sam eventSeq i drugie dostaje stale_state.
+  const sendUndo = useCallback(() => {
+    const expectedSeq = stateRef.current?.eventSeq;
+    enqueue(async () => {
+      try {
+        const result = await undo(matchId, expectedSeq);
+        setErrorCode(null);
+        acceptState(result.state);
+      } catch (caught) {
+        if (acceptStale(caught)) {
+          return;
+        }
         const code = caught instanceof ApiRequestError && caught.status === 409 ? caught.code : null;
         setErrorCode(code === 'nothing_to_undo' || code === 'match_locked' ? code : 'undo_failed');
       }
     });
-  }, [matchId, enqueue, acceptState]);
+  }, [matchId, enqueue, acceptState, acceptStale]);
 
-  const sendAbandon = useCallback(
-    (playerId: string, reason: string | null) => {
+  // Gracz potwierdził komendę w oknie, więc po stale_state idzie ona jeszcze raz z eventSeq z odpowiedzi. Najwyżej dwa żądania.
+  const sendConfirmed = useCallback(
+    (send: (expectedSeq: number | undefined) => Promise<MatchSnapshot>, failure: MatchErrorCode) => {
+      const expectedSeq = stateRef.current?.eventSeq;
       enqueue(async () => {
         try {
-          const state = await abandonMatch(matchId, playerId, reason);
+          let next: MatchSnapshot;
+          try {
+            next = await send(expectedSeq);
+          } catch (caught) {
+            if (!(caught instanceof StaleStateRequestError)) {
+              throw caught;
+            }
+            acceptState(caught.state);
+            next = await send(caught.state.eventSeq);
+          }
           setErrorCode(null);
-          acceptState(state);
-        } catch {
-          setErrorCode('abandon_failed');
+          acceptState(next);
+        } catch (caught) {
+          if (caught instanceof StaleStateRequestError) {
+            acceptState(caught.state);
+          }
+          setErrorCode(failure);
         }
       });
     },
-    [matchId, enqueue, acceptState],
+    [enqueue, acceptState],
+  );
+
+  const sendAbandon = useCallback(
+    (playerId: string, reason: string | null) => {
+      sendConfirmed((expectedSeq) => abandonMatch(matchId, playerId, reason, expectedSeq), 'abandon_failed');
+    },
+    [matchId, sendConfirmed],
   );
 
   const sendResume = useCallback(() => {
-    enqueue(async () => {
-      try {
-        const state = await resumeMatch(matchId);
-        setErrorCode(null);
-        acceptState(state);
-      } catch {
-        setErrorCode('resume_failed');
-      }
-    });
-  }, [matchId, enqueue, acceptState]);
+    sendConfirmed((expectedSeq) => resumeMatch(matchId, expectedSeq), 'resume_failed');
+  }, [matchId, sendConfirmed]);
 
   const sendEndPractice = useCallback(() => {
-    enqueue(async () => {
-      try {
-        const state = await endPractice(matchId);
-        setErrorCode(null);
-        acceptState(state);
-      } catch {
-        setErrorCode('end_practice_failed');
-      }
-    });
-  }, [matchId, enqueue, acceptState]);
+    sendConfirmed((expectedSeq) => endPractice(matchId, expectedSeq), 'end_practice_failed');
+  }, [matchId, sendConfirmed]);
 
   const sendCheckoutAttempt = useCallback(
     (success: boolean) => {
+      const expectedSeq = stateRef.current?.eventSeq;
       enqueue(async () => {
         try {
-          const state = await postCheckoutAttempt(matchId, success);
+          const state = await postCheckoutAttempt(matchId, success, expectedSeq);
           setErrorCode(null);
           acceptState(state);
-        } catch {
+        } catch (caught) {
+          if (acceptStale(caught)) {
+            return;
+          }
           setErrorCode('checkout_attempt_failed');
         }
       });
     },
-    [matchId, enqueue, acceptState],
+    [matchId, enqueue, acceptState, acceptStale],
   );
 
   const sendCheckoutSkip = useCallback(() => {
+    const expectedSeq = stateRef.current?.eventSeq;
     enqueue(async () => {
       try {
-        const state = await postCheckoutSkip(matchId);
+        const state = await postCheckoutSkip(matchId, expectedSeq);
         setErrorCode(null);
         acceptState(state);
-      } catch {
+      } catch (caught) {
+        if (acceptStale(caught)) {
+          return;
+        }
         setErrorCode('checkout_skip_failed');
       }
     });
-  }, [matchId, enqueue, acceptState]);
+  }, [matchId, enqueue, acceptState, acceptStale]);
 
   return {
     state,

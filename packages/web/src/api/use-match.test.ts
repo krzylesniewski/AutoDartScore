@@ -1,4 +1,4 @@
-import { HitEvent, type LiveMessage, type MatchSnapshot } from '@autoscore/schema';
+import { HitEvent, RestMissRequest, type LiveMessage, type MatchSnapshot } from '@autoscore/schema';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { snapshot } from '../test/snapshots';
@@ -8,6 +8,8 @@ import { useMatch, type UseMatch } from './use-match';
 const MATCH_ID = 'm_42';
 const THROWS_URL = `/api/matches/${MATCH_ID}/throws`;
 const UNDO_URL = `/api/matches/${MATCH_ID}/undo`;
+const REST_MISS_URL = `/api/matches/${MATCH_ID}/rest-miss`;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const T20 = { segment: 20, multiplier: 3 } as const;
 
 // Wzorowana na atrapie z GameScreen.test.tsx. Hook potrzebuje z socketu tylko stanu meczu.
@@ -57,6 +59,10 @@ function created(call: Call): Promise<Response> {
 
 function serverError(): Promise<Response> {
   return Promise.resolve(json(500, { error: 'internal_error', message: 'Internal error' }));
+}
+
+function stale(state: MatchSnapshot): Promise<Response> {
+  return Promise.resolve(json(409, { error: 'stale_state', message: 'Match state changed', state }));
 }
 
 function networkError(): Promise<Response> {
@@ -223,8 +229,48 @@ describe('useMatch throw retry', () => {
   });
 });
 
-describe('useMatch other commands', () => {
-  it('drops a queued undo when a Reszta Miss throw fails', async () => {
+describe('useMatch Reszta Miss', () => {
+  const restMissed = snapshot({ id: MATCH_ID, eventSeq: 7, currentPlayerId: 'p2' });
+
+  function restMissOk(state: MatchSnapshot = restMissed): Promise<Response> {
+    return Promise.resolve(json(200, { throws: [], events: [], state }));
+  }
+
+  function restMissBodies(): unknown[] {
+    return calls.filter((call) => call.url === REST_MISS_URL).map((call) => call.body);
+  }
+
+  it('sends one rest-miss command with a uuid eventId and the current eventSeq', async () => {
+    respond = () => restMissOk();
+    const { result } = render();
+    deliver({ ...initial, currentDarts: [T20] });
+    act(() => {
+      result.current.sendRestMiss();
+    });
+    await settled(result);
+    expect(calls.map((call) => call.url)).toEqual([REST_MISS_URL]);
+    expect(RestMissRequest.parse(calls[0]?.body)).toEqual(calls[0]?.body);
+    expect(calls[0]?.body).toEqual({ eventId: expect.stringMatching(UUID) as unknown, expectedSeq: 4 });
+    expect(throwCalls()).toEqual([]);
+    expect(result.current.state).toEqual(restMissed);
+    expect(result.current.errorCode).toBeNull();
+  });
+
+  it('sends the eventSeq from the reply to a hit queued ahead of it', async () => {
+    const afterHit = { ...initial, eventSeq: 5, currentDarts: [T20] };
+    respond = (call) => (call.url === THROWS_URL ? Promise.resolve(json(201, throwResult(call, afterHit))) : restMissOk());
+    const { result } = render();
+    deliver(initial);
+    act(() => {
+      result.current.sendHit(T20);
+      result.current.sendRestMiss();
+    });
+    await settled(result);
+    expect(calls.map((call) => call.url)).toEqual([THROWS_URL, REST_MISS_URL]);
+    expect(restMissBodies()).toEqual([{ eventId: expect.stringMatching(UUID) as unknown, expectedSeq: 5 }]);
+  });
+
+  it('fails on HTTP 500 without a partial turn and drops a queued undo', async () => {
     respond = (call) => (call.url === UNDO_URL ? Promise.resolve(json(200, { undoneThrowId: 't1', state: { ...initial, eventSeq: 5 } })) : serverError());
     const { result } = render();
     deliver(initial);
@@ -233,11 +279,154 @@ describe('useMatch other commands', () => {
       result.current.sendUndo();
     });
     await settled(result);
-    expect(throwCalls()).toHaveLength(1);
-    expect(calls.filter((call) => call.url === UNDO_URL)).toEqual([]);
+    expect(calls.map((call) => call.url)).toEqual([REST_MISS_URL]);
     expect(result.current.errorCode).toBe('throw_failed');
+    expect(result.current.state).toEqual(initial);
   });
 
+  it('resends the identical command once after a network error', async () => {
+    respond = () => (calls.length === 1 ? networkError() : restMissOk());
+    const { result } = render();
+    deliver(initial);
+    act(() => {
+      result.current.sendRestMiss();
+    });
+    await settled(result);
+    const sent = restMissBodies();
+    expect(sent).toHaveLength(2);
+    expect(sent[1]).toEqual(sent[0]);
+    expect(result.current.errorCode).toBeNull();
+    expect(result.current.state).toEqual(restMissed);
+  });
+
+  it('fails after two network errors', async () => {
+    respond = networkError;
+    const { result } = render();
+    deliver(initial);
+    act(() => {
+      result.current.sendRestMiss();
+    });
+    await settled(result);
+    const sent = restMissBodies();
+    expect(sent).toHaveLength(2);
+    expect(sent[1]).toEqual(sent[0]);
+    expect(result.current.errorCode).toBe('throw_failed');
+    expect(result.current.state).toEqual(initial);
+  });
+
+  it('accepts the state from a stale_state reply without an error and keeps a hit queued behind it', async () => {
+    const newer = snapshot({ id: MATCH_ID, eventSeq: 9, currentPlayerId: 'p2' });
+    respond = (call) => (call.url === REST_MISS_URL ? stale(newer) : created(call));
+    const { result } = render();
+    deliver(initial);
+    act(() => {
+      result.current.sendRestMiss();
+      result.current.sendHit(T20);
+    });
+    await settled(result);
+    expect(calls.map((call) => call.url)).toEqual([REST_MISS_URL, THROWS_URL]);
+    expect(result.current.errorCode).toBeNull();
+    expect(result.current.state?.eventSeq).toBe(9);
+  });
+
+  it('sends nothing when the hit queued ahead of it closed the turn', async () => {
+    const twoDarts = { ...initial, currentPlayerId: 'p1', currentDarts: [T20, T20] };
+    const nextThrower = { ...initial, eventSeq: 5, currentPlayerId: 'p2', currentDarts: [] };
+    respond = (call) => (call.url === THROWS_URL ? Promise.resolve(json(201, throwResult(call, nextThrower))) : restMissOk());
+    const { result } = render();
+    deliver(twoDarts);
+    act(() => {
+      result.current.sendHit(T20);
+      result.current.sendRestMiss();
+    });
+    await settled(result);
+    expect(calls.map((call) => call.url)).toEqual([THROWS_URL]);
+    expect(result.current.state).toEqual(nextThrower);
+  });
+});
+
+describe('useMatch expectedSeq', () => {
+  it('sends the same expectedSeq with two queued undos and accepts the stale reply silently', async () => {
+    const afterUndo = { ...initial, eventSeq: 5 };
+    respond = () => (calls.length === 1 ? Promise.resolve(json(200, { undoneThrowId: 't1', state: afterUndo })) : stale(afterUndo));
+    const { result } = render();
+    deliver(initial);
+    act(() => {
+      result.current.sendUndo();
+      result.current.sendUndo();
+    });
+    await settled(result);
+    expect(calls).toEqual([
+      { url: UNDO_URL, body: { expectedSeq: 4 } },
+      { url: UNDO_URL, body: { expectedSeq: 4 } },
+    ]);
+    expect(result.current.errorCode).toBeNull();
+    expect(result.current.state?.eventSeq).toBe(5);
+  });
+
+  it.each([
+    ['undo', UNDO_URL, (match: UseMatch) => match.sendUndo(), { expectedSeq: 4 }],
+    ['checkout attempt', `/api/matches/${MATCH_ID}/checkout-attempts`, (match: UseMatch) => match.sendCheckoutAttempt(true), { success: true, expectedSeq: 4 }],
+    ['checkout skip', `/api/matches/${MATCH_ID}/checkout-skips`, (match: UseMatch) => match.sendCheckoutSkip(), { expectedSeq: 4 }],
+  ] as const)('accepts a stale_state reply to %s with one request and no error', async (_name, url, send, body) => {
+    const newer = snapshot({ id: MATCH_ID, eventSeq: 9, currentPlayerId: 'p2' });
+    respond = () => stale(newer);
+    const { result } = render();
+    deliver(initial);
+    act(() => {
+      send(result.current);
+    });
+    await settled(result);
+    expect(calls).toEqual([{ url, body }]);
+    expect(result.current.errorCode).toBeNull();
+    expect(result.current.state).toEqual(newer);
+  });
+
+  describe.each([
+    ['abandon', `/api/matches/${MATCH_ID}/abandon`, (match: UseMatch) => match.sendAbandon('p1', null), { playerId: 'p1' }, 'Nie udało się porzucić meczu'],
+    ['resume', `/api/matches/${MATCH_ID}/resume`, (match: UseMatch) => match.sendResume(), {}, 'Nie udało się wznowić meczu'],
+    ['end practice', `/api/matches/${MATCH_ID}/end`, (match: UseMatch) => match.sendEndPractice(), {}, 'Nie udało się zakończyć treningu'],
+  ] as const)('%s after stale_state', (_name, url, send, body, failure) => {
+    const newer = snapshot({ id: MATCH_ID, eventSeq: 9 });
+    const newest = snapshot({ id: MATCH_ID, eventSeq: 11 });
+    const done = snapshot({ id: MATCH_ID, eventSeq: 10 });
+
+    async function run(second: () => Promise<Response>): Promise<{ readonly current: UseMatch }> {
+      respond = () => (calls.length === 1 ? stale(newer) : second());
+      const { result } = render();
+      deliver(initial);
+      act(() => {
+        send(result.current);
+      });
+      await settled(result);
+      expect(calls).toEqual([
+        { url, body: { ...body, expectedSeq: 4 } },
+        { url, body: { ...body, expectedSeq: 9 } },
+      ]);
+      return result;
+    }
+
+    it('is sent once more with the eventSeq of the reply state', async () => {
+      const result = await run(() => Promise.resolve(json(200, done)));
+      expect(result.current.errorCode).toBeNull();
+      expect(result.current.state).toEqual(done);
+    });
+
+    it('shows the existing text when the second attempt fails', async () => {
+      const result = await run(serverError);
+      expect(result.current.error).toBe(failure);
+      expect(result.current.state).toEqual(newer);
+    });
+
+    it('shows the existing text and the newest state when the second attempt is stale too', async () => {
+      const result = await run(() => stale(newest));
+      expect(result.current.error).toBe(failure);
+      expect(result.current.state).toEqual(newest);
+    });
+  });
+});
+
+describe('useMatch other commands', () => {
   it.each([
     ['match_locked', 'any server text'],
     ['nothing_to_undo', 'Match has no throw to undo'],

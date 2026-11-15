@@ -1,13 +1,33 @@
-import { ApiError, FrequentHitsResponse, HeadToHead, LoginResponse, MatchListItem, MatchSnapshot, MatchSummary, Player, PlayerForm, PlayerStats, StatsOverall, StatsRankings, ThrowResult, UndoResult } from '@autoscore/schema';
+import {
+  ApiError,
+  FrequentHitsResponse,
+  HeadToHead,
+  LoginResponse,
+  MatchListItem,
+  MatchSnapshot,
+  MatchSummary,
+  Player,
+  PlayerForm,
+  PlayerStats,
+  RestMissResult,
+  STALE_STATE,
+  StaleStateError,
+  StatsOverall,
+  StatsRankings,
+  ThrowResult,
+  UndoResult,
+} from '@autoscore/schema';
 import type {
   AbandonMatchRequest,
   CheckoutAttemptRequest,
+  CommandRequest,
   CreateMatchRequest,
   CreatePlayerRequest,
   HitEvent,
   ListPlayersQuery,
   LoginRequest,
   MatchListQuery,
+  RestMissRequest,
   StatsFilter,
   StatsPeriod,
   UpdatePlayerRequest,
@@ -34,6 +54,17 @@ export class ApiRequestError extends Error {
   }
 }
 
+// Serwer odrzucił komendę z nieaktualnym expectedSeq i niczego nie zapisał. state to jego bieżący stan meczu.
+export class StaleStateRequestError extends ApiRequestError {
+  readonly state: MatchSnapshot;
+
+  constructor(message: string, state: MatchSnapshot) {
+    super(409, STALE_STATE, message);
+    this.name = 'StaleStateRequestError';
+    this.state = state;
+  }
+}
+
 interface Parser<T> {
   parse(value: unknown): T;
 }
@@ -51,6 +82,12 @@ async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {
   const response = await fetch(`${API_BASE}${path}`, sentToken === null ? timed : withToken(timed, sentToken));
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
+    if (response.status === 409) {
+      const stale = StaleStateError.safeParse(body);
+      if (stale.success) {
+        throw new StaleStateRequestError(stale.data.message, stale.data.state);
+      }
+    }
     const error = ApiError.safeParse(body);
     if (error.success) {
       if (response.status === 401 && error.data.error === 'unauthorized') {
@@ -65,6 +102,19 @@ async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {
 
 function postJson(body: unknown): RequestInit {
   return { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
+}
+
+// Bez expectedSeq idzie samo POST bez body, tak jak z ekranów list meczów, które nie znają eventSeq.
+function postCommand(expectedSeq: number | undefined): RequestInit {
+  if (expectedSeq === undefined) {
+    return { method: 'POST' };
+  }
+  const body: CommandRequest = { expectedSeq };
+  return postJson(body);
+}
+
+function withExpectedSeq(expectedSeq: number | undefined): CommandRequest {
+  return expectedSeq === undefined ? {} : { expectedSeq };
 }
 
 // Tylko podane klucze, bez pustego "?", gdy nie ma żadnego.
@@ -111,8 +161,12 @@ export function postThrow(matchId: string, hit: HitEvent): Promise<ThrowResult> 
   return request(`/matches/${encodeURIComponent(matchId)}/throws`, ThrowResult, postJson(hit));
 }
 
-export function undo(matchId: string): Promise<UndoResult> {
-  return request(`/matches/${encodeURIComponent(matchId)}/undo`, UndoResult, { method: 'POST' });
+export function postRestMiss(matchId: string, body: RestMissRequest): Promise<RestMissResult> {
+  return request(`/matches/${encodeURIComponent(matchId)}/rest-miss`, RestMissResult, postJson(body));
+}
+
+export function undo(matchId: string, expectedSeq?: number): Promise<UndoResult> {
+  return request(`/matches/${encodeURIComponent(matchId)}/undo`, UndoResult, postCommand(expectedSeq));
 }
 
 export function getPlayerStats(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<PlayerStats> {
@@ -144,25 +198,25 @@ export function getMatchSummary(matchId: string): Promise<MatchSummary> {
 }
 
 // Pusty powód (same spacje) nie idzie do serwera.
-export function abandonMatch(id: string, playerId: string, reason: string | null): Promise<MatchSnapshot> {
+export function abandonMatch(id: string, playerId: string, reason: string | null, expectedSeq?: number): Promise<MatchSnapshot> {
   const trimmed = reason?.trim();
-  const body: AbandonMatchRequest = { playerId, ...(trimmed ? { reason: trimmed } : {}) };
+  const body: AbandonMatchRequest = { playerId, ...(trimmed ? { reason: trimmed } : {}), ...withExpectedSeq(expectedSeq) };
   return request(`/matches/${encodeURIComponent(id)}/abandon`, MatchSnapshot, postJson(body));
 }
 
-export function resumeMatch(id: string): Promise<MatchSnapshot> {
-  return request(`/matches/${encodeURIComponent(id)}/resume`, MatchSnapshot, { method: 'POST' });
+export function resumeMatch(id: string, expectedSeq?: number): Promise<MatchSnapshot> {
+  return request(`/matches/${encodeURIComponent(id)}/resume`, MatchSnapshot, postCommand(expectedSeq));
 }
 
-export function endPractice(id: string): Promise<MatchSnapshot> {
-  return request(`/matches/${encodeURIComponent(id)}/end`, MatchSnapshot, { method: 'POST' });
+export function endPractice(id: string, expectedSeq?: number): Promise<MatchSnapshot> {
+  return request(`/matches/${encodeURIComponent(id)}/end`, MatchSnapshot, postCommand(expectedSeq));
 }
 
-export function postCheckoutAttempt(matchId: string, success: boolean): Promise<MatchSnapshot> {
-  const body: CheckoutAttemptRequest = { success };
+export function postCheckoutAttempt(matchId: string, success: boolean, expectedSeq?: number): Promise<MatchSnapshot> {
+  const body: CheckoutAttemptRequest = { success, ...withExpectedSeq(expectedSeq) };
   return request(`/matches/${encodeURIComponent(matchId)}/checkout-attempts`, MatchSnapshot, postJson(body));
 }
 
-export function postCheckoutSkip(matchId: string): Promise<MatchSnapshot> {
-  return request(`/matches/${encodeURIComponent(matchId)}/checkout-skips`, MatchSnapshot, { method: 'POST' });
+export function postCheckoutSkip(matchId: string, expectedSeq?: number): Promise<MatchSnapshot> {
+  return request(`/matches/${encodeURIComponent(matchId)}/checkout-skips`, MatchSnapshot, postCommand(expectedSeq));
 }
