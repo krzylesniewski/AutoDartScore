@@ -1,4 +1,4 @@
-import { FORM_GAMES, MIN_LEGS_FOR_AVERAGE } from '@autoscore/schema';
+import { FORM_GAMES, MIN_GAMES_FOR_WIN_RATE, MIN_LEGS_FOR_AVERAGE } from '@autoscore/schema';
 
 // Polska odmiana po liczbie: 1, 2-4 (bez 12-14), reszta.
 function plural(count: number, one: string, few: string, many: string): string {
@@ -263,6 +263,12 @@ export const pl = {
   tileHighestTurn: 'Najwyższa tura',
   tileHighestTurnUnit: '3 lotki, mecze 1v1',
   tileOnlyMatches: 'Tylko mecze 1v1',
+  statWinRate: 'Win rate',
+  tileWinRateUnit: `min. ${games(MIN_GAMES_FOR_WIN_RATE)}`,
+  tileOnlyMatchesAndCasual: 'Tylko mecze i zabawa',
+  statT20Hits: 'Trafienia T20',
+  tileT20HitsUnit: 'rzutki za 60',
+  recordsRegion: 'Rekordy',
   noGamesInFilter: 'Brak gier w tym filtrze.',
   filterOverall: 'Overall',
   overallSubtitle: 'Wszystkie gry liczone do statystyk razem',

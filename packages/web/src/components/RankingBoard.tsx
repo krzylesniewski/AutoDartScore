@@ -1,5 +1,5 @@
 import type { RankedPlayer, RankingEntry, StatsRankings } from '@autoscore/schema';
-import { formatAverage } from '../game/format-stat';
+import { formatAverage, formatPercent } from '../game/format-stat';
 import { podiumSlots } from '../game/podium';
 import { recordBarPercent } from '../game/record-bar';
 import { pl } from '../i18n/pl';
@@ -26,6 +26,13 @@ interface Tile {
 
 function tiles(rankings: StatsRankings): readonly Tile[] {
   return [
+    {
+      title: pl.statWinRate,
+      unit: pl.tileWinRateUnit,
+      entries: rankings.winRate,
+      format: formatPercent,
+      empty: rankings.filter === 'practice' ? pl.tileOnlyMatchesAndCasual : undefined,
+    },
     { title: pl.tileBestLeg, unit: pl.tileBestLegUnit, entries: rankings.bestLegAverage, format: formatAverage },
     { title: pl.statHighestCheckout, unit: pl.tileCheckoutUnit, entries: rankings.highestCheckout, format: String },
     { title: pl.tileShortestLeg, unit: pl.tileShortestLegUnit, entries: rankings.shortestLeg, format: String, lowerIsBetter: true },
@@ -36,10 +43,12 @@ function tiles(rankings: StatsRankings): readonly Tile[] {
       format: String,
       empty: rankings.filter === 'casual' || rankings.filter === 'practice' ? pl.tileOnlyMatches : undefined,
     },
+    { title: pl.statT20Hits, unit: pl.tileT20HitsUnit, entries: rankings.t20Hits, format: String },
   ];
 }
 
-// Podium i dalsze miejsca po średniej oraz cztery kafelki z pierwszą piątką.
+// Podium i dalsze miejsca po średniej oraz kafelki z pierwszą piątką.
+// Od xl kolumna kafelków przewija się sama, a panel średniej stoi w miejscu.
 export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
   const { podium, rest } = podiumSlots(rankings.players);
   return (
@@ -61,27 +70,34 @@ export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
         )}
         <p className="relative mt-auto border-t border-(--color-border) pt-2.5 text-sm text-(--color-text-muted)">{pl.averageFootnote}</p>
       </section>
-      <div className="grid min-h-0 grid-cols-1 gap-5 sm:grid-cols-2 sm:grid-rows-2">
-        {tiles(rankings).map((tile) => {
-          const best = tile.entries[0]?.value ?? 0;
-          return (
-            <section key={tile.title} aria-label={tile.title} className={tileCard}>
-              <CardRings className="-top-12 -right-12 size-44" />
-              <div className="relative mb-2 flex items-baseline justify-between gap-3">
-                <h2 className="font-display text-2xl leading-tight font-extrabold">{tile.title}</h2>
-                <span className="text-[13px] text-(--color-text-muted)">{tile.unit}</span>
-              </div>
-              <ol className={`relative flex flex-col gap-0.5 xl:min-h-0 xl:overflow-y-auto ${scrollbar}`}>
-                {tile.entries.map((entry) => (
-                  <li key={entry.playerId}>
-                    <TileRow entry={entry} value={tile.format(entry.value)} bar={recordBarPercent(entry.value, best, tile.lowerIsBetter ?? false)} />
-                  </li>
-                ))}
-              </ol>
-              {tile.entries.length < 3 && <p className="relative py-2 text-(--color-text-muted)">{tile.empty ?? pl.tooFewPlayers}</p>}
-            </section>
-          );
-        })}
+      <div
+        role="region"
+        aria-label={pl.recordsRegion}
+        tabIndex={0}
+        className={`min-h-0 min-w-0 rounded-(--radius-panel) xl:overflow-y-auto xl:pr-2 xl:pb-(--space-6) ${scrollbar}`}
+      >
+        <div className="grid grid-cols-1 content-start gap-5 sm:grid-cols-2">
+          {tiles(rankings).map((tile) => {
+            const best = tile.entries[0]?.value ?? 0;
+            return (
+              <section key={tile.title} aria-label={tile.title} className={tileCard}>
+                <CardRings className="-top-12 -right-12 size-44" />
+                <div className="relative mb-2 flex items-baseline justify-between gap-3">
+                  <h2 className="font-display text-2xl leading-tight font-extrabold">{tile.title}</h2>
+                  <span className="text-[13px] text-(--color-text-muted)">{tile.unit}</span>
+                </div>
+                <ol className="relative flex flex-col gap-0.5">
+                  {tile.entries.map((entry) => (
+                    <li key={entry.playerId}>
+                      <TileRow entry={entry} value={tile.format(entry.value)} bar={recordBarPercent(entry.value, best, tile.lowerIsBetter ?? false)} />
+                    </li>
+                  ))}
+                </ol>
+                {tile.entries.length < 3 && <p className="relative py-2 text-(--color-text-muted)">{tile.empty ?? pl.tooFewPlayers}</p>}
+              </section>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
