@@ -2,8 +2,8 @@ name: CI
 
 on:
   push:
-    # feat/redesign: gałąź integracyjna etapu 3; bramka rolloutu wymaga zielonego CI na jej commitach.
-    branches: [main, feat/redesign]
+    # feat/redesign i feat/hardening: gałęzie integracyjne etapów 3 i 4; bramka rolloutu wymaga zielonego CI na ich commitach.
+    branches: [main, feat/redesign, feat/hardening]
   pull_request:
 
 concurrency:
