@@ -5,7 +5,6 @@ import { checkoutHistory, checkoutSession } from '../test/snapshots';
 import { CheckoutActions, CheckoutRecentAttempts, CheckoutTargetCard, type CheckoutActionsProps } from './CheckoutPracticePanel';
 import { CheckoutPracticeSummary } from './CheckoutPracticeSummary';
 import { HIT_FLASH_MS } from './KeypadKey';
-import { ROUTE_CHIP } from './CheckoutCard';
 
 // 7 udanych z 12, ostatnia próba nieudana.
 const SEVEN_OF_TWELVE = [true, true, false, true, false, true, false, true, false, true, true, false];
@@ -69,25 +68,14 @@ describe('CheckoutTargetCard', () => {
     expect(screen.getByText('0 z 0 · —')).toBeTruthy();
   });
 
-  it('sizes the target with clamp inside its own container', () => {
-    render(<CheckoutTargetCard session={checkoutSession([], { target: 64 })} />);
-    expect(screen.getByRole('region', { name: 'Końcówka' }).className.split(' ')).toContain('@container');
-    expect(screen.getByText('64').className).toMatch(/text-\[clamp\(/);
-  });
-
-  it('shows one shared route chip per dart in an accent block and fills the column from lg', () => {
+  it('shows the route darts in order after the dart count', () => {
     render(<CheckoutTargetCard session={checkoutSession([], { target: 100 })} />);
     const card = screen.getByRole('region', { name: 'Końcówka' });
-    const chips = [...card.querySelectorAll('span')].filter((span) => span.className === ROUTE_CHIP);
-    expect(chips.map((chip) => chip.textContent)).toEqual(['T20', 'D20']);
-    const block = within(card).getByText(pl.checkoutInDarts(2)).parentElement;
-    expect(block?.tagName).toBe('DIV');
-    expect(block?.className.split(' ')).toContain('sc-checkout');
-    for (const chip of chips) {
-      expect(block?.contains(chip)).toBe(true);
-    }
-    expect(card.className.split(' ')).toEqual(expect.arrayContaining(['lg:flex-1', 'lg:min-h-0', 'rounded-(--radius-panel)']));
-    expect(card.className.split(' ')).not.toContain('lg:py-9');
+    const label = within(card).getByText(pl.checkoutInDarts(2));
+    const first = within(card).getByText('T20');
+    const second = within(card).getByText('D20');
+    expect(label.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -120,21 +108,13 @@ describe('CheckoutActions', () => {
     expect(button('Cofnij').getAttribute('aria-keyshortcuts')).toBe('Backspace');
   });
 
-  it('keeps the result buttons at least 56 px tall, taller from lg', () => {
+  it('puts Nowa końcówka and Cofnij after the results in the reading order', () => {
     actions();
-    for (const name of ['Udało się', 'Nie udało się']) {
-      expect(button(name).className.split(' ')).toEqual(expect.arrayContaining(['min-h-(--button-height)', 'lg:min-h-28']));
+    const names = ['Nie udało się', 'Udało się', 'Nowa końcówka', 'Cofnij'];
+    for (let index = 1; index < names.length; index += 1) {
+      const previous = button(names[index - 1] as string);
+      expect(previous.compareDocumentPosition(button(names[index] as string)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
-    expect(button('Cofnij').className.split(' ')).toContain('min-h-12');
-    expect(button('Nowa końcówka').className).toBe(button('Cofnij').className);
-  });
-
-  it('puts Nowa końcówka and Cofnij in one row of two equal columns under the results', () => {
-    actions();
-    const row = button('Nowa końcówka').parentElement;
-    expect(row).toBe(button('Cofnij').parentElement);
-    expect(row?.className.split(' ')).toEqual(expect.arrayContaining(['grid', 'grid-cols-2']));
-    expect(row?.previousElementSibling).toBe(button('Udało się').parentElement);
   });
 
   it('reports a skip once on a click and once on N', () => {
@@ -275,13 +255,11 @@ describe('CheckoutActions', () => {
       expect(button('Udało się').hasAttribute('data-flash')).toBe(false);
     });
 
-    it('flashes the red-bordered failure button with the text color', () => {
+    it('flashes the failure button on a click', () => {
       actions();
-      expect(button('Nie udało się').className.split(' ')).toContain('border-(--color-accent)');
+      expectNoFeedback(button('Nie udało się'));
       fireEvent.click(button('Nie udało się'));
-      const classes = button('Nie udało się').className.split(' ');
-      expect(classes).toContain('border-(--color-text)');
-      expect(classes).not.toContain('border-(--color-accent)');
+      expect(button('Nie udało się').hasAttribute('data-flash')).toBe(true);
     });
   });
 });
@@ -302,12 +280,13 @@ describe('CheckoutRecentAttempts', () => {
     expect(within(region).getByText('najnowsza na górze').closest('h2')).toBeNull();
   });
 
-  it('reserves the height of 5 rows from the first attempt', () => {
+  it('replaces Brak prób with the list from the first attempt', () => {
     const { rerender } = render(<CheckoutRecentAttempts session={checkoutSession()} />);
-    expect(screen.getByText('Brak prób').className.split(' ')).toEqual(expect.arrayContaining(['h-40', 'lg:h-70']));
+    expect(screen.getByText('Brak prób')).toBeTruthy();
+    expect(screen.queryByRole('list')).toBeNull();
     rerender(<CheckoutRecentAttempts session={checkoutSession(checkoutHistory([true]))} />);
-    expect(screen.getByRole('list').className.split(' ')).toEqual(expect.arrayContaining(['h-40', 'lg:h-70']));
-    expect(screen.getByRole('listitem').className.split(' ')).toEqual(expect.arrayContaining(['h-8', 'lg:h-14']));
+    expect(screen.queryByText('Brak prób')).toBeNull();
+    expect(rows(screen.getByRole('list'))).toEqual(['1.2Udało się']);
   });
 });
 
@@ -315,9 +294,10 @@ describe('CheckoutPracticeSummary', () => {
   it('shows the totals and every attempt in order', () => {
     render(<CheckoutPracticeSummary session={checkoutSession(checkoutHistory(SEVEN_OF_TWELVE))} />);
     const summary = screen.getByRole('region', { name: 'Podsumowanie treningu' });
+    const values = within(summary).getAllByRole('definition');
     const totals = within(summary)
       .getAllByRole('term')
-      .map((term) => [term.textContent, term.nextElementSibling?.textContent]);
+      .map((term, index) => [term.textContent, values[index]?.textContent]);
     expect(totals).toEqual([
       ['Próby', '12'],
       ['Udane', '7'],

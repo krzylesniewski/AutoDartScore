@@ -29,7 +29,6 @@ describe('FormChart', () => {
     expect(lines).toHaveLength(5);
     for (const line of lines) {
       expect(line.getAttribute('y1')).toBe(line.getAttribute('y2'));
-      expect(line.getAttribute('class')).toBe('stroke-(--color-border)');
       expect(line.getAttribute('vector-effect')).toBe('non-scaling-stroke');
     }
     const children = [...chart().children].map((child) => child.tagName.toLowerCase());

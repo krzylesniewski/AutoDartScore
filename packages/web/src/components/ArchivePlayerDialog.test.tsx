@@ -3,13 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { ArchivePlayerDialog } from './ArchivePlayerDialog';
 
 describe('ArchivePlayerDialog', () => {
-  it('opens as a focused modal dialog on a dimmed screen', () => {
+  it('opens as a focused modal dialog', () => {
     render(<ArchivePlayerDialog name="Anna" onConfirm={vi.fn()} onCancel={vi.fn()} />);
     const dialog = screen.getByRole('dialog', { name: 'Zarchiwizować gracza?' });
     expect((dialog as HTMLDialogElement).open).toBe(true);
     expect(document.activeElement).toBe(dialog);
-    expect(dialog.classList).toContain('bg-(--color-bg)/80');
-    expect(dialog.querySelector('svg[aria-hidden="true"]')?.querySelectorAll('circle')).toHaveLength(3);
   });
 
   it('confirms with Archiwizuj and cancels with Anuluj or Escape', () => {

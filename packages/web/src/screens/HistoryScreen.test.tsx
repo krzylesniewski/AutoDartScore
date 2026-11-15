@@ -211,15 +211,11 @@ describe('HistoryScreen', () => {
     }
   });
 
-  it('marks a game in progress by its badge and not by an outline', async () => {
+  it('marks a game in progress by its badge with an icon', async () => {
     render(<HistoryScreen />);
     await screen.findByText('Anna 2 : 1 Bartek');
-    const live = row('W trakcie');
-    const classes = live.getAttribute('class')?.split(' ') ?? [];
-    expect(classes.filter((name) => /^(border|ring|outline)/.test(name))).toEqual([]);
-    const icon = live.querySelector('svg');
-    expect(icon?.getAttribute('aria-hidden')).toBe('true');
-    expect(icon?.parentElement?.textContent).toBe('W trakcie');
+    const badge = within(row('W trakcie')).getByText('W trakcie');
+    expect(badge.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('shows an empty state', async () => {

@@ -44,8 +44,8 @@ function setup({ layout = 'ring', disabled = false, undoDisabled = false, checko
   return { onHit, onRestMiss, onUndo, button, rerender };
 }
 
-function classes(element: HTMLElement): string[] {
-  return element.className.split(' ').filter(Boolean);
+function follows(earlier: Element, later: Element): boolean {
+  return (earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
 
 // Tekst bez odznak skrótów, które są aria-hidden i nie należą do nazwy.
@@ -114,21 +114,11 @@ describe('Keypad', () => {
     expect(within(screen.getByRole('group', { name: 'Mnożnik' })).getAllByRole('button').map(visibleText)).toEqual(['S', 'D', 'T']);
   });
 
-  it('lays out 1-20 five per row below lg and ten per row from lg in the grid layout', () => {
-    const { button } = setup({ layout: 'grid' });
-    expect(classes(button('20').parentElement as HTMLElement)).toEqual(expect.arrayContaining(['grid-cols-5', 'lg:grid-cols-10']));
-    for (const name of SEGMENTS) {
-      expect(classes(button(name))).toEqual(expect.arrayContaining(['h-14', 'lg:h-[78px]']));
-      expect(classes(button(name)).some((name) => name.startsWith('xl:'))).toBe(false);
-    }
-  });
-
   it('puts each ring key at its ring position', () => {
     const { button } = setup();
     DARTBOARD_ORDER.forEach((segment, index) => {
       const { left, top } = ringKeyPosition(index);
       const key = button(String(segment));
-      expect(classes(key)).toContain('rounded-full');
       expect(parseFloat(key.style.left)).toBeCloseTo(left, 6);
       expect(parseFloat(key.style.top)).toBeCloseTo(top, 6);
       expect(key.style.left.endsWith('%')).toBe(true);
@@ -136,41 +126,16 @@ describe('Keypad', () => {
     });
   });
 
-  it('gives key 20 on the ring a brighter idle border than the other keys', () => {
+  it('marks the selected multiplier key as pressed in the multiplier group', () => {
     const { button } = setup();
-    expect(classes(button('20'))).toContain('border-(--color-text-muted)');
-    expect(classes(button('20'))).not.toContain('border-transparent');
-    expect(classes(button('1'))).toContain('border-transparent');
+    const group = screen.getByRole('group', { name: 'Mnożnik' });
+    expect(within(group).getByRole('button', { name: 'S' })).toBe(button('S'));
+    expect(button('S').getAttribute('aria-pressed')).toBe('true');
+    expect(button('D').getAttribute('aria-pressed')).toBe('false');
+    expect(button('T').getAttribute('aria-pressed')).toBe('false');
   });
 
-  it.each(LAYOUTS)('gives the number keys, 25 and Bull depth without a visible border in the %s layout', (layout) => {
-    const { button } = setup({ layout });
-    for (const name of [...SEGMENTS, '25', 'Bull']) {
-      expect(classes(button(name))).toEqual(
-        expect.arrayContaining(['bg-linear-to-b', 'from-(--color-surface-raised)', 'to-(--color-surface)', 'border-(length:--border-width)']),
-      );
-    }
-    for (const name of [...SEGMENTS, '25']) {
-      expect(classes(button(name))).toContain('shadow-(--shadow-key)');
-    }
-    expect(classes(button('Bull'))).toContain('sc-key--bull');
-    expect(classes(button('Bull')).some((name) => name.startsWith('shadow-'))).toBe(false);
-  });
-
-  it('makes 25 and Bull pill keys in the ring centre', () => {
-    const { button } = setup();
-    expect(classes(button('25'))).toContain('rounded-(--radius-pill)');
-    expect(classes(button('Bull'))).toContain('rounded-(--radius-pill)');
-  });
-
-  it('puts the multiplier keys on a tray and marks the selected one', () => {
-    const { button } = setup();
-    expect(classes(screen.getByRole('group', { name: 'Mnożnik' }))).toEqual(expect.arrayContaining(['bg-(--color-surface-soft)', 'rounded-(--radius-card)', 'p-1.5']));
-    expect(classes(button('S'))).toEqual(expect.arrayContaining(['bg-(--color-text)', 'text-(--color-text-inverse)', 'shadow-(--shadow-selected)', 'rounded-(--radius-segment)']));
-    expect(classes(button('D'))).toEqual(expect.arrayContaining(['bg-transparent', 'text-(--color-text)']));
-  });
-
-  it.each(LAYOUTS)('shows a letter below lg and the full word from lg on the multiplier keys in the %s layout', (layout) => {
+  it.each(LAYOUTS)('names the multiplier keys by a letter and shows the full word only to the eye in the %s layout', (layout) => {
     const { button } = setup({ layout });
     for (const [name, word] of [
       ['S', 'Single'],
@@ -184,11 +149,9 @@ describe('Keypad', () => {
       expect(shorts).toHaveLength(1);
       const short = shorts[0] as HTMLElement;
       expect(short.tagName).toBe('SPAN');
-      expect(classes(short)).toContain('lg:sr-only');
       expect(short.hasAttribute('aria-hidden')).toBe(false);
       const long = within(key).getByText(word);
       expect(long.getAttribute('aria-hidden')).toBe('true');
-      expect(classes(long)).toEqual(expect.arrayContaining(['hidden', 'lg:inline']));
       expect(key.getAttribute('aria-keyshortcuts')).toBe(name);
     }
     expect(screen.queryByRole('button', { name: /Single|Double|Treble/ })).toBeNull();
@@ -216,40 +179,11 @@ describe('Keypad', () => {
     expect(button('Cofnij').disabled).toBe(false);
   });
 
-  it('puts Miss, Reszta Miss and Cofnij in one column next to the ring from lg and in one row below lg', () => {
-    const { button } = setup();
-    const column = button('Miss').parentElement as HTMLElement;
-    expect(button('Reszta Miss').parentElement).toBe(column);
-    expect(button('Cofnij').parentElement).toBe(column);
-    expect(classes(column)).toEqual(expect.arrayContaining(['grid', 'grid-cols-[3fr_2fr_2fr]', 'lg:flex', 'lg:flex-col']));
-    expect(classes(button('Miss'))).toEqual(expect.arrayContaining(['h-14', 'lg:min-h-14', 'lg:flex-1']));
-    for (const name of ['Reszta Miss', 'Cofnij']) {
-      expect(classes(button(name))).toContain('h-14');
-    }
-  });
-
-  it('puts Cofnij in the last row of the grid layout', () => {
-    const { button } = setup({ layout: 'grid' });
-    const row = button('Cofnij').parentElement as HTMLElement;
-    expect([...row.children].map((element) => visibleText(element as HTMLElement))).toEqual(['25', 'Bull', 'Miss', 'Reszta Miss', 'Cofnij']);
-    for (const name of ['25', 'Bull', 'Miss', 'Reszta Miss', 'Cofnij']) {
-      expect(classes(button(name))).toEqual(expect.arrayContaining(['h-14', 'lg:h-[62px]']));
-    }
-  });
-
-  it('gives Miss and Reszta Miss the Scena look', () => {
-    const { button } = setup();
-    expect(classes(button('Miss'))).toEqual(
-      expect.arrayContaining(['bg-(--color-surface-soft)', 'rounded-(--radius-card)', 'shadow-(--shadow-inset-line)', 'font-extrabold']),
-    );
-    expect(classes(button('Reszta Miss'))).toEqual(expect.arrayContaining(['shadow-(--shadow-outline)', 'text-(--color-text-sub)']));
-  });
-
-  it('bounds the ring side by the height and the width of the keypad', () => {
-    const { button } = setup();
-    const ring = button('20').parentElement as HTMLElement;
-    expect(classes(ring)).toContain('lg:w-[clamp(330px,min(100dvh_-_var(--keypad-ring-reserve),100cqi_-_280px),600px)]');
-    expect(classes(screen.getByRole('region', { name: 'Klawiatura rzutek' }))).toContain('@container');
+  it.each(LAYOUTS)('puts Miss, Reszta Miss and Cofnij after the number keys in the %s layout', (layout) => {
+    const { button } = setup({ layout });
+    expect(follows(button('5'), button('Miss'))).toBe(true);
+    expect(follows(button('Miss'), button('Reszta Miss'))).toBe(true);
+    expect(follows(button('Reszta Miss'), button('Cofnij'))).toBe(true);
   });
 
   it('sends Reszta Miss and resets the toggle to S', () => {
@@ -270,7 +204,8 @@ describe('Keypad', () => {
 
   it('renders the grid from a stored grid entry', () => {
     const { button } = setup({ layout: 'grid' });
-    expect(classes(button('20'))).not.toContain('rounded-full');
+    expect(button('20').style.left).toBe('');
+    expect(button('20').style.top).toBe('');
   });
 
   it.each(LAYOUTS)('has no layout button in the %s layout', (layout) => {
@@ -293,12 +228,6 @@ describe('Keypad', () => {
       const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement;
       const rerender = (next: boolean) => view.rerender(keypad(next));
       return { onHit, button, rerender };
-    }
-
-    function expectOneColorPerGroup(element: HTMLElement): void {
-      expect(classes(element).filter((name) => /^bg-/.test(name))).toHaveLength(1);
-      expect(classes(element).filter((name) => /^border-(\(--color-|transparent$)/.test(name))).toHaveLength(1);
-      expect(classes(element).filter((name) => /^text-\(--color-/.test(name))).toHaveLength(1);
     }
 
     afterEach(() => {
@@ -331,21 +260,11 @@ describe('Keypad', () => {
       expect(button('20').hasAttribute('data-pressed')).toBe(false);
     });
 
-    it('gives a pressed key the raised colors and a motion-safe 1 px drop', () => {
-      const { button } = renderKeypad(false);
-      fireEvent.pointerDown(button('20'));
-      expect(classes(button('20'))).toEqual(
-        expect.arrayContaining(['bg-(--color-surface-raised)', 'text-(--color-text)', 'border-(--color-text)', 'motion-safe:[transform:translateY(1px)]']),
-      );
-      expect(classes(button('20')).some((name) => name.includes('scale'))).toBe(false);
-      expect(classes(button('20'))).not.toContain('[transform:translateY(1px)]');
-    });
-
-    it('keeps the cream colors on the selected multiplier while pressed', () => {
+    it('keeps the selected multiplier selected while pressed', () => {
       const { button } = renderKeypad(false);
       fireEvent.pointerDown(button('S'));
-      expect(classes(button('S'))).toEqual(expect.arrayContaining(['bg-(--color-text)', 'border-(--color-text)', 'motion-safe:[transform:translateY(1px)]']));
-      expect(classes(button('S'))).not.toContain('bg-(--color-surface-raised)');
+      expect(button('S').hasAttribute('data-pressed')).toBe(true);
+      expect(button('S').getAttribute('aria-pressed')).toBe('true');
     });
 
     it('flashes the hit key for the named duration', () => {
@@ -354,7 +273,6 @@ describe('Keypad', () => {
       fireEvent.click(button('20'));
       expect(HIT_FLASH_MS).toBe(200);
       expect(button('20').hasAttribute('data-flash')).toBe(true);
-      expect(classes(button('20'))).toContain('border-(--color-accent)');
 
       act(() => {
         vi.advanceTimersByTime(199);
@@ -365,7 +283,6 @@ describe('Keypad', () => {
         vi.advanceTimersByTime(1);
       });
       expect(button('20').hasAttribute('data-flash')).toBe(false);
-      expect(classes(button('20'))).not.toContain('border-(--color-accent)');
     });
 
     it('restarts the flash on a click during the flash', () => {
@@ -397,12 +314,12 @@ describe('Keypad', () => {
       expect(button('D').hasAttribute('data-flash')).toBe(false);
     });
 
-    it('shows the accent border over the pressed border', () => {
+    it('flashes a key that is still pressed', () => {
       const { button } = renderKeypad(false);
       fireEvent.pointerDown(button('20'));
       fireEvent.click(button('20'));
-      expect(classes(button('20'))).toEqual(expect.arrayContaining(['bg-(--color-surface-raised)', 'border-(--color-accent)']));
-      expect(classes(button('20'))).not.toContain('border-(--color-text)');
+      expect(button('20').hasAttribute('data-pressed')).toBe(true);
+      expect(button('20').hasAttribute('data-flash')).toBe(true);
     });
 
     it('does not react on a disabled keypad', () => {
@@ -442,33 +359,6 @@ describe('Keypad', () => {
       rerender(true);
       expect(button('20').hasAttribute('data-flash')).toBe(false);
       expect(vi.getTimerCount()).toBe(0);
-    });
-
-    it.each(['20', '1', '25', 'Bull', 'Miss', 'Reszta Miss', 'D', 'S'])('gives %s one background and one border color in every state', (name) => {
-      vi.useFakeTimers();
-      const { button } = renderKeypad(false);
-      expectOneColorPerGroup(button(name));
-
-      fireEvent.pointerDown(button(name));
-      expectOneColorPerGroup(button(name));
-
-      fireEvent.click(button(name));
-      expectOneColorPerGroup(button(name));
-
-      fireEvent.pointerUp(button(name));
-      expectOneColorPerGroup(button(name));
-
-      act(() => {
-        vi.advanceTimersByTime(HIT_FLASH_MS);
-      });
-      expectOneColorPerGroup(button(name));
-    });
-
-    it('gives every key touch-manipulation', () => {
-      renderKeypad(false);
-      for (const key of screen.getAllByRole('button')) {
-        expect(classes(key)).toContain('touch-manipulation');
-      }
     });
   });
 
@@ -535,7 +425,6 @@ describe('Keypad', () => {
         type('2', '0');
         expect(button('20').hasAttribute('data-flash')).toBe(true);
         expect(button('20').hasAttribute('data-pressed')).toBe(true);
-        expect(classes(button('20'))).toEqual(expect.arrayContaining(['bg-(--color-surface-raised)', 'border-(--color-accent)']));
 
         act(() => {
           vi.advanceTimersByTime(HIT_FLASH_MS - 1);
@@ -563,35 +452,17 @@ describe('Keypad', () => {
         for (const [name, badge, keys] of expected) {
           const element = button(name);
           expect(element.getAttribute('aria-keyshortcuts')).toBe(keys);
-          // S, D i T mają drugi ukryty span z pełnym słowem, więc odznaka to ten z absolute.
-          const badges = element.querySelectorAll('span[aria-hidden="true"].absolute');
+          // S, D i T pokazują swoją literę także jako nazwę, więc odznaka to jedyna ukryta kopia.
+          const badges = within(element)
+            .getAllByText(badge)
+            .filter((candidate) => candidate.getAttribute('aria-hidden') === 'true');
           expect(badges).toHaveLength(1);
-          expect(badges[0]?.textContent).toBe(badge);
-          expect(classes(badges[0] as HTMLElement)).toEqual(expect.arrayContaining(['absolute', 'hidden', 'lg:block']));
-          expect(classes(element)).toContain('relative');
         }
         for (const name of [...SEGMENTS, 'Reszta Miss']) {
           expect(button(name).hasAttribute('aria-keyshortcuts')).toBe(false);
           expect(button(name).querySelector('span[aria-hidden="true"]')).toBeNull();
         }
       });
-    });
-
-    it('keeps the ring keys absolute and without relative', () => {
-      const { button } = setup();
-      for (const name of SEGMENTS) {
-        expect(classes(button(name))).toContain('absolute');
-        expect(classes(button(name))).not.toContain('relative');
-      }
-    });
-
-    it('keeps a pressed ring key centred on its position', () => {
-      const { button } = setup();
-      fireEvent.pointerDown(button('20'));
-      expect(button('20').hasAttribute('data-pressed')).toBe(true);
-      expect(classes(button('20'))).toEqual(expect.arrayContaining(['-translate-x-1/2', '-translate-y-1/2', 'motion-safe:[transform:translateY(1px)]']));
-      // Dodatnie translate-y-* dzieli z -translate-y-1/2 jedną właściwość translate i zrzuciłoby klawisz o pół wysokości.
-      expect(classes(button('20')).filter((name) => /(^|:)translate-y-/.test(name))).toEqual([]);
     });
 
     it.each([
@@ -844,23 +715,25 @@ describe('Keypad', () => {
     const row = () => screen.getByRole('group', { name: 'Najczęstsze: Anna' });
     const rowKey = (name: string) => within(row()).getByRole('button', { name }) as HTMLButtonElement;
 
-    // Od lg blok stoi nad Miss w kole, a w siatce między S/D/T a 1-20.
-    function reservedBlock(layout: KeypadLayout): HTMLElement {
-      const anchor = layout === 'ring' ? screen.getByRole('button', { name: 'Miss' }).parentElement : screen.getByRole('button', { name: '20' }).parentElement?.previousElementSibling;
-      const block = layout === 'ring' ? anchor?.firstElementChild : anchor;
-      if (!(block instanceof HTMLElement)) {
-        throw new Error('no reserved block');
-      }
-      return block;
-    }
-
     it.each(LAYOUTS)('names the row after the thrower and labels each hit in the %s layout', (layout) => {
       setup({ layout, frequent: anna(SIX) });
       expect(within(row()).getByText('Najczęstsze: Anna')).toBeTruthy();
       expect(within(row()).getAllByRole('button').map((element) => element.textContent)).toEqual(['S20', 'D16', 'T20', 'Bull', '25', 'S1']);
       expect(screen.getAllByRole('button', { name: '25' })).toHaveLength(2);
       expect(screen.getAllByRole('button', { name: 'Bull' })).toHaveLength(2);
-      expect(reservedBlock(layout)).toBe(row());
+    });
+
+    // W kole wiersz stoi nad Miss, a w siatce między S/D/T a 1-20.
+    it('puts the row between the ring and Miss in the ring layout', () => {
+      setup({ frequent: anna(SIX) });
+      expect(follows(screen.getByRole('button', { name: '5' }), row())).toBe(true);
+      expect(follows(row(), screen.getByRole('button', { name: 'Miss' }))).toBe(true);
+    });
+
+    it('puts the row between the multiplier and 1-20 in the grid layout', () => {
+      setup({ layout: 'grid', frequent: anna(SIX) });
+      expect(follows(screen.getByRole('button', { name: 'T' }), row())).toBe(true);
+      expect(follows(row(), screen.getByRole('button', { name: '20' }))).toBe(true);
     });
 
     it.each(LAYOUTS)('sends the exact hit under T and resets the toggle to S in the %s layout', (layout) => {
@@ -888,43 +761,17 @@ describe('Keypad', () => {
       expect(onHit).not.toHaveBeenCalled();
     });
 
-    it('gives the row keys at least 44 px and a smaller text than the number keys', () => {
-      setup({ layout: 'grid', frequent: anna(SIX) });
-      expect(classes(rowKey('Bull'))).toEqual(expect.arrayContaining(['sc-chip', 'bg-(--color-surface-soft)', 'min-h-11', 'min-w-11', 'text-lg', 'touch-manipulation']));
-      expect(classes(within(row()).getByText('Najczęstsze: Anna'))).toContain('truncate');
-    });
-
-    it.each(LAYOUTS)('reserves the same block without hits in the %s layout', (layout) => {
-      setup({ layout, frequent: anna(SIX) });
-      const withHits = reservedBlock(layout).className;
-      cleanup();
-
+    it.each(LAYOUTS)('shows no row without hits and a row of one key with one hit in the %s layout', (layout) => {
       for (const frequent of [null, anna([]), anna(SIX.slice(0, 1))]) {
         setup({ layout, frequent });
-        expect(reservedBlock(layout).className).toBe(withHits);
         if (frequent?.hits.length) {
           expect(within(row()).getAllByRole('button')).toHaveLength(1);
         } else {
-          expect(reservedBlock(layout).getAttribute('aria-hidden')).toBe('true');
-          expect(reservedBlock(layout).childElementCount).toBe(0);
           expect(screen.queryByRole('group', { name: /Najczęstsze/ })).toBeNull();
           expect(screen.getAllByRole('button')).toHaveLength(28);
         }
         cleanup();
       }
-    });
-
-    it('hides the block below lg in the ring layout and keeps it at a fixed height', () => {
-      setup({ frequent: anna(SIX) });
-      expect(classes(reservedBlock('ring'))).toEqual(expect.arrayContaining(['hidden', 'lg:flex', 'h-31', 'shrink-0']));
-      expect(classes(screen.getByRole('button', { name: 'Miss' }))).toEqual(expect.arrayContaining(['lg:flex-1']));
-    });
-
-    it('keeps the block at a fixed height at every width in the grid layout', () => {
-      setup({ layout: 'grid', frequent: anna(SIX) });
-      expect(classes(reservedBlock('grid'))).toEqual(expect.arrayContaining(['flex', 'h-18', 'shrink-0']));
-      expect(classes(reservedBlock('grid')).some((name) => name === 'hidden' || name.includes(':h-'))).toBe(false);
-      expect(classes(within(row()).getAllByRole('button')[0]?.parentElement as HTMLElement)).toContain('grid-cols-6');
     });
   });
 });

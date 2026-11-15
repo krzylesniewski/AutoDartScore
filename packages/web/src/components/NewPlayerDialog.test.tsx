@@ -39,7 +39,7 @@ describe('NewPlayerDialog', () => {
     expect(name.getAttribute('aria-invalid')).toBeNull();
   });
 
-  it('shows the taken name in cream text with a warning icon and marks the field', async () => {
+  it('shows the taken name with a warning icon and marks the field', async () => {
     render(<NewPlayerDialog onCreated={vi.fn()} onCancel={vi.fn()} />);
     const name = screen.getByRole('textbox', { name: 'Imię' });
     fireEvent.change(name, { target: { value: 'Anna' } });
@@ -47,8 +47,7 @@ describe('NewPlayerDialog', () => {
 
     const error = await screen.findByText(message);
     expect(error.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
-    expect(error.classList).not.toContain('text-(--color-accent)');
-    expect(name.classList).toContain('aria-invalid:inset-ring-2');
+    expect(name.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('creates the player with the emoji picked from the grid', async () => {

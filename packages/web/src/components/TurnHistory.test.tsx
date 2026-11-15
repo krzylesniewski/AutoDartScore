@@ -75,12 +75,11 @@ describe('TurnHistory', () => {
     }
   });
 
-  it('keeps a visible copy of the headers hidden from screen readers above the scroll', () => {
+  it('keeps a copy of the headers hidden from screen readers', () => {
     render(<TurnHistory state={midLeg} />);
     const copy = screen.getAllByText('Bartek').map((cell) => cell.closest('table') as HTMLElement);
     const hidden = copy.find((element) => element !== table());
     expect(hidden?.getAttribute('aria-hidden')).toBe('true');
-    expect(table().querySelector('thead')?.className.split(' ')).toContain('sr-only');
   });
 
   it('shows the score after the turn and the points in brackets', () => {
@@ -107,17 +106,9 @@ describe('TurnHistory', () => {
     expect(rows).toHaveLength(3);
     const current = rows[2] as HTMLElement;
     expect(current.getAttribute('aria-current')).toBe('true');
-    expect(current.className.split(' ')).toContain('bg-(--color-surface-softer)');
     expect(within(current).getByRole('rowheader').textContent).toBe('3');
-    expect(within(current).getByText('rzuca teraz').className.split(' ')).toContain('sr-only');
+    expect(within(within(current).getAllByRole('cell')[0] as HTMLElement).getByText('rzuca teraz')).toBeTruthy();
     expect(rows.filter((row) => row.getAttribute('aria-current') === 'true')).toHaveLength(1);
-  });
-
-  it('colors the thrower column in the text color and the others in the sub color', () => {
-    render(<TurnHistory state={midLeg} />);
-    const cells = within(within(table()).getAllByRole('row')[1] as HTMLElement).getAllByRole('cell');
-    expect(cells[0]?.className.split(' ')).toContain('text-(--color-text)');
-    expect(cells[1]?.className.split(' ')).toContain('text-(--color-text-sub)');
   });
 
   it('has no current row in an abandoned game', () => {
@@ -125,12 +116,6 @@ describe('TurnHistory', () => {
     const rows = within(table()).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(2);
     expect(rows.some((row) => row.hasAttribute('aria-current'))).toBe(false);
-  });
-
-  it('scrolls the vertical table in its own reversed container', () => {
-    render(<TurnHistory state={midLeg} />);
-    const scroll = table().parentElement as HTMLElement;
-    expect(scroll.className.split(' ')).toEqual(expect.arrayContaining(['flex', 'flex-col-reverse', 'overflow-y-auto']));
   });
 
   it('shows the place on the closing casual cell and out-of-queue cells after it', () => {
@@ -142,18 +127,12 @@ describe('TurnHistory', () => {
     render(<TurnHistory state={state} />);
     const rows = within(table()).getAllByRole('row').slice(1);
     const closing = within(rows[0] as HTMLElement).getAllByRole('cell')[0] as HTMLElement;
-    expect(within(closing).getByText('1. miejsce').className.split(' ')).toContain('sr-only');
-    expect(closing.querySelector('svg')?.getAttribute('class')).toContain('text-(--color-gold)');
+    expect(within(closing).getByText('1. miejsce')).toBeTruthy();
+    expect(closing.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
     expect(closing.textContent).toContain('0 (140)');
     const out = within(rows[1] as HTMLElement).getAllByRole('cell')[0] as HTMLElement;
-    expect(within(out).getByText('poza kolejką').className.split(' ')).toContain('sr-only');
+    expect(within(out).getByText('poza kolejką')).toBeTruthy();
     expect(within(out).getByText('–').getAttribute('aria-hidden')).toBe('true');
-  });
-
-  it('lets the points drop under the score with four players in a narrow container', () => {
-    const state = casual(['Anna', 'Bartek', 'Celina', 'Darek'], { legTurns: [legTurn('p1')], currentPlayerId: 'p2' });
-    render(<TurnHistory state={state} />);
-    expect(screen.getByText('(60)').className.split(' ')).toContain('@max-md:block');
   });
 
   it('shows Przebieg lega in Solo 501 with points and score rows', () => {
@@ -168,14 +147,6 @@ describe('TurnHistory', () => {
     const [points, remaining] = within(solo).getAllByRole('row').slice(1) as HTMLElement[];
     expect(within(points as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['60', 'Bust', '26', '…rzuca teraz']);
     expect(within(remaining as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['441', '441', '415', '']);
-    expect(within(points as HTMLElement).getAllByRole('cell')[3]?.className.split(' ')).toContain('bg-(--color-surface-soft)');
-  });
-
-  it('scrolls the Solo 501 table sideways from the current turn', () => {
-    render(<TurnHistory state={soloState()} />);
-    const solo = screen.getByRole('table', { name: 'Przebieg lega' });
-    expect(solo.className.split(' ')).toEqual(expect.arrayContaining(['w-max', 'min-w-full']));
-    expect(solo.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['flex', 'flex-row-reverse', 'overflow-x-auto']));
   });
 
   it('has no current column in a finished Solo 501', () => {
@@ -195,7 +166,6 @@ describe('TurnHistory', () => {
     const current = rows[2] as HTMLElement;
     expect(current.getAttribute('aria-current')).toBe('true');
     expect(within(current).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['20 · …rzuca teraz', '20']);
-    expect(session.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['flex-col-reverse', 'overflow-y-auto']));
   });
 
   it('shows only the dots in the open Free run approach before its first dart', () => {

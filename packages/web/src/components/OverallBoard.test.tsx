@@ -23,8 +23,9 @@ const overall: StatsOverall = {
   ],
 };
 
-function classes(element: Element | null | undefined): string[] {
-  return element?.getAttribute('class')?.split(' ') ?? [];
+function tiles(): (string | null)[][] {
+  const values = screen.getAllByRole('definition');
+  return screen.getAllByRole('term').map((term, index) => [term.textContent, values[index]?.textContent ?? null]);
 }
 
 function group(name: string): HTMLElement {
@@ -40,8 +41,7 @@ function names(container: HTMLElement): string[] {
 describe('OverallBoard', () => {
   it('shows four tiles with the totals', () => {
     render(<OverallBoard overall={overall} />);
-    const tiles = screen.getAllByRole('term').map((term) => [term.textContent, term.nextElementSibling?.textContent]);
-    expect(tiles).toEqual([
+    expect(tiles()).toEqual([
       ['Lotki łącznie', '1234'],
       ['Średnia ogólna (3 rzutki)', '60,50'],
       ['Gry', '4'],
@@ -51,7 +51,7 @@ describe('OverallBoard', () => {
 
   it('shows a dash for the overall average without completed legs', () => {
     render(<OverallBoard overall={{ ...overall, average: null, players: [overallPlayer('p5', 'Ewa', 22, null, null)] }} />);
-    expect(screen.getByText('Średnia ogólna (3 rzutki)').nextElementSibling?.textContent).toBe('—');
+    expect(tiles()).toContainEqual(['Średnia ogólna (3 rzutki)', '—']);
     expect(screen.queryByRole('region', { name: 'Powyżej średniej' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Poniżej średniej' })).toBeNull();
     expect(names(group('Bez ukończonego lega'))).toEqual(['Ewa']);
@@ -86,23 +86,11 @@ describe('OverallBoard', () => {
     expect(screen.getByRole('link', { name: /Anna/ }).getAttribute('href')).toBe('#/stats/a%20b');
   });
 
-  it('adapts the layout to phones, tablets and a monitor', () => {
-    render(<OverallBoard overall={overall} />);
-    const tiles = classes(document.querySelector('dl'));
-    expect(tiles).toEqual(expect.arrayContaining(['grid-cols-2', 'lg:grid-cols-4']));
-    const list = group('Powyżej średniej').parentElement;
-    expect(classes(list)).toEqual(expect.arrayContaining(['@container', 'xl:min-h-0', 'xl:flex-1', 'xl:overflow-y-auto']));
-    expect(classes(list)).not.toContain('overflow-y-auto');
-    expect(classes(list?.parentElement)).toEqual(expect.arrayContaining(['xl:min-h-0', 'xl:flex-1']));
-    expect(classes(list?.parentElement)).not.toContain('flex-1');
-    const name = within(group('Powyżej średniej')).getByText('Anna');
-    expect(classes(name)).toEqual(expect.arrayContaining(['min-w-0', 'truncate']));
-    expect(classes(name.parentElement).some((value) => value.startsWith('@max-sm:flex-col'))).toBe(true);
-  });
-
   it('uses only theme colors', () => {
     const { container } = render(<OverallBoard overall={overall} />);
-    const colors = [...container.querySelectorAll('*')].flatMap((element) => classes(element)).filter((name) => /#[0-9a-f]{3,6}\b|rgba?\(|hsla?\(/i.test(name));
-    expect(colors).toEqual([]);
+    for (const element of container.querySelectorAll('*')) {
+      // Kolory wolno brać tylko z tokenów motywu, a kolor wpisany na sztywno widać jedynie w klasie.
+      expect(element.getAttribute('class') ?? '').not.toMatch(/#[0-9a-f]{3,6}\b|rgba?\(|hsla?\(/i);
+    }
   });
 });

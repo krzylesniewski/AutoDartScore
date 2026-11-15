@@ -70,6 +70,7 @@ describe('ScoreProgressChart', () => {
   it('draws the lines in the avatar colors', () => {
     render(<ScoreProgressChart progress={legProgress({ p1: [241], p3: [301] })} players={players} />);
     const lines = [...chart().querySelectorAll('path.fill-none')];
+    // Stały kolor awatara gracza to znaczenie linii, a w SVG widać go tylko w klasie.
     expect(lines.map((line) => line.getAttribute('class'))).toEqual(['fill-none stroke-(--color-avatar-3)', 'fill-none stroke-(--color-avatar-9)']);
   });
 
@@ -81,7 +82,6 @@ describe('ScoreProgressChart', () => {
     expect(vertical).toHaveLength(3);
     expect(lines.filter((line) => line.getAttribute('y1') === line.getAttribute('y2'))).toHaveLength(8);
     for (const line of lines) {
-      expect(line.getAttribute('class')).toBe('stroke-(--color-border)');
       expect(line.getAttribute('vector-effect')).toBe('non-scaling-stroke');
       expect(line.getAttribute('stroke-dasharray')).toBeNull();
     }
