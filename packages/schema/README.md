@@ -27,7 +27,7 @@ Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (
 
 `domain-events.ts`: `DomainEvent`, unia zdarzeń `TurnCompleted`, `Bust`, `LegWon`, `MatchWon`, `PlayerFinished`, `CasualFinished`.
 
-`stats.ts`: `StatsFilter`, `StatsPeriod` (`30d`, `90d`, `all`), `STATS_PERIOD_DAYS` (30, 90 i `null` dla `all`), `PlayerStatsQuery`, `OverallQuery`, `HeadToHeadQuery`, `PlayerStatLine`, `PlayerStats`, `MatchSummaryLeg`, `MatchSummaryPlayer`, `LegProgressPoint`, `LegProgressPlayer`, `LegProgress`, `MatchSummary`, `FREQUENT_HITS_LIMIT`, `FrequentHit`, `FrequentHitsResponse`.
+`stats.ts`: `StatsFilter`, `StatsPeriod` (`30d`, `90d`, `all`), `STATS_PERIOD_DAYS` (30, 90 i `null` dla `all`), `PlayerStatsQuery`, `OverallQuery`, `HeadToHeadQuery`, `PlayerStatLine`, `PlayerStats`, `MIN_GAMES_FOR_WIN_RATE` (3, tyle ukończonych gier 1v1 albo w zabawie potrzeba do rankingu wygranych), `MatchSummaryLeg`, `MatchSummaryPlayer`, `LegProgressPoint`, `LegProgressPlayer`, `LegProgress`, `MatchSummary`, `FREQUENT_HITS_LIMIT`, `FrequentHit`, `FrequentHitsResponse`.
 
 Zapytania statystyk (`PlayerStatsQuery`, `RankingsQuery`, `PlayerFormQuery`, `OverallQuery`, `HeadToHeadQuery`) mają `period` z domyślnym `all`. Odpowiedzi `PlayerStats`, `StatsRankings`, `StatsOverall`, `HeadToHead` i `PlayerForm` mają wymagane pole `period`.
 

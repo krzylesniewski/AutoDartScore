@@ -1,11 +1,12 @@
-import { MIN_LEGS_FOR_AVERAGE, type MatchType, type Player, type RankedPlayer, type RankingEntry, type StatsRankings } from '@autoscore/schema';
+import { MIN_GAMES_FOR_WIN_RATE, MIN_LEGS_FOR_AVERAGE, type MatchType, type Player, type RankedPlayer, type RankingEntry, type StatsRankings } from '@autoscore/schema';
 import type { PlayerLeg } from './completed-legs.js';
-import { EMPTY_TOTALS, mergeTotals, threeDartAverage, type GameTally, type PlayerTotals } from './tally.js';
+import { EMPTY_TOTALS, mergeTotals, threeDartAverage, winRatePercent, type GameTally, type PlayerTotals } from './tally.js';
 
 // Czysta logika rankingu graczy, bez I/O. Średnie liczą tylko ukończone legi, rekordy biorą wynik z tallyGame.
 
 export interface RankedGame {
   readonly type: MatchType;
+  readonly finished: boolean;
   readonly legs: readonly PlayerLeg[];
   readonly tally: GameTally;
 }
@@ -50,6 +51,7 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
   const legs = new Map<string, { points: number; darts: number; legs: number; bestLeg: number }>();
   const totals = new Map<string, PlayerTotals>();
   const highestTurns = new Map<string, number>();
+  const results = new Map<string, { played: number; won: number }>();
   let gameCount = 0;
   let legCount = 0;
 
@@ -72,6 +74,11 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
       // Najwyższa tura liczy tylko mecze 1v1, choć filtr "Wszystkie" obejmuje też zabawę i trening.
       if (game.type === 'match' && playerTotals.highestTurn !== null) {
         highestTurns.set(playerId, Math.max(highestTurns.get(playerId) ?? 0, playerTotals.highestTurn));
+      }
+      // Jak matchesPlayed w statystykach gracza: Solo 501, porzucona i trwająca gra nie są rozegrane.
+      if (game.finished && game.type !== 'practice') {
+        const current = results.get(playerId) ?? { played: 0, won: 0 };
+        results.set(playerId, { played: current.played + 1, won: current.won + (game.tally.winnerId === playerId ? 1 : 0) });
       }
     }
   }
@@ -120,5 +127,14 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
       }),
       'desc',
     ),
+    winRate: top(
+      players.flatMap((player) => {
+        const own = results.get(player.id);
+        const value = own && own.played >= MIN_GAMES_FOR_WIN_RATE ? winRatePercent(own.won, own.played) : null;
+        return value === null ? [] : [{ player, value }];
+      }),
+      'desc',
+    ),
+    t20Hits: top(fromTotals((own) => (own.t20Hits > 0 ? own.t20Hits : null)), 'desc'),
   };
 }
