@@ -37,7 +37,7 @@ Decyzja autora z 2026-11-10: redesign jest nowym etapem 3 (dwie kamery to teraz 
 | **D1** | Design system „AUTO Score: Scena”: tokeny nazwane jak w `design/theme.css`, 15 komponentów, kontrast sprawdzony dla każdej pary. | https://claude.ai/artifact/LqA3gyNJgsZU2ceAtEzuGy, kopia w repo: `design/scena/` |
 | **D2** | Makiety 20 ekranów na kanwie (strona „Etap 3: Scena”) przy 1600×900 i 390×844. | https://claude.ai/artifact/Uw59Q2VKaZLe1R3CWH4Haq, źródła w repo: `design/mockups/scena/` |
 | **D3** | Akceptacja autora 2026-11-10 („podoba mi się”), z uwagami niżej. Zrzutów PNG nie eksportujemy: źródła makiet są w repo, a każdy PR dokłada zrzuty swoich ekranów. | zrobione |
-| **R** | Plan PR-ów R1-R11 (niżej), manifest `rollout/etap3/manifest.yaml`, gałąź `feat/redesign` z CI na push, scalanie automatyczne do `feat/redesign`. | rollout `autoscore-etap3` |
+| **R** | Plan PR-ów R1-R14 (niżej), manifest `rollout/etap3/manifest.yaml`, gałąź `feat/redesign` z CI na push, scalanie automatyczne do `feat/redesign`. | rollout `autoscore-etap3` |
 
 ## Kamienie milowe
 
@@ -45,6 +45,7 @@ Decyzja autora z 2026-11-10: redesign jest nowym etapem 3 (dwie kamery to teraz 
 |---|---|---|
 | **K1: nowy wygląd** | R1-R8 | cała aplikacja w kierunku „Scena” z paskiem progresu, funkcje bez zmian |
 | **K2: informacje o legu** | R9-R10 | zbite punkty, mini statystyki lega i historia tur na żywo |
+| **K3: statystyki** | R11-R14 | filtr czasu w statystykach, przewijana kolumna rankingów z „Win rate” i „Trafienia T20” |
 
 Do `main` każdy kamień wchodzi PR-em `feat/redesign` → `main`, który otwiera i scala autor. Rollout scala PR-y automatycznie (`policy.merge: auto`) tylko do `feat/redesign`.
 
@@ -176,6 +177,76 @@ Autor zaakceptował makiety w całości; tam, gdzie makiety różnią się od dz
 4. Teksty w `pl.ts`, opisy dla czytników ekranu.
 
 **Testy:** jednostkowe funkcji (bust, pierwsza tura, zabawa, Free run, pusta lista); komponentowe (`TurnHistory` z bustem: ikona i tekst; `StatTile`); test, że klawiatura nie zmienia położenia po pojawieniu się historii (jak testy P31); zrzuty 1v1 w połowie lega z bustem, zabawy i telefonu z otwartym panelem.
+
+## K3: statystyki (R11-R14), prośby autora z 2026-11-15
+
+Wpisy w `feedback-graczy.md` z 2026-11-15. Zasady wspólne dla R1-R10 obowiązują dalej (tokeny, RWD, dostępność, zrzuty w PR, pliki tylko do czytania), z jednym wyjątkiem: K3 zmienia dane z serwera i dodaje teksty, bo to nowe funkcje. Makiet do K3 nie ma: wygląd bierz z istniejących elementów ekranu „Statystyki” (`RankingBoard`, `OverallBoard`, przełącznik `sc-seg`) i z `design/scena/`.
+
+Kolejność: R11 → R12 → R13 → R14 (każdy zależy od poprzedniego, bo dotykają tych samych plików).
+
+**Ustalenia wspólne (decyzje i założenia z 2026-11-15):**
+- **Okres:** trzy wartości: `30d` (ostatnie 30 dni), `90d` (ostatni kwartał, czyli ostatnie 90 dni, liczone krocząco, nie kwartał kalendarzowy) i `all` (cały czas, domyślnie). Gra należy do okresu, gdy jej `createdAt` jest nie starsze niż `teraz − N dni`. „Teraz” to zegar serwera, wstrzykiwany jak dotąd (`now`), nigdy zegar urządzenia.
+- **Win rate:** procent wygranych gier gracza: `wygrane / rozegrane × 100`, z tych samych gier co `matchesPlayed` i `matchesWon` w `PlayerStats` (ukończony mecz 1v1; ukończona zabawa, gdzie wygrana to 1. miejsce; bez treningu i bez gier porzuconych albo trwających). Do rankingu wchodzi gracz z co najmniej 3 ukończonymi grami w wybranym filtrze i okresie (`MIN_GAMES_FOR_WIN_RATE = 3` w `packages/schema`).
+- **Trafienia T20:** liczba rzutek `segment: 20, multiplier: 3` (każda warta 60 pkt) w zamkniętych turach, także w turach z bustem, tak jak liczy `frequentHits`. Liczone z tabeli rzutek przez odtworzenie zdarzeń, nie z osobnego licznika.
+
+## R11: okres w API statystyk (schema, server)
+
+**Dziś:** `GET /stats/rankings`, `GET /players/:id/stats` i `GET /players/:id/form` przyjmują tylko `type`. `GET /stats/overall` i `GET /players/:id/head-to-head/:opponentId` nie mają parametrów. Nie da się pobrać statystyk z wybranego czasu.
+
+**Zmiana:**
+1. `packages/schema`: `StatsPeriod = z.enum(['30d', '90d', 'all'])`, stała z liczbą dni dla każdej wartości i parametr `period` (domyślnie `all`) w `PlayerStatsQuery`, `RankingsQuery`, `PlayerFormQuery` oraz w nowych `OverallQuery` i `HeadToHeadQuery`. Odpowiedzi `PlayerStats`, `StatsRankings`, `StatsOverall`, `HeadToHead` i `PlayerForm` dostają pole `period` z użytą wartością.
+2. `packages/server`: wszystkie pięć tras przyjmuje `?period=`. Nieznana wartość daje 400 jak dla `type`. Filtr po `createdAt` gry działa w warstwie dostępu do danych (`listMatches` i `findMatchIdsForPlayer` dostają opcjonalną dolną granicę daty i filtrują w zapytaniu, bez funkcji specyficznych dla SQLite), więc gry spoza okresu nie są odtwarzane.
+3. Granica okresu liczona z wstrzykniętego zegara serwisu.
+4. `GET /players/:id/frequent-hits` i `GET /matches/:id/summary` bez zmian.
+
+**Testy:** schema (domyślne `all`, odrzucenie nieznanej wartości); serwer dla każdej z pięciu tras: gra sprzed 31 dni wypada z `30d` i zostaje w `90d`, gra sprzed 91 dni zostaje tylko w `all`, granica dokładnie 30 dni, łączenie `type` z `period`, pusty wynik w okresie bez gier; test, że `all` daje dokładnie to samo co dziś.
+
+**Dokumentacja:** tabela API w `README.md` i `packages/server/README.md`.
+
+## R12: win rate i trafienia T20 w danych statystyk (schema, server)
+
+**Zmiana:**
+1. `PlayerStatLine` dostaje `t20Hits` (liczba trafień T20), więc pole jest w `PlayerStats` i w podsumowaniu meczu. Liczone w `stats/tally.ts` razem z resztą sum.
+2. `StatsRankings` dostaje dwie listy `RankingEntry` (pierwsza piątka, remisy jak w pozostałych listach):
+   - `winRate`: wartość to procent 0-100 z jednym miejscem po przecinku; tylko gracze z co najmniej `MIN_GAMES_FOR_WIN_RATE` ukończonymi grami; dla filtra `practice` lista jest pusta;
+   - `t20Hits`: wartość to liczba trafień; gracze z zerem nie wchodzą na listę.
+3. `PlayerStats` dostaje `winRate` (procent albo `null`, gdy gracz nie ma ukończonych gier w filtrze i okresie). Tu bez progu 3 gier, bo obok stoi „wygrane/rozegrane”.
+4. Obie listy i oba pola respektują `type` i `period` z R11.
+
+**Testy:** tally (T20 w zwykłej turze, w turze z bustem, T20 nie myli się z T19 ani D20, Bull i 25 nie liczą się); rankingi (próg 3 gier, remis, pusta lista dla `practice`, zabawa liczy 1. miejsce jako wygraną, porzucona gra nie liczy się do rozegranych, okres zawęża obie listy); `PlayerStats.winRate` równe `null` bez gier.
+
+**Dokumentacja:** `README.md`, `packages/schema/README.md`, `packages/server/README.md`.
+
+## R13: przewijana kolumna rankingów z nowymi kafelkami (web)
+
+**Prośba:** „Prawa strona z mniejszymi tabelami powinna być scrollowalna” i „do tej scrollowalnej części dodajemy co najmniej dwie statystyki: WinRate oraz ilość rzuconych triple 60”.
+
+**Dziś:** `RankingBoard.tsx` ma po prawej siatkę 2×2 czterech kafelków (najlepszy leg, najwyższe zamknięcie, najkrótszy leg, najwyższa tura) wciśniętą w wysokość ekranu (`sm:grid-rows-2`), więc piąty kafelek się nie zmieści.
+
+**Zmiana:**
+1. Od `xl` prawa kolumna to osobny obszar przewijany w pionie (`overflow-y: auto`, pasek jak w liście dalszych miejsc), z kafelkami w dwóch kolumnach o naturalnej wysokości (pierwsza piątka w każdym, bez wewnętrznego przewijania kafelka). Lewa karta ze średnią i podium nie przewija się razem z nią. Poniżej `xl` strona przewija się w całości jak dziś, kafelki w jednej albo dwóch kolumnach.
+2. Sześć kafelków w kolejności: „Win rate”, „Najlepszy leg”, „Najwyższe zamknięcie”, „Najkrótszy leg”, „Najwyższa tura”, „Trafienia T20”.
+   - „Win rate”: wartość z procentem i przecinkiem dziesiętnym (np. „66,7%”), jednostka „min. 3 gry”; przy filtrze „Trening” tekst „tylko mecze i zabawa” zamiast listy.
+   - „Trafienia T20”: liczba, jednostka „rzutki za 60”.
+3. Obszar przewijany jest dostępny z klawiatury (`tabindex="0"`, `role="region"` z nazwą, pierścień fokusu), a na dole ma zapas, żeby ostatni rząd nie kleił się do krawędzi.
+4. Karta gracza (`PlayerCard`) pokazuje dwie nowe pozycje w siatce statystyk: „Win rate” (albo „–” przy `null`) i „Trafienia T20”.
+5. Teksty w `i18n/pl.ts`.
+
+**Testy:** komponent (sześć kafelków w tej kolejności, format procentu z przecinkiem, tekst zastępczy dla treningu, region z nazwą i `tabindex`); karta gracza z nowymi pozycjami; zrzuty rankingu przy czterech rozmiarach z zasad wspólnych, w tym 1280×800 z przewiniętą prawą kolumną.
+
+## R14: filtr okresu na ekranie statystyk (web)
+
+**Prośba:** „Statystyki powinny dostać też filtr po czasie: ostatnie 30 dni, ostatni kwartał, all time”.
+
+**Zmiana:**
+1. Ekran rankingu: drugi przełącznik segmentowy „Okres” obok „Typu gier”, z opcjami „30 dni”, „Kwartał” i „Cały czas” (domyślnie „Cały czas”). Działa dla wszystkich widoków, także „Overall”. Podtytuł pod tytułem dalej pokazuje liczbę gier i legów, już dla wybranego okresu.
+2. Karta gracza: ten sam przełącznik „Okres”; zawęża statystyki, wykres formy i bilans 1v1. Historia gier gracza zostaje pełna.
+3. Wybór okresu jest wspólny dla rankingu i karty gracza w ramach wizyty (przejście z rankingu na kartę gracza i z powrotem go zachowuje) i zostaje w `localStorage` (`autoscore.statsPeriod`), z odczytem i zapisem w `try/catch`.
+4. Pusty wynik w okresie pokazuje obecny tekst „brak gier w filtrze”, a nie błąd.
+5. `api/client.ts`: funkcje statystyk przyjmują `period` i wysyłają go w zapytaniu.
+6. Poniżej `sm` oba przełączniki stoją jeden pod drugim na całą szerokość, bez poziomego przewijania strony.
+
+**Testy:** zmiana okresu wysyła `period` w każdym z zapytań (rankingi, overall, statystyki gracza, forma, bilans 1v1); wybór przetrwa przejście ranking → karta gracza i ponowne otwarcie ekranu; pusty okres pokazuje tekst zastępczy; zrzuty rankingu i karty gracza przy 375×812 i 1280×800.
 
 ## Poza zakresem
 

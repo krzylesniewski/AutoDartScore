@@ -1,4 +1,4 @@
-# AutoScore Dart: Etap 3 (redesign „Scena”) jako seria PR-ów R1-R10.
+# AutoScore Dart: Etap 3 (redesign „Scena”) jako seria PR-ów R1-R14.
 # Źródło: CLAUDE.md, design/plan-etap3.md, design/scena/ (design system), design/mockups/scena/ (makiety).
 # Opis pól: ~/.claude/skills/rollout/docs/manifest.html
 # Ten plik jest w repo; ~/.rollouts/autoscore-etap3/manifest.yaml to dowiązanie do niego.
@@ -69,7 +69,7 @@ gates:
   preVerify:
     scope: true
 
-# K1 (R1-R8): nowy wygląd. K2 (R9-R10): informacje o legu. Po kamieniu feat/redesign → main PR-em autora.
+# K1 (R1-R8): nowy wygląd. K2 (R9-R10): informacje o legu. K3 (R11-R14): statystyki. Po kamieniu feat/redesign → main PR-em autora.
 prs:
   - id: R1
     branch: style/scena-tokens
@@ -174,6 +174,47 @@ prs:
     brief: briefs/R10.md
     deps: [R4, R8, R9]
     priority: 30
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: R11
+    branch: feat/stats-period-api
+    title: 'feat: period filter in the stats API'
+    brief: briefs/R11.md
+    priority: 50
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
+
+  - id: R12
+    branch: feat/stats-win-rate-t20
+    title: 'feat: win rate and T20 hits in stats data'
+    brief: briefs/R12.md
+    deps: [R11]
+    priority: 45
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
+
+  - id: R13
+    branch: feat/web-stats-scroll-tiles
+    title: 'feat(web): scrollable ranking tiles with win rate and T20 hits'
+    brief: briefs/R13.md
+    deps: [R12]
+    priority: 40
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [rwd]
+
+  - id: R14
+    branch: feat/web-stats-period
+    title: 'feat(web): period filter on the stats screen'
+    brief: briefs/R14.md
+    deps: [R11, R13]
+    priority: 35
     effort: { brief: high, implement: high, verify: high }
     changeset: none
     scope: ['packages/web/**']
