@@ -33,7 +33,7 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 - **Rodzaj / obszar:** pomysł / statystyki
 - **Co powiedział:** „Statystyki powinny dostać też filtr po czasie, na przykład: ostatnie 30 dni, ostatni kwartał, all time, myślę, że takie 3 wystarczą. Popraw API, jeśli nie można pobierać danych w taki sposób.”
 - **Kontekst:** ekran „Statystyki” po redesignie
-- **Status:** zaplanowany (R11 i R14, `design/plan-etap3.md`)
+- **Status:** zrobiony (R11 i R14, PR #94 i #97)
 - **Uwagi:** API statystyk przyjmuje dziś tylko `type`, więc dochodzi parametr `period` (`30d`, `90d`, `all`). Założenie: kwartał to ostatnie 90 dni, a gra należy do okresu według daty utworzenia.
 
 ### 2026-11-15: win rate i trafienia T20 w rankingach
@@ -41,7 +41,7 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 - **Rodzaj / obszar:** pomysł / statystyki
 - **Co powiedział:** „Do tej scrollowalnej części dodajemy co najmniej dwie statystyki: WinRate oraz ilość rzuconych triple 60.”
 - **Kontekst:** ekran „Statystyki”, kafelki rankingów
-- **Status:** zaplanowany (R12 i R13, `design/plan-etap3.md`)
+- **Status:** zrobiony (R12 i R13, PR #95 i #96)
 - **Uwagi:** „triple 60” to trafienie T20. Win rate liczony z ukończonych meczów 1v1 i zabaw, w rankingu od 3 gier.
 
 ### 2026-11-15: przewijana prawa kolumna statystyk
@@ -49,7 +49,7 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 - **Rodzaj / obszar:** utrudnienie / statystyki
 - **Co powiedział:** „Prawa strona z mniejszymi tabelami powinna być scrollowalna.”
 - **Kontekst:** ekran „Statystyki”, kafelki rankingów w siatce 2×2
-- **Status:** zaplanowany (R13, `design/plan-etap3.md`)
+- **Status:** zrobiony (R13, PR #96)
 - **Uwagi:** siatka `sm:grid-rows-2` w `RankingBoard.tsx` wciska cztery kafelki w wysokość ekranu, więc kolejne się nie mieszczą.
 
 ### 2026-11-10: czas trwania meczu w podsumowaniu
