@@ -1,6 +1,7 @@
-import type { CheckoutAttempt, CheckoutRange, DomainEvent } from '@autoscore/schema';
+import { CheckoutRule, type CheckoutAttempt, type CheckoutRange } from '@autoscore/schema';
+import type { ApplyResult } from './apply-result.js';
 import { EngineError } from './errors.js';
-import type { ApplyResult } from './x01-match.js';
+import { replaySteps } from './replay-steps.js';
 
 // Trening checkoutów: gracz dostaje losowy wynik do zamknięcia i zgłasza, czy mu się udało. Sesja nie ma końca.
 // Zasada repeat_on_miss: po pudle cel zostaje, nowy po trafieniu albo pominięciu. Zasada new_each_attempt (sesje zapisane
@@ -15,10 +16,6 @@ export const CHECKOUT_RANGES: Record<CheckoutRange, { readonly min: number; read
 
 // Ziarno mieści się w kolumnie integer ze znakiem (32 bity), także na PostgreSQL.
 export const MAX_CHECKOUT_SEED = 2 ** 31 - 1;
-
-export type CheckoutRule = 'new_each_attempt' | 'repeat_on_miss';
-
-const CHECKOUT_RULES: readonly CheckoutRule[] = ['new_each_attempt', 'repeat_on_miss'];
 
 export interface CheckoutsConfig {
   readonly playerId: string;
@@ -98,7 +95,7 @@ export function createCheckouts(config: CheckoutsConfig): CheckoutsState {
   if (!config.playerId) {
     throw new EngineError('invalid_config', 'Checkout practice needs a player');
   }
-  if (!CHECKOUT_RULES.includes(config.rule)) {
+  if (!CheckoutRule.options.includes(config.rule)) {
     throw new EngineError('invalid_config', `Unknown checkout rule: ${String(config.rule)}`);
   }
   return { config, target: checkoutTarget(config.seed, config.range, 0), draws: 0, skips: 0, attempts: [] };
@@ -122,12 +119,7 @@ export function applyCheckoutSkip(state: CheckoutsState): ApplyResult<CheckoutsS
 
 // Stan sesji jako wynik odtworzenia wszystkich prób i pominięć w kolejności z logu (zapis zdarzeniowy).
 export function replayCheckouts(config: CheckoutsConfig, steps: readonly CheckoutStep[]): ApplyResult<CheckoutsState> {
-  let state = createCheckouts(config);
-  const events: DomainEvent[] = [];
-  for (const step of steps) {
-    const result = step.type === 'attempt' ? applyCheckoutAttempt(state, step.success) : applyCheckoutSkip(state);
-    state = result.state;
-    events.push(...result.events);
-  }
-  return { state, events };
+  return replaySteps(createCheckouts(config), steps, (state, step) =>
+    step.type === 'attempt' ? applyCheckoutAttempt(state, step.success) : applyCheckoutSkip(state),
+  );
 }

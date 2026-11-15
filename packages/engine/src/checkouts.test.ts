@@ -1,4 +1,4 @@
-import type { CheckoutRange } from '@autoscore/schema';
+import type { CheckoutRange, CheckoutRule } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import {
   applyCheckoutAttempt,
@@ -10,7 +10,6 @@ import {
   MAX_CHECKOUT_SEED,
   nextCheckoutTarget,
   replayCheckouts,
-  type CheckoutRule,
   type CheckoutStep,
   type CheckoutsConfig,
   type CheckoutsState,

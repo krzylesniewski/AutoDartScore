@@ -6,7 +6,9 @@ Losowania też tu nie ma. Kto zaczyna, podaje wywołujący w konfiguracji (`firs
 
 ## API
 
-Każda funkcja `apply*` i `replay*` zwraca `ApplyResult`: `{ state, events }`. Trafienie ma typ `Hit` z `@autoscore/schema`.
+Każda funkcja `apply*` i `replay*` zwraca `ApplyResult<S>`: `{ state, events }` (`apply-result.ts`). Trafienie ma typ `Hit` z `@autoscore/schema`.
+
+Zasady tury X01 (bust, zamknięcie, trzecia rzutka) są w jednym wewnętrznym module `x01-turn.ts`, wspólnym dla meczu 1v1, zabawy i Solo 501. Nie jest eksportowany.
 
 Jedno wejście dla wszystkich typów gry (`game.ts`):
 
@@ -21,7 +23,7 @@ Jedno wejście dla wszystkich typów gry (`game.ts`):
 Mecz 1v1, best of N legów (`x01-match.ts`):
 
 - `createX01Match`, `applyThrow`, `replayX01Match`, `currentPlayerId`,
-- `STARTING_SCORES`: 301, 501, 701.
+- wynik startowy to `StartingScore`, a dozwolone wartości (301, 501, 701) są w `STARTING_SCORES` z `@autoscore/schema`.
 
 Zabawa dla 2-4 graczy z miejscami (`casual-match.ts`):
 
@@ -38,7 +40,7 @@ Trening Free run, bez zasad i bez zdarzeń domenowych (`free-run.ts`):
 Trening checkoutów, bez rzutek i bez zdarzeń domenowych (`checkouts.ts`):
 
 - `CheckoutsConfig` ma `playerId`, `range`, `seed` i `rule` (`CheckoutRule`). `createCheckouts` odrzuca nieznaną zasadę błędem `invalid_config`,
-- `CheckoutRule`: `repeat_on_miss` (po nieudanej próbie cel zostaje, nowy po udanej) albo `new_each_attempt` (nowy cel po każdej próbie, zasada sesji zapisanych wcześniej),
+- `CheckoutRule` z `@autoscore/schema`: `repeat_on_miss` (po nieudanej próbie cel zostaje, nowy po udanej) albo `new_each_attempt` (nowy cel po każdej próbie, zasada sesji zapisanych wcześniej),
 - `CheckoutsState` ma bieżący `target`, `attempts`, `skips` i `draws` (ile razy zmienił się cel). Zawsze `target === checkoutTarget(seed, range, draws)`,
 - `applyCheckoutAttempt(state, success)`: zapisuje próbę na bieżącym celu i losuje nowy według zasady,
 - `applyCheckoutSkip(state)`: losuje nowy cel bez próby i zwiększa `skips`, w obu zasadach,
@@ -54,7 +56,7 @@ Punkty (`points.ts`):
 
 Błędy (`errors.ts`): `EngineError` z polem `code`:
 
-- `invalid_config`: zła konfiguracja gry, na przykład zła liczba graczy albo ziarno checkoutów spoza `0..MAX_CHECKOUT_SEED`,
+- `invalid_config`: zła konfiguracja gry, na przykład zła liczba graczy albo ziarno checkoutów spoza `0..MAX_CHECKOUT_SEED`. `createX01Match` odrzuca też `firstPlayerIndex` inny niż 0 lub 1 i `legsToWin` spoza 1, 2, 3 (best of 1, 3, 5 z `BestOf`),
 - `invalid_hit`: trafienie niezgodne z kodowaniem,
 - `match_finished`: rzutka po końcu gry,
 - `wrong_mode`: rzutka w treningu checkoutów albo próba lub pominięcie checkoutu w innym trybie.
@@ -65,9 +67,11 @@ Błędy (`errors.ts`): `EngineError` z polem `code`:
 pnpm --filter @autoscore/engine test
 ```
 
-- `x01-match.test.ts`: tura, bust, zamknięcie, legi i mecz, odtwarzanie.
+- `x01-turn.test.ts`: jedna rzutka w turze X01, otwarta tura, trzecia rzutka, trzy rodzaje bustu, zamknięcie na doublu i Bullu, zła rzutka, 4. rzutka w turze.
+- `x01-match.test.ts`: konfiguracja, tura, bust, zamknięcie, legi i mecz, odtwarzanie.
 - `casual-match.test.ts`: zabawa, kolejne zamknięcia, wypadanie z kolejki, ostatnie miejsce, bust po zamknięciu innych graczy, odtwarzanie.
 - `solo-501.test.ts`: tura, bust, zamknięcie, odtwarzanie.
 - `free-run.test.ts`: licznik sesji (rzutki, suma, średnia), odtwarzanie.
 - `checkouts.test.ts`: powtarzalność celów, zakres, brak powtórki poprzedniego celu, rozkład na 10 000 celach, próby w obu zasadach, pominięcia, odtwarzanie mieszanych kroków.
 - `game.test.ts`: wspólne wejście, `countsToStats`, `isGameFinished`, `wrong_mode`.
+- `replay-golden.test.ts`: odtworzenia meczu 1v1, zabawy, Solo 501, Free run i treningu checkoutów (także urwane w trakcie tury) porównane z migawką w `__snapshots__`, nagraną na silniku sprzed wspólnego rdzenia tury. Migawki się nie nadpisuje.
