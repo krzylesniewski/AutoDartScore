@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# Deploys one commit from origin/main as the autoscore user, builds the front
-# when AUTOSCORE_WEB_DIR is set, and rolls back the commit, the front and the
-# database when any step fails.
+# Deploys one commit from origin/main as the autoscore user. When
+# AUTOSCORE_WEB_DIR is set, the front is built into packages/web/dist.new
+# while the old version serves, and swapped in after the service stops. The
+# previous build stays as dist.prev. A failure before the stop restores the
+# checkout and leaves the old version running. A failure after the stop rolls
+# back the commit, the front and the database.
 #
 #   deploy.sh <40-character sha>
 #
 # As the forced command of the deploy key, the SHA comes from
 # SSH_ORIGINAL_COMMAND. Exit codes: 0 deployed, 1 rejected or failed before
-# any change, 2 deploy failed and rollback succeeded, 3 rollback failed too.
+# any change, 2 deploy failed and the previous version runs, 3 restoring the
+# previous version failed too.
 set -euo pipefail
 
 app_dir="${AUTOSCORE_APP_DIR:-/home/autoscore/app}"
@@ -15,6 +19,7 @@ env_file="${AUTOSCORE_ENV_FILE:-/etc/autoscore/autoscore.env}"
 backup_dir="${AUTOSCORE_BACKUP_DIR:-/home/autoscore/backups}"
 log_dir="${AUTOSCORE_LOG_DIR:-/home/autoscore/logs}"
 service="${AUTOSCORE_SERVICE:-autoscore}"
+web_out="$app_dir/packages/web/dist"
 keep_backups=14
 
 target=""
@@ -25,6 +30,8 @@ backup_file=""
 db_absent=0
 web_dir=""
 public_url=""
+dist_moved=0
+web_swapped=0
 
 log() {
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"
@@ -59,24 +66,62 @@ install_deps() {
   (cd "$app_dir" && pnpm install --frozen-lockfile)
 }
 
-# AUTOSCORE_WEB_DIR only switches the build on. The build always writes
-# packages/web/dist. The server has 1 GB of RAM, hence the heap limit.
+# AUTOSCORE_WEB_DIR only switches the build and the swap on. The server lists
+# the files of packages/web/dist once at startup, so the build goes aside and
+# the swap waits for the stop. The server has 1 GB of RAM, hence the heap
+# limit.
 build_web() {
-  if [ -z "$web_dir" ]; then
-    return 0
-  fi
   log "building the front for $public_url"
-  (cd "$app_dir" && VITE_API_URL="$public_url" VITE_BASE=/ NODE_OPTIONS=--max-old-space-size=512 pnpm --filter @autoscore/web build)
+  rm -rf -- "$web_out.new" || return 1
+  (cd "$app_dir" && VITE_API_URL="$public_url" VITE_BASE=/ NODE_OPTIONS=--max-old-space-size=512 pnpm --filter @autoscore/web build --outDir dist.new --emptyOutDir)
 }
 
-# Called as an if condition, where set -e is off, so every step checks its own
-# status.
-deploy_target() {
+# The flags tell the rollback whether dist.prev holds the front to restore.
+swap_web() {
+  rm -rf -- "$web_out.prev" || return 1
+  if [ -e "$web_out" ]; then
+    mv -- "$web_out" "$web_out.prev" || return 1
+    dist_moved=1
+  fi
+  mv -- "$web_out.new" "$web_out" || return 1
+  web_swapped=1
+}
+
+# Commits older than this script do not ignore the build directories in
+# .gitignore. Without this, a rollback to one of them would leave a dirty
+# tree, and every later deploy would be rejected.
+ignore_web_builds() {
+  local exclude line
+  exclude=$(git -C "$app_dir" rev-parse --git-path info/exclude) || return 1
+  case "$exclude" in
+    /*) ;;
+    *) exclude="$app_dir/$exclude" ;;
+  esac
+  mkdir -p -- "$(dirname "$exclude")" || return 1
+  if [ -s "$exclude" ] && [ -n "$(tail -c 1 "$exclude")" ]; then
+    echo >> "$exclude" || return 1
+  fi
+  for line in /packages/web/dist.new/ /packages/web/dist.prev/; do
+    if [ ! -e "$exclude" ] || ! grep -qxF -- "$line" "$exclude"; then
+      printf '%s\n' "$line" >> "$exclude" || return 1
+    fi
+  done
+}
+
+# The functions below run as if conditions, where set -e is off, so every
+# step checks its own status.
+
+# Runs while the old version serves, so a failure here never stops it.
+prepare_target() {
   log "checking out $target"
   git -C "$app_dir" checkout --quiet --detach "$target" || return 1
   install_deps || return 1
-  build_web || return 1
+  if [ -n "$web_dir" ]; then
+    build_web || return 1
+  fi
+}
 
+switch_target() {
   log "stopping $service"
   sudo -n systemctl stop "$service" || return 1
 
@@ -84,7 +129,7 @@ deploy_target() {
     mkdir -p "$backup_dir/deploy" || return 1
     local file
     file="$backup_dir/deploy/autoscore-$(utc_stamp)-${previous:0:7}.sqlite"
-    sqlite3 "$db" ".backup '$file'" || return 1
+    backup_database "$db" "$file" || return 1
     backup_file="$file"
     log "backed up the database to $backup_file"
     prune_backups "$backup_dir/deploy" "$keep_backups" || return 1
@@ -93,9 +138,34 @@ deploy_target() {
     log "no database at $db yet, skipping the backup"
   fi
 
+  if [ -n "$web_dir" ]; then
+    log "switching the front to the new build"
+    swap_web || return 1
+  fi
+
   log "starting $service"
   sudo -n systemctl start "$service" || return 1
   wait_for_health || return 1
+}
+
+restore_checkout() {
+  log "restoring the checkout of $previous without touching $service"
+  git -C "$app_dir" checkout --quiet --force --detach "$previous" || return 1
+  install_deps || return 1
+  rm -rf -- "$web_out.new" || return 1
+}
+
+restore_web() {
+  if [ "$dist_moved" = 1 ]; then
+    rm -rf -- "$web_out" || return 1
+    mv -- "$web_out.prev" "$web_out" || return 1
+    log "restored the previous front from $web_out.prev"
+  elif [ "$web_swapped" = 1 ]; then
+    # The first deploy with the front on had no earlier build to keep.
+    build_web || return 1
+    swap_web || return 1
+  fi
+  rm -rf -- "$web_out.new" || return 1
 }
 
 rollback() {
@@ -125,7 +195,9 @@ rollback() {
   # half-done checkout left behind.
   git -C "$app_dir" checkout --quiet --force --detach "$previous" || return 1
   install_deps || return 1
-  build_web || return 1
+  if [ -n "$web_dir" ]; then
+    restore_web || return 1
+  fi
   sudo -n systemctl start "$service" || return 1
   wait_for_health || return 1
 }
@@ -195,6 +267,10 @@ main() {
   export CI=true
 
   previous=$(git -C "$app_dir" rev-parse HEAD)
+  if ! ignore_web_builds; then
+    echo "cannot add the front build directories to the exclude file of $app_dir"
+    finish failed 1
+  fi
   if [ -n "$(git -C "$app_dir" status --porcelain)" ]; then
     echo "the checkout in $app_dir has local changes"
     git -C "$app_dir" status --short
@@ -216,7 +292,16 @@ main() {
 
   log "previous=$previous target=$target"
 
-  if deploy_target; then
+  if ! prepare_target; then
+    log "deploy of $target failed before stopping $service"
+    if restore_checkout; then
+      log "$service was not stopped, the old version keeps running"
+      finish rolled-back 2
+    fi
+    log "restoring the checkout of $previous failed, $service was not stopped"
+    finish rollback-failed 3
+  fi
+  if switch_target; then
     finish deployed 0
   fi
   log "deploy of $target failed"
