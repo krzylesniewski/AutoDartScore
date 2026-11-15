@@ -483,7 +483,7 @@ describe('HomeScreen: new player dialog', () => {
     fireEvent.click(button('+ Nowy gracz'));
     expect(dialog().getAttribute('aria-modal')).toBe('true');
     expect(within(dialog()).getByLabelText('Imię')).toBeTruthy();
-    expect(within(dialog()).getByLabelText('Avatar (emoji)')).toBeTruthy();
+    expect(within(dialog()).getByRole('group', { name: 'Avatar (emoji)' })).toBeTruthy();
     expect(within(dialog()).getByRole('group', { name: 'Kolor' })).toBeTruthy();
     expect(within(dialog()).queryByRole('checkbox')).toBeNull();
     expect(screen.queryByText('Gość')).toBeNull();
@@ -497,7 +497,7 @@ describe('HomeScreen: new player dialog', () => {
     fireEvent.click(button('Anna'));
     fireEvent.click(button('+ Nowy gracz'));
     fireEvent.change(within(dialog()).getByLabelText('Imię'), { target: { value: ' Gosia ' } });
-    fireEvent.change(within(dialog()).getByLabelText('Avatar (emoji)'), { target: { value: '🦊' } });
+    fireEvent.change(within(dialog()).getByRole('textbox', { name: 'Inne emoji' }), { target: { value: '🦊' } });
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Dodaj' }));
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
@@ -514,7 +514,7 @@ describe('HomeScreen: new player dialog', () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('+ Nowy gracz'));
-    const radios = within(dialog()).getAllByRole('radio') as HTMLInputElement[];
+    const radios = within(within(dialog()).getByRole('group', { name: 'Kolor' })).getAllByRole('radio') as HTMLInputElement[];
     expect(radios.map((radio) => radio.getAttribute('aria-label'))).toEqual([
       'Bursztynowy',
       'Niebieski',
@@ -758,5 +758,49 @@ describe('HomeScreen: games to finish', () => {
     render(<HomeScreen />);
     expect(await screen.findByText('Nie udało się pobrać listy gier')).toBeTruthy();
     expect(screen.queryByText('Brak gier do dokończenia.')).toBeNull();
+  });
+});
+
+describe('HomeScreen: Scena look', () => {
+  // Znaczek wyboru to ukryty span z ikoną. Avatar też jest ukrytym spanem, ale bez ikony.
+  function badges(tile: HTMLElement): Element[] {
+    return [...tile.querySelectorAll('span[aria-hidden="true"]')].filter((span) => span.querySelector('svg'));
+  }
+
+  it('shows the title as a visible h1', async () => {
+    render(<HomeScreen />);
+    await chips();
+    const title = screen.getByRole('heading', { level: 1, name: 'Nowa gra' });
+    expect(title.tagName).toBe('H1');
+    expect(title.classList).not.toContain('sr-only');
+  });
+
+  it('marks only the selected type tile with a hidden check badge and an accent ring', async () => {
+    render(<HomeScreen />);
+    await chips();
+    const selected = screen.getByRole('button', { name: 'Mecz 1v1', description: 'Dwóch graczy, best of N legów' });
+    const other = screen.getByRole('button', { name: 'Zabawa', description: '3-4 graczy, walka o miejsca' });
+    expect(badges(selected)).toHaveLength(1);
+    expect(selected.classList).toContain('inset-ring-(--color-accent)');
+    expect(badges(other)).toHaveLength(0);
+    expect(other.classList).not.toContain('inset-ring-(--color-accent)');
+
+    fireEvent.click(other);
+    expect(badges(other)).toHaveLength(1);
+    expect(badges(selected)).toHaveLength(0);
+  });
+
+  it("rings a picked player's tile in the player's color and keeps the name as the button name", async () => {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('Bartek'));
+    const picked = button('Bartek');
+    expect(picked.classList).toContain('inset-ring-(--color-avatar-7)');
+    expect(badges(picked)).toHaveLength(1);
+    expect(picked.firstElementChild?.textContent).toBe('🎯');
+    expect(picked.lastChild?.textContent).toBe('Bartek');
+    const unpicked = button('Anna');
+    expect([...unpicked.classList].filter((name) => name.startsWith('inset-ring-'))).toEqual([]);
+    expect(badges(unpicked)).toHaveLength(0);
   });
 });

@@ -44,8 +44,8 @@ describe('MatchStatsPanel', () => {
         state={state}
         summary={summary({
           legs: [
-            { legIndex: 0, winnerId: 'p2', checkout: 40, dartsThrown: 22, averages: [] },
-            { legIndex: 1, winnerId: 'p1', checkout: 121, dartsThrown: 9, averages: [] },
+            { legIndex: 0, winnerId: 'p2', checkout: 40, dartsThrown: 22, averages: [], durationMs: 300_000 },
+            { legIndex: 1, winnerId: 'p1', checkout: 121, dartsThrown: 9, averages: [], durationMs: 120_000 },
           ],
         })}
       />,

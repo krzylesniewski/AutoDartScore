@@ -1,4 +1,4 @@
-import type { HeadToHead, MatchListItem, Player, PlayerFormPoint, PlayerStats, RankingEntry, StatsRankings } from '@autoscore/schema';
+import type { HeadToHead, MatchListItem, Player, PlayerFormPoint, PlayerStats, RankingEntry, StatsOverall, StatsRankings } from '@autoscore/schema';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listItem, player, statLine } from '../test/snapshots';
@@ -73,10 +73,23 @@ const rankingsFixture: StatsRankings = {
   highestTurn: [entry('p2', 'Bartek', 1, 180)],
 };
 
+const overallFixture: StatsOverall = {
+  games: 23,
+  legs: 61,
+  darts: 1234,
+  average: 75.25,
+  players: [
+    { playerId: 'p1', name: 'Anna', avatar: null, color: 1, darts: 6, legs: 1, average: 150.5, difference: 75.25 },
+    { playerId: 'p2', name: 'Bartek', avatar: '🎯', color: 7, darts: 3, legs: 1, average: 0, difference: -75.25 },
+    { playerId: 'p3', name: 'Celina', avatar: null, color: 3, darts: 12, legs: 0, average: null, difference: null },
+  ],
+};
+
 let urls: string[];
 let requests: { url: string; method: string; body: unknown }[];
 let respondStats: (url: string) => Response;
 let rankings: StatsRankings;
+let overall: () => Response;
 let profiles: Player[];
 let form: PlayerFormPoint[];
 let headToHead: (opponentId: string) => HeadToHead;
@@ -87,6 +100,7 @@ beforeEach(() => {
   requests = [];
   respondStats = (url) => json(200, stats(/players\/([^/]+)\/stats/.exec(url)?.[1] ?? ''));
   rankings = rankingsFixture;
+  overall = () => json(200, overallFixture);
   profiles = players;
   form = [];
   headToHead = (opponentId) => ({ ...emptyHeadToHead, opponentId });
@@ -117,6 +131,9 @@ beforeEach(() => {
       }
       if (url === '/api/players?archived=include') {
         return json(200, profiles);
+      }
+      if (url === '/api/stats/overall') {
+        return overall();
       }
       if (url.startsWith('/api/stats/rankings')) {
         return json(200, { ...rankings, filter: new URL(url, 'http://localhost').searchParams.get('type') });
@@ -173,8 +190,16 @@ describe('StatsScreen: ranking', () => {
     expect(urls).toContain('/api/stats/rankings?type=all');
 
     const list = tile('Średnia (3 rzutki)');
-    expect(rows(list)).toEqual(['1.AAnna25 legów61,50', '2.🎯Bartek21 legów55,25', '3.CCelina3 legi40,00', 'DDarek2 legi70,00']);
-    expect(within(list).getByRole('link', { name: /Bartek/ }).getAttribute('href')).toBe('#/stats/p2');
+    expect(rows(within(list).getByRole('list', { name: 'Podium średniej' }))).toEqual(['AAnna61,50Miejsce 125 legów', '🎯Bartek55,25Miejsce 221 legów', 'CCelina40,00Miejsce 33 legi']);
+    expect(rows(within(list).getByRole('list', { name: 'Dalsze miejsca' }))).toEqual(['DDarek2 legi70,00']);
+    for (const [name, id] of [
+      ['Anna', 'p1'],
+      ['Bartek', 'p2'],
+      ['Celina', 'p3'],
+      ['Darek', 'p4'],
+    ] as const) {
+      expect(within(list).getByRole('link', { name: new RegExp(name) }).getAttribute('href')).toBe(`#/stats/${id}`);
+    }
     expect(within(list).getByText('Średnia od 3 ukończonych legów.')).toBeTruthy();
   });
 
@@ -196,7 +221,7 @@ describe('StatsScreen: ranking', () => {
     render(<StatsScreen playerId={null} />);
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
     const leaders = (container: HTMLElement) => [...container.querySelectorAll('[data-leader]')].map((row) => row.textContent);
-    expect(leaders(tile('Średnia (3 rzutki)'))).toEqual(['1.AAnna25 legów61,50']);
+    expect(leaders(tile('Średnia (3 rzutki)'))).toEqual(['AAnna61,50Miejsce 125 legów']);
     expect(leaders(tile('Najwyższe zamknięcie'))).toEqual(['1.🎯Bartek121', '1.CCelina121']);
   });
 
@@ -261,6 +286,111 @@ describe('StatsScreen: ranking', () => {
     );
     render(<StatsScreen playerId={null} />);
     expect(await screen.findByText('Nie udało się pobrać statystyk')).toBeTruthy();
+  });
+});
+
+describe('StatsScreen: overall', () => {
+  const filterLabels = ['Wszystkie', 'Mecze 1v1', 'Zabawa', 'Trening'];
+
+  function filterButtons(): string[] {
+    const bar = screen.getByRole('button', { name: 'Wszystkie' }).parentElement as HTMLElement;
+    return within(bar)
+      .getAllByRole('button')
+      .map((button) => button.textContent ?? '');
+  }
+
+  async function openOverall(): Promise<void> {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    fireEvent.click(screen.getByRole('button', { name: 'Overall' }));
+  }
+
+  it('puts Overall right after Trening in the ranking filter only', async () => {
+    const { unmount } = render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(filterButtons()).toEqual([...filterLabels, 'Overall']);
+    unmount();
+
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    expect(filterButtons()).toEqual(filterLabels);
+    expect(screen.queryByRole('button', { name: 'Overall' })).toBeNull();
+  });
+
+  it('separates Overall from the filters with a hidden divider in the ranking only', async () => {
+    const { unmount } = render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const training = screen.getByRole('button', { name: 'Trening' });
+    const divider = training.nextElementSibling;
+    expect(divider?.getAttribute('aria-hidden')).toBe('true');
+    expect(divider?.tagName).not.toBe('BUTTON');
+    expect(divider?.textContent).toBe('');
+    expect(divider?.nextElementSibling).toBe(screen.getByRole('button', { name: 'Overall' }));
+    unmount();
+
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    const bar = screen.getByRole('button', { name: 'Wszystkie' }).parentElement as HTMLElement;
+    expect(bar.querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Trening' }).nextElementSibling).toBeNull();
+  });
+
+  it('shows the totals and the players above and below the overall average', async () => {
+    await openOverall();
+    expect(await screen.findByText('Wszystkie gry liczone do statystyk razem')).toBeTruthy();
+    expect(urls).toContain('/api/stats/overall');
+    expect(window.location.hash).toBe('#/stats');
+    expect(screen.getByRole('button', { name: 'Overall' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Wszystkie' }).getAttribute('aria-pressed')).toBe('false');
+
+    expect(value('Lotki łącznie')).toBe('1234');
+    expect(value('Średnia ogólna (3 rzutki)')).toBe('75,25');
+    expect(value('Gry')).toBe('23');
+    expect(value('Legi')).toBe('61');
+    expect(within(card()).getAllByRole('term')).toHaveLength(4);
+
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Typ gry', 'Powyżej średniej', 'Poniżej średniej', 'Bez ukończonego lega']);
+    expect(rows(screen.getByRole('region', { name: 'Powyżej średniej' }))).toEqual(['AAnna150,50+75,256 lotek']);
+    expect(rows(screen.getByRole('region', { name: 'Poniżej średniej' }))).toEqual(['🎯Bartek0,00−75,253 lotki']);
+    expect(rows(screen.getByRole('region', { name: 'Bez ukończonego lega' }))).toEqual(['CCelina—12 lotek']);
+    expect(screen.queryByRole('region', { name: 'Średnia (3 rzutki)' })).toBeNull();
+  });
+
+  it('shows the ranking again after another filter', async () => {
+    await openOverall();
+    await screen.findByText('Wszystkie gry liczone do statystyk razem');
+    fireEvent.click(screen.getByRole('button', { name: 'Zabawa' }));
+    expect(await screen.findByRole('region', { name: 'Średnia (3 rzutki)' })).toBeTruthy();
+    expect(urls).toContain('/api/stats/rankings?type=casual');
+    expect(screen.queryByText('Powyżej średniej')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Overall' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('shows loading and then the error when the overview fails', async () => {
+    overall = () => json(500, { error: 'internal_error', message: 'Internal server error' });
+    await openOverall();
+    expect(screen.getByText('Ładowanie…')).toBeTruthy();
+    expect(await screen.findByText('Nie udało się pobrać statystyk')).toBeTruthy();
+  });
+
+  it('shows one message without darts', async () => {
+    overall = () => json(200, { games: 0, legs: 0, darts: 0, average: null, players: [] });
+    await openOverall();
+    expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
+    expect(screen.getByText('Wszystkie gry liczone do statystyk razem')).toBeTruthy();
+    expect(document.querySelector('dl')).toBeNull();
+  });
+
+  it('scrolls the five filter buttons inside the bar on phones', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const bar = screen.getByRole('button', { name: 'Overall' }).parentElement;
+    const barClasses = bar?.getAttribute('class')?.split(' ') ?? [];
+    expect(barClasses).toContain('max-sm:overflow-x-auto');
+    expect(barClasses).not.toContain('max-sm:overflow-hidden');
+    for (const button of within(bar as HTMLElement).getAllByRole('button')) {
+      expect(button.getAttribute('class')?.split(' ')).not.toContain('max-sm:min-w-0');
+    }
   });
 });
 
@@ -354,7 +484,7 @@ describe('StatsScreen: player profile', () => {
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
     expect((within(dialog).getByLabelText('Imię') as HTMLInputElement).value).toBe('Anna');
     fireEvent.change(within(dialog).getByLabelText('Imię'), { target: { value: ' Ania ' } });
-    fireEvent.change(within(dialog).getByLabelText('Avatar (emoji)'), { target: { value: '🦊' } });
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Inne emoji' }), { target: { value: '🦊' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Ania' })).toBeTruthy();
@@ -374,14 +504,14 @@ describe('StatsScreen: player profile', () => {
     render(<StatsScreen playerId="p2" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Edytuj profil' }));
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
-    const checked = (within(dialog).getAllByRole('radio') as HTMLInputElement[]).filter((radio) => radio.checked);
+    const checked = (within(within(dialog).getByRole('group', { name: 'Kolor' })).getAllByRole('radio') as HTMLInputElement[]).filter((radio) => radio.checked);
     expect(checked.map((radio) => radio.getAttribute('aria-label'))).toEqual(['Różowy']);
     expect(checked[0]?.nextElementSibling?.textContent).toBe('✓');
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Błękitny' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([{ url: '/api/players/p2', method: 'PATCH', body: { name: 'Bartek', avatar: '🎯', color: 12 } }]);
+    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([{ url: '/api/players/p2', method: 'PATCH', body: { name: 'Bartek', color: 12 } }]);
     await vi.waitFor(() => expect(within(screen.getByRole('region', { name: 'Bartek' })).getByText('🎯').classList).toContain('bg-(--color-avatar-12)'));
   });
 
@@ -405,8 +535,8 @@ describe('StatsScreen: player profile', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Edytuj profil' }));
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
-    expect((within(dialog).getByLabelText('Avatar (emoji)') as HTMLInputElement).value).toBe('🎯');
-    fireEvent.change(within(dialog).getByLabelText('Avatar (emoji)'), { target: { value: '' } });
+    expect((within(dialog).getByRole('radio', { name: '🎯' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(dialog).getByRole('radio', { name: /Bez emoji/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
     await vi.waitFor(() => expect(requests.find((request) => request.method === 'PATCH')?.body).toEqual({ name: 'Anna', avatar: null, color: 1 }));
   });
@@ -545,7 +675,7 @@ describe('StatsScreen: responsive layout', () => {
     expect(classes(board)).toEqual(expect.arrayContaining(['grid-cols-1', 'lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]', 'xl:min-h-0', 'xl:flex-1']));
     expect(classes(board)).not.toContain('flex-1');
     expect(classes(tile('Najkrótszy leg').parentElement)).toEqual(expect.arrayContaining(['grid-cols-1', 'sm:grid-cols-2']));
-    const ranking = classes(list.querySelector('ol'));
+    const ranking = classes(within(list).getByRole('list', { name: 'Dalsze miejsca' }));
     expect(ranking).toContain('xl:overflow-y-auto');
     expect(ranking).not.toContain('overflow-y-auto');
     expect(ranking).not.toContain('flex-1');
@@ -560,11 +690,14 @@ describe('StatsScreen: responsive layout', () => {
     const list = tile('Średnia (3 rzutki)');
     expect(classes(list)).toContain('@container');
     expect(classes(tile('Najwyższe zamknięcie'))).toContain('@container');
-    const row = list.querySelector('[data-leader]');
-    expect(classes(row)).toContain('min-h-13');
-    expect(classes(row)).not.toContain('h-13');
-    const variants = [row, ...(row?.querySelectorAll('*') ?? [])].flatMap((element) => classes(element));
-    expect(variants.some((name) => name.startsWith('@max-'))).toBe(true);
+    const variants = (element: Element | null) => [element, ...(element?.querySelectorAll('*') ?? [])].flatMap((item) => classes(item));
+    const row = tile('Najwyższe zamknięcie').querySelector('[data-leader]');
+    expect(classes(row)).toContain('min-h-14');
+    expect(classes(row)).not.toContain('h-14');
+    expect(variants(row).some((name) => name.startsWith('@max-'))).toBe(true);
+    const rest = within(within(list).getByRole('list', { name: 'Dalsze miejsca' })).getByRole('link');
+    expect(classes(rest)).toContain('min-h-14');
+    expect(variants(rest).some((name) => name.startsWith('@max-'))).toBe(true);
     const name = within(list).getByText('Anna');
     expect(classes(name)).toEqual(expect.arrayContaining(['min-w-0', 'truncate']));
     expect(classes(within(list).getByText('61,50'))).toContain('shrink-0');

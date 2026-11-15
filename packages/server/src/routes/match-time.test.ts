@@ -1,4 +1,4 @@
-import { MatchSnapshot, ThrowResult, UndoResult } from '@autoscore/schema';
+import { MatchSnapshot, MatchSummary, ThrowResult, UndoResult } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { D, LEG_301, MISS, S, T, abandon, createGame, createPlayers, getMatch, resume, setup, throwDarts, undo, type Dart, type TestApp } from '../test-helpers.js';
 
@@ -56,6 +56,14 @@ async function pause(id: string, from: number, to: number | null): Promise<void>
     expect((await resume(t.app, id)).statusCode).toBe(200);
   }
 }
+
+async function legs(id: string): Promise<MatchSummary['legs']> {
+  const response = await t.app.inject({ method: 'GET', url: `/matches/${id}/summary` });
+  expect(response.statusCode).toBe(200);
+  return MatchSummary.parse(response.json()).legs;
+}
+
+const durations = async (id: string) => (await legs(id)).map(({ legIndex, durationMs }) => ({ legIndex, durationMs }));
 
 describe('round and game times', () => {
   it('starts a new game at round 1 without times', async () => {
@@ -164,5 +172,86 @@ describe('round and game times', () => {
       expect(state).toEqual(await getMatch(t.app, id));
     }
     expect(await getMatch(t.app, id)).toMatchObject({ finished: true, round: null, pausedMs: 4000 });
+  });
+});
+
+describe('leg durations in GET /matches/:id/summary', () => {
+  // W legu 1 zaczyna Bartek, więc LEG_301 daje mu wygraną.
+  it('times each won leg from its first to its closing dart', async () => {
+    const { id } = await match301();
+    await throwAt(10, id, LEG_301.slice(0, 8));
+    await throwAt(20, id, LEG_301.slice(8));
+    await throwAt(100, id, LEG_301.slice(0, 8));
+    await throwAt(125, id, LEG_301.slice(8));
+    expect(await durations(id)).toEqual([
+      { legIndex: 0, durationMs: 10_000 },
+      { legIndex: 1, durationMs: 25_000 },
+    ]);
+  });
+
+  it('subtracts a closed pause inside a leg', async () => {
+    const { id } = await match301();
+    await throwAt(10, id, LEG_301.slice(0, 8));
+    await pause(id, 30, 90);
+    await throwAt(100, id, LEG_301.slice(8));
+    expect(await durations(id)).toEqual([{ legIndex: 0, durationMs: 30_000 }]);
+  });
+
+  it('subtracts a pause between legs from neither leg', async () => {
+    const { id } = await match301();
+    await throwAt(10, id, LEG_301.slice(0, 8));
+    await throwAt(20, id, LEG_301.slice(8));
+    await pause(id, 30, 90);
+    await throwAt(100, id, LEG_301.slice(0, 8));
+    await throwAt(130, id, LEG_301.slice(8));
+    expect(await durations(id)).toEqual([
+      { legIndex: 0, durationMs: 10_000 },
+      { legIndex: 1, durationMs: 30_000 },
+    ]);
+  });
+
+  it('drops a leg on undo of its closing dart and ends it at the dart thrown again', async () => {
+    const { id } = await match301();
+    await throwAt(10, id, LEG_301.slice(0, 8));
+    await throwAt(20, id, LEG_301.slice(8));
+    expect(await durations(id)).toEqual([{ legIndex: 0, durationMs: 10_000 }]);
+
+    await undoAt(30, id);
+    expect(await legs(id)).toEqual([]);
+
+    await throwAt(50, id, [D(5)]);
+    expect(await durations(id)).toEqual([{ legIndex: 0, durationMs: 40_000 }]);
+  });
+
+  it('moves the end of a leg with a checkout moved to a later dart', async () => {
+    const { id } = await match301();
+    await throwAt(10, id, LEG_301.slice(0, 8));
+    await throwAt(100, id, [D(5)]);
+    expect(await durations(id)).toEqual([{ legIndex: 0, durationMs: 90_000 }]);
+
+    await undoAt(110, id);
+    await throwAt(120, id, [MISS]);
+    await throwAt(130, id, [MISS, MISS, MISS]);
+    await throwAt(160, id, [D(5)]);
+    expect(await durations(id)).toEqual([{ legIndex: 0, durationMs: 150_000 }]);
+  });
+
+  it('gives the last leg the time of the live leg clock at the finish', async () => {
+    const { id } = await match301();
+    await throwAt(10, id, LEG_301);
+    await throwAt(50, id, LEG_301);
+    await throwAt(100, id, LEG_301.slice(0, 3));
+    await pause(id, 110, 150);
+    const finished = await throwAt(200, id, LEG_301.slice(3));
+    expect(finished).toMatchObject({ finished: true, legIndex: 2 });
+
+    const { finishedAt, legStartedAt, legPausedMs } = finished;
+    if (finishedAt === null || legStartedAt === null) {
+      throw new Error('A finished match has its times');
+    }
+    const last = (await legs(id)).at(-1);
+    expect(last?.legIndex).toBe(2);
+    expect(last?.durationMs).toBe(Date.parse(finishedAt) - Date.parse(legStartedAt) - legPausedMs);
+    expect(last?.durationMs).toBe(60_000);
   });
 });

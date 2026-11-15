@@ -75,6 +75,22 @@ describe('GET /matches/:id/live', () => {
     expect(messages.at(-1)).toEqual({ type: 'state_updated', matchId: id, eventSeq: 9, state: response.json().state });
   });
 
+  it('sends the closed turns of the leg in state_updated like the throw response', async () => {
+    const { id } = await match301(3);
+    await throwDarts(t.app, id, [S(20), S(20)]);
+    const subscriber = await subscribe(id);
+    await received(subscriber, 1);
+
+    const response = await postThrow(t.app, id, hitEvent(id, S(20)));
+    expect(response.statusCode).toBe(201);
+    const last = (await received(subscriber, 4)).at(-1);
+    if (last?.type !== 'state_updated') {
+      throw new Error(`Expected state_updated, got ${last?.type}`);
+    }
+    expect(last.state.legTurns).toHaveLength(1);
+    expect(last.state.legTurns).toEqual(response.json().state.legTurns);
+  });
+
   it('sends throw_undone and then state_updated after an undo', async () => {
     const { id } = await match301(3);
     const [thrown] = await throwDarts(t.app, id, [S(20)]);

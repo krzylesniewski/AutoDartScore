@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pl } from '../i18n/pl';
-import { formatAverage, formatBestLeg, formatDecimal, formatDoubles, formatDoublesParts, formatNumber } from './format-stat';
+import { formatAverage, formatBestLeg, formatDecimal, formatDifference, formatDoubles, formatDoublesParts, formatNumber } from './format-stat';
 
 describe('formatDecimal', () => {
   it('renders a decimal comma with the given digits', () => {
@@ -30,6 +30,23 @@ describe('formatAverage', () => {
 
   it('renders null as a dash', () => {
     expect(formatAverage(null)).toBe('—');
+  });
+});
+
+describe('formatDifference', () => {
+  it('signs a positive value and zero with a plus', () => {
+    expect(formatDifference(4.2)).toBe('+4,20');
+    expect(formatDifference(75.25)).toBe('+75,25');
+    expect(formatDifference(0)).toBe('+0,00');
+  });
+
+  it('signs a negative value with a minus sign', () => {
+    expect(formatDifference(-3.1)).toBe('−3,10');
+    expect(formatDifference(-75.25)).toBe('−75,25');
+  });
+
+  it('renders null as a dash', () => {
+    expect(formatDifference(null)).toBe('—');
   });
 });
 

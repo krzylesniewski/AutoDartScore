@@ -102,6 +102,22 @@ export const Abandonment = z.object({
 });
 export type Abandonment = z.infer<typeof Abandonment>;
 
+// Zamknięta tura bieżącego lega.
+export const LegTurn = z
+  .object({
+    playerId: PlayerId,
+    turnIndex: z.int().min(0), // turnIndex ze zdarzenia silnika. W Free run numer podejścia od 0
+    darts: z.array(Hit).min(1).max(3),
+    points: z.int().min(0).max(180), // 0 przy buście
+    remainingAfter: z.int().min(0).nullable(), // null tylko w Free run. Przy buście wynik sprzed tury
+    bust: z.boolean(),
+  })
+  .refine((turn) => !turn.bust || (turn.points === 0 && turn.remainingAfter !== null), {
+    message: 'A bust scores 0 points and keeps the score before the turn',
+    path: ['bust'],
+  });
+export type LegTurn = z.infer<typeof LegTurn>;
+
 // Stan gry wysyłany przez REST i WebSocket. Serwer buduje go od nowa z logu zdarzeń.
 export const MatchSnapshot = z.object({
   id: z.string().min(1),
@@ -127,6 +143,7 @@ export const MatchSnapshot = z.object({
   legIndex: z.int().min(0),
   turnIndex: z.int().min(0),
   currentDarts: z.array(Hit).max(2),
+  legTurns: z.array(LegTurn), // zamknięte tury bieżącego lega w kolejności rzutów. Otwarta tura jest w currentDarts
   players: z.array(MatchSnapshotPlayer).min(1).max(4), // w kolejności playerIds z żądania utworzenia
   winnerId: PlayerId.nullable(),
   placements: z.array(Placement),

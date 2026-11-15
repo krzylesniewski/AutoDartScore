@@ -42,9 +42,9 @@ const matchSummary = summary({
     summaryPlayer('p2', { dartsThrown: 48, average: 62.5, first9Average: 70.33, scores180: 1, scores140: 1, highestCheckout: 121, doubleAttempts: 3, doublesHit: 2, doublesPercent: 66.7, bestLegDarts: 12, legsWon: 2 }),
   ],
   legs: [
-    { legIndex: 0, winnerId: 'p2', checkout: 121, dartsThrown: 12, averages: [{ playerId: 'p1', average: 55 }, { playerId: 'p2', average: 75.25 }] },
-    { legIndex: 1, winnerId: 'p1', checkout: 40, dartsThrown: 15, averages: [{ playerId: 'p1', average: 100.2 }, { playerId: 'p2', average: 60 }] },
-    { legIndex: 2, winnerId: 'p2', checkout: 32, dartsThrown: 21, averages: [{ playerId: 'p1', average: 40 }, { playerId: 'p2', average: 43 }] },
+    { legIndex: 0, winnerId: 'p2', checkout: 121, dartsThrown: 12, averages: [{ playerId: 'p1', average: 55 }, { playerId: 'p2', average: 75.25 }], durationMs: 252_000 },
+    { legIndex: 1, winnerId: 'p1', checkout: 40, dartsThrown: 15, averages: [{ playerId: 'p1', average: 100.2 }, { playerId: 'p2', average: 60 }], durationMs: 301_000 },
+    { legIndex: 2, winnerId: 'p2', checkout: 32, dartsThrown: 21, averages: [{ playerId: 'p1', average: 40 }, { playerId: 'p2', average: 43 }], durationMs: 425_000 },
   ],
 });
 
@@ -73,6 +73,9 @@ describe('MatchSummaryPanel', () => {
     expect(screen.getByText('Leg 1: Bartek · 12 rzutek · zamknięcie 121')).toBeTruthy();
     expect(screen.getByText('Anna 55,00 · Bartek 75,25')).toBeTruthy();
     expect(screen.getByText('Leg 3: Bartek · 21 rzutek · zamknięcie 32')).toBeTruthy();
+    const firstLeg = screen.getByText('Leg 1: Bartek · 12 rzutek · zamknięcie 121').closest('li') as HTMLElement;
+    expect(within(firstLeg).getByText('4:12')).toBeTruthy();
+    expect(within(firstLeg).getByText('Czas lega 4 min 12 s')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/');
   });
 
@@ -117,7 +120,7 @@ describe('MatchSummaryPanel', () => {
       finished: true,
       eventSeq: 9,
       players: [summaryPlayer('p1', { dartsThrown: 9, average: 167, first9Average: 167, scores180: 2, scores140: 1, highestCheckout: 141, bestLegDarts: 9 })],
-      legs: [{ legIndex: 0, winnerId: 'p1', checkout: 141, dartsThrown: 9, averages: [{ playerId: 'p1', average: 167 }] }],
+      legs: [{ legIndex: 0, winnerId: 'p1', checkout: 141, dartsThrown: 9, averages: [{ playerId: 'p1', average: 167 }], durationMs: 95_000 }],
     });
     render(<MatchSummaryPanel state={state} summary={soloSummary} error={false} />);
     expect(columnNames()).toEqual(['Anna']);
@@ -125,6 +128,9 @@ describe('MatchSummaryPanel', () => {
     expect(row('Najwyższe zamknięcie')).toEqual(['141']);
     expect(screen.getByText('Leg 1: Anna · 9 rzutek · zamknięcie 141')).toBeTruthy();
     expect(screen.getByText('Anna 167,00')).toBeTruthy();
+    const leg = screen.getByText('Leg 1: Anna · 9 rzutek · zamknięcie 141').closest('li') as HTMLElement;
+    expect(within(leg).queryByText('1:35')).toBeNull();
+    expect(screen.queryByText(/Czas lega/)).toBeNull();
   });
 
   it('shows the result and Ładowanie… until the summary of the final state arrives', () => {
@@ -162,11 +168,25 @@ describe('MatchSummaryPanel: game time', () => {
     ['Solo 501', finishedSolo],
   ])('shows Czas gry without the pauses in %s', (_name, state) => {
     render(<MatchSummaryPanel state={{ ...state, ...times }} summary={null} error={false} />);
-    expect(screen.getByText('Czas gry 12:34')).toBeTruthy();
+    expect(screen.getByText('Czas gry')).toBeTruthy();
+    expect(screen.getByText('12:34')).toBeTruthy();
+  });
+
+  it('shows Czas gry of a casual game next to its summary', () => {
+    const casualSummary = summary({ type: 'casual', finished: true, eventSeq: finishedCasual.eventSeq, players: [summaryPlayer('p1'), summaryPlayer('p2')] });
+    render(<MatchSummaryPanel state={{ ...finishedCasual, ...times }} summary={casualSummary} error={false} />);
+    expect(screen.getByRole('table', { name: 'Podsumowanie meczu' })).toBeTruthy();
+    expect(screen.getByText('Czas gry')).toBeTruthy();
+    expect(screen.getByText('12:34')).toBeTruthy();
   });
 
   it('shows no Czas gry without a start time', () => {
     render(<MatchSummaryPanel state={{ ...finishedCasual, ...times, startedAt: null }} summary={null} error={false} />);
+    expect(screen.queryByText(/Czas gry/)).toBeNull();
+  });
+
+  it('shows no Czas gry without a finish time', () => {
+    render(<MatchSummaryPanel state={{ ...finishedCasual, ...times, finishedAt: null }} summary={null} error={false} />);
     expect(screen.queryByText(/Czas gry/)).toBeNull();
   });
 });

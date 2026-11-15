@@ -16,11 +16,11 @@ const FILTERS: readonly { value: MatchType | null; label: string }[] = [
   { value: 'practice', label: pl.typePractice },
 ];
 
-const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
-const choice = 'min-h-12 rounded-(--radius-card) border-(length:--border-width) px-4 font-display text-xl';
+const label = 'font-display text-[15px] font-bold tracking-[0.18em] text-(--color-text-muted) uppercase';
+const choice = 'min-h-12 whitespace-nowrap rounded-(--radius-button) px-5 font-display text-xl max-sm:flex-1 max-sm:px-3 max-sm:text-lg';
 
 function choiceStyle(selected: boolean): string {
-  return `${choice} ${selected ? 'border-(--color-text) bg-(--color-text) text-(--color-text-inverse)' : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text)'}`;
+  return `${choice} ${selected ? 'bg-(--color-text) font-extrabold text-(--color-text-inverse) shadow-(--shadow-selected)' : 'bg-transparent font-bold text-(--color-text)'}`;
 }
 
 type Games = { status: 'loading' } | { status: 'ready'; games: MatchListItem[] } | { status: 'error' };
@@ -73,17 +73,17 @@ export function HistoryScreen() {
   return (
     <div className="flex h-full flex-col">
       <AppNav current="history" />
-      <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-12 pt-7 pb-8">
-        <div className="flex flex-wrap items-end justify-between gap-8">
-          <div className="flex flex-col gap-1.5">
-            <h1 className="font-display text-[56px] leading-none font-bold uppercase">{pl.history}</h1>
-            <p className="text-[17px] text-(--color-text-muted)">{pl.historySubtitle}</p>
+      <main className="flex min-h-0 flex-1 flex-col gap-(--space-6) overflow-auto px-4 pt-4 pb-6 sm:px-8 lg:px-(--space-page) lg:pt-6">
+        <div className="flex flex-wrap items-end justify-between gap-4 sm:gap-8">
+          <div className="flex flex-col gap-2">
+            <h1 className="font-display text-[length:clamp(2.5rem,10vw,4rem)] leading-[0.9] font-black tracking-[0.01em]">{pl.history}</h1>
+            <p className="text-[17px] text-(--color-text-sub)">{pl.historySubtitle}</p>
           </div>
-          <section aria-labelledby="history-filter" className="flex flex-col gap-2.5">
-            <h2 id="history-filter" className={label}>
+          <section aria-labelledby="history-filter" className="flex flex-col gap-2 max-sm:w-full sm:items-end">
+            <h2 id="history-filter" className={`${label} sm:mr-1.5`}>
               {pl.gameType}
             </h2>
-            <div className="flex flex-wrap gap-2.5">
+            <div role="group" aria-labelledby="history-filter" className="sc-seg w-fit flex-wrap max-sm:w-full max-sm:flex-nowrap max-sm:overflow-x-auto">
               {FILTERS.map((option) => (
                 <button key={option.label} type="button" aria-pressed={type === option.value} onClick={() => {
                     setType(option.value);
@@ -102,15 +102,13 @@ export function HistoryScreen() {
         )}
         {games.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
         {games.status === 'error' && (
-          <p className="flex items-center gap-2 font-display text-xl text-(--color-accent)">
-            <WarningIcon />
+          <p className="flex items-center gap-2 font-display text-xl text-(--color-text)">
+            <WarningIcon className="text-(--color-accent)" />
             {pl.loadMatchesFailed}
           </p>
         )}
         {games.status === 'ready' && (
-          <div className="rounded-(--radius-card) border-(length:--border-width) border-(--color-border) bg-(--color-surface) px-7 py-3">
-            <MatchHistoryList games={games.games} now={new Date()} busy={busy} onAbandon={setAbandoning} />
-          </div>
+          <MatchHistoryList games={games.games} now={new Date()} busy={busy} onAbandon={setAbandoning} groupByDay />
         )}
       </main>
       {abandoning && <AbandonDialog state={abandoning} onCancel={closeAbandon} onConfirm={(playerId, reason) => void abandon(abandoning, playerId, reason)} />}

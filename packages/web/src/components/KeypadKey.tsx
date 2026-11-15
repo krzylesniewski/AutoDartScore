@@ -2,9 +2,9 @@ import { useEffect, useImperativeHandle, useRef, useState, type CSSProperties, t
 
 export const HIT_FLASH_MS = 200;
 
-const PRESSED_TONE: KeypadKeyTone = { fill: 'bg-(--color-surface-active) text-(--color-text)', border: 'border-(--color-text)' };
+const PRESSED_TONE: KeypadKeyTone = { fill: 'bg-(--color-surface-raised) text-(--color-text)', border: 'border-(--color-text)' };
 const FLASH_BORDER = 'border-(--color-accent)';
-const feedback = 'touch-manipulation transition-[background-color,border-color,scale] duration-80';
+const feedback = 'touch-manipulation transition-[background-color,border-color,transform] duration-80';
 // Kolor tekstu klawisza z mniejszą kryjącością, więc odznaka jest czytelna także na kremowym wybranym mnożniku.
 export const SHORTCUT_BADGE = 'pointer-events-none absolute top-1 right-1.5 hidden font-body text-xs leading-none font-medium opacity-70 lg:block';
 
@@ -147,7 +147,8 @@ export function KeypadKey({
       onClick={handleClick}
       style={style}
       // Klawisze koła 1-20 są absolute, więc relative dostaje tylko klawisz z odznaką.
-      className={`${className} ${feedback} ${tone.fill} ${border}${pressed ? ' motion-safe:scale-96' : ''}${shortcut ? ' relative' : ''}`}
+      // Zejście o 1 px idzie przez transform, bo utility translate-y-* nadpisałoby -translate-y-1/2, które centruje klawisz koła.
+      className={`${className} ${feedback} ${tone.fill} ${border}${pressed ? ' motion-safe:[transform:translateY(1px)]' : ''}${shortcut ? ' relative' : ''}`}
     >
       {children}
       {shortcut && (

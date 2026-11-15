@@ -1,10 +1,11 @@
+import '../theme.css';
 import type { MatchSnapshot } from '@autoscore/schema';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatCountdown } from '../game/undo-window';
 import { useUndoWindow } from '../game/use-undo-window';
 import { pl } from '../i18n/pl';
-import { legProgress, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import { casual, legProgress, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
 import { LockIcon } from './icons';
 import { MatchEndView, type MatchEndViewProps } from './MatchEndView';
 
@@ -32,7 +33,7 @@ const current = summary({
   finished: true,
   eventSeq: 9,
   players: [summaryPlayer('p1', { dartsThrown: 30, average: 50, legsWon: 1 }), summaryPlayer('p2', { dartsThrown: 33, average: 60, legsWon: 2 })],
-  legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [] }],
+  legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [], durationMs: 252_000 }],
 });
 
 function view(overrides: Partial<MatchEndViewProps> = {}) {
@@ -162,19 +163,41 @@ describe('MatchEndView', () => {
     expect(within(leg).getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
   });
 
-  it('ends the setup line with Czas gry without the pauses', () => {
-    view({ state: { ...finished, startedAt: '2026-10-21T18:00:00.000Z', finishedAt: '2026-10-21T19:03:05.000Z', pausedMs: 60_000 } });
-    expect(screen.getByText('501 · Double-out · Best of 3 · Czas gry 1:02:05')).toBeTruthy();
+  const times = { startedAt: '2026-10-21T18:00:00.000Z', finishedAt: '2026-10-21T19:03:05.000Z', pausedMs: 60_000 };
+
+  it('shows Czas gry without the pauses in the winner card and only the settings in the setup line', () => {
+    view({ state: { ...finished, ...times } });
+    const card = screen.getByText('Bartek wygrywa').closest('section') as HTMLElement;
+    expect(within(card).getByText('501 · Double-out · Best of 3')).toBeTruthy();
+    expect(within(card).getByText('Czas gry')).toBeTruthy();
+    expect(within(card).getByText('1:02:05')).toBeTruthy();
   });
 
-  it('leaves Czas gry out of the setup line without a start time', () => {
-    view({ state: { ...finished, startedAt: null, finishedAt: '2026-10-21T19:03:05.000Z' } });
+  it.each([
+    ['a start time', { startedAt: null }],
+    ['a finish time', { finishedAt: null }],
+  ])('shows no Czas gry without %s', (_name, missing) => {
+    view({ state: { ...finished, ...times, ...missing } });
     expect(screen.getByText('501 · Double-out · Best of 3')).toBeTruthy();
     expect(screen.queryByText(/Czas gry/)).toBeNull();
   });
 
+  it('shows the duration of each leg in its card', () => {
+    const legs = [
+      { legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [], durationMs: 252_900 },
+      { legIndex: 1, winnerId: 'p2', checkout: 40, dartsThrown: 15, averages: [], durationMs: 61_000 },
+    ];
+    view({ summary: { ...current, legs } });
+    const first = screen.getByText('Leg 1').closest('li') as HTMLElement;
+    expect(within(first).getByText('4:12')).toBeTruthy();
+    expect(within(first).getByText('Czas lega 4 min 12 s')).toBeTruthy();
+    const second = screen.getByText('Leg 2').closest('li') as HTMLElement;
+    expect(within(second).getByText('1:01')).toBeTruthy();
+    expect(within(second).getByText('Czas lega 1 min 1 s')).toBeTruthy();
+  });
+
   it('shows the checkout and the averages of each player in a leg card', () => {
-    view({ summary: { ...current, legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [{ playerId: 'p1', average: 74.2 }, { playerId: 'p2', average: null }] }] } });
+    view({ summary: { ...current, legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [{ playerId: 'p1', average: 74.2 }, { playerId: 'p2', average: null }], durationMs: 252_000 }] } });
     const legList = screen.getByRole('list', { name: 'Legi' });
     expect(within(legList).getByText('Leg 1')).toBeTruthy();
     expect(within(legList).getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
@@ -325,5 +348,154 @@ describe('MatchEndView: score progress chart', () => {
   it('shows no chart from a summary older than the state', () => {
     view({ summary: { ...withProgress, eventSeq: 8 } });
     expect(screen.queryByRole('img', { name: /^Zejście z wyniku/ })).toBeNull();
+  });
+});
+
+// Tekst bez avatarów, bo ich inicjały są ukryte przed czytnikami ekranu.
+function visibleText(element: Element): string {
+  const copy = element.cloneNode(true) as Element;
+  copy.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+  return copy.textContent ?? '';
+}
+
+function ancestors(element: Element): Element[] {
+  const list: Element[] = [];
+  for (let node = element.parentElement; node; node = node.parentElement) {
+    list.push(node);
+  }
+  return list;
+}
+
+describe('MatchEndView: winner glow', () => {
+  const players = [player('p1', 'Anna', { legsWon: 1, avatar: '🦊' }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯' })];
+
+  it('rings only the winner avatar', () => {
+    view({ state: { ...finished, players } });
+    const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
+    const ring = 'shadow-(--shadow-winner-avatar)';
+    expect(within(card).getByText('🎯').parentElement?.classList).toContain(ring);
+    expect(ancestors(within(card).getByText('🦊')).some((node) => node.classList.contains(ring))).toBe(false);
+  });
+
+  it('puts a hidden gold halo inside the winner card', () => {
+    view();
+    const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
+    const halo = [...card.querySelectorAll('[aria-hidden="true"]')].find((node) => node.classList.contains('bg-(image:--gradient-winner-halo)'));
+    expect(halo).toBeTruthy();
+    expect(halo?.classList).toContain('pointer-events-none');
+  });
+});
+
+describe('MatchEndView: casual', () => {
+  const finishedCasual = casual(['Anna', 'Bartek', 'Celina'], {
+    eventSeq: 12,
+    finished: true,
+    currentPlayerId: null,
+    players: [player('p1', 'Anna', { remaining: 0 }), player('p2', 'Bartek', { remaining: 40 }), player('p3', 'Celina', { remaining: 0 })],
+    placements: [
+      { playerId: 'p3', place: 1 },
+      { playerId: 'p1', place: 2 },
+      { playerId: 'p2', place: 3 },
+    ],
+    startedAt: '2026-10-21T18:00:00.000Z',
+    finishedAt: '2026-10-21T18:12:30.000Z',
+  });
+
+  const casualSummary = summary({
+    type: 'casual',
+    finished: true,
+    eventSeq: 12,
+    players: [
+      summaryPlayer('p1', { dartsThrown: 33, average: 44.27, highestCheckout: 16 }),
+      summaryPlayer('p2', { dartsThrown: 36, average: 38.08, highestCheckout: null }),
+      summaryPlayer('p3', { dartsThrown: 27, average: 55.67, highestCheckout: 40 }),
+    ],
+  });
+
+  function casualView(overrides: Partial<MatchEndViewProps> = {}) {
+    return view({ state: finishedCasual, summary: casualSummary, ...overrides });
+  }
+
+  function ranking(): HTMLElement {
+    return screen.getByRole('region', { name: 'Zabawa zakończona · ranking miejsc' });
+  }
+
+  it('shows the first place with a trophy above the other places', () => {
+    casualView();
+    const card = ranking();
+    expect(within(card).getByRole('heading', { name: 'Zabawa zakończona · ranking miejsc' })).toBeTruthy();
+    const pill = within(card).getByText('1. miejsce');
+    expect(pill.querySelector('svg')).not.toBeNull();
+    const others = within(card).getByRole('list', { name: 'Pozostałe miejsca' });
+    const first = within(card).getByText('Celina');
+    expect(others.contains(first)).toBe(false);
+    expect(first.compareDocumentPosition(others) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(card).getByText('27 rzutek · zamknięcie 40 · śr. 55,67')).toBeTruthy();
+  });
+
+  it('lists the other places in order with their details and averages', () => {
+    casualView();
+    const items = within(screen.getByRole('list', { name: 'Pozostałe miejsca' })).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    const [second, third] = items as [HTMLElement, HTMLElement];
+    expect(within(second).getByText('2.')).toBeTruthy();
+    expect(within(second).getByText('Anna')).toBeTruthy();
+    expect(within(second).getByText(/· zamknięcie 16$/)).toBeTruthy();
+    expect(within(second).getByText('44,27')).toBeTruthy();
+    expect(within(third).getByText('3.')).toBeTruthy();
+    expect(within(third).getByText('Bartek')).toBeTruthy();
+    expect(within(third).getByText(/· zostało 40$/)).toBeTruthy();
+    expect(within(third).getByText('36 rzutek · zostało 40')).toBeTruthy();
+  });
+
+  it('shows Czas gry in the ranking card', () => {
+    casualView();
+    expect(within(ranking()).getByText('Czas gry')).toBeTruthy();
+    expect(within(ranking()).getByText('12:30')).toBeTruthy();
+  });
+
+  it('shows the game type and setup in the header', () => {
+    casualView();
+    expect(within(screen.getByRole('banner')).getByText('Zabawa · 501 · Double-out')).toBeTruthy();
+  });
+
+  it('orders the table columns by place and leaves out Wygrane legi', () => {
+    casualView();
+    const table = screen.getByRole('table', { name: 'Podsumowanie meczu' });
+    const columns = within(table).getAllByRole('columnheader');
+    expect(columns.map(visibleText)).toEqual(['1.Celina', '2.Anna', '3.Bartek']);
+    const rowHeaders = within(table).getAllByRole('rowheader').map((header) => header.textContent);
+    expect(rowHeaders).toHaveLength(9);
+    expect(rowHeaders).not.toContain('Wygrane legi');
+  });
+
+  it('shows the chart of the leg', () => {
+    casualView({ summary: { ...casualSummary, lastLegProgress: legProgress({ p1: [241, 181], p2: [281, 221], p3: [261, 201] }) } });
+    expect(screen.getByRole('img', { name: /^Zejście z wyniku w legu 1/ })).toBeTruthy();
+  });
+
+  it('offers Cofnij and Nowa gra but no Rewanż, Zapisz i wyjdź or Nowy mecz', () => {
+    const props = casualView();
+    expect(screen.queryByRole('button', { name: 'Rewanż' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Zapisz i wyjdź' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Nowy mecz' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('href')).toBe('#/');
+    fireEvent.click(screen.getByRole('button', { name: 'Cofnij' }));
+    expect(props.onUndo).toHaveBeenCalledOnce();
+  });
+
+  it('shows the places without details while the summary is older than the state', () => {
+    casualView({ summary: { ...casualSummary, eventSeq: 11 } });
+    const items = within(screen.getByRole('list', { name: 'Pozostałe miejsca' })).getAllByRole('listitem');
+    expect(items.map(visibleText)).toEqual(['2.Anna', '3.Bartek']);
+    expect(screen.queryByText(/zamknięcie|zostało/)).toBeNull();
+    expect(screen.getByText('Ładowanie…')).toBeTruthy();
+    expect(screen.queryByRole('table')).toBeNull();
+  });
+
+  it('offers to save a guest', () => {
+    const players = finishedCasual.players.map((entry) => (entry.id === 'p2' ? { ...entry, guest: true } : entry));
+    casualView({ state: { ...finishedCasual, players } });
+    expect(screen.getByRole('button', { name: 'Zapisz gracza: Bartek' })).toBeTruthy();
   });
 });

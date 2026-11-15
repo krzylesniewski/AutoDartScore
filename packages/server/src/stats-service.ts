@@ -1,14 +1,16 @@
 import { isGameFinished, type GameState } from '@autoscore/engine';
-import type { DomainEvent, FrequentHitsResponse, HeadToHead, Hit, LegProgress, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsRankings } from '@autoscore/schema';
+import type { DomainEvent, FrequentHitsResponse, HeadToHead, Hit, LegProgress, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsRankings } from '@autoscore/schema';
 import { HttpError, notFound } from './errors.js';
-import { effectiveCheckoutSteps, effectiveThrows, lastActivityAt, lastSeq, replayMatch } from './replay.js';
+import { closedPauses, effectiveCheckoutSteps, effectiveThrows, lastActivityAt, lastSeq, replayMatch } from './replay.js';
 import { checkoutSession } from './snapshot.js';
 import { completedPlayerLegs } from './stats/completed-legs.js';
 import { buildForm, type FormGame } from './stats/form.js';
 import { buildFrequentHits } from './stats/frequent-hits.js';
 import { buildHeadToHead, type HeadToHeadGame } from './stats/head-to-head.js';
+import { legDurations } from './stats/leg-durations.js';
 import { buildLegProgress } from './stats/leg-progress.js';
-import { buildRankings } from './stats/rankings.js';
+import { buildOverall } from './stats/overall.js';
+import { buildRankings, type RankedGame } from './stats/rankings.js';
 import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine } from './stats/tally.js';
 import type { Store, StoredMatch } from './store/store.js';
 
@@ -16,6 +18,7 @@ export interface StatsService {
   playerStats(playerId: string, filter: StatsFilter): Promise<PlayerStats>;
   matchSummary(matchId: string): Promise<MatchSummary>;
   rankings(filter: StatsFilter): Promise<StatsRankings>;
+  overall(): Promise<StatsOverall>;
   headToHead(playerId: string, opponentId: string): Promise<HeadToHead>;
   playerForm(playerId: string, filter: StatsFilter): Promise<PlayerForm>;
   frequentHits(playerId: string): Promise<FrequentHitsResponse>;
@@ -48,9 +51,12 @@ function lastLegProgress(game: GameState, playerIds: readonly string[], events: 
 export function createStatsService({ store }: Dependencies): StatsService {
   async function replayed(match: StoredMatch) {
     const log = await store.loadLog(match.id);
-    const { state, events } = replayMatch(match, effectiveThrows(log), effectiveCheckoutSteps(log));
+    const throws = effectiveThrows(log);
+    const { state, events } = replayMatch(match, throws, effectiveCheckoutSteps(log));
     const playerIds = match.players.map((player) => player.id);
     return {
+      log,
+      throws,
       seq: lastSeq(log),
       state,
       finished: isGameFinished(state),
@@ -78,6 +84,20 @@ export function createStatsService({ store }: Dependencies): StatsService {
       }
     }
     return matches;
+  }
+
+  // Gry wszystkich graczy liczone do statystyk, w przeciwieństwie do statsGames dla jednego gracza.
+  async function rankedGames(filter: StatsFilter): Promise<RankedGame[]> {
+    const types = FILTER_TYPES[filter];
+    const games: RankedGame[] = [];
+    for (const match of await store.listMatches()) {
+      if (!match.countsToStats || !types.includes(match.type)) {
+        continue;
+      }
+      const { playerIds, events, tally } = await replayed(match);
+      games.push({ type: match.type, legs: completedPlayerLegs(match.type, playerIds, events), tally });
+    }
+    return games;
   }
 
   return {
@@ -112,31 +132,33 @@ export function createStatsService({ store }: Dependencies): StatsService {
       if (!match) {
         throw notFound(`Match ${matchId}`);
       }
-      const { seq, state, finished, playerIds, events, tally } = await replayed(match);
+      const { log, throws, seq, state, finished, playerIds, events, tally } = await replayed(match);
+      const durations = legDurations(events, throws, closedPauses(log));
       return {
         matchId,
         type: match.type,
         finished,
         eventSeq: seq,
         players: playerIds.map((playerId) => ({ ...toStatLine(tally.players.get(playerId) ?? EMPTY_TOTALS), playerId })),
-        legs: [...tally.legs],
+        legs: tally.legs.map((leg) => {
+          const durationMs = durations.get(leg.legIndex);
+          if (durationMs === undefined) {
+            throw new Error(`Corrupt match ${matchId}: leg ${leg.legIndex} has no duration`);
+          }
+          return { ...leg, durationMs };
+        }),
         lastLegProgress: lastLegProgress(state, playerIds, events),
         checkouts: state.type === 'practice' && state.practiceMode === 'checkouts' ? checkoutSession(state.state) : null,
       };
     },
 
     async rankings(filter) {
-      const types = FILTER_TYPES[filter];
-      const games = [];
-      for (const match of await store.listMatches()) {
-        if (!match.countsToStats || !types.includes(match.type)) {
-          continue;
-        }
-        const { playerIds, events, tally } = await replayed(match);
-        games.push({ type: match.type, legs: completedPlayerLegs(match.type, playerIds, events), tally });
-      }
       // Zarchiwizowany gracz zostaje w rankingu. Ukrywa go tylko wybór graczy do nowej gry.
-      return { filter, ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games }) };
+      return { filter, ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames(filter) }) };
+    },
+
+    async overall() {
+      return buildOverall({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames('all') });
     },
 
     async headToHead(playerId, opponentId) {

@@ -12,7 +12,7 @@ export function EventBanner({ banner, achievements }: { banner: Banner | null; a
       {banner && (
         <p
           className={`flex animate-banner-in flex-wrap items-center gap-x-3 gap-y-1 rounded-(--radius-card) px-5 py-3 font-display text-3xl font-bold uppercase motion-reduce:animate-none lg:text-4xl ${
-            banner.kind === 'bust' ? 'bg-(--color-accent) text-(--color-on-accent)' : 'bg-(--color-text) text-(--color-text-inverse)'
+            banner.kind === 'bust' ? 'sc-checkout' : 'bg-(--color-text) text-(--color-text-inverse) shadow-(--shadow-card)'
           }`}
         >
           {banner.kind === 'bust' ? <BustIcon /> : <TrophyIcon />}

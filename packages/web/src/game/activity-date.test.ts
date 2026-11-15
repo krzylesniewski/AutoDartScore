@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatActivity } from './activity-date';
+import { activityDay, formatActivity, formatClock } from './activity-date';
 
 const now = new Date(2026, 9, 18, 19, 30);
 
@@ -30,5 +30,38 @@ describe('formatActivity', () => {
 
   it('adds the year for another year', () => {
     expect(formatActivity(iso(2025, 9, 18), now)).toBe('18.10.2025');
+  });
+});
+
+describe('formatClock', () => {
+  it('pads the local hours and minutes', () => {
+    expect(formatClock(iso(2026, 9, 18, 8, 5))).toBe('08:05');
+    expect(formatClock(iso(2026, 9, 18, 0, 0))).toBe('00:00');
+  });
+});
+
+describe('activityDay', () => {
+  it('shows Dziś for today', () => {
+    expect(activityDay(iso(2026, 9, 18, 0, 0), now)).toBe('Dziś');
+    expect(activityDay(iso(2026, 9, 18, 19, 29), now)).toBe('Dziś');
+  });
+
+  it('shows Wczoraj for the previous day', () => {
+    expect(activityDay(iso(2026, 9, 17, 23, 59), now)).toBe('Wczoraj');
+    expect(activityDay(iso(2026, 9, 17, 0, 0), now)).toBe('Wczoraj');
+  });
+
+  it('crosses a month and a year for Wczoraj', () => {
+    expect(activityDay(iso(2026, 8, 30), new Date(2026, 9, 1, 10))).toBe('Wczoraj');
+    expect(activityDay(iso(2025, 11, 31), new Date(2026, 0, 1, 10))).toBe('Wczoraj');
+  });
+
+  it('shows the day and month earlier in the same year', () => {
+    expect(activityDay(iso(2026, 9, 16), now)).toBe('16.10');
+    expect(activityDay(iso(2026, 0, 2), now)).toBe('02.01');
+  });
+
+  it('adds the year for another year', () => {
+    expect(activityDay(iso(2025, 9, 18), now)).toBe('18.10.2025');
   });
 });

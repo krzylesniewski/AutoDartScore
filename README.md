@@ -16,7 +16,7 @@ Jeszcze nie ma:
 
 - Statystyk i ekranu podsumowania lega lub meczu.
 - Historii meczów oraz przerywania i wznawiania gry.
-- Działających przycisków „Nowa runda” i „Do weryfikacji”. Na ekranie gry są nieaktywne, z etykietą „Wkrótce”.
+- Działających przycisków „Nowa runda” i „Do weryfikacji”. Nie ma ich na ekranie gry, dopóki nie dostaną działania.
 - Obsługi `confidence`. Serwer zapisuje to pole, ale go nie używa (nie ma jeszcze statusu `pending`).
 - Kamery. Detekcja przyjdzie w etapie 2.
 
@@ -73,13 +73,14 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 | Metoda | Ścieżka | Opis |
 |---|---|---|
 | `GET` | `/players` | Lista graczy bez gości, posortowana po imieniu. |
-| `POST` | `/players` | Nowy gracz (`CreatePlayerRequest`: `name` 1-40 znaków po obcięciu spacji, opcjonalny `avatar` 1-16 znaków, opcjonalny `color` 1-16, `guest` domyślnie `false`). Bez `color` gracz dostaje stały kolor wyliczony z `id`. Odpowiedź 201 z `Player`. Imię zajęte przez innego zapisanego, niezarchiwizowanego gracza daje 409 `player_name_taken` (nie dotyczy gości). |
+| `POST` | `/players` | Nowy gracz (`CreatePlayerRequest`: `name` 1-40 znaków po obcięciu spacji, opcjonalny `avatar` (dokładnie jedno emoji, np. 🎯, 👍🏽 albo 🇵🇱; tekst daje 400), opcjonalny `color` 1-16, `guest` domyślnie `false`). Bez `color` gracz dostaje stały kolor wyliczony z `id`. Odpowiedź 201 z `Player`. Imię zajęte przez innego zapisanego, niezarchiwizowanego gracza daje 409 `player_name_taken` (nie dotyczy gości). |
 | `POST` | `/matches` | Nowa gra (`CreateMatchRequest`, rodzaj w polu `type`). Odpowiedź 201 z `MatchSnapshot`. |
 | `GET` | `/matches/:id` | Bieżący stan gry (`MatchSnapshot`). |
 | `POST` | `/matches/:id/throws` | Rzutka (`HitEvent`). Odpowiedź 201 z `{ throw, events, state }`. |
 | `POST` | `/matches/:id/checkout-attempts` | Próba w treningu checkoutów (`CheckoutAttemptRequest`: `{ success }`). Odpowiedź 201 z `MatchSnapshot`. Po udanej próbie `checkouts` ma nowy cel, po nieudanej ten sam. Sesje zapisane przed wprowadzeniem tej zasady dostają nowy cel po każdej próbie. Inna gra daje 409 `not_checkouts`, zakończony trening 409 `practice_ended`, a porzucony 409 `match_abandoned`. |
 | `POST` | `/matches/:id/checkout-skips` | Pominięcie celu w treningu checkoutów: nowy cel bez próby. Body jest ignorowane. Odpowiedź 201 z `MatchSnapshot`, w którym `attempts`, `successes` i `history` się nie zmieniają, a `skips` rośnie o 1. Błędy jak przy próbie, nieznana gra daje 404 `not_found`. |
 | `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki. Body jest ignorowane. Odpowiedź 200 z `{ undoneThrowId, state }`. W zakończonej grze działa do `editableUntil` ze stanu gry (`finishedAt` plus `AUTOSCORE_MATCH_LOCK_MINUTES`), potem daje 409 `match_locked`. W treningu checkoutów cofa ostatnią próbę albo ostatnie pominięcie, przywraca poprzedni cel i zwraca `undoneThrowId: null`. |
+| `GET` | `/matches/:id/summary` | Podsumowanie gry (`MatchSummary`). Każdy wygrany leg w `legs` ma `durationMs`: czas od pierwszej do zamykającej rzutki lega w milisekundach, bez przerw między porzuceniem a wznowieniem. Zabawa ma pustą listę `legs`. Nieznana gra daje 404 `not_found`. |
 | WebSocket | `/matches/:id/live` | Strumień stanu i zdarzeń jednej gry. |
 
 Rodzaje gry w `POST /matches`:

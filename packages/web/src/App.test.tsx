@@ -8,6 +8,10 @@ function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 }
 
+function stageLight(): string | null | undefined {
+  return document.querySelector('[data-stage-light]')?.getAttribute('data-stage-light');
+}
+
 const createdAt = '2026-10-15T18:30:00.000Z';
 let urls: string[];
 
@@ -48,6 +52,7 @@ describe('App', () => {
     expect(await screen.findByText('Brak gier do dokończenia.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Statystyki' }).getAttribute('href')).toBe('#/stats');
     expect(screen.getByRole('link', { name: 'Historia' }).getAttribute('href')).toBe('#/history');
+    expect(stageLight()).toBe('game');
   });
 
   it('opens the settings on #/settings', () => {
@@ -57,6 +62,7 @@ describe('App', () => {
     const link = screen.getByRole('link', { name: 'Ustawienia' });
     expect(link.getAttribute('href')).toBe('#/settings');
     expect(link.getAttribute('aria-current')).toBe('page');
+    expect(stageLight()).toBe('game');
   });
 
   it('opens the match history on #/history', async () => {
@@ -66,6 +72,7 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Historia' }).getAttribute('aria-current')).toBe('page');
     expect(await screen.findByText('Brak gier w historii.')).toBeTruthy();
     expect(urls).toContain('/api/matches');
+    expect(stageLight()).toBe('list');
   });
 
   it('renders the start screen without a hash', async () => {
@@ -86,6 +93,7 @@ describe('App', () => {
     render(<App />);
     expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
     await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all'));
+    expect(stageLight()).toBe('list');
   });
 
   it('opens the statistics of the player in #/stats/:playerId', async () => {
@@ -172,6 +180,7 @@ describe('login', () => {
     expect(await screen.findByLabelText('Hasło')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Zaloguj' })).toBeTruthy();
     expect(screen.queryByRole('heading', { level: 1, name: 'Nowa gra' })).toBeNull();
+    expect(stageLight()).toBe('center');
   });
 
   it('brings back the same screen after login and sends the token', async () => {

@@ -20,3 +20,21 @@ export function formatActivity(iso: string, now: Date): string {
   const day = `${pad(date.getDate())}.${pad(date.getMonth() + 1)}`;
   return date.getFullYear() === now.getFullYear() ? day : `${day}.${date.getFullYear()}`;
 }
+
+export function formatClock(iso: string): string {
+  const date = new Date(iso);
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// Nagłówek dnia w historii gier, w strefie urządzenia.
+export function activityDay(iso: string, now: Date): string {
+  const date = new Date(iso);
+  if (sameDay(date, now)) {
+    return pl.historyDayToday;
+  }
+  if (sameDay(date, new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))) {
+    return pl.historyDayYesterday;
+  }
+  const day = `${pad(date.getDate())}.${pad(date.getMonth() + 1)}`;
+  return date.getFullYear() === now.getFullYear() ? day : `${day}.${date.getFullYear()}`;
+}

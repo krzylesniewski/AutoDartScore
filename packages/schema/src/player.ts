@@ -5,6 +5,20 @@ export const PLAYER_COLOR_COUNT = 16;
 export const PlayerColor = z.int().min(1).max(PLAYER_COLOR_COUNT);
 export type PlayerColor = z.infer<typeof PlayerColor>;
 
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+const pictographic = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
+
+// Jedno emoji to dokładnie jeden grafem z symbolem obrazkowym: 🐙, 👍🏽, 👨‍👩‍👧 albo flaga 🇵🇱. Litery i cyfry odpadają.
+export function isSingleEmoji(value: string): boolean {
+  if (value === '' || value.trim() !== value) {
+    return false;
+  }
+  return Array.from(graphemes.segment(value)).length === 1 && pictographic.test(value);
+}
+
+// Avatar w żądaniach: jedno emoji (decyzja autora 2026-11-10). Zapisane wcześniej avatary zostają, bo Player tego nie sprawdza.
+const AvatarEmoji = z.string().min(1).max(16).refine(isSingleEmoji, { message: 'Avatar must be a single emoji' });
+
 // Gość to zwykły gracz z flagą guest, więc silnik i tak dostaje różne identyfikatory graczy.
 export const Player = z.object({
   id: z.string().min(1),
@@ -19,7 +33,7 @@ export type Player = z.infer<typeof Player>;
 
 export const CreatePlayerRequest = z.object({
   name: z.string().trim().min(1).max(40),
-  avatar: z.string().min(1).max(16).optional(),
+  avatar: AvatarEmoji.optional(),
   color: PlayerColor.optional(), // bez koloru serwer dobiera stały kolor z id
   guest: z.boolean().default(false),
 });
@@ -29,7 +43,7 @@ export type CreatePlayerRequest = z.infer<typeof CreatePlayerRequest>;
 export const UpdatePlayerRequest = z
   .object({
     name: z.string().trim().min(1).max(40).optional(),
-    avatar: z.string().min(1).max(16).nullable().optional(),
+    avatar: AvatarEmoji.nullable().optional(),
     color: PlayerColor.optional(), // koloru nie da się wyczyścić, tylko zmienić
     archived: z.boolean().optional(),
     guest: z.literal(false).optional(),

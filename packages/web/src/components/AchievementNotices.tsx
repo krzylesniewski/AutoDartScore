@@ -13,7 +13,7 @@ export function AchievementNotices({ notices }: { notices: readonly AchievementN
       {notices.map(({ achievement, playerName }) => (
         <li
           key={`${achievement.eventSeq}-${achievement.kind}-${achievement.playerId}`}
-          className="flex animate-banner-in items-center gap-3 rounded-(--radius-card) border-(length:--border-width) border-(--color-accent) bg-(--color-surface) px-4 py-2 font-display text-lg font-semibold text-(--color-text) motion-reduce:animate-none lg:text-xl"
+          className="flex animate-banner-in items-center gap-3 rounded-(--radius-card) bg-linear-to-b from-(--color-surface-raised) to-(--color-surface) px-4 py-2 font-display text-lg font-semibold text-(--color-text) shadow-(--shadow-card) motion-reduce:animate-none lg:text-xl"
         >
           <StarIcon className="text-(--color-accent)" />
           <span className="min-w-0 break-words">

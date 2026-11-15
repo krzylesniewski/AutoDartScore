@@ -23,6 +23,11 @@ export function avatarColorClass(color: number): string {
   return AVATAR_COLORS[color - 1] ?? AVATAR_COLORS[0];
 }
 
+// Kolor gracza jako wartość CSS, np. do pierścienia i poświaty. Ten sam zastępczy kolor 1 co avatarColorClass.
+export function avatarColorVar(color: number): string {
+  return `var(--color-avatar-${AVATAR_COLORS[color - 1] === undefined ? 1 : color})`;
+}
+
 const AVATAR_STROKES = [
   'stroke-(--color-avatar-1)',
   'stroke-(--color-avatar-2)',

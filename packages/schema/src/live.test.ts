@@ -28,6 +28,7 @@ const state = {
   legIndex: 0,
   turnIndex: 1,
   currentDarts: [],
+  legTurns: [],
   players: [
     { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: 0, legsWon: null, place: 1, dartsThrownInLeg: 3 },
     { id: 'p2', name: 'Bartek', avatar: null, color: 7, guest: false, remaining: 301, legsWon: null, place: null, dartsThrownInLeg: 0 },

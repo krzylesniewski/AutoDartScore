@@ -7,6 +7,7 @@ import {
   CheckoutSession,
   CreateMatchRequest,
   HealthResponse,
+  LegTurn,
   MatchListItem,
   MatchListQuery,
   MatchSnapshot,
@@ -155,6 +156,7 @@ const snapshot = {
   legIndex: 0,
   turnIndex: 0,
   currentDarts: [{ segment: 20, multiplier: 3 }],
+  legTurns: [],
   players: [
     { id: 'p1', name: 'Anna', avatar: '🎯', color: 1, guest: false, remaining: 241, legsWon: 0, place: null, dartsThrownInLeg: 1 },
     { id: 'p2', name: 'Bartek', avatar: null, color: 7, guest: true, remaining: 301, legsWon: 0, place: null, dartsThrownInLeg: 0 },
@@ -235,9 +237,70 @@ describe('ThrowRecord', () => {
   });
 });
 
+const legTurn = {
+  playerId: 'p1',
+  turnIndex: 0,
+  darts: [
+    { segment: 20, multiplier: 3 },
+    { segment: 20, multiplier: 3 },
+    { segment: 20, multiplier: 3 },
+  ],
+  points: 180,
+  remainingAfter: 121,
+  bust: false,
+};
+
+describe('LegTurn', () => {
+  it('accepts a 1v1 turn', () => {
+    expect(LegTurn.parse(legTurn)).toEqual(legTurn);
+  });
+
+  it('accepts a bust that keeps the score before the turn', () => {
+    const bust = {
+      playerId: 'p1',
+      turnIndex: 2,
+      darts: [
+        { segment: 20, multiplier: 3 },
+        { segment: 20, multiplier: 3 },
+      ],
+      points: 0,
+      remainingAfter: 121,
+      bust: true,
+    };
+    expect(LegTurn.parse(bust)).toEqual(bust);
+  });
+
+  it('accepts a free run turn without a remaining score', () => {
+    const freeRun = { ...legTurn, remainingAfter: null };
+    expect(LegTurn.parse(freeRun)).toEqual(freeRun);
+  });
+
+  it.each([
+    ['0 darts', { ...legTurn, darts: [] }],
+    ['4 darts', { ...legTurn, darts: [...legTurn.darts, { segment: 1, multiplier: 1 }] }],
+    ['a bust with points', { ...legTurn, points: 60, bust: true }],
+    ['a bust without a remaining score', { ...legTurn, points: 0, remainingAfter: null, bust: true }],
+    ['181 points', { ...legTurn, points: 181 }],
+  ])('rejects %s', (_name, value) => {
+    expect(LegTurn.safeParse(value).success).toBe(false);
+  });
+});
+
 describe('MatchSnapshot', () => {
   it('accepts a 1v1 snapshot', () => {
     expect(MatchSnapshot.parse(snapshot)).toEqual(snapshot);
+  });
+
+  it('accepts a snapshot with closed turns of the leg', () => {
+    const withTurns = {
+      ...snapshot,
+      legTurns: [legTurn, { ...legTurn, playerId: 'p2', turnIndex: 1, darts: [{ segment: 0, multiplier: 0 }], points: 0, remainingAfter: 301 }],
+    };
+    expect(MatchSnapshot.parse(withTurns)).toEqual(withTurns);
+  });
+
+  it('rejects a snapshot without legTurns', () => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, legTurns: undefined }).success).toBe(false);
   });
 
   it('accepts a free run snapshot', () => {

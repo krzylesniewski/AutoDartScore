@@ -35,4 +35,28 @@ describe('EditPlayerDialog', () => {
     expect(screen.queryByText(message)).toBeNull();
     expect(name.getAttribute('aria-invalid')).toBeNull();
   });
+
+  it('does not send an unchanged avatar, so an older text avatar still saves', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ...bartek, avatar: 'KL', name: 'Bartek K' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const onSaved = vi.fn();
+    render(<EditPlayerDialog player={{ ...bartek, avatar: 'KL' }} onSaved={onSaved} onCancel={vi.fn()} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Imię' }), { target: { value: 'Bartek K' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as Record<string, unknown>;
+    expect(body).toEqual({ name: 'Bartek K', color: 7 });
+  });
+
+  it('sends the emoji picked from the grid', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ...bartek, avatar: '🎮' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const onSaved = vi.fn();
+    render(<EditPlayerDialog player={bartek} onSaved={onSaved} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByRole('radio', { name: '🎮' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as Record<string, unknown>;
+    expect(body).toEqual({ name: 'Bartek', avatar: '🎮', color: 7 });
+  });
 });

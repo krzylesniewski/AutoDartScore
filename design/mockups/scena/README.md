@@ -19,6 +19,8 @@
 | `E3Ustawienia.dc.html`, `E3Logowanie.dc.html` | ustawienia, logowanie | 1600×900 |
 | `E3DialogNowyGracz.dc.html`, `E3DialogPorzucenie.dc.html` | dialogi | 1600×900 |
 
+Zmiany po przeglądzie aplikacji (2026-11-10, wygrywają z makietami): tło sceny bez pierścieni tarczy; karta zamknięcia od `lg` na dole prawej kolumny, pod klawiaturą.
+
 Czego makiety nie zmieniają (wiąże `design/plan-etap3.md`): logiki wykresów z P56 (w makietach podział tury na rzutki jest przykładowy), skrótów klawiszowych, zasad RWD z `design/rwd.md` (klawiatura nie skacze), tekstów z `i18n/pl.ts` tam, gdzie istnieją. Liczby w makietach są przykładowe; w aplikacji wszystko pochodzi ze snapshotu i statystyk serwera.
 
 Podglądy komponentów w `design/scena/components/*/preview.html` odwołują się do ikon przez adresy `/_blob/…` artefaktu design systemu; w repo ikony są w `design/scena/assets/Icons/*.svg` (to te same ikony co w `packages/web/src/components/icons.tsx`).

@@ -1,0 +1,378 @@
+/*
+ * Elementy bazowe Sceny: scena (.sc-stage, .sc-stage__content), panel (.sc-panel),
+ * przyciski (.sc-btn i warianty), przełącznik segmentowy (.sc-seg), karta gracza (.sc-player, .sc-avatar--current,
+ * .sc-card-rings), pasek progresu (.sc-progress), pasek aplikacji (.sc-appbar, .sc-nav, .sc-clock, .sc-status),
+ * sloty rzutek (.sc-slot), kafelki statystyk lega (.sc-tiles, .sc-tile), karta zamknięcia (.sc-checkout, .sc-route-chip, .sc-kbd--on-accent), klawisze (.sc-key--bull, .sc-chip)
+ * i pierścień fokusu.
+ * Nazwy klas i wartości jak w design/scena/components/ (bundle.css i README.md komponentów).
+ */
+
+/*
+ * Bez transform, filter i contain na scenie i jej treści: okna dialogowe mają position: fixed
+ * i muszą zostać przypięte do okna przeglądarki, a nie do sceny.
+ */
+.sc-stage {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse var(--stage-light-size) at var(--stage-light-x) var(--stage-light-y),
+    var(--color-bg-glow) 0%,
+    var(--color-bg-mid) 45%,
+    var(--color-bg) 100%
+  );
+}
+
+/* Ekran gry: światło nad klawiaturą. */
+.sc-stage[data-stage-light="game"] {
+  --stage-light-size: 1000px 700px;
+  --stage-light-x: 62%;
+  --stage-light-y: -10%;
+}
+
+/* Listy: światło nad tytułem. */
+.sc-stage[data-stage-light="list"] {
+  --stage-light-size: 1100px 650px;
+  --stage-light-x: 22%;
+  --stage-light-y: -10%;
+}
+
+.sc-stage[data-stage-light="center"] {
+  --stage-light-size: 1000px 700px;
+  --stage-light-x: 50%;
+  --stage-light-y: -10%;
+}
+
+@media (width < 40rem) {
+  .sc-stage[data-stage-light] {
+    --stage-light-size: 560px 460px;
+    --stage-light-y: -8%;
+  }
+}
+
+
+.sc-stage__content {
+  position: relative;
+  height: 100%;
+}
+
+/* W warstwie components, żeby utility Tailwinda na tym samym elemencie zawsze wygrywały. */
+@layer components {
+  .sc-panel {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    padding: 20px 22px;
+    border-radius: var(--radius-panel);
+    background: linear-gradient(180deg, var(--color-surface-raised) 0%, var(--color-surface) 100%);
+    box-shadow: var(--shadow-panel);
+  }
+
+  .sc-panel--flat {
+    background: var(--color-surface-softer);
+    box-shadow: var(--shadow-inset-line);
+  }
+
+  .sc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    height: 54px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: var(--radius-button);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 19px;
+    cursor: pointer;
+    color: var(--color-text);
+    background: var(--color-surface-soft);
+  }
+
+  .sc-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .sc-btn--primary {
+    background: linear-gradient(135deg, var(--color-accent-hi) 0%, var(--color-accent) 60%, var(--color-accent-lo) 100%);
+    color: var(--color-on-accent);
+    font-weight: 800;
+    font-size: 24px;
+    box-shadow: var(--shadow-checkout);
+  }
+
+  .sc-btn--outline {
+    background: transparent;
+    box-shadow: var(--shadow-outline);
+  }
+
+  .sc-btn--outline.sc-btn--quiet {
+    color: var(--color-text-sub);
+  }
+
+  .sc-btn--large {
+    height: 96px;
+    border-radius: var(--radius-card);
+    font-weight: 800;
+    font-size: 36px;
+  }
+
+  .sc-btn--icon {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: var(--radius-pill);
+  }
+
+  .sc-btn--icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sc-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .sc-seg {
+    display: flex;
+    gap: var(--space-1);
+    padding: 5px;
+    border-radius: 16px;
+    background: var(--color-surface-softer);
+    box-shadow: var(--shadow-inset-line);
+  }
+
+  .sc-seg button {
+    height: 46px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: var(--radius-button);
+    background: transparent;
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  .sc-seg button[aria-pressed="true"] {
+    background: var(--color-text);
+    color: var(--color-text-inverse);
+    font-weight: 800;
+    box-shadow: var(--shadow-selected);
+  }
+
+  .sc-seg--multiplier {
+    flex-direction: column;
+    width: 130px;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--radius-card);
+    background: var(--color-surface-soft);
+    box-shadow: none;
+  }
+
+  .sc-seg--multiplier button {
+    flex: 1;
+    min-height: 72px;
+    border-radius: var(--radius-segment);
+    font-size: 24px;
+  }
+
+  .sc-card-rings {
+    position: absolute;
+    pointer-events: none;
+    opacity: var(--opacity-card-rings);
+    color: var(--color-text);
+  }
+
+  .sc-avatar--current {
+    box-shadow: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--sc-avatar-color), 0 0 24px 2px var(--sc-avatar-color);
+  }
+
+  .sc-player--current {
+    background: linear-gradient(180deg, var(--color-surface-raised) 0%, var(--color-surface) 100%);
+    box-shadow: var(--shadow-card);
+  }
+
+  .sc-player--waiting {
+    background: var(--color-surface-softer);
+    box-shadow: 0 1px 0 var(--color-border) inset;
+  }
+
+  /* Makieta ma tu czerń z kryciem 60%. Najbliższy token to --color-bg. */
+  .sc-player--current .sc-player__value {
+    text-shadow: 0 6px 30px color-mix(in srgb, var(--color-bg) 60%, transparent);
+  }
+
+  .sc-progress {
+    position: relative;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--color-progress-track);
+    overflow: hidden;
+  }
+
+  .sc-progress > span {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--color-text-muted);
+  }
+
+  .sc-progress--current > span {
+    background: var(--color-accent);
+    box-shadow: 0 0 10px var(--color-accent-glow);
+  }
+
+  .sc-appbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    padding: 0 var(--space-page);
+  }
+
+  .sc-nav {
+    display: flex;
+    gap: var(--space-1);
+    align-self: stretch;
+  }
+
+  .sc-nav a {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  /* bottom: -1px kładzie kreskę na dolnej linii paska. */
+  .sc-nav a[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: -1px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--color-accent);
+    box-shadow: var(--shadow-tab-glow);
+  }
+
+  .sc-clock {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    background: var(--color-surface-soft);
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-text-muted);
+    background: var(--color-surface-softer);
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 15px;
+  }
+
+  .sc-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    min-width: 0;
+    border-radius: var(--radius-card);
+    background: var(--color-surface-softer);
+  }
+
+  .sc-slot--active {
+    box-shadow: var(--shadow-slot-active);
+    color: var(--color-text-sub);
+  }
+
+  .sc-slot--filled {
+    background: var(--color-surface-soft);
+  }
+
+  .sc-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .sc-tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: 8px 12px;
+    border-radius: var(--radius-button);
+    background: var(--color-surface-softer);
+    box-shadow: var(--shadow-inset-line);
+  }
+
+  .sc-checkout {
+    position: relative;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-card);
+    background: linear-gradient(135deg, var(--color-accent-hi) 0%, var(--color-accent) 60%, var(--color-accent-lo) 100%);
+    box-shadow: var(--shadow-checkout);
+    color: var(--color-on-accent);
+    text-align: left;
+  }
+
+  .sc-route-chip {
+    padding: 0 12px;
+    border-radius: var(--radius-chip);
+    background: var(--color-route-chip);
+    color: var(--color-on-accent);
+    white-space: nowrap;
+  }
+
+  .sc-kbd--on-accent {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    padding: 4px 7px;
+    border-radius: 6px;
+    background: var(--color-route-chip);
+    color: var(--color-on-accent);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .sc-key--bull {
+    box-shadow: 0 0 0 2px var(--color-accent) inset, var(--shadow-key);
+  }
+
+  .sc-chip {
+    border-radius: var(--radius-button);
+    background: var(--color-surface-soft);
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-weight: 700;
+  }
+}
+
+/*
+ * Poza warstwami, żeby podczas fokusu wygrywał z utility cieni. Radio i checkbox są pominięte:
+ * aplikacja chowa część z nich i rysuje fokus na sąsiednim elemencie albo etykiecie, więc pierścień by się zdublował.
+ */
+:where(a[href], button, input:not([type="radio"], [type="checkbox"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

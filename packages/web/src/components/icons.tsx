@@ -220,3 +220,29 @@ export function GridIcon({ className }: IconProps) {
     </Svg>
   );
 }
+
+export function ArrowUpIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M12 3l8 8h-5.5v10h-5V11H4z" />
+    </Svg>
+  );
+}
+
+export function ArrowDownIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M12 21l-8-8h5.5V3h5v10H20z" />
+    </Svg>
+  );
+}
+
+export function MoreIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="5" cy="12" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="19" cy="12" r="2" />
+    </Svg>
+  );
+}
