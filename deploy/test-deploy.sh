@@ -142,14 +142,16 @@ INSERT INTO throws (segment) VALUES (20), (5), (1);"
 }
 
 # .backup still copies this database, but the copy fails integrity_check.
+# Some builds of the sqlite3 shell, such as Ubuntu's, start in defensive mode,
+# which forbids writing the schema.
 corrupt_db() {
   rm -f -- "$db"
-  sqlite3 "$db" "CREATE TABLE t (x, y);
+  sqlite3 -cmd '.dbconfig defensive off' "$db" "CREATE TABLE t (x, y);
 CREATE INDEX i ON t (x);
 WITH RECURSIVE n (v) AS (SELECT 1 UNION ALL SELECT v + 1 FROM n WHERE v < 300)
 INSERT INTO t SELECT v, 300 - v FROM n;
 PRAGMA writable_schema = ON;
-UPDATE sqlite_schema SET sql = 'CREATE INDEX i ON t (y)' WHERE name = 'i';"
+UPDATE sqlite_schema SET sql = 'CREATE INDEX i ON t (y)' WHERE name = 'i';" > /dev/null
 }
 
 run_deploy() {
