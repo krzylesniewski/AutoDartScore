@@ -27,7 +27,7 @@ function isValidAuth(data: unknown, auth: AuthConfig, nowMs: number): boolean {
     return false;
   }
   const parsed = LiveAuthMessage.safeParse(message);
-  return parsed.success && verifyToken(auth.tokenSecret, parsed.data.token, nowMs);
+  return parsed.success && verifyToken(auth, parsed.data.token, nowMs);
 }
 
 export function liveRoutes(

@@ -24,6 +24,7 @@ export interface AppOptions {
   readonly db: Kysely<Database>;
   readonly random?: () => number; // losowanie, kto zaczyna, i ziarna celów treningu checkoutów. Domyślnie Math.random
   readonly logger?: boolean;
+  readonly trustProxy?: boolean; // adres klienta z X-Forwarded-For, tylko za reverse proxy. Domyślnie false
   readonly auth: AuthConfig | null;
   readonly corsOrigins?: readonly string[] | null;
   readonly now?: () => number; // zegar dla tokenów, limitu logowań, blokady zakończonej gry i okresu statystyk. Domyślnie Date.now
@@ -36,7 +37,7 @@ export interface AppOptions {
 }
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({ logger: options.logger ?? false, trustProxy: options.trustProxy ?? false });
   const webDir = options.webDir ?? null;
   const webRoutes = new Set<string>();
   const apiSegments = new Set<string>();

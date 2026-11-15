@@ -47,7 +47,7 @@ export async function registerAccessControl(app: FastifyInstance, { auth, corsOr
       return;
     }
     const token = bearerToken(request);
-    if (token === null || !verifyToken(auth.tokenSecret, token, now())) {
+    if (token === null || !verifyToken(auth, token, now())) {
       throw unauthorized();
     }
   });
