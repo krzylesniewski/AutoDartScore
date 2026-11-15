@@ -23,7 +23,7 @@ interface Client {
 
 const auth = { password: 'tajne', tokenSecret: 's'.repeat(32) };
 const now = Date.parse('2026-10-20T18:00:00.000Z');
-const token = createToken(auth.tokenSecret, now + 60_000);
+const token = createToken(auth, now + 60_000);
 
 let t: TestApp | null = null;
 const sockets: TestSocket[] = [];

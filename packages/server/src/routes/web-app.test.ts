@@ -48,7 +48,7 @@ async function withFront(): Promise<TestApp> {
 }
 
 function bearer(): { authorization: string } {
-  return { authorization: `Bearer ${createToken(tokenSecret, now + 1000)}` };
+  return { authorization: `Bearer ${createToken({ password, tokenSecret }, now + 1000)}` };
 }
 
 function errorCode(response: { json(): unknown }): string {

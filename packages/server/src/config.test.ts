@@ -24,6 +24,7 @@ describe('loadConfig', () => {
       corsOrigins: null,
       webDir: null,
       matchLockMinutes: 5,
+      trustProxy: false,
     });
   });
 
@@ -36,6 +37,7 @@ describe('loadConfig', () => {
       corsOrigins: null,
       webDir: null,
       matchLockMinutes: 5,
+      trustProxy: false,
     });
   });
 
@@ -161,5 +163,19 @@ describe('loadConfig match lock', () => {
 
   it.each(['abc', '-1', '2.5', ' 5', '525601'])('rejects %j', (value) => {
     expect(() => loadConfig({ ...off, AUTOSCORE_MATCH_LOCK_MINUTES: value })).toThrow(`Invalid AUTOSCORE_MATCH_LOCK_MINUTES: ${value}`);
+  });
+});
+
+describe('loadConfig trust proxy', () => {
+  it.each(['on', ' on '])('trusts the proxy for %j', (value) => {
+    expect(loadConfig({ ...off, AUTOSCORE_TRUST_PROXY: value }).trustProxy).toBe(true);
+  });
+
+  it.each([{}, { AUTOSCORE_TRUST_PROXY: '' }, { AUTOSCORE_TRUST_PROXY: ' ' }, { AUTOSCORE_TRUST_PROXY: 'off' }])('ignores the proxy for %j', (env) => {
+    expect(loadConfig({ ...off, ...env }).trustProxy).toBe(false);
+  });
+
+  it.each(['ON', 'true', '1', 'yes'])('rejects %j', (value) => {
+    expect(() => loadConfig({ ...off, AUTOSCORE_TRUST_PROXY: value })).toThrow(`Invalid AUTOSCORE_TRUST_PROXY: ${value}`);
   });
 });

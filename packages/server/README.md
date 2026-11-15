@@ -25,8 +25,9 @@ Serwer może działać w internecie za jednym wspólnym hasłem. Hasło jest dom
 | `AUTOSCORE_PASSWORD` | brak | Wspólne hasło. Przy `AUTOSCORE_AUTH=on` brak hasła albo pusta wartość zatrzymuje start błędem `Missing AUTOSCORE_PASSWORD`, a hasło przykładowe z `deploy/autoscore.env.example` (także ze spacjami wokół) błędem `Invalid AUTOSCORE_PASSWORD`. Przy `AUTOSCORE_AUTH=off` musi być puste, a `AUTOSCORE_TOKEN_SECRET` jest wtedy pomijany. |
 | `AUTOSCORE_TOKEN_SECRET` | brak | Klucz do podpisu tokenów, co najmniej 32 znaki. Wymagany, gdy hasło jest ustawione. Bez niego serwer nie wstaje (`Missing AUTOSCORE_TOKEN_SECRET`), a za krótki daje `Invalid AUTOSCORE_TOKEN_SECRET`. |
 | `AUTOSCORE_CORS_ORIGIN` | brak (wyłączone) | Lista originów frontu po przecinku, np. `https://front.example,http://localhost:5173`. Spacje i puste wpisy są pomijane. |
+| `AUTOSCORE_TRUST_PROXY` | `off` | `on` bierze adres klienta z nagłówka `X-Forwarded-For`. Ustaw `on` tylko za reverse proxy, inaczej zostaw `off`. Pusta wartość znaczy `off`, a każda inna niż `on` i `off` zatrzymuje start błędem `Invalid AUTOSCORE_TRUST_PROXY`. |
 
-Sekret wygenerujesz przez `openssl rand -hex 32`. Token jest podpisany HMAC-SHA256 i ważny 180 dni. Serwer nie przechowuje tokenów, więc nowy sekret wylogowuje wszystkie urządzenia.
+Sekret wygenerujesz przez `openssl rand -hex 32`. Token jest podpisany HMAC-SHA256 i ważny 30 dni. Klucz podpisu powstaje z sekretu i hasła. Serwer nie przechowuje tokenów, więc nowe hasło albo nowy sekret wylogowuje wszystkie urządzenia. Tokeny wydane przed tą wersją serwer odrzuca, więc każde urządzenie loguje się raz od nowa.
 
 Każdy wpis w `AUTOSCORE_CORS_ORIGIN` musi być samym originem: schemat, host i opcjonalny port, bez ścieżki i bez końcowego ukośnika. `https://front.example/`, `https://front.example/app`, `*` albo `front.example` zatrzymują start błędem `Invalid AUTOSCORE_CORS_ORIGIN`, bo nigdy nie pasowałyby do nagłówka `Origin` z przeglądarki.
 
@@ -34,7 +35,8 @@ Każdy wpis w `AUTOSCORE_CORS_ORIGIN` musi być samym originem: schemat, host i 
 
 - `GET /health` zwraca `{ "status": "ok" }` i nigdy nie wymaga tokenu.
 - `POST /auth/login` z `{ "password": "…" }` zwraca `{ "token": "…", "expiresAt": "…" }`. Trasa istnieje tylko z ustawionym hasłem, inaczej odpowiada 404. Złe hasło daje 401 `invalid_password`, a niepoprawne body 400.
-- Po 10 nieudanych logowaniach w ciągu minuty serwer odpowiada 429 `too_many_attempts` z nagłówkiem `Retry-After` w sekundach, nawet na poprawne hasło. Limit jest wspólny dla całego serwera i trzymany w pamięci.
+- Po 10 nieudanych logowaniach z jednego adresu klienta w ciągu minuty serwer odpowiada temu adresowi 429 `too_many_attempts` z nagłówkiem `Retry-After` w sekundach, nawet na poprawne hasło. Po 100 nieudanych logowaniach w ciągu minuty ze wszystkich adresów razem 429 dostaje każdy klient. Oba limity są trzymane w pamięci, restart je zeruje.
+- Z `AUTOSCORE_TRUST_PROXY=on` adres klienta pochodzi z `X-Forwarded-For`, który klient może podrobić, więc prawdziwą granicą jest limit dla wszystkich adresów.
 - Z ustawionym hasłem każde inne żądanie HTTP, także do nieznanej trasy, wymaga nagłówka `Authorization: Bearer <token>`. Bez niego albo z nieważnym tokenem odpowiedź to 401 `unauthorized`. `OPTIONS` oraz `GET` i `HEAD` do plików frontu (niżej) nie wymagają tokenu, a WebSocket uwierzytelnia się pierwszą wiadomością (niżej).
 - Z ustawionym `AUTOSCORE_CORS_ORIGIN` tylko wymienione originy dostają `Access-Control-Allow-Origin`, także na odpowiedzi 401. Preflight dopuszcza metody `GET`, `HEAD`, `POST` i `PATCH` oraz nagłówki `Authorization` i `Content-Type`.
 

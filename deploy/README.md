@@ -50,7 +50,7 @@ sudo install -m 640 -o root -g autoscore /home/autoscore/app/deploy/autoscore.en
 sudoedit /etc/autoscore/autoscore.env
 ```
 
-Wpisz hasło, sekret i adres aplikacji w `AUTOSCORE_PUBLIC_URL`. `AUTOSCORE_CORS_ORIGIN` zostaw pustą, bo front i API działają pod jednym adresem. Serwer nie wstaje bez hasła, z hasłem przykładowym z pliku wzoru ani z `AUTOSCORE_AUTH=off` razem z hasłem. `AUTOSCORE_AUTH` zostaw na serwerze nieustawioną. Znaczenie zmiennych `AUTOSCORE_*` opisuje [README serwera](../packages/server/README.md), a `PORT`, `HOST` i `DATABASE_PATH` [README w katalogu głównym](../README.md).
+Wpisz hasło, sekret i adres aplikacji w `AUTOSCORE_PUBLIC_URL`. `AUTOSCORE_CORS_ORIGIN` zostaw pustą, bo front i API działają pod jednym adresem. Serwer nie wstaje bez hasła, z hasłem przykładowym z pliku wzoru ani z `AUTOSCORE_AUTH=off` razem z hasłem. `AUTOSCORE_AUTH` zostaw na serwerze nieustawioną. Za reverse proxy hostingu ustaw `AUTOSCORE_TRUST_PROXY=on`, jak we wzorze. Bez tego wszystkie logowania mają jeden adres proxy i działa tylko limit wspólny dla wszystkich klientów. Znaczenie zmiennych `AUTOSCORE_*` opisuje [README serwera](../packages/server/README.md), a `PORT`, `HOST` i `DATABASE_PATH` [README w katalogu głównym](../README.md).
 
 Instalacja usługi i pierwszy start:
 

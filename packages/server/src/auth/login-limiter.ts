@@ -1,34 +1,63 @@
 export interface LoginLimiter {
-  retryAfterMs(): number | null;
-  recordFailure(): void;
+  retryAfterMs(client: string): number | null;
+  recordFailure(client: string): void;
 }
 
 const WINDOW_MS = 60_000;
-const MAX_FAILURES = 10;
+export const MAX_FAILURES_PER_CLIENT = 10;
+export const MAX_FAILURES_GLOBAL = 100;
 
-// Jeden licznik na cały serwer, w pamięci. Restart go zeruje.
+// Limit na klienta sprawia, że jedno urządzenie nie zablokuje logowania wszystkim.
+// Limit globalny zatrzymuje zgadywanie z wielu adresów naraz. Stan jest w pamięci, restart go zeruje.
 export function createLoginLimiter(now: () => number): LoginLimiter {
-  let failures: number[] = [];
+  let global: number[] = [];
+  const perClient = new Map<string, number[]>();
 
+  function recent(failures: readonly number[], at: number): number[] {
+    return failures.filter((failedAt) => at - failedAt < WINDOW_MS);
+  }
+
+  // Czyścimy wszystkie listy, nie tylko listę wołającego, żeby mapa nie trzymała adresów, które już nie wracają.
   function prune(at: number): void {
-    failures = failures.filter((failedAt) => at - failedAt < WINDOW_MS);
+    global = recent(global, at);
+    for (const [client, failures] of perClient) {
+      const kept = recent(failures, at);
+      if (kept.length === 0) {
+        perClient.delete(client);
+      } else {
+        perClient.set(client, kept);
+      }
+    }
+  }
+
+  function waitMs(failures: readonly number[], max: number, at: number): number | null {
+    const oldest = failures[0];
+    if (failures.length < max || oldest === undefined) {
+      return null;
+    }
+    return oldest + WINDOW_MS - at;
   }
 
   return {
-    retryAfterMs() {
+    retryAfterMs(client) {
       const at = now();
       prune(at);
-      const oldest = failures[0];
-      if (failures.length < MAX_FAILURES || oldest === undefined) {
-        return null;
-      }
-      return oldest + WINDOW_MS - at;
+      const waits = [waitMs(perClient.get(client) ?? [], MAX_FAILURES_PER_CLIENT, at), waitMs(global, MAX_FAILURES_GLOBAL, at)].filter(
+        (ms) => ms !== null,
+      );
+      return waits.length === 0 ? null : Math.max(...waits);
     },
 
-    recordFailure() {
+    recordFailure(client) {
       const at = now();
       prune(at);
-      failures.push(at);
+      global.push(at);
+      const failures = perClient.get(client);
+      if (failures === undefined) {
+        perClient.set(client, [at]);
+      } else {
+        failures.push(at);
+      }
     },
   };
 }

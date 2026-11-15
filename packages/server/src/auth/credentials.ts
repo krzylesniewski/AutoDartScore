@@ -1,19 +1,26 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import type { AuthConfig } from '../config.js';
 
-export const TOKEN_TTL_MS = 180 * 24 * 60 * 60 * 1000;
+export const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 
-function sign(secret: string, payload: string): string {
-  return createHmac('sha256', secret).update(payload).digest('base64url');
+// Klucz zależy też od hasła, więc nowe hasło unieważnia wszystkie wydane tokeny.
+function signingKey(auth: AuthConfig): Buffer {
+  const passwordDigest = createHash('sha256').update(auth.password).digest();
+  return createHmac('sha256', auth.tokenSecret).update(passwordDigest).digest();
 }
 
-export function createToken(secret: string, expiresAtMs: number): string {
+function sign(auth: AuthConfig, payload: string): string {
+  return createHmac('sha256', signingKey(auth)).update(payload).digest('base64url');
+}
+
+export function createToken(auth: AuthConfig, expiresAtMs: number): string {
   const payload = `${VERSION}.${expiresAtMs}`;
-  return `${payload}.${sign(secret, payload)}`;
+  return `${payload}.${sign(auth, payload)}`;
 }
 
-export function verifyToken(secret: string, token: string, nowMs: number): boolean {
+export function verifyToken(auth: AuthConfig, token: string, nowMs: number): boolean {
   const parts = token.split('.');
   if (parts.length !== 3) {
     return false;
@@ -28,7 +35,7 @@ export function verifyToken(secret: string, token: string, nowMs: number): boole
   }
   // Porównujemy napisy, a nie zdekodowane bajty, bo Node dekoduje base64url pobłażliwie i przyjąłby zmieniony podpis.
   const given = Buffer.from(signature);
-  const expected = Buffer.from(sign(secret, `${version}.${expiry}`));
+  const expected = Buffer.from(sign(auth, `${version}.${expiry}`));
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
     return false;
   }

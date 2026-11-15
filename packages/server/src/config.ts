@@ -13,6 +13,7 @@ export interface ServerConfig {
   readonly corsOrigins: readonly string[] | null;
   readonly webDir: string | null;
   readonly matchLockMinutes: number;
+  readonly trustProxy: boolean;
 }
 
 type AuthMode = 'on' | 'off';
@@ -33,6 +34,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     corsOrigins: parseCorsOrigins(env.AUTOSCORE_CORS_ORIGIN),
     webDir: parseWebDir(env.AUTOSCORE_WEB_DIR),
     matchLockMinutes: parseMatchLockMinutes(env.AUTOSCORE_MATCH_LOCK_MINUTES),
+    trustProxy: parseTrustProxy(env.AUTOSCORE_TRUST_PROXY),
   };
 }
 
@@ -73,6 +75,17 @@ function parseAuthMode(value: string | undefined): AuthMode {
     return 'off';
   }
   throw new Error(`Invalid AUTOSCORE_AUTH: ${mode}`);
+}
+
+function parseTrustProxy(value: string | undefined): boolean {
+  const mode = (value ?? '').trim();
+  if (mode === '' || mode === 'off') {
+    return false;
+  }
+  if (mode === 'on') {
+    return true;
+  }
+  throw new Error(`Invalid AUTOSCORE_TRUST_PROXY: ${mode}`);
 }
 
 // Komunikaty błędów nie zawierają hasła ani sekretu, bo trafiają do logów.

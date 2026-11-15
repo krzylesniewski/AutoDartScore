@@ -99,7 +99,7 @@ describe('GET /players/:id/frequent-hits with a password', () => {
   });
 
   it('answers 401 without a token and 200 with one', async () => {
-    const authorization = `Bearer ${createToken(tokenSecret, now + TOKEN_TTL_MS)}`;
+    const authorization = `Bearer ${createToken({ password: 'tajne hasło', tokenSecret }, now + TOKEN_TTL_MS)}`;
     const created = await secured.app.inject({ method: 'POST', url: '/players', payload: { name: 'Anna' }, headers: { authorization } });
     expect(created.statusCode).toBe(201);
     const url = `/players/${created.json().id}/frequent-hits`;

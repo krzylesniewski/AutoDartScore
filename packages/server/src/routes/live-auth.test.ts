@@ -23,7 +23,7 @@ interface Client {
 
 const auth = { password: 'tajne', tokenSecret: 's'.repeat(32) };
 const now = Date.parse('2026-10-20T18:00:00.000Z');
-const token = createToken(auth.tokenSecret, now + 60_000);
+const token = createToken(auth, now + 60_000);
 const front = 'https://front.example';
 
 let t: TestApp | null = null;
@@ -89,7 +89,8 @@ describe('live WebSocket with a password', () => {
     ['invalid JSON', 'not json'],
     ['a non-auth message', JSON.stringify({ type: 'subscribe', token })],
     ['a bad token', JSON.stringify({ type: 'auth', token: `${token}x` })],
-    ['an expired token', JSON.stringify({ type: 'auth', token: createToken(auth.tokenSecret, now) })],
+    ['an expired token', JSON.stringify({ type: 'auth', token: createToken(auth, now) })],
+    ['a token signed for another password', JSON.stringify({ type: 'auth', token: createToken({ ...auth, password: 'stare' }, now + 60_000) })],
   ])('closes with 4401 after %s', async (_name, message) => {
     const { app } = await start({ auth });
     const client = await connect(app, `/matches/${await createMatch(app)}/live`);
