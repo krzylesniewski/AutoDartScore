@@ -1,5 +1,5 @@
 import { isGameFinished, type GameState } from '@autoscore/engine';
-import type { DomainEvent, FrequentHitsResponse, HeadToHead, Hit, LegProgress, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsRankings } from '@autoscore/schema';
+import type { DomainEvent, FrequentHitsResponse, HeadToHead, Hit, LegProgress, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsPeriod, StatsRankings } from '@autoscore/schema';
 import { HttpError, notFound } from './errors.js';
 import { closedPauses, effectiveCheckoutSteps, effectiveThrows, lastActivityAt, lastSeq, replayMatch } from './replay.js';
 import { checkoutSession } from './snapshot.js';
@@ -10,22 +10,24 @@ import { buildHeadToHead, type HeadToHeadGame } from './stats/head-to-head.js';
 import { legDurations } from './stats/leg-durations.js';
 import { buildLegProgress } from './stats/leg-progress.js';
 import { buildOverall } from './stats/overall.js';
+import { periodStart } from './stats/period.js';
 import { buildRankings, type RankedGame } from './stats/rankings.js';
 import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine } from './stats/tally.js';
 import type { Store, StoredMatch } from './store/store.js';
 
 export interface StatsService {
-  playerStats(playerId: string, filter: StatsFilter): Promise<PlayerStats>;
+  playerStats(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<PlayerStats>;
   matchSummary(matchId: string): Promise<MatchSummary>;
-  rankings(filter: StatsFilter): Promise<StatsRankings>;
-  overall(): Promise<StatsOverall>;
-  headToHead(playerId: string, opponentId: string): Promise<HeadToHead>;
-  playerForm(playerId: string, filter: StatsFilter): Promise<PlayerForm>;
+  rankings(filter: StatsFilter, period: StatsPeriod): Promise<StatsRankings>;
+  overall(period: StatsPeriod): Promise<StatsOverall>;
+  headToHead(playerId: string, opponentId: string, period: StatsPeriod): Promise<HeadToHead>;
+  playerForm(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<PlayerForm>;
   frequentHits(playerId: string): Promise<FrequentHitsResponse>;
 }
 
 interface Dependencies {
   readonly store: Store;
+  readonly now: () => number; // zegar serwera, od którego liczy się okres statystyk
 }
 
 const FILTER_TYPES: Record<StatsFilter, readonly MatchType[]> = {
@@ -48,7 +50,7 @@ function lastLegProgress(game: GameState, playerIds: readonly string[], events: 
 }
 
 // Bez kolejki gry, jak GET /matches/:id: tylko czyta log i odtwarza go w silniku.
-export function createStatsService({ store }: Dependencies): StatsService {
+export function createStatsService({ store, now }: Dependencies): StatsService {
   async function replayed(match: StoredMatch) {
     const log = await store.loadLog(match.id);
     const throws = effectiveThrows(log);
@@ -75,9 +77,11 @@ export function createStatsService({ store }: Dependencies): StatsService {
   }
 
   // Gry gracza, które wchodzą do statystyk, w kolejności utworzenia.
-  async function statsGames(playerId: string, filter: StatsFilter): Promise<StoredMatch[]> {
+  // Okres filtruje już zapytanie, więc starsze gry nie są wczytywane ani odtwarzane.
+  async function statsGames(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<StoredMatch[]> {
     const matches = [];
-    for (const matchId of await store.findMatchIdsForPlayer(playerId, FILTER_TYPES[filter])) {
+    const createdFrom = periodStart(period, now());
+    for (const matchId of await store.findMatchIdsForPlayer(playerId, FILTER_TYPES[filter], { createdFrom })) {
       const match = await store.findMatch(matchId);
       if (match) {
         matches.push(match);
@@ -87,10 +91,11 @@ export function createStatsService({ store }: Dependencies): StatsService {
   }
 
   // Gry wszystkich graczy liczone do statystyk, w przeciwieństwie do statsGames dla jednego gracza.
-  async function rankedGames(filter: StatsFilter): Promise<RankedGame[]> {
+  async function rankedGames(filter: StatsFilter, period: StatsPeriod): Promise<RankedGame[]> {
     const types = FILTER_TYPES[filter];
     const games: RankedGame[] = [];
-    for (const match of await store.listMatches()) {
+    const createdFrom = periodStart(period, now());
+    for (const match of await store.listMatches({ createdFrom })) {
       if (!match.countsToStats || !types.includes(match.type)) {
         continue;
       }
@@ -101,14 +106,14 @@ export function createStatsService({ store }: Dependencies): StatsService {
   }
 
   return {
-    async playerStats(playerId, filter) {
+    async playerStats(playerId, filter, period) {
       await requirePlayer(playerId);
       let totals = EMPTY_TOTALS;
       let legPoints = 0;
       let legDarts = 0;
       let matchesPlayed = 0;
       let matchesWon = 0;
-      for (const match of await statsGames(playerId, filter)) {
+      for (const match of await statsGames(playerId, filter, period)) {
         const { finished, playerIds, events, tally } = await replayed(match);
         totals = mergeTotals(totals, tally.players.get(playerId) ?? EMPTY_TOTALS);
         for (const leg of completedPlayerLegs(match.type, playerIds, events)) {
@@ -124,7 +129,7 @@ export function createStatsService({ store }: Dependencies): StatsService {
           matchesWon += tally.winnerId === playerId ? 1 : 0;
         }
       }
-      return { ...toStatLine(totals), average: threeDartAverage(legPoints, legDarts), playerId, filter, matchesPlayed, matchesWon };
+      return { ...toStatLine(totals), average: threeDartAverage(legPoints, legDarts), playerId, filter, period, matchesPlayed, matchesWon };
     },
 
     async matchSummary(matchId) {
@@ -152,16 +157,16 @@ export function createStatsService({ store }: Dependencies): StatsService {
       };
     },
 
-    async rankings(filter) {
+    async rankings(filter, period) {
       // Zarchiwizowany gracz zostaje w rankingu. Ukrywa go tylko wybór graczy do nowej gry.
-      return { filter, ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames(filter) }) };
+      return { filter, period, ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames(filter, period) }) };
     },
 
-    async overall() {
-      return buildOverall({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames('all') });
+    async overall(period) {
+      return { period, ...buildOverall({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames('all', period) }) };
     },
 
-    async headToHead(playerId, opponentId) {
+    async headToHead(playerId, opponentId, period) {
       if (playerId === opponentId) {
         throw new HttpError(400, 'invalid_request', 'Head-to-head needs two different players');
       }
@@ -169,7 +174,7 @@ export function createStatsService({ store }: Dependencies): StatsService {
       await requirePlayer(opponentId);
       const games: HeadToHeadGame[] = [];
       const playedAt: string[] = [];
-      for (const match of await statsGames(playerId, 'match')) {
+      for (const match of await statsGames(playerId, 'match', period)) {
         if (!match.players.some((player) => player.id === opponentId)) {
           continue;
         }
@@ -182,24 +187,24 @@ export function createStatsService({ store }: Dependencies): StatsService {
         playedAt.push(lastActivityAt);
       }
       // Daty ISO w UTC porównują się jak tekst.
-      return { ...buildHeadToHead({ playerId, opponentId, games }), lastPlayedAt: playedAt.sort().at(-1) ?? null };
+      return { ...buildHeadToHead({ playerId, opponentId, games }), period, lastPlayedAt: playedAt.sort().at(-1) ?? null };
     },
 
-    async playerForm(playerId, filter) {
+    async playerForm(playerId, filter, period) {
       await requirePlayer(playerId);
       const games: FormGame[] = [];
-      for (const match of await statsGames(playerId, filter)) {
+      for (const match of await statsGames(playerId, filter, period)) {
         const { playerIds, events } = await replayed(match);
         const legs = completedPlayerLegs(match.type, playerIds, events).filter((leg) => leg.playerId === playerId);
         games.push({ matchId: match.id, type: match.type, createdAt: match.createdAt, legs });
       }
-      return { playerId, filter, points: buildForm(games) };
+      return { playerId, filter, period, points: buildForm(games) };
     },
 
     async frequentHits(playerId) {
       await requirePlayer(playerId);
       const darts: Hit[] = [];
-      for (const match of await statsGames(playerId, 'all')) {
+      for (const match of await statsGames(playerId, 'all', 'all')) {
         const { events } = await replayed(match);
         for (const event of events) {
           // Jak reszta statystyk liczy tylko zamknięte tury. Zwycięska tura też ma turn_completed.

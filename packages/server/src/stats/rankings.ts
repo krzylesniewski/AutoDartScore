@@ -46,7 +46,7 @@ function top(candidates: readonly Candidate[], order: 'asc' | 'desc'): RankingEn
     .map(({ player, value, position }) => ({ playerId: player.id, name: player.name, avatar: player.avatar, color: player.color, position, value }));
 }
 
-export function buildRankings({ players, games }: RankingsInput): Omit<StatsRankings, 'filter'> {
+export function buildRankings({ players, games }: RankingsInput): Omit<StatsRankings, 'filter' | 'period'> {
   const legs = new Map<string, { points: number; darts: number; legs: number; bestLeg: number }>();
   const totals = new Map<string, PlayerTotals>();
   const highestTurns = new Map<string, number>();

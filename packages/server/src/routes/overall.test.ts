@@ -31,13 +31,14 @@ async function playLeg301(playerIds: readonly string[] = [anna, bartek]): Promis
 
 describe('GET /stats/overall', () => {
   it('answers zeros and an empty list for an empty database', async () => {
-    expect(await overall()).toEqual({ games: 0, legs: 0, darts: 0, average: null, players: [] });
+    expect(await overall()).toEqual({ period: 'all', games: 0, legs: 0, darts: 0, average: null, players: [] });
   });
 
   it('takes the mean of the player averages, not the average of all darts', async () => {
     await playLeg301();
     // Ze wszystkich 9 rzutek średnia wyniosłaby 100,33.
     expect(await overall()).toEqual({
+      period: 'all',
       games: 1,
       legs: 1,
       darts: 9,
@@ -74,6 +75,7 @@ describe('GET /stats/overall', () => {
     expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
 
     expect(await overall()).toEqual({
+      period: 'all',
       games: 1,
       legs: 1,
       darts: 20,
@@ -108,6 +110,7 @@ describe('GET /stats/overall', () => {
     expect((await patchPlayer(t.app, anna, { archived: true })).statusCode).toBe(200);
 
     expect(await overall()).toEqual({
+      period: 'all',
       games: 1,
       legs: 1,
       darts: 3,

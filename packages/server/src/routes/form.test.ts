@@ -44,13 +44,14 @@ describe('GET /players/:id/form', () => {
     expect(await form(anna)).toEqual({
       playerId: anna,
       filter: 'all',
+      period: 'all',
       points: [
         { matchId: first.id, type: 'match', createdAt: '2026-10-18T10:01:00.000Z', average: 150.5, legs: 1 },
         { matchId: solo.id, type: 'practice', createdAt: '2026-10-18T10:04:00.000Z', average: 167, legs: 1 },
       ],
     });
     expect((await form(anna, 'match')).points.map((point) => point.matchId)).toEqual([first.id]);
-    expect(await form(bartek, 'practice')).toEqual({ playerId: bartek, filter: 'practice', points: [] });
+    expect(await form(bartek, 'practice')).toEqual({ playerId: bartek, filter: 'practice', period: 'all', points: [] });
   });
 
   it('answers 404 for an unknown player', async () => {
