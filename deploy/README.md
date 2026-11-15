@@ -6,7 +6,9 @@ Ten katalog uruchamia aplikację jako usługę systemd na małym serwerze z Ubun
 - `autoscore.env.example`: wzór pliku ze zmiennymi serwera.
 - `deploy.sh`: wdraża jeden commit z `main`, buduje front, robi kopię bazy, sprawdza `/health` i wycofuje zmianę, gdy coś pójdzie nie tak.
 - `backup.sh`: codzienna kopia bazy, zostaje 14 najnowszych.
-- `pull-backup.sh`: kopiuje najnowszą kopię z serwera na Maca.
+- `pull-backup.sh`: kopiuje najnowszą kopię z serwera na Maca, trzyma 30 najnowszych kopii lokalnie i kończy się błędem, gdy najnowsza kopia na serwerze ma więcej niż 48 h.
+- `pl.autoscore.pull-backup.plist`: wzór zadania `launchd`, które codziennie uruchamia `pull-backup.sh` na Macu (patrz [Kopie na Macu](#kopie-na-macu)).
+- `test-pull-backup.sh`: próba `pull-backup.sh` z atrapami `ssh` i `scp`, bez serwera.
 - `migrate-db.sh`: jednorazowe przeniesienie lokalnej bazy na serwer. `test-migrate-db.sh` sprawdza go na bazach tymczasowych.
 - `test-deploy.sh`: próba `deploy.sh` i rollbacku na tymczasowym klonie, bez serwera (patrz [Testy skryptów](#testy-skryptów)).
 
@@ -89,6 +91,59 @@ Kopie trafiają do `/home/autoscore/backups/daily`. Każda przechodzi `PRAGMA in
 
 ```sh
 deploy/pull-backup.sh --ssh <użytkownik>@<host> --port <port> --local-dir <katalog-na-kopie>
+```
+
+Codzienne pobieranie na Maca opisuje sekcja [Kopie na Macu](#kopie-na-macu).
+
+## Kopie na Macu
+
+`pull-backup.sh` pobiera najnowszą kopię z serwera, sprawdza ją przez `PRAGMA integrity_check` i dopiero wtedy zapisuje pod docelową nazwą. Po każdej nowej, poprawnej kopii zostawia lokalnie najnowsze kopie, domyślnie 30. Liczbę zmienisz opcją `--keep <n>` albo zmienną `AUTOSCORE_LOCAL_BACKUP_KEEP`. Na koniec sprawdza wiek najnowszej kopii na serwerze. Gdy ma więcej niż 48 h, cron na serwerze najpewniej przestał działać i skrypt kończy się kodem 3, także gdy ten plik był już pobrany wcześniej.
+
+| Kod | Znaczenie |
+|---|---|
+| 0 | Kopia pobrana albo już była lokalnie, najnowsza kopia na serwerze ma najwyżej 48 h. |
+| 1 | Złe opcje (także `--keep`, które nie jest dodatnią liczbą całkowitą), błąd `ssh` albo `scp`, brak kopii na serwerze albo nieoczekiwana nazwa pliku. |
+| 2 | Pobrany plik nie przeszedł `PRAGMA integrity_check` albo nie jest bazą. Nic nie zostaje zapisane ani usunięte. |
+| 3 | Najnowsza kopia na serwerze ma więcej niż 48 h. Nowa, poprawna kopia i tak zostaje zapisana. |
+
+Zadanie działa bez człowieka, więc `ssh` i `scp` działają w trybie `BatchMode`. Klucz SSH musi działać bez pytania o hasło, a serwer musi już być w `known_hosts`. Do `known_hosts` trafi po jednym ręcznym połączeniu. Klucz wdrożeniowy tu nie zadziała. Wystarczy zwykłe konto bez roota w grupie `autoscore`, bo skrypt tylko czyta kopie.
+
+Instalacja:
+
+1. Skopiuj wzór do `~/Library/LaunchAgents/`:
+
+   ```sh
+   cp deploy/pl.autoscore.pull-backup.plist ~/Library/LaunchAgents/
+   ```
+
+2. W skopiowanym pliku zamień znaczniki na wartości. `launchd` nie rozwija `~` ani zmiennych, więc ścieżki muszą być bezwzględne.
+   - `__REPO_DIR__`: katalog repo.
+   - `__LOG_FILE__`: plik logu, na przykład w `~/Library/Logs/` zapisany pełną ścieżką.
+   - `__SSH_TARGET__`: `<użytkownik>@<host>`.
+   - `__SSH_PORT__`: `<port>`.
+   - `__LOCAL_DIR__`: katalog na kopie.
+
+3. Załaduj zadanie:
+
+   ```sh
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/pl.autoscore.pull-backup.plist
+   ```
+
+Zadanie rusza codziennie o 9:00 czasu Maca. Kopia na serwerze powstaje o 3:15 czasu serwera. Gdy Mac śpi o 9:00, `launchd` uruchamia zadanie raz po wybudzeniu. Gdy Mac jest wtedy wyłączony, ten dzień przepada. Limit 48 h przepuszcza jeden pominięty dzień.
+
+Sprawdzenie, czy działa:
+
+```sh
+launchctl kickstart -k gui/$(id -u)/pl.autoscore.pull-backup
+launchctl print gui/$(id -u)/pl.autoscore.pull-backup
+```
+
+W wyniku `launchctl print` szukaj `last exit code`, a szczegóły znajdziesz w pliku logu. Każde uruchomienie zaczyna się w nim linią `pull-backup <czas UTC>`.
+
+Usunięcie:
+
+```sh
+launchctl bootout gui/$(id -u)/pl.autoscore.pull-backup
 ```
 
 ## Klucz wdrożeniowy
@@ -230,10 +285,12 @@ Przy kodach 2 i 3 skrypt wypisuje ostatnie 50 linii `journalctl -u autoscore`.
 
 ## Testy skryptów
 
-Job `deploy-scripts` w CI uruchamia `shellcheck -x deploy/*.sh`, `bash deploy/test-migrate-db.sh` i `bash deploy/test-deploy.sh`. Lokalnie, z katalogu głównego repo:
+Job `deploy-scripts` w CI uruchamia `shellcheck -x deploy/*.sh`, `bash deploy/test-migrate-db.sh`, `bash deploy/test-deploy.sh` i `bash deploy/test-pull-backup.sh`. Lokalnie, z katalogu głównego repo:
 
 ```sh
 bash deploy/test-deploy.sh
 ```
 
 Test potrzebuje tylko `git` i `sqlite3`. Uruchamia `deploy.sh` na tymczasowym klonie z atrapami `systemctl`, `sudo`, `curl` i `pnpm`, więc nie dotyka usługi ani sieci. Sprawdza udane wdrożenie, nieudany build, nieudany start, uszkodzoną bazę i nieudany rollback.
+
+`bash deploy/test-pull-backup.sh` potrzebuje tylko `sqlite3` i `python3`. Udaje serwer lokalnym katalogiem z atrapami `ssh` i `scp`. Sprawdza kody wyjścia i pliki lokalne przy świeżej, starej, uszkodzonej i niebędącej bazą kopii, przycinanie przez `--keep`, błąd `ssh` oraz wzór `launchd`.
