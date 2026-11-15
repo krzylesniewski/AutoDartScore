@@ -1,7 +1,5 @@
 import { hitPoints, type GameState } from '@autoscore/engine';
-import type { DomainEvent, Hit, LegTurn } from '@autoscore/schema';
-
-export const DARTS_PER_TURN = 3;
+import { DARTS_PER_TURN, type DomainEvent, type Hit, type LegTurn } from '@autoscore/schema';
 
 // Nowe obiekty rzutek, bo wywołujący podaje rekordy rzutek, a ich identyfikatory i czasy nie należą do stanu gry.
 function plain(darts: readonly Hit[]): Hit[] {

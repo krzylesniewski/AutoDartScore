@@ -71,6 +71,18 @@ describe('createX01Match', () => {
   it('rejects a non-positive legsToWin', () => {
     expectEngineError(() => createX01Match({ ...config, legsToWin: 0 }), 'invalid_config');
   });
+
+  it.each([2, -1, 0.5])('rejects firstPlayerIndex %d', (firstPlayerIndex) => {
+    expectEngineError(() => createX01Match({ ...config, firstPlayerIndex: firstPlayerIndex as unknown as 0 | 1 }), 'invalid_config');
+  });
+
+  it.each([4, 5, 1.5])('rejects legsToWin %d outside best of 1, 3 and 5', (legsToWin) => {
+    expectEngineError(() => createX01Match({ ...config, legsToWin }), 'invalid_config');
+  });
+
+  it.each([1, 2, 3])('accepts legsToWin %d', (legsToWin) => {
+    expect(createX01Match({ ...config, legsToWin }).config.legsToWin).toBe(legsToWin);
+  });
 });
 
 describe('scoring a turn', () => {

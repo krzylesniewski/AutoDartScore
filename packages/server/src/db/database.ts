@@ -21,7 +21,7 @@ export interface MatchesTable {
   counts_to_stats: number;
   checkout_range: string | null; // tylko w treningu checkoutów
   checkout_seed: number | null; // tylko w treningu checkoutów, od 0 do MAX_CHECKOUT_SEED
-  checkout_rule: string | null; // tylko w treningu checkoutów, CheckoutRule z silnika
+  checkout_rule: string | null; // tylko w treningu checkoutów, CheckoutRule z @autoscore/schema
   created_at: string;
 }
 

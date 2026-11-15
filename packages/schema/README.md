@@ -13,9 +13,12 @@ Kontrakt projektu: schematy Zod i typy TypeScript wspólne dla wszystkich pakiet
 
 Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (50 pkt, liczy się jako double), a 25×3 jest odrzucane.
 
-`match.ts`: `MatchType` (`match`, `casual`, `practice`), `PracticeMode` (`free_run`, `solo_501`, `checkouts`), `CheckoutRange` (`2-50`, `51-100`), `CheckoutAttempt` (`{ target, success }`), `StartingScore` (301, 501, 701), `BestOf` (1, 3, 5), `Placement`, `MatchStatus` (`in_progress`, `abandoned`, `ended`, `finished`).
+`match.ts`: `MatchType` (`match`, `casual`, `practice`), `PracticeMode` (`free_run`, `solo_501`, `checkouts`), `CheckoutRange` (`2-50`, `51-100`), `CheckoutRule` (`new_each_attempt`, `repeat_on_miss`), `CheckoutTarget` (2-100), `CheckoutAttempt` (`{ target, success }`), `DARTS_PER_TURN` (3), `StartingScore` (301, 501, 701), `STARTING_SCORES` (te same wartości jako lista), `BestOf` (1, 3, 5), `Placement`, `MatchStatus` (`in_progress`, `abandoned`, `ended`, `finished`).
 
-`player.ts`: `Player`, `CreatePlayerRequest`.
+- `CheckoutRule` to zasada losowania celów w treningu checkoutów. Serwer ją zapisuje, ale nie wysyła w odpowiedziach API.
+- `DARTS_PER_TURN` ogranicza `darts` w `TurnCompleted`, `Bust` i `LegTurn`, `throws` w `RestMissResult` oraz `MatchSnapshot.currentDarts` (do `DARTS_PER_TURN - 1`).
+
+`player.ts`: `PlayerId` (niepusty napis, także w zdarzeniach domenowych, `Placement` i statystykach), `Player`, `CreatePlayerRequest`.
 
 `match-api.ts`: `CreateMatchRequest`, `ThrowRecord`, `MatchSnapshot`, `MatchSnapshotPlayer`, `LegTurn`, `CheckoutSession`, `Abandonment`, `ExpectedSeq`, `CommandRequest`, `AbandonMatchRequest`, `MatchListQuery`, `MatchListItem`, `CheckoutAttemptRequest`, `ThrowResult`, `REST_MISS_SOURCE`, `RestMissRequest`, `RestMissResult`, `UndoResult`, `ApiError`, `STALE_STATE`, `StaleStateError`, `HealthResponse`.
 

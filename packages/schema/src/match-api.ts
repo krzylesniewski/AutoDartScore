@@ -1,10 +1,19 @@
 import { z } from 'zod';
 import { DomainEvent } from './domain-events.js';
 import { Hit, HitSource, Multiplier, Segment } from './hit.js';
-import { BestOf, CheckoutAttempt, CheckoutRange, MatchStatus, MatchType, Placement, PracticeMode, StartingScore } from './match.js';
-import { PlayerColor } from './player.js';
-
-const PlayerId = z.string().min(1);
+import {
+  BestOf,
+  CheckoutAttempt,
+  CheckoutRange,
+  CheckoutTarget,
+  DARTS_PER_TURN,
+  MatchStatus,
+  MatchType,
+  Placement,
+  PracticeMode,
+  StartingScore,
+} from './match.js';
+import { PlayerColor, PlayerId } from './player.js';
 
 function distinct(ids: readonly string[]): boolean {
   return new Set(ids).size === ids.length;
@@ -73,8 +82,6 @@ export const MatchSnapshotPlayer = z.object({
 });
 export type MatchSnapshotPlayer = z.infer<typeof MatchSnapshotPlayer>;
 
-const CheckoutTarget = z.int().min(2).max(100);
-
 // Postęp treningu checkoutów. Ziarno losowania zostaje na serwerze.
 export const CheckoutSession = z
   .object({
@@ -107,7 +114,7 @@ export const LegTurn = z
   .object({
     playerId: PlayerId,
     turnIndex: z.int().min(0), // turnIndex ze zdarzenia silnika. W Free run numer podejścia od 0
-    darts: z.array(Hit).min(1).max(3),
+    darts: z.array(Hit).min(1).max(DARTS_PER_TURN),
     points: z.int().min(0).max(180), // 0 przy buście
     remainingAfter: z.int().min(0).nullable(), // null tylko w Free run. Przy buście wynik sprzed tury
     bust: z.boolean(),
@@ -142,7 +149,7 @@ export const MatchSnapshot = z.object({
   currentPlayerId: PlayerId.nullable(),
   legIndex: z.int().min(0),
   turnIndex: z.int().min(0),
-  currentDarts: z.array(Hit).max(2),
+  currentDarts: z.array(Hit).max(DARTS_PER_TURN - 1),
   legTurns: z.array(LegTurn), // zamknięte tury bieżącego lega w kolejności rzutów. Otwarta tura jest w currentDarts
   players: z.array(MatchSnapshotPlayer).min(1).max(4), // w kolejności playerIds z żądania utworzenia
   winnerId: PlayerId.nullable(),
@@ -228,7 +235,7 @@ export const RestMissRequest = z.object({
 export type RestMissRequest = z.infer<typeof RestMissRequest>;
 
 export const RestMissResult = z.object({
-  throws: z.array(ThrowRecord).max(3), // pusta lista przy ponownym wysłaniu
+  throws: z.array(ThrowRecord).max(DARTS_PER_TURN), // pusta lista przy ponownym wysłaniu
   events: z.array(DomainEvent), // tylko zdarzenia wywołane tymi rzutkami
   state: MatchSnapshot,
 });
