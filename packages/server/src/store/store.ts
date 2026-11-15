@@ -1,7 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import type { Insertable, Kysely, Selectable } from 'kysely';
-import type { CheckoutRule } from '@autoscore/engine';
-import type { CheckoutRange, CreatePlayerRequest, MatchType, Player, PracticeMode, ThrowRecord, UpdatePlayerRequest } from '@autoscore/schema';
+import type {
+  CheckoutRange,
+  CheckoutRule,
+  CreatePlayerRequest,
+  MatchType,
+  Player,
+  PracticeMode,
+  ThrowRecord,
+  UpdatePlayerRequest,
+} from '@autoscore/schema';
 import type { Database, MatchEventsTable, MatchesTable, PlayerChangesTable, PlayersTable, ThrowsTable } from '../db/database.js';
 import { playerNameTaken } from '../errors.js';
 import { defaultPlayerColor } from './player-color.js';
