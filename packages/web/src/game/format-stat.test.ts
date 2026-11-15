@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pl } from '../i18n/pl';
-import { formatAverage, formatBestLeg, formatDecimal, formatDifference, formatDoubles, formatDoublesParts, formatNumber } from './format-stat';
+import { formatAverage, formatBestLeg, formatDecimal, formatDifference, formatDoubles, formatDoublesParts, formatNumber, formatPercent } from './format-stat';
 
 describe('formatDecimal', () => {
   it('renders a decimal comma with the given digits', () => {
@@ -54,6 +54,18 @@ describe('formatNumber', () => {
   it('renders a number or a dash', () => {
     expect(formatNumber(121)).toBe('121');
     expect(formatNumber(null)).toBe('—');
+  });
+});
+
+describe('formatPercent', () => {
+  it('renders one decimal with a comma and a percent sign', () => {
+    expect(formatPercent(0)).toBe('0,0%');
+    expect(formatPercent(66.7)).toBe('66,7%');
+    expect(formatPercent(100)).toBe('100,0%');
+  });
+
+  it('renders a dash for null', () => {
+    expect(formatPercent(null)).toBe('—');
   });
 });
 

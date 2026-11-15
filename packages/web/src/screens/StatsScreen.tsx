@@ -10,7 +10,7 @@ import { OverallBoard } from '../components/OverallBoard';
 import { PlayerProfile } from '../components/PlayerProfile';
 import { RankingBoard } from '../components/RankingBoard';
 import { WarningIcon } from '../components/icons';
-import { formatAverage, formatBestLeg, formatDoublesParts, formatNumber } from '../game/format-stat';
+import { formatAverage, formatBestLeg, formatDoublesParts, formatNumber, formatPercent } from '../game/format-stat';
 import { pl } from '../i18n/pl';
 
 const RANKING_HREF = '#/stats';
@@ -62,11 +62,13 @@ function statItems(stats: PlayerStats): { term: string; value: string; detail?: 
     { term: pl.stat140, value: String(stats.scores140) },
     { term: pl.stat100, value: String(stats.scores100) },
     { term: pl.stat60, value: String(stats.scores60) },
+    { term: pl.statT20Hits, value: String(stats.t20Hits) },
     { term: pl.statHighestCheckout, value: formatNumber(stats.highestCheckout) },
     { term: pl.statDoubles, value: doubles.value, ...(doubles.detail === null ? {} : { detail: doubles.detail }) },
     { term: pl.statBestLeg, value: formatBestLeg(stats.bestLegDarts) },
     { term: pl.statLegsWon, value: String(stats.legsWon) },
     { term: pl.statMatchesWon, value: `${stats.matchesWon}/${stats.matchesPlayed}` },
+    { term: pl.statWinRate, value: formatPercent(stats.winRate) },
   ];
 }
 

@@ -210,11 +210,12 @@ describe('StatsScreen: ranking', () => {
     expect(within(list).getByText('Średnia od 3 ukończonych legów.')).toBeTruthy();
   });
 
-  it('shows exactly 4 top 5 tiles and no doubles tile', async () => {
+  it('shows exactly 6 top 5 tiles and no doubles tile', async () => {
     render(<StatsScreen playerId={null} />);
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
-    const tiles = ['Rekordowy leg (średnia)', 'Najwyższe zamknięcie', 'Najkrótszy leg', 'Najwyższa tura'];
-    expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label')).filter(Boolean)).toEqual(tiles);
+    const tiles = ['Win rate', 'Rekordowy leg (średnia)', 'Najwyższe zamknięcie', 'Najkrótszy leg', 'Najwyższa tura', 'Trafienia T20'];
+    const records = screen.getByRole('region', { name: 'Rekordy' });
+    expect(within(records).getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual(tiles);
     expect(screen.queryByText('% doubli')).toBeNull();
     expect(within(tile('Rekordowy leg (średnia)')).getByText('3 rzutki')).toBeTruthy();
     expect(rows(tile('Rekordowy leg (średnia)'))).toEqual(['1.AAnna98,33', '2.🎯Bartek86,50', '3.CCelina74,20']);
@@ -222,6 +223,30 @@ describe('StatsScreen: ranking', () => {
     expect(rows(tile('Najwyższe zamknięcie'))).toEqual(['1.🎯Bartek121', '1.CCelina121', '3.AAnna80', '3.DDarek80']);
     expect(within(tile('Najkrótszy leg')).getByText('liczba rzutek')).toBeTruthy();
     expect(within(tile('Najwyższa tura')).getByText('3 lotki, mecze 1v1')).toBeTruthy();
+  });
+
+  it('shows the win rate tile in percent with the minimum number of games', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(within(tile('Win rate')).getByText('min. 3 gry')).toBeTruthy();
+    expect(rows(tile('Win rate'))).toEqual(['1.AAnna66,7%', '2.🎯Bartek33,3%']);
+    expect(within(tile('Win rate')).getByText('Za mało graczy w tej kategorii.')).toBeTruthy();
+  });
+
+  it('shows the T20 tile with plain counts', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(within(tile('Trafienia T20')).getByText('rzutki za 60')).toBeTruthy();
+    expect(rows(tile('Trafienia T20'))).toEqual(['1.🎯Bartek42', '2.AAnna17']);
+  });
+
+  it('says the win rate counts only matches and casual games under the practice filter', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    rankings = { ...rankingsFixture, filter: 'practice', winRate: [] };
+    fireEvent.click(screen.getByRole('button', { name: 'Trening' }));
+    await vi.waitFor(() => expect(within(tile('Win rate')).getByText('Tylko mecze i zabawa')).toBeTruthy());
+    expect(within(tile('Win rate')).queryByText('Za mało graczy w tej kategorii.')).toBeNull();
   });
 
   it('marks the leaders in the list and in the tiles', async () => {
@@ -268,6 +293,7 @@ describe('StatsScreen: ranking', () => {
     expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
     expect(screen.getByText('Ranking graczy z całej historii · 0 gier, 0 legów')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Najwyższa tura' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Rekordy' })).toBeNull();
     expect(screen.queryByText('Średnia (3 rzutki)')).toBeNull();
   });
 
@@ -422,6 +448,19 @@ describe('StatsScreen: player card', () => {
     expect(value('Najlepszy leg')).toBe('6 rzutek');
     expect(value('Wygrane legi')).toBe('1');
     expect(value('Wygrane mecze')).toBe('1/2');
+    expect(value('Trafienia T20')).toBe('0');
+    expect(value('Win rate')).toBe('50,0%');
+  });
+
+  it('shows T20 hits after 60+ and a dash for the win rate without finished games', async () => {
+    respondStats = () => json(200, stats('p1', { winRate: null, t20Hits: 7 }));
+    render(<StatsScreen playerId="p1" />);
+    await vi.waitFor(() => expect(document.querySelector('dl')).not.toBeNull());
+    expect(value('Win rate')).toBe('—');
+    expect(value('Trafienia T20')).toBe('7');
+    const terms = [...card().querySelectorAll('dt')].map((term) => term.textContent);
+    expect(terms.indexOf('Trafienia T20')).toBe(terms.indexOf('60+') + 1);
+    expect(terms.at(-1)).toBe('Win rate');
   });
 
   it('sends the chosen filter as ?type=', async () => {
@@ -687,8 +726,21 @@ describe('StatsScreen: responsive layout', () => {
     expect(ranking).not.toContain('overflow-y-auto');
     expect(ranking).not.toContain('flex-1');
     const tileList = classes(tile('Najkrótszy leg').querySelector('ol'));
-    expect(tileList).toContain('xl:overflow-y-auto');
+    expect(tileList).not.toContain('xl:overflow-y-auto');
     expect(tileList).not.toContain('overflow-y-auto');
+  });
+
+  it('scrolls the record tiles as one region only from xl', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const records = screen.getByRole('region', { name: 'Rekordy' });
+    expect(records.getAttribute('tabindex')).toBe('0');
+    const region = classes(records);
+    expect(region).toContain('xl:overflow-y-auto');
+    expect(region).not.toContain('overflow-y-auto');
+    expect(region.some((name) => name.startsWith('xl:pb-'))).toBe(true);
+    expect(tile('Najkrótszy leg').parentElement?.parentElement).toBe(records);
+    expect(classes(tile('Najkrótszy leg').parentElement)).not.toContain('sm:grid-rows-2');
   });
 
   it('adapts the ranking rows to the width of their card', async () => {
