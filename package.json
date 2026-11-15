@@ -11,6 +11,7 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
+    "e2e": "pnpm --filter @autoscore/e2e e2e",
     "docs": "pnpm --filter @autoscore/web docs:dev"
   },
   "devDependencies": {

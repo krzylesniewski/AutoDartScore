@@ -1,0 +1,13 @@
+{
+  "name": "@autoscore/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "playwright test",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@autoscore/schema": "workspace:*",
+    "@playwright/test": "^1.65.1"
+  }
+}
