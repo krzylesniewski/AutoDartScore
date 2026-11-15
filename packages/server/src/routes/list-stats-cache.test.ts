@@ -26,7 +26,7 @@ let t: TestApp;
 let uncached: FastifyInstance;
 beforeEach(async () => {
   t = await setup();
-  uncached = await buildApp({ db: t.db, random: () => 0, replayCacheSize: 0 });
+  uncached = await buildApp({ db: t.db, auth: null, random: () => 0, replayCacheSize: 0 });
   await uncached.ready();
 });
 afterEach(async () => {

@@ -36,16 +36,16 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` uruchamia równolegle serwer (`http://localhost:3000`) i front (domyślnie `http://localhost:5173`). Aplikację otwierasz pod adresem frontu.
+`pnpm dev` uruchamia równolegle serwer (`http://localhost:3000`) i front (domyślnie `http://localhost:5173`). Aplikację otwierasz pod adresem frontu. Serwer z `pnpm dev` działa bez hasła, bo skrypt ustawia `AUTOSCORE_AUTH=off`, chyba że zmienna jest już ustawiona.
 
 Tablet w tej samej sieci otwiera `http://<adres-IP-komputera>:5173`. Tablet potrzebuje tylko portu 5173, bo front przekazuje zapytania do API przez proxy `/api`. Jeśli macOS pyta o połączenia przychodzące, zezwól na nie w zaporze (Ustawienia systemowe, Sieć, Zapora).
 
 Serwer przy starcie wykonuje migracje bazy. Plik bazy powstaje domyślnie w `packages/server/autoscore.sqlite`, bo pnpm uruchamia skrypty w katalogu pakietu. Pliki `*.sqlite` są w `.gitignore`.
 
-Sam serwer, bez frontu i bez trybu watch:
+Sam serwer, bez frontu, bez trybu watch i bez hasła:
 
 ```sh
-pnpm --filter @autoscore/server start
+AUTOSCORE_AUTH=off pnpm --filter @autoscore/server start
 ```
 
 ## Konfiguracja
@@ -57,6 +57,7 @@ Konfiguracja idzie przez zmienne środowiskowe.
 | `PORT` | `3000` | Port serwera API. |
 | `HOST` | `0.0.0.0` | Adres nasłuchu serwera. Domyślny pozwala połączyć się z innych urządzeń w sieci. |
 | `DATABASE_PATH` | `autoscore.sqlite` | Ścieżka pliku SQLite, względna wobec katalogu, w którym działa proces serwera. |
+| `AUTOSCORE_AUTH` | `on` | `on` wymaga hasła w `AUTOSCORE_PASSWORD`, bez niego serwer nie wstaje. `off` wyłącza logowanie, tylko do pracy lokalnej. `AUTOSCORE_PASSWORD`, `AUTOSCORE_TOKEN_SECRET` i błędy startu opisuje [README serwera](packages/server/README.md). |
 | `AUTOSCORE_API_URL` | `http://localhost:3000` | Adres serwera, na który proxy Vite przekazuje `/api`. |
 | `AUTOSCORE_MATCH_LOCK_MINUTES` | `5` | Ile minut po rzutce kończącej grę da się jeszcze cofać. `0` zamyka grę od razu. Wartość spoza samych cyfr albo większa niż `525600` (rok) zatrzymuje start z błędem `Invalid AUTOSCORE_MATCH_LOCK_MINUTES`. |
 

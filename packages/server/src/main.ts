@@ -13,6 +13,9 @@ const app = await buildApp({
   webDir: config.webDir,
   matchLockMinutes: config.matchLockMinutes,
 });
+if (config.auth === null) {
+  app.log.warn('Authentication is off (AUTOSCORE_AUTH=off). Anyone who can reach the server can read and change all data.');
+}
 
 async function shutdown(): Promise<void> {
   await app.close();
