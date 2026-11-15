@@ -10,7 +10,7 @@ import { createLiveHub } from './live-hub.js';
 import { createMatchService } from './match-service.js';
 import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
-import { liveRoutes } from './routes/live.js';
+import { LIVE_MAX_PAYLOAD_BYTES, LIVE_MAX_PENDING_CONNECTIONS, liveRoutes } from './routes/live.js';
 import { matchRoutes } from './routes/matches.js';
 import { playerRoutes } from './routes/players.js';
 import { statsRoutes } from './routes/stats.js';
@@ -27,6 +27,7 @@ export interface AppOptions {
   readonly corsOrigins?: readonly string[] | null;
   readonly now?: () => number; // zegar dla tokenów, limitu logowań, blokady zakończonej gry i okresu statystyk. Domyślnie Date.now
   readonly liveAuthTimeoutMs?: number;
+  readonly liveMaxPendingConnections?: number;
   readonly livePingIntervalMs?: number;
   readonly webDir?: string | null; // katalog zbudowanego frontu. null wyłącza serwowanie plików
   readonly matchLockMinutes?: number; // ile minut po ostatniej rzutce da się cofać w zakończonej grze. Domyślnie 5
@@ -43,7 +44,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       apiSegments.add(firstSegment(route.url));
     });
   }
-  await app.register(websocket);
+  await app.register(websocket, { options: { maxPayload: LIVE_MAX_PAYLOAD_BYTES } });
   const auth = options.auth ?? null;
   const now = options.now ?? Date.now;
   await registerAccessControl(app, { auth, corsOrigins: options.corsOrigins ?? null, now, webRoutes });
@@ -74,7 +75,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   }
   playerRoutes(app, store);
   await matchRoutes(app, service);
-  liveRoutes(app, service, { auth, now, authTimeoutMs: options.liveAuthTimeoutMs ?? 5000, pingIntervalMs: options.livePingIntervalMs ?? 30_000 });
+  liveRoutes(app, service, {
+    auth,
+    now,
+    authTimeoutMs: options.liveAuthTimeoutMs ?? 5000,
+    pingIntervalMs: options.livePingIntervalMs ?? 30_000,
+    maxPendingConnections: options.liveMaxPendingConnections ?? LIVE_MAX_PENDING_CONNECTIONS,
+  });
   statsRoutes(app, createStatsService({ store, now }));
   if (webDir !== null) {
     await webAppRoutes(app, { webDir, webRoutes, apiSegments });

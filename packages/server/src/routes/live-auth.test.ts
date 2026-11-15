@@ -8,8 +8,9 @@ import { MATCH_NOT_FOUND_CLOSE_CODE, UNAUTHORIZED_CLOSE_CODE } from './live.js';
 interface TestSocket {
   on(event: 'message', listener: (data: Buffer) => void): void;
   on(event: 'close', listener: (code: number) => void): void;
-  on(event: 'ping', listener: () => void): void;
+  on(event: 'ping', listener: (data: Buffer) => void): void;
   send(data: string): void;
+  pong(data: Buffer): void;
   terminate(): void;
 }
 
@@ -58,6 +59,7 @@ async function connect(app: TestApp['app'], path: string, headers: Record<string
   const socket: TestSocket = await app.injectWS(path, { headers }, {
     onInit(ws: TestSocket) {
       ws.on('message', (data) => client.messages.push(JSON.parse(data.toString())));
+      ws.on('ping', (data) => ws.pong(data));
       ws.on('ping', () => client.pings++);
       ws.on('close', (code) => (client.closeCode = code));
     },
