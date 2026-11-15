@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Helpers for deploy.sh and backup.sh. Sourced, so it sets no shell options.
+# Helpers for deploy.sh, backup.sh and pull-backup.sh. Sourced, so it sets no
+# shell options.
 
 # Prints the value of KEY from a systemd env file, or nothing when KEY is
 # missing. The file is never sourced, because the password may contain shell
