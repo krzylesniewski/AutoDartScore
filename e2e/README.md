@@ -8,10 +8,10 @@ Zestaw obejmuje:
 - `layout.spec.ts`: układ, którego testy jednostkowe w jsdom nie widzą. Przy 375×812, 768×1024, 1280×800 i 1920×1080:
   - Brak poziomego przewijania na ekranach nowej gry, statystyk, karty gracza, historii, ustawień (otwartych z nawigacji, z widocznymi statusami kamery i głosu), końca meczu, treningu końcówek i przebiegu Solo 501.
   - „Rewanż” i „Nowy mecz” na końcu meczu oraz „Udało się” i „Nie udało się” w treningu końcówek mieszczą się w oknie i da się je kliknąć.
-  - Klawiatura (koło i siatka) mieści się w oknie i nie przesuwa się po rzutce, po zmianie rzucającego, przy trasie zamknięcia, po buście ani przy komunikacie o zerwanym połączeniu, a baner „Bust” jej nie zasłania.
+  - Klawiatura (koło i siatka) mieści się w oknie i nie przesuwa się po rzutce, po zmianie rzucającego, przy trasie zamknięcia, po buście, przy komunikacie o zerwanym połączeniu ani przy zmianie rzucającego z najczęstszymi trafieniami na takiego, który ich nie ma. Baner „Bust” jej nie zasłania.
   - „Porzuć mecz” jest ukryte, dopóki nie otworzy się „Menu gry”, a potem da się je kliknąć nad klawiaturą.
 
-  Poniżej lg „Tury” zamienia pasek wyników na historię tur bez ruszania klawiatury, a bieżąca tura jest widoczna. Od lg historia tur stoi stale w lewej kolumnie, a „Menu gry” znika, gdy nie ma w nim akcji.
+  Poniżej lg „Tury” zamienia pasek wyników na historię tur bez ruszania klawiatury, a bieżąca tura jest widoczna. Od lg historia tur stoi stale w lewej kolumnie, która przewija się sama i kończy się w oknie, a „Menu gry” znika, gdy nie ma w nim akcji.
 
 ## Uruchomienie
 

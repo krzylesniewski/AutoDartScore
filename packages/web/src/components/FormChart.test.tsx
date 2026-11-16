@@ -12,8 +12,9 @@ function chart(): HTMLElement {
   return screen.getByRole('img', { name: /^Wykres formy/ });
 }
 
+// Liczby osi mają położenie w stylu inline. Niewidoczna kopia trzymająca szerokość osi go nie ma.
 function axisLabels(container: HTMLElement): (string | null)[][] {
-  return [...container.querySelectorAll('[aria-hidden="true"]')].map((axis) => [...axis.querySelectorAll('span.absolute')].map((label) => label.textContent));
+  return [...container.querySelectorAll('[aria-hidden="true"]')].map((axis) => [...axis.querySelectorAll('span[style]')].map((label) => label.textContent));
 }
 
 describe('FormChart', () => {

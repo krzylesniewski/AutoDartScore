@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, type APIRequestContext } from '@playwright/test';
-import type { AbandonMatchRequest, CreateMatchRequest, CreatePlayerRequest, Hit, HitEvent, LoginRequest, LoginResponse, MatchSnapshot, Player } from '@autoscore/schema';
+import type { AbandonMatchRequest, CreateMatchRequest, CreatePlayerRequest, FrequentHitsResponse, Hit, HitEvent, LoginRequest, LoginResponse, MatchSnapshot, Player } from '@autoscore/schema';
 import { PASSWORD } from '../env';
 
 // T20 ×3, Miss ×3, potem T20, T11, D14: zaczynający zamyka leg 301, kimkolwiek jest.
@@ -53,6 +53,12 @@ export async function createPracticeByApi(
   const response = await request.post('/matches', { headers: authorization(token), data: body });
   await expect(response).toBeOK();
   return (await response.json()) as MatchSnapshot;
+}
+
+export async function frequentHitsByApi(request: APIRequestContext, token: string, playerId: string): Promise<FrequentHitsResponse['hits']> {
+  const response = await request.get(`/players/${encodeURIComponent(playerId)}/frequent-hits`, { headers: authorization(token) });
+  await expect(response).toBeOK();
+  return ((await response.json()) as FrequentHitsResponse).hits;
 }
 
 export async function abandonMatchByApi(request: APIRequestContext, token: string, matchId: string, playerId: string): Promise<void> {

@@ -622,8 +622,8 @@ describe('StatsScreen: form chart', () => {
     const chart = await screen.findByRole('img', { name: 'Wykres formy: 2 gry, ostatnia średnia 60,25' });
     expect(chart.querySelectorAll('circle')).toHaveLength(2);
     expect(chart.querySelector('path')).not.toBeNull();
-    const values = chart.parentElement?.querySelector('ol.sr-only');
-    expect([...(values?.querySelectorAll('li') ?? [])].map((item) => item.textContent)).toEqual(['Gra 1: 45,50', 'Gra 2: 60,25']);
+    const values = within(chart.parentElement as HTMLElement).getByRole('list');
+    expect(within(values).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Gra 1: 45,50', 'Gra 2: 60,25']);
     expect(chart.parentElement?.textContent).toContain('60,25');
   });
 

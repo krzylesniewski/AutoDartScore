@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page, type WebSocketRoute } from '@playwright/test';
 import type { Hit, Player } from '@autoscore/schema';
-import { FINISHING_DARTS, MISS, abandonMatchByApi, createMatchByApi, createPlayerByApi, createPracticeByApi, loginByApi, postThrowsByApi } from './helpers/api';
+import { FINISHING_DARTS, MISS, abandonMatchByApi, createMatchByApi, createPlayerByApi, createPracticeByApi, frequentHitsByApi, loginByApi, postThrowsByApi } from './helpers/api';
 import { currentThrower, keypadKey, scoreboard, throwerRow, waitForKeypad } from './helpers/game';
 import { boxOf, expectInViewport, expectNoHorizontalScroll, expectNoOverlap, expectSameBox, keypadBox } from './helpers/layout';
 import { uniqueName, useToken } from './helpers/session';
@@ -70,6 +70,24 @@ async function insideHorizontalScroll(element: Locator): Promise<boolean> {
     }
     const box = scroller.getBoundingClientRect();
     return rect.left >= box.left - 1 && rect.right <= box.right + 1;
+  });
+}
+
+// Najbliższy przodek z overflow-y auto albo scroll, czyli kontener, w którym element się przewija.
+async function verticalScroller(element: Locator): Promise<{ bottom: number; holdsScoreboard: boolean; holdsKeypad: boolean } | null> {
+  return element.evaluate((node) => {
+    let scroller = node.parentElement;
+    while (scroller && !['auto', 'scroll'].includes(getComputedStyle(scroller).overflowY)) {
+      scroller = scroller.parentElement;
+    }
+    if (!scroller) {
+      return null;
+    }
+    return {
+      bottom: scroller.getBoundingClientRect().bottom,
+      holdsScoreboard: scroller.contains(document.querySelector('[aria-label="Wyniki"]')),
+      holdsKeypad: scroller.contains(document.querySelector('[aria-label="Klawiatura rzutek"]')),
+    };
   });
 }
 
@@ -263,12 +281,74 @@ for (const viewport of VIEWPORTS) {
         await expectNoHorizontalScroll(page);
         await expectInViewport(await keypadBox(page), page);
 
+        // Lewa kolumna przewija się sama: jej przewijany kontener trzyma pasek wyników bez klawiatury i kończy się w oknie.
+        const heading = page.getByRole('heading', { name: 'Historia tur · Leg 1' });
+        const column = await verticalScroller(heading);
+        expect(column).not.toBeNull();
+        expect(column?.holdsScoreboard).toBe(true);
+        expect(column?.holdsKeypad).toBe(false);
+        expect(column?.bottom).toBeLessThanOrEqual(viewport.height + 1);
+        expect(await page.evaluate(() => (document.scrollingElement ? document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight : 0))).toBeLessThanOrEqual(1);
+        const current = page.locator('tr[aria-current="true"]');
+        await current.scrollIntoViewIfNeeded();
+        await expect(current).toBeInViewport();
+        expect(await page.evaluate(() => window.scrollY)).toBe(0);
+        expect((await boxOf(page.locator('section[id]').filter({ has: heading }))).height).toBeGreaterThanOrEqual(260);
+
         const { thrower } = await currentThrower(page, [players[0].name, players[1].name]);
         const abandoner = thrower === players[0].name ? players[0] : players[1];
         await abandonMatchByApi(request, token, match.id, abandoner.id);
         await page.reload();
         await expect(page.getByRole('button', { name: 'Wznów mecz' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Menu gry' })).toBeHidden();
+      });
+    }
+
+    for (const layout of ['ring', 'grid'] as const) {
+      test(`frequent hits keep the ${layout} keypad in place with and without hits`, async ({ page, context, request }) => {
+        if (layout === 'grid') {
+          await context.addInitScript(() => window.localStorage.setItem('autoscore.keypadLayout', 'grid'));
+        }
+        // Nowi gracze: jeden ma trafienia z treningu, drugi żadnych. Kto by nie zaczął, klawiatura pokazuje oba stany bloku.
+        const withHits = await createPlayerByApi(request, token, uniqueName('Ola'));
+        const withoutHits = await createPlayerByApi(request, token, uniqueName('Jan'));
+        const practice = await createPracticeByApi(request, token, withHits.id, { practiceMode: 'solo_501' });
+        await postThrowsByApi(request, token, practice.id, [T20, T20, T20]);
+        expect(await frequentHitsByApi(request, token, withHits.id)).not.toHaveLength(0);
+        expect(await frequentHitsByApi(request, token, withoutHits.id)).toHaveLength(0);
+
+        const match = await createMatchByApi(request, token, [withHits.id, withoutHits.id]);
+        const row = page.getByRole('group', { name: /^Najczęstsze/ });
+        // W siatce rząd stoi przy każdej szerokości, a w kole tylko od lg.
+        const rowShown = layout === 'grid' || viewport.width >= LG;
+        const expectRow = async (thrower: string) => {
+          if (thrower === withHits.name && rowShown) {
+            await expect(row).toBeVisible();
+          } else {
+            await expect(row).toHaveCount(0);
+          }
+        };
+        const hitsLoaded = () => page.waitForResponse((response) => response.url().includes('/frequent-hits'));
+
+        const firstHits = hitsLoaded();
+        await page.goto(`/#/matches/${match.id}`);
+        await waitForKeypad(page);
+        await firstHits;
+        await fontsReady(page);
+        const { thrower, other } = await currentThrower(page, [withHits.name, withoutHits.name]);
+        await expectRow(thrower);
+        const before = await keypadBox(page);
+        await expectInViewport(before, page);
+        // Od lg w kole rząd stoi nad Miss w kolumnie obok koła, więc bez stałego bloku zmieniłby wysokość Miss, a nie klawiatury.
+        const missBefore = await boxOf(keypadKey(page, 'Miss'));
+
+        const nextHits = hitsLoaded();
+        await postThrowsByApi(request, token, match.id, [MISS, MISS, MISS]);
+        await nextHits;
+        await expect(throwerRow(page)).toContainText(other);
+        await expectRow(other);
+        expectSameBox(await keypadBox(page), before);
+        expectSameBox(await boxOf(keypadKey(page, 'Miss')), missBefore);
       });
     }
 
