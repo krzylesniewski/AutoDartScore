@@ -153,6 +153,8 @@ for (const viewport of VIEWPORTS) {
         const result = page.getByRole('button', { name, exact: true });
         await expectBoxInViewport(page, result);
         expect((await boxOf(result)).height).toBeGreaterThanOrEqual(56);
+        // Próbne kliknięcie sprawdza, że nic nie przykrywa przycisku, i nie zapisuje próby.
+        await result.click({ trial: true });
       }
       const results = await boxOf(success);
       const skip = await boxOf(page.getByRole('button', { name: 'Nowa końcówka', exact: true }));
