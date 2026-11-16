@@ -20,7 +20,8 @@ export function LegInfo({ state, id, className = '', onClose }: LegInfoProps) {
   }
   const stats = legStats(state);
   const highest = stats.highest;
-  const highestName = highest && state.players.length >= 2 ? (state.players.find((player) => player.id === highest.playerId)?.name ?? null) : null;
+  const highestName =
+    highest && state.players.length >= 2 ? (state.players.find((player) => player.id === highest.playerId)?.name ?? null) : null;
   const close = onClose && (
     // Ten sam krzyżyk co ikona bustu, jak w makiecie panelu na telefonie.
     <button type="button" onClick={onClose} className="sc-btn sc-btn--icon shrink-0 lg:hidden">

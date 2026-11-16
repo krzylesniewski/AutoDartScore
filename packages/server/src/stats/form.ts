@@ -15,7 +15,10 @@ export interface FormGame {
 export function buildForm(games: readonly FormGame[]): PlayerFormPoint[] {
   const points: PlayerFormPoint[] = [];
   for (const game of games) {
-    const sum = game.legs.reduce((acc, leg) => ({ points: acc.points + leg.points, darts: acc.darts + leg.darts }), { points: 0, darts: 0 });
+    const sum = game.legs.reduce((acc, leg) => ({ points: acc.points + leg.points, darts: acc.darts + leg.darts }), {
+      points: 0,
+      darts: 0,
+    });
     const average = threeDartAverage(sum.points, sum.darts);
     // Gra bez ukończonego lega nie ma średniej.
     if (average === null) {

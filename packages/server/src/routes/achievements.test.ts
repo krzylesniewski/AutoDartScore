@@ -1,6 +1,22 @@
 import { LiveMessage } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { abandon, createGame, createPlayer, createPlayers, D, hitEvent, MISS, postThrow, S, setup, T, throwDarts, undo, type Dart, type TestApp } from '../test-helpers.js';
+import {
+  abandon,
+  createGame,
+  createPlayer,
+  createPlayers,
+  D,
+  hitEvent,
+  MISS,
+  postThrow,
+  S,
+  setup,
+  T,
+  throwDarts,
+  undo,
+  type Dart,
+  type TestApp,
+} from '../test-helpers.js';
 
 // Typy ws nie są zależnością pakietu, więc opisujemy tylko to, czego używa test.
 interface TestSocket {
@@ -30,11 +46,15 @@ afterEach(async () => {
 // Nasłuch w onInit, bo pierwsza wiadomość może przyjść przed rozwiązaniem injectWS.
 async function subscribe(matchId: string): Promise<Subscriber> {
   const messages: unknown[] = [];
-  const socket: TestSocket = await t.app.injectWS(`/matches/${matchId}/live`, {}, {
-    onInit(ws: TestSocket) {
-      ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+  const socket: TestSocket = await t.app.injectWS(
+    `/matches/${matchId}/live`,
+    {},
+    {
+      onInit(ws: TestSocket) {
+        ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+      },
     },
-  });
+  );
   sockets.push(socket);
   return { messages };
 }
@@ -71,7 +91,11 @@ async function liveDarts(matchId: string, darts: readonly Dart[]): Promise<LiveM
   const before = subscriber.messages.length;
   await throwDarts(t.app, matchId, darts);
   // Każda rzutka kończy się state_updated, więc czekamy na tyle state_updated, ile było rzutek.
-  await vi.waitFor(() => expect(subscriber.messages.slice(before).filter((message) => (message as LiveMessage).type === 'state_updated')).toHaveLength(darts.length));
+  await vi.waitFor(() =>
+    expect(subscriber.messages.slice(before).filter((message) => (message as LiveMessage).type === 'state_updated')).toHaveLength(
+      darts.length,
+    ),
+  );
   return (await received(subscriber, before)).slice(1);
 }
 
@@ -94,7 +118,13 @@ describe('achievement live messages', () => {
 
     expect((await postThrow(t.app, id, hitEvent(id, S(20)))).statusCode).toBe(201);
     const messages = (await received(subscriber, 6)).slice(1);
-    expect(messages.map((message) => message.type)).toEqual(['throw_registered', 'turn_completed', 'achievement', 'achievement', 'state_updated']);
+    expect(messages.map((message) => message.type)).toEqual([
+      'throw_registered',
+      'turn_completed',
+      'achievement',
+      'achievement',
+      'state_updated',
+    ]);
     expect(messages.every((message) => message.matchId === id && message.eventSeq === 3)).toBe(true);
     expect(achievementsIn(messages)).toEqual([
       { type: 'achievement', matchId: id, eventSeq: 3, playerId: anna, kind: 'first_100', value: 100, previous: null },
@@ -106,8 +136,8 @@ describe('achievement live messages', () => {
     await finishedMatch([anna, bartek]);
     const { id } = await match301([anna, bartek]);
     const [, , last] = await throwDarts(t.app, id, TON);
-    expect(Object.keys(last).sort()).toEqual(['events', 'state', 'throw']);
-    expect(last.events.map((event: { type: string }) => event.type)).toEqual(['turn_completed']);
+    expect(Object.keys(last!).sort()).toEqual(['events', 'state', 'throw']);
+    expect(last!.events.map((event: { type: string }) => event.type)).toEqual(['turn_completed']);
   });
 
   it('sends nothing to a guest', async () => {

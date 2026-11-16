@@ -56,9 +56,26 @@ export function FormChart({ points }: FormChartProps) {
         className="block h-44 w-full min-w-0 rounded-[10px] bg-(--color-bg)/55"
       >
         {chart.grid.map((tick) => (
-          <line key={tick.value} x1={0} x2={SIZE.width} y1={tick.position} y2={tick.position} className="stroke-(--color-border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          <line
+            key={tick.value}
+            x1={0}
+            x2={SIZE.width}
+            y1={tick.position}
+            y2={tick.position}
+            className="stroke-(--color-border)"
+            strokeWidth={1}
+            vectorEffect="non-scaling-stroke"
+          />
         ))}
-        {chart.path && <path d={chart.path} className="fill-none stroke-(--color-accent)" strokeWidth={3} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+        {chart.path && (
+          <path
+            d={chart.path}
+            className="fill-none stroke-(--color-accent)"
+            strokeWidth={3}
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
         {chart.points.map((point, index) => (
           <circle
             key={points[index]?.matchId ?? index}

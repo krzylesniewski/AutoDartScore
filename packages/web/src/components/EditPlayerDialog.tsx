@@ -83,7 +83,11 @@ export function EditPlayerDialog({ player, onSaved, onCancel }: EditPlayerDialog
           </p>
         )}
         <div className="mt-1.5 grid grid-cols-2 gap-3">
-          <button type="submit" disabled={saving || name.trim() === ''} className="sc-btn sc-btn--primary h-15 rounded-(--radius-button) text-[26px]">
+          <button
+            type="submit"
+            disabled={saving || name.trim() === ''}
+            className="sc-btn sc-btn--primary h-15 rounded-(--radius-button) text-[26px]"
+          >
             {pl.save}
           </button>
           <button type="button" disabled={saving} onClick={onCancel} className="sc-btn h-15 text-[24px] font-bold">

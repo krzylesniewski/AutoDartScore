@@ -10,7 +10,14 @@ export interface GameSetup {
   readonly checkoutRange: CheckoutRange;
 }
 
-export const INITIAL_SETUP: GameSetup = { type: 'match', playerIds: [], startingScore: 301, bestOf: 1, practiceMode: 'free_run', checkoutRange: '2-50' };
+export const INITIAL_SETUP: GameSetup = {
+  type: 'match',
+  playerIds: [],
+  startingScore: 301,
+  bestOf: 1,
+  practiceMode: 'free_run',
+  checkoutRange: '2-50',
+};
 
 export const PLAYER_COUNT: Record<MatchType, { readonly min: number; readonly max: number }> = {
   match: { min: 2, max: 2 },

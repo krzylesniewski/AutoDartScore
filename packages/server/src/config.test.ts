@@ -71,12 +71,13 @@ describe('loadConfig auth', () => {
     },
   );
 
-  it.each([{ AUTOSCORE_AUTH: 'off' }, { AUTOSCORE_AUTH: ' off ', AUTOSCORE_TOKEN_SECRET: 'short' }, { AUTOSCORE_AUTH: 'off', AUTOSCORE_PASSWORD: '' }])(
-    'turns auth off only when asked for %j',
-    (env) => {
-      expect(loadConfig(env).auth).toBeNull();
-    },
-  );
+  it.each([
+    { AUTOSCORE_AUTH: 'off' },
+    { AUTOSCORE_AUTH: ' off ', AUTOSCORE_TOKEN_SECRET: 'short' },
+    { AUTOSCORE_AUTH: 'off', AUTOSCORE_PASSWORD: '' },
+  ])('turns auth off only when asked for %j', (env) => {
+    expect(loadConfig(env).auth).toBeNull();
+  });
 
   it.each([{ AUTOSCORE_PASSWORD: 'x' }, { AUTOSCORE_PASSWORD: 'x', AUTOSCORE_TOKEN_SECRET: secret }])(
     'rejects AUTOSCORE_AUTH=off together with a password: %j',
@@ -105,9 +106,12 @@ describe('loadConfig auth', () => {
     expect(() => loadConfig({ AUTOSCORE_PASSWORD: password, AUTOSCORE_TOKEN_SECRET: secret })).toThrow(/^Invalid AUTOSCORE_PASSWORD/);
   });
 
-  it.each([{ AUTOSCORE_PASSWORD: 'x' }, { AUTOSCORE_PASSWORD: 'x', AUTOSCORE_TOKEN_SECRET: '' }])('requires a secret with a password: %j', (env) => {
-    expect(() => loadConfig(env)).toThrow('Missing AUTOSCORE_TOKEN_SECRET');
-  });
+  it.each([{ AUTOSCORE_PASSWORD: 'x' }, { AUTOSCORE_PASSWORD: 'x', AUTOSCORE_TOKEN_SECRET: '' }])(
+    'requires a secret with a password: %j',
+    (env) => {
+      expect(() => loadConfig(env)).toThrow('Missing AUTOSCORE_TOKEN_SECRET');
+    },
+  );
 
   it('rejects a secret shorter than 32 characters without printing it', () => {
     expect(() => loadConfig({ AUTOSCORE_PASSWORD: 'tajne-haslo', AUTOSCORE_TOKEN_SECRET: 'b'.repeat(31) })).toThrow(
@@ -128,12 +132,18 @@ describe('loadConfig CORS', () => {
     ]);
   });
 
-  it.each(['https://front.example/', 'https://front.example/app', 'front.example', '*', 'https://FRONT.example', 'https://front.example:443'])(
-    'rejects the entry %j',
-    (entry) => {
-      expect(() => loadConfig({ ...off, AUTOSCORE_CORS_ORIGIN: `https://ok.example,${entry}` })).toThrow(`Invalid AUTOSCORE_CORS_ORIGIN: ${entry}`);
-    },
-  );
+  it.each([
+    'https://front.example/',
+    'https://front.example/app',
+    'front.example',
+    '*',
+    'https://FRONT.example',
+    'https://front.example:443',
+  ])('rejects the entry %j', (entry) => {
+    expect(() => loadConfig({ ...off, AUTOSCORE_CORS_ORIGIN: `https://ok.example,${entry}` })).toThrow(
+      `Invalid AUTOSCORE_CORS_ORIGIN: ${entry}`,
+    );
+  });
 });
 
 describe('loadConfig web dir', () => {
@@ -171,9 +181,12 @@ describe('loadConfig trust proxy', () => {
     expect(loadConfig({ ...off, AUTOSCORE_TRUST_PROXY: value }).trustProxy).toBe(true);
   });
 
-  it.each([{}, { AUTOSCORE_TRUST_PROXY: '' }, { AUTOSCORE_TRUST_PROXY: ' ' }, { AUTOSCORE_TRUST_PROXY: 'off' }])('ignores the proxy for %j', (env) => {
-    expect(loadConfig({ ...off, ...env }).trustProxy).toBe(false);
-  });
+  it.each([{}, { AUTOSCORE_TRUST_PROXY: '' }, { AUTOSCORE_TRUST_PROXY: ' ' }, { AUTOSCORE_TRUST_PROXY: 'off' }])(
+    'ignores the proxy for %j',
+    (env) => {
+      expect(loadConfig({ ...off, ...env }).trustProxy).toBe(false);
+    },
+  );
 
   it.each(['ON', 'true', '1', 'yes'])('rejects %j', (value) => {
     expect(() => loadConfig({ ...off, AUTOSCORE_TRUST_PROXY: value })).toThrow(`Invalid AUTOSCORE_TRUST_PROXY: ${value}`);

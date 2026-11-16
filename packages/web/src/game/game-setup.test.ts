@@ -32,7 +32,11 @@ describe('game setup', () => {
     const match = { ...INITIAL_SETUP, playerIds: ['p1', 'p2'] };
     expect(createRequest(match)).toEqual({ type: 'match', playerIds: ['p1', 'p2'], startingScore: 301, bestOf: 1 });
     expect(createRequest({ ...match, type: 'casual' })).toEqual({ type: 'casual', playerIds: ['p1', 'p2'], startingScore: 301 });
-    expect(createRequest({ ...match, type: 'practice', playerIds: ['p1'] })).toEqual({ type: 'practice', playerIds: ['p1'], practiceMode: 'free_run' });
+    expect(createRequest({ ...match, type: 'practice', playerIds: ['p1'] })).toEqual({
+      type: 'practice',
+      playerIds: ['p1'],
+      practiceMode: 'free_run',
+    });
     expect(CreateMatchRequest.safeParse(createRequest({ ...match, playerIds: ['p1'] })).success).toBe(false);
   });
 

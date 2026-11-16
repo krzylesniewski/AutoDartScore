@@ -19,21 +19,39 @@ beforeEach(() => {
   urls = [];
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string) => {
+    vi.fn((url: string) => {
       urls.push(url);
       if (url === '/api/players' || url === '/api/players?archived=include') {
-        return json(200, [
-          { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, archivedAt: null, createdAt },
-          { id: 'p 2', name: 'Bartek', avatar: null, color: 7, guest: false, archivedAt: null, createdAt },
-        ]);
+        return Promise.resolve(
+          json(200, [
+            { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, archivedAt: null, createdAt },
+            { id: 'p 2', name: 'Bartek', avatar: null, color: 7, guest: false, archivedAt: null, createdAt },
+          ]),
+        );
       }
       if (url === '/api/matches?status=unfinished' || url === '/api/matches') {
-        return json(200, []);
+        return Promise.resolve(json(200, []));
       }
       if (url.startsWith('/api/stats/rankings')) {
-        return json(200, { filter: 'all', period: 'all', games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [], winRate: [], t20Hits: [] });
+        return Promise.resolve(
+          json(200, {
+            filter: 'all',
+            period: 'all',
+            games: 0,
+            legs: 0,
+            players: [],
+            bestLegAverage: [],
+            highestCheckout: [],
+            shortestLeg: [],
+            highestTurn: [],
+            winRate: [],
+            t20Hits: [],
+          }),
+        );
       }
-      return json(200, { ...statLine(), playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null });
+      return Promise.resolve(
+        json(200, { ...statLine(), playerId: 'p1', filter: 'all', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null }),
+      );
     }),
   );
 });
@@ -151,16 +169,16 @@ describe('login', () => {
     FakeWebSocket.instances = [];
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init?: RequestInit) => {
+      vi.fn((url: string, init?: RequestInit) => {
         const request = { url, init };
         requests.push(request);
         if (url === '/api/auth/login') {
-          return json(200, { token: 't1', expiresAt: '2027-04-18T00:00:00.000Z' });
+          return Promise.resolve(json(200, { token: 't1', expiresAt: '2027-04-18T00:00:00.000Z' }));
         }
         if (authorization(request) !== 'Bearer t1') {
-          return json(401, { error: 'unauthorized', message: 'Missing or invalid token' });
+          return Promise.resolve(json(401, { error: 'unauthorized', message: 'Missing or invalid token' }));
         }
-        return json(200, []);
+        return Promise.resolve(json(200, []));
       }),
     );
   });
@@ -205,7 +223,7 @@ describe('login', () => {
     await vi.waitFor(() => expect(requests.some((request) => request.url === '/api/auth/login')).toBe(true));
     const login = requests.find((request) => request.url === '/api/auth/login');
     expect(login?.init?.method).toBe('POST');
-    expect(JSON.parse(String(login?.init?.body))).toEqual({ password: ' secret ' });
+    expect(JSON.parse(login?.init?.body as string)).toEqual({ password: ' secret ' });
     expect(authorization(login)).toBeNull();
   });
 

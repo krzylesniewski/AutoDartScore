@@ -20,17 +20,19 @@ export interface MatchHeaderProps {
   onEndPractice?: () => void;
   // Przycisk „Tury” poniżej lg. Bez tego propsa nagłówek go nie ma.
   turns?: TurnsToggle | undefined;
+  // Ref przycisku „Tury” osobno od turns, bo react-hooks/refs uznaje każdy odczyt obiektu z refem za odczyt refa w renderze.
+  turnsButtonRef?: Ref<HTMLButtonElement> | undefined;
 }
 
 export interface TurnsToggle {
   open: boolean;
   controls: string;
   onToggle(): void;
-  buttonRef?: Ref<HTMLButtonElement> | undefined;
 }
 
 const meta = 'font-display font-semibold whitespace-nowrap text-(--color-text-sub)';
-const statusPill = 'sc-status shrink-0 font-display font-semibold whitespace-nowrap max-lg:gap-1.5 max-lg:px-2.5 max-lg:py-1.5 max-lg:text-[13px]';
+const statusPill =
+  'sc-status shrink-0 font-display font-semibold whitespace-nowrap max-lg:gap-1.5 max-lg:px-2.5 max-lg:py-1.5 max-lg:text-[13px]';
 const menuButton = 'sc-btn h-12 w-full shrink-0 justify-start whitespace-nowrap';
 const card = 'rounded-(--radius-card) bg-(--color-surface-raised) p-3 shadow-(--shadow-panel)';
 const popover =
@@ -40,7 +42,18 @@ const popover =
 // Od lg panel i blok tytułu mają display: contents, a ich dzieci stają w jednym wierszu paska.
 // Poniżej lg panel jest rozwijaną kartą pod paskiem, a blok tytułu dwoma wierszami obok znaku.
 // Porzuć mecz i Zakończ trening są od lg w osobnej karcie pod przyciskiem menu.
-export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled, onEffectsChange, onAbandon, onResume, onEndPractice, turns }: MatchHeaderProps) {
+export function MatchHeader({
+  state,
+  voiceEnabled,
+  onVoiceChange,
+  effectsEnabled,
+  onEffectsChange,
+  onAbandon,
+  onResume,
+  onEndPractice,
+  turns,
+  turnsButtonRef,
+}: MatchHeaderProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -91,7 +104,9 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
     <header className={`sc-appbar relative ${open ? 'z-30' : 'z-10'} shrink-0 max-lg:h-12 max-lg:gap-2.5 max-lg:px-4 lg:h-17`}>
       <a href="#/" aria-label={pl.home} className="flex shrink-0 items-center gap-(--space-5) text-(--color-text)">
         <AppMark className="size-[26px] lg:size-8" />
-        <span className="font-display text-[24px] font-extrabold tracking-[0.08em] whitespace-nowrap uppercase max-lg:sr-only">{pl.appName}</span>
+        <span className="font-display text-[24px] font-extrabold tracking-[0.08em] whitespace-nowrap uppercase max-lg:sr-only">
+          {pl.appName}
+        </span>
       </a>
       <span aria-hidden="true" className="mx-2 h-6 w-px shrink-0 bg-(--color-border) max-lg:hidden" />
       <div className="flex min-w-0 grow flex-col gap-1 lg:contents">
@@ -104,7 +119,9 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
         )}
         <span aria-hidden="true" className="hidden lg:block lg:grow" />
         {state && legShown && (
-          <div className={`${meta} flex shrink-0 items-center gap-1.5 text-[14px] leading-tight tabular-nums lg:text-[19px] lg:leading-normal`}>
+          <div
+            className={`${meta} flex shrink-0 items-center gap-1.5 text-[14px] leading-tight tabular-nums lg:text-[19px] lg:leading-normal`}
+          >
             {state.type === 'match' && (
               <>
                 <span>{pl.legNumber(state.legIndex + 1)}</span>
@@ -116,7 +133,10 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
         )}
       </div>
       {state && legShown && (
-        <LegClock state={state} className="sc-clock h-8 shrink-0 font-display text-[17px] font-bold max-lg:px-2.5 max-lg:py-0 lg:h-auto lg:text-[19px]" />
+        <LegClock
+          state={state}
+          className="sc-clock h-8 shrink-0 font-display text-[17px] font-bold max-lg:px-2.5 max-lg:py-0 lg:h-auto lg:text-[19px]"
+        />
       )}
       {state?.status === 'ended' && (
         <span className={statusPill}>
@@ -164,7 +184,7 @@ export function MatchHeader({ state, voiceEnabled, onVoiceChange, effectsEnabled
       </div>
       {turns && (
         <button
-          ref={turns.buttonRef}
+          ref={turnsButtonRef}
           type="button"
           aria-expanded={turns.open}
           aria-controls={turns.controls}

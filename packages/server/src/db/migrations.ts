@@ -4,7 +4,15 @@ import { Migrator, type Migration, type MigrationProvider } from 'kysely/migrati
 // Kształt starej tabeli match_events, z której kopiujemy wiersze. Typ Database opisuje już tabelę po migracji.
 interface LifecycleMigrationTables {
   match_events: { match_id: string; seq: number; type: string; throw_id: string | null; created_at: string };
-  match_events_next: { match_id: string; seq: number; type: string; throw_id: string | null; player_id: string | null; reason: string | null; created_at: string };
+  match_events_next: {
+    match_id: string;
+    seq: number;
+    type: string;
+    throw_id: string | null;
+    player_id: string | null;
+    reason: string | null;
+    created_at: string;
+  };
 }
 
 interface CheckoutRuleMigrationTables {
@@ -162,19 +170,19 @@ const migrations: Record<string, Migration> = {
 };
 
 const provider: MigrationProvider = {
-  getMigrations: async () => migrations,
+  getMigrations: () => Promise.resolve(migrations),
 };
 
 export async function migrateToLatest<DB>(db: Kysely<DB>): Promise<void> {
   const { error } = await new Migrator({ db, provider }).migrateToLatest();
   if (error) {
-    throw error;
+    throw error instanceof Error ? error : new Error('Migration failed', { cause: error });
   }
 }
 
 export async function migrateTo<DB>(db: Kysely<DB>, target: string): Promise<void> {
   const { error } = await new Migrator({ db, provider }).migrateTo(target);
   if (error) {
-    throw error;
+    throw error instanceof Error ? error : new Error('Migration failed', { cause: error });
   }
 }

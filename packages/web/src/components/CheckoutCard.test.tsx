@@ -18,7 +18,7 @@ function renderCard(state: MatchSnapshot, disabled = false) {
   return { onCheckout, ...view };
 }
 
-const card = () => screen.getByRole('button', { name: /Zamknięcie/ }) as HTMLButtonElement;
+const card = () => screen.getByRole<HTMLButtonElement>('button', { name: /Zamknięcie/ });
 
 describe('CheckoutCard', () => {
   it('shows each dart of the route in its own chip', () => {
@@ -71,7 +71,11 @@ describe('CheckoutCard', () => {
   });
 
   it('renders nothing in Free run', () => {
-    const state = snapshot({ startingScore: null, currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: null, legsWon: 0 })] });
+    const state = snapshot({
+      startingScore: null,
+      currentPlayerId: 'p1',
+      players: [player('p1', 'Anna', { remaining: null, legsWon: 0 })],
+    });
     const { container } = renderCard(state);
     expect(container.innerHTML).toBe('');
   });

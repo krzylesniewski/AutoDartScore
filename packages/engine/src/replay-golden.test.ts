@@ -4,9 +4,9 @@ import { replayGame, type CheckoutStep, type GameConfig } from './index.js';
 
 // Migawka nagrana na silniku sprzed wydzielenia wspólnego rdzenia tury. Każda różnica to zmiana zachowania, więc migawki się nie nadpisuje.
 
-const S = (n: number): Hit => ({ segment: n, multiplier: 1 }) as Hit;
-const D = (n: number): Hit => ({ segment: n, multiplier: 2 }) as Hit;
-const T = (n: number): Hit => ({ segment: n, multiplier: 3 }) as Hit;
+const S = (n: number): Hit => ({ segment: n, multiplier: 1 });
+const D = (n: number): Hit => ({ segment: n, multiplier: 2 });
+const T = (n: number): Hit => ({ segment: n, multiplier: 3 });
 const BULL: Hit = { segment: 25, multiplier: 2 };
 const OUTER_BULL: Hit = { segment: 25, multiplier: 1 };
 const MISS: Hit = { segment: 0, multiplier: 0 };
@@ -100,7 +100,11 @@ const scenarios: readonly Scenario[] = [
   },
   { name: 'solo 501 to the checkout', config: solo, hits: soloTurns.flat() },
   { name: 'solo 501 stopped mid-turn', config: solo, hits: [...MAX, T(20), MISS] },
-  { name: 'free run', config: { type: 'practice', practiceMode: 'free_run', playerId: 'sam' }, hits: [T(20), MISS, BULL, OUTER_BULL, S(5), D(16), T(19)] },
+  {
+    name: 'free run',
+    config: { type: 'practice', practiceMode: 'free_run', playerId: 'sam' },
+    hits: [T(20), MISS, BULL, OUTER_BULL, S(5), D(16), T(19)],
+  },
   {
     name: 'checkouts repeat_on_miss',
     config: { type: 'practice', practiceMode: 'checkouts', playerId: 'sam', range: '2-50', seed: 12345, rule: 'repeat_on_miss' },

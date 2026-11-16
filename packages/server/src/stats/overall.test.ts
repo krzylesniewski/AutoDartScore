@@ -72,10 +72,7 @@ describe('buildOverall', () => {
   it('lists a player without a completed leg last and counts their darts', () => {
     const overall = buildOverall({
       players: [celina, anna, bartek],
-      games: [
-        game([leg('anna', 0, 150, 6), leg('bartek', 0, 30, 3)], { anna: 6, bartek: 3 }),
-        game([], { celina: 12, bartek: 15 }),
-      ],
+      games: [game([leg('anna', 0, 150, 6), leg('bartek', 0, 30, 3)], { anna: 6, bartek: 3 }), game([], { celina: 12, bartek: 15 })],
     });
     expect(overall).toMatchObject({ games: 1, legs: 1, darts: 36, average: 52.5 });
     expect(overall.players.map((entry) => [entry.name, entry.darts, entry.average, entry.difference])).toEqual([

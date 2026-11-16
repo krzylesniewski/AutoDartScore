@@ -177,9 +177,21 @@ export function HomeScreen() {
           />
         </div>
       </main>
-      <StartBar setup={setup} players={selected} canStart={request.success && !submitting} error={startError} onStart={() => void start()} />
+      <StartBar
+        setup={setup}
+        players={selected}
+        canStart={request.success && !submitting}
+        error={startError}
+        onStart={() => void start()}
+      />
       {creatingPlayer && <NewPlayerDialog onCreated={onPlayerCreated} onCancel={closeNewPlayer} />}
-      {abandoning && <AbandonDialog state={abandoning} onCancel={closeAbandon} onConfirm={(playerId, reason) => void abandon(abandoning, playerId, reason)} />}
+      {abandoning && (
+        <AbandonDialog
+          state={abandoning}
+          onCancel={closeAbandon}
+          onConfirm={(playerId, reason) => void abandon(abandoning, playerId, reason)}
+        />
+      )}
       {ending && <EndPracticeDialog onCancel={closeEnd} onConfirm={() => void end(ending)} />}
     </div>
   );

@@ -41,7 +41,15 @@ class LoadBoundary extends Component<{ children: ReactNode; onReload: () => void
 export function LazyScreen({ children, onReload = reloadPage }: LazyScreenProps) {
   return (
     <LoadBoundary onReload={onReload}>
-      <Suspense fallback={<p role="status" className="font-display text-(--color-text-muted)">{pl.loading}</p>}>{children}</Suspense>
+      <Suspense
+        fallback={
+          <p role="status" className="font-display text-(--color-text-muted)">
+            {pl.loading}
+          </p>
+        }
+      >
+        {children}
+      </Suspense>
     </LoadBoundary>
   );
 }

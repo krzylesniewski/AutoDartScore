@@ -110,7 +110,11 @@ export function announcementFor(
     return null;
   }
   const parts: [AnnouncementPart, ...AnnouncementPart[]] = [main.part];
-  if (options.zeroComments === true && main.kind === 'score' && events.some((event) => event.type === 'turn_completed' && event.total === 0)) {
+  if (
+    options.zeroComments === true &&
+    main.kind === 'score' &&
+    events.some((event) => event.type === 'turn_completed' && event.total === 0)
+  ) {
     parts.push(pick(ZERO_VARIANTS, random));
   }
   for (const kind of ACHIEVEMENT_ORDER) {

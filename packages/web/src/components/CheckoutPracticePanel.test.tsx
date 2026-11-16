@@ -43,7 +43,7 @@ function expectNoFeedback(element: HTMLElement): void {
 }
 
 function button(name: string): HTMLButtonElement {
-  return screen.getByRole('button', { name }) as HTMLButtonElement;
+  return screen.getByRole<HTMLButtonElement>('button', { name });
 }
 
 function rows(list: HTMLElement): string[] {

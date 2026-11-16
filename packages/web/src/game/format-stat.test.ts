@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { pl } from '../i18n/pl';
-import { formatAverage, formatBestLeg, formatDecimal, formatDifference, formatDoubles, formatDoublesParts, formatNumber, formatPercent } from './format-stat';
+import {
+  formatAverage,
+  formatBestLeg,
+  formatDecimal,
+  formatDifference,
+  formatDoubles,
+  formatDoublesParts,
+  formatNumber,
+  formatPercent,
+} from './format-stat';
 
 describe('formatDecimal', () => {
   it('renders a decimal comma with the given digits', () => {

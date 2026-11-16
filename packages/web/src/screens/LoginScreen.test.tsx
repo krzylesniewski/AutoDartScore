@@ -14,7 +14,7 @@ beforeEach(() => {
   onLoggedIn = vi.fn<() => void>();
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => respond()),
+    vi.fn(() => Promise.resolve(respond())),
   );
 });
 
@@ -37,7 +37,7 @@ describe('LoginScreen', () => {
 
   it('disables the button while the field is empty', () => {
     render(<LoginScreen onLoggedIn={onLoggedIn} />);
-    const button = screen.getByRole('button', { name: 'Zaloguj' }) as HTMLButtonElement;
+    const button = screen.getByRole<HTMLButtonElement>('button', { name: 'Zaloguj' });
     expect(button.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText('Hasło'), { target: { value: 'x' } });
     expect(button.disabled).toBe(false);
@@ -59,7 +59,7 @@ describe('LoginScreen', () => {
     expect(alert.querySelector('svg')).not.toBeNull();
     expect(localStorage.getItem('autoscore.token')).toBeNull();
     expect(onLoggedIn).not.toHaveBeenCalled();
-    expect((screen.getByLabelText('Hasło') as HTMLInputElement).value).toBe('wrong');
+    expect(screen.getByLabelText<HTMLInputElement>('Hasło').value).toBe('wrong');
   });
 
   it('ties a wrong password to the field', async () => {

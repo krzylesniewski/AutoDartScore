@@ -10,7 +10,9 @@
     "dev": "pnpm -r --parallel dev",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "e2e": "pnpm --filter @autoscore/e2e e2e",
     "docs": "pnpm --filter @autoscore/web docs:dev"
   },
@@ -18,6 +20,8 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.6",
     "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.10.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.2"
   }

@@ -38,6 +38,13 @@ describe('canEndPractice', () => {
   });
 
   it('refuses a 1v1', () => {
-    expect(canEndPractice(snapshot({ legIndex: 1, players: [player('p1', 'Anna', { dartsThrownInLeg: 3 }), player('p2', 'Bartek', { dartsThrownInLeg: 3 })] }))).toBe(false);
+    expect(
+      canEndPractice(
+        snapshot({
+          legIndex: 1,
+          players: [player('p1', 'Anna', { dartsThrownInLeg: 3 }), player('p2', 'Bartek', { dartsThrownInLeg: 3 })],
+        }),
+      ),
+    ).toBe(false);
   });
 });

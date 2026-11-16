@@ -74,7 +74,14 @@ describe('legTurns in the match snapshot', () => {
     const { id, anna } = await match301();
     const state = await throwAll(id, [T(20), T(20), T(20), S(1), S(1), S(1), T(20), T(20)]);
     expect(state.legTurns).toHaveLength(3);
-    expect(state.legTurns[2]).toEqual({ playerId: anna, turnIndex: 2, darts: hits([T(20), T(20)]), points: 0, remainingAfter: 121, bust: true });
+    expect(state.legTurns[2]).toEqual({
+      playerId: anna,
+      turnIndex: 2,
+      darts: hits([T(20), T(20)]),
+      points: 0,
+      remainingAfter: 121,
+      bust: true,
+    });
   });
 
   it('removes the turn when its last dart is undone', async () => {

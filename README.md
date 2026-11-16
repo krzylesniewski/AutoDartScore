@@ -236,16 +236,22 @@ README pakietów: [engine](packages/engine/README.md), [schema](packages/schema/
 ```sh
 pnpm test        # testy wszystkich pakietów (Vitest)
 pnpm typecheck   # tsc w każdym pakiecie
-pnpm lint        # ESLint na całym repo
+pnpm lint        # ESLint na całym repo, ostrzeżenie też jest błędem
+pnpm format      # formatuje repo Prettierem
+pnpm format:check   # sprawdza formatowanie bez zmiany plików
 pnpm e2e         # testy end-to-end w Chromium (opis w e2e/README.md)
 pnpm --filter @autoscore/engine test   # testy jednego pakietu
 ```
 
+Kod formatuje Prettier według `.prettierrc.json`: pojedyncze cudzysłowy i szerokość linii 140. Markdown i HTML nie są formatowane, listę wyłączeń ma `.prettierignore`.
+
+ESLint sprawdza reguły typescript-eslint z informacją o typach, a w `packages/web` także reguły React hooks. Testy `engine` i `schema` liczą pokrycie i nie przechodzą poniżej progów z ich `vitest.config.ts`.
+
 CI (`.github/workflows/ci.yml`) ma 8 jobów:
 
-- `test`: `pnpm test`,
+- `test`: `pnpm test`, w tym progi pokrycia w `engine` i `schema`,
 - `typecheck`: `pnpm typecheck`,
-- `lint`: `pnpm lint`,
+- `lint`: `pnpm lint` i `pnpm format:check`,
 - `build`: build frontu z `VITE_BASE=/`, jak przy wdrożeniu,
 - `smoke`: start serwera bez hasła na pustej bazie i `GET /players` z odpowiedzią 200,
 - `e2e`: `pnpm e2e` na zbudowanym froncie i serwerze z hasłem,

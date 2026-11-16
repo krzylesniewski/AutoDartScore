@@ -13,7 +13,18 @@ const TEENS = [
   'osiemnaście',
   'dziewiętnaście',
 ];
-const TENS = ['', '', 'dwadzieścia', 'trzydzieści', 'czterdzieści', 'pięćdziesiąt', 'sześćdziesiąt', 'siedemdziesiąt', 'osiemdziesiąt', 'dziewięćdziesiąt'];
+const TENS = [
+  '',
+  '',
+  'dwadzieścia',
+  'trzydzieści',
+  'czterdzieści',
+  'pięćdziesiąt',
+  'sześćdziesiąt',
+  'siedemdziesiąt',
+  'osiemdziesiąt',
+  'dziewięćdziesiąt',
+];
 const HUNDRED = 'sto';
 
 // Słowa zamiast cyfr: każdy głos czyta je tak samo, a później dają się zamienić na nagrane klipy.

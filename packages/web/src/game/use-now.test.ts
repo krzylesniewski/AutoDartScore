@@ -36,4 +36,14 @@ describe('useNow', () => {
     unmount();
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it('reads the current time on the render that turns ticking on', () => {
+    const { result, rerender } = renderHook(({ ticking }) => useNow(ticking), { initialProps: { ticking: false } });
+    expect(result.current).toBe(NOW);
+    act(() => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+    rerender({ ticking: true });
+    expect(result.current).toBe(NOW + 10 * 60_000);
+  });
 });

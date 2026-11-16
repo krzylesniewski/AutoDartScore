@@ -49,3 +49,5 @@ Zapytania statystyk (`PlayerStatsQuery`, `RankingsQuery`, `PlayerFormQuery`, `Ov
 ```sh
 pnpm --filter @autoscore/schema test
 ```
+
+Testy liczą pokrycie (v8) i nie przechodzą, gdy spadnie ono poniżej progów w `vitest.config.ts`.

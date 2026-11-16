@@ -37,10 +37,20 @@ export type NewMatch = Omit<StoredMatch, 'id' | 'createdAt' | 'players'> & { rea
 
 export type LogEntry =
   | { readonly seq: number; readonly type: 'throw' | 'undo'; readonly throwId: string; readonly createdAt: string }
-  | { readonly seq: number; readonly type: 'match_abandoned'; readonly playerId: string; readonly reason: string | null; readonly createdAt: string }
+  | {
+      readonly seq: number;
+      readonly type: 'match_abandoned';
+      readonly playerId: string;
+      readonly reason: string | null;
+      readonly createdAt: string;
+    }
   | { readonly seq: number; readonly type: 'match_resumed' | 'practice_ended'; readonly createdAt: string }
   | { readonly seq: number; readonly type: 'checkout_attempt'; readonly success: boolean; readonly createdAt: string }
-  | { readonly seq: number; readonly type: 'checkout_attempt_undone' | 'checkout_skipped' | 'checkout_skip_undone'; readonly createdAt: string };
+  | {
+      readonly seq: number;
+      readonly type: 'checkout_attempt_undone' | 'checkout_skipped' | 'checkout_skip_undone';
+      readonly createdAt: string;
+    };
 
 export interface MatchLog {
   readonly entries: readonly LogEntry[];
@@ -246,7 +256,10 @@ export function createStore(db: Kysely<Database>): Store {
   }
 
   async function withProfiles(rows: readonly PlayerRow[]): Promise<Player[]> {
-    const changes = await latestChanges(db, rows.map((row) => row.id));
+    const changes = await latestChanges(
+      db,
+      rows.map((row) => row.id),
+    );
     return rows.map((row) => toPlayer(row, changes.get(row.id)));
   }
 
@@ -266,7 +279,10 @@ export function createStore(db: Kysely<Database>): Store {
           .execute()),
       );
     }
-    const changes = await latestChanges(db, rows.map((row) => row.id));
+    const changes = await latestChanges(
+      db,
+      rows.map((row) => row.id),
+    );
     const players = new Map<string, Player[]>();
     for (const row of rows) {
       const list = players.get(row.match_id) ?? [];
@@ -276,10 +292,16 @@ export function createStore(db: Kysely<Database>): Store {
     return players;
   }
 
-  function appendLifecycle(matchId: string, entry: Pick<Insertable<MatchEventsTable>, 'type' | 'player_id' | 'reason' | 'success'>): Promise<number> {
+  function appendLifecycle(
+    matchId: string,
+    entry: Pick<Insertable<MatchEventsTable>, 'type' | 'player_id' | 'reason' | 'success'>,
+  ): Promise<number> {
     return db.transaction().execute(async (trx) => {
       const seq = await nextSeq(trx, matchId);
-      await trx.insertInto('match_events').values({ match_id: matchId, seq, ...entry, created_at: now() }).execute();
+      await trx
+        .insertInto('match_events')
+        .values({ match_id: matchId, seq, ...entry, created_at: now() })
+        .execute();
       return seq;
     });
   }
@@ -303,7 +325,10 @@ export function createStore(db: Kysely<Database>): Store {
       for (const row of rows) {
         const seq = await nextSeq(trx, row.match_id);
         await trx.insertInto('throws').values(row).execute();
-        await trx.insertInto('match_events').values({ match_id: row.match_id, seq, type: 'throw', throw_id: row.id, created_at: receivedAt }).execute();
+        await trx
+          .insertInto('match_events')
+          .values({ match_id: row.match_id, seq, type: 'throw', throw_id: row.id, created_at: receivedAt })
+          .execute();
         seqs.push(seq);
       }
       return seqs;
@@ -361,7 +386,11 @@ export function createStore(db: Kysely<Database>): Store {
       if (ids.length === 0) {
         return [];
       }
-      const rows = await db.selectFrom('players').selectAll().where('id', 'in', [...ids]).execute();
+      const rows = await db
+        .selectFrom('players')
+        .selectAll()
+        .where('id', 'in', [...ids])
+        .execute();
       return withProfiles(rows);
     },
 
@@ -518,12 +547,7 @@ export function createStore(db: Kysely<Database>): Store {
     },
 
     async loadLog(matchId) {
-      const entries = await db
-        .selectFrom('match_events')
-        .select(LOG_COLUMNS)
-        .where('match_id', '=', matchId)
-        .orderBy('seq')
-        .execute();
+      const entries = await db.selectFrom('match_events').select(LOG_COLUMNS).where('match_id', '=', matchId).orderBy('seq').execute();
       const throws = await db.selectFrom('throws').selectAll().where('match_id', '=', matchId).execute();
       return {
         entries: entries.map(toLogEntry),
@@ -551,7 +575,10 @@ export function createStore(db: Kysely<Database>): Store {
     async appendUndo(matchId, throwId) {
       return db.transaction().execute(async (trx) => {
         const seq = await nextSeq(trx, matchId);
-        await trx.insertInto('match_events').values({ match_id: matchId, seq, type: 'undo', throw_id: throwId, created_at: now() }).execute();
+        await trx
+          .insertInto('match_events')
+          .values({ match_id: matchId, seq, type: 'undo', throw_id: throwId, created_at: now() })
+          .execute();
         return seq;
       });
     },

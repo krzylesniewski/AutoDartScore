@@ -18,8 +18,14 @@ export function EndPracticeDialog({ onConfirm, onCancel }: EndPracticeDialogProp
 
   return (
     <Dialog labelledBy={titleId} className="gap-5" onClose={onCancel}>
-      <h2 id={titleId} className="relative flex items-center gap-3.5 font-display text-[32px] leading-none font-black tracking-[0.01em] uppercase sm:text-[40px]">
-        <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-full bg-(--color-surface-soft) text-2xl">
+      <h2
+        id={titleId}
+        className="relative flex items-center gap-3.5 font-display text-[32px] leading-none font-black tracking-[0.01em] uppercase sm:text-[40px]"
+      >
+        <span
+          aria-hidden="true"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-(--color-surface-soft) text-2xl"
+        >
           <StopIcon />
         </span>
         {pl.endPracticeTitle}

@@ -1,4 +1,11 @@
-import { AbandonMatchRequest, CheckoutAttemptRequest, CommandRequest, CreateMatchRequest, MatchListQuery, RestMissRequest } from '@autoscore/schema';
+import {
+  AbandonMatchRequest,
+  CheckoutAttemptRequest,
+  CommandRequest,
+  CreateMatchRequest,
+  MatchListQuery,
+  RestMissRequest,
+} from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import { invalidRequest } from '../errors.js';
 import type { MatchService } from '../match-service.js';
@@ -59,7 +66,7 @@ export async function matchRoutes(app: FastifyInstance, service: MatchService): 
   // Undo, wznowienie, koniec treningu i pominięcie checkoutu czytają z body tylko expectedSeq. Własny parser w tym kontekście
   // czyta body jako JSON przy każdym typie treści. Pusty albo zepsuty JSON i wartość, która nie jest obiektem, znaczą brak body,
   // więc nie dają błędu 400. Obiekt musi przejść CommandRequest.
-  await app.register(async (undoScope) => {
+  await app.register((undoScope) => {
     undoScope.removeAllContentTypeParsers();
     undoScope.addContentTypeParser('*', { parseAs: 'buffer' }, (_request, body, done) => done(null, lenientJson(body)));
     undoScope.post<MatchParams>('/matches/:id/undo', async (request) => service.undo(request.params.id, commandSeq(request.body)));

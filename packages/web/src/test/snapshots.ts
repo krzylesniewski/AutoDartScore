@@ -1,4 +1,16 @@
-import type { CheckoutAttempt, CheckoutSession, LegProgress, LegTurn, MatchListItem, MatchSnapshot, MatchSnapshotPlayer, MatchSummary, MatchSummaryPlayer, Player, PlayerStatLine } from '@autoscore/schema';
+import type {
+  CheckoutAttempt,
+  CheckoutSession,
+  LegProgress,
+  LegTurn,
+  MatchListItem,
+  MatchSnapshot,
+  MatchSnapshotPlayer,
+  MatchSummary,
+  MatchSummaryPlayer,
+  Player,
+  PlayerStatLine,
+} from '@autoscore/schema';
 
 // Domyślnie tura za 60 z 501. Bust bez podanych punktów i wyniku dostaje 0 punktów i wynik startowy, jak w schemacie.
 export function legTurn(playerId: string, overrides: Partial<LegTurn> = {}): LegTurn {

@@ -341,7 +341,13 @@ export function useMatch(matchId: string, onLiveMessage?: (message: LiveMessage)
     const eventId = newEventId();
     enqueue(async () => {
       const start = stateRef.current;
-      if (!start || start.finished || start.status !== 'in_progress' || start.currentPlayerId !== playerId || start.currentDarts.length < dartsAtClick) {
+      if (
+        !start ||
+        start.finished ||
+        start.status !== 'in_progress' ||
+        start.currentPlayerId !== playerId ||
+        start.currentDarts.length < dartsAtClick
+      ) {
         return;
       }
       const body: RestMissRequest = { eventId, expectedSeq: start.eventSeq };

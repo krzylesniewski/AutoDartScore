@@ -69,7 +69,15 @@ export function ScoreProgressChart({ progress, players }: ScoreProgressChartProp
           {entries.map(({ line, player, dash }) => (
             <li key={line.playerId} className="flex min-w-0 items-center gap-2">
               <svg aria-hidden="true" viewBox="0 0 32 8" className="h-2 w-7.5 shrink-0">
-                <line x1={0} x2={32} y1={4} y2={4} className={avatarStrokeClass(player?.color ?? 1)} strokeWidth={3} strokeDasharray={dash} />
+                <line
+                  x1={0}
+                  x2={32}
+                  y1={4}
+                  y2={4}
+                  className={avatarStrokeClass(player?.color ?? 1)}
+                  strokeWidth={3}
+                  strokeDasharray={dash}
+                />
               </svg>
               <Avatar name={player?.name ?? ''} avatar={player?.avatar ?? null} color={player?.color ?? 1} size="small" />
               <span className="min-w-0 font-display text-lg font-bold break-words">{player?.name}</span>
@@ -98,16 +106,42 @@ export function ScoreProgressChart({ progress, players }: ScoreProgressChartProp
             className="block h-44 w-full rounded-(--radius-chip) bg-(--color-bg)/55 lg:h-60"
           >
             {chart.dartGrid.map((tick) => (
-              <line key={`x${tick.value}`} x1={tick.position} x2={tick.position} y1={0} y2={SIZE.height} className="stroke-(--color-border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              <line
+                key={`x${tick.value}`}
+                x1={tick.position}
+                x2={tick.position}
+                y1={0}
+                y2={SIZE.height}
+                className="stroke-(--color-border)"
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+              />
             ))}
             {chart.scoreGrid.map((tick) => (
-              <line key={`y${tick.value}`} x1={0} x2={SIZE.width} y1={tick.position} y2={tick.position} className="stroke-(--color-border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              <line
+                key={`y${tick.value}`}
+                x1={0}
+                x2={SIZE.width}
+                y1={tick.position}
+                y2={tick.position}
+                className="stroke-(--color-border)"
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+              />
             ))}
             {entries.map(({ line, player, layout, dash }) => {
               const stroke = avatarStrokeClass(player?.color ?? 1);
               return (
                 <g key={line.playerId}>
-                  {layout?.path && <path d={layout.path} className={`fill-none ${stroke}`} strokeWidth={3} strokeDasharray={dash} vectorEffect="non-scaling-stroke" />}
+                  {layout?.path && (
+                    <path
+                      d={layout.path}
+                      className={`fill-none ${stroke}`}
+                      strokeWidth={3}
+                      strokeDasharray={dash}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  )}
                   {/* Punkt to ścieżka zerowej długości z okrągłym końcem, bo okrąg rozciągnąłby się przy preserveAspectRatio="none". */}
                   {layout?.points.map((point, index) => (
                     <path

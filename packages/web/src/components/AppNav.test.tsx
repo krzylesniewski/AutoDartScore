@@ -13,7 +13,11 @@ describe('AppNav', () => {
     const settings = within(nav).getByRole('link', { name: 'Ustawienia' });
     expect(settings.getAttribute('href')).toBe('#/settings');
     expect(settings.hasAttribute('aria-disabled')).toBe(false);
-    expect(within(nav).getAllByRole('link').filter((link) => link.hasAttribute('aria-disabled'))).toEqual([]);
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .filter((link) => link.hasAttribute('aria-disabled')),
+    ).toEqual([]);
     expect(within(nav).queryByText('Wkrótce')).toBeNull();
   });
 

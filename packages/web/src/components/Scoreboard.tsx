@@ -162,7 +162,10 @@ export function Scoreboard({ state }: ScoreboardProps) {
   const players = scoreboardOrder(state);
   const freeSlots = state.type === 'casual' ? MAX_PLAYERS - state.players.length : 0;
   const nextId = nextPlayerId(state);
-  const kinds: ScoreboardRowKind[] = [...players.map((player) => rowKind(state, player)), ...Array.from({ length: freeSlots }, () => 'slot' as const)];
+  const kinds: ScoreboardRowKind[] = [
+    ...players.map((player) => rowKind(state, player)),
+    ...Array.from({ length: freeSlots }, () => 'slot' as const),
+  ];
   const { offsets, height } = scoreboardRowOffsets(kinds);
   const gapFor = (kind: ScoreboardRowKind) => classes(layout, kind === 'current' ? 'gapCurrent' : 'gap');
   const rowClass = 'absolute inset-x-0 top-0 transition-transform duration-300 ease-out motion-reduce:transition-none';
@@ -277,14 +280,25 @@ function CurrentCard({ player, state, layout }: RowProps) {
           {state.checkouts ? throwingNowShort : throwingNow(state.currentDarts.length + 1)}
         </span>
       </span>
-      {legs && <LegDots won={legs.won} target={legs.target} className="col-start-3 row-start-1 gap-1.5" dotClass={classes(layout, 'currentDots')} />}
+      {legs && (
+        <LegDots
+          won={legs.won}
+          target={legs.target}
+          className="col-start-3 row-start-1 gap-1.5"
+          dotClass={classes(layout, 'currentDots')}
+        />
+      )}
       <div className={classes(layout, 'currentValue')}>
         {state.freeRun ? (
           <SessionCounter items={freeRunItems(state.freeRun)} layout={layout} />
         ) : state.checkouts ? (
           <SessionCounter items={checkoutItems(state.checkouts)} layout={layout} />
         ) : (
-          <span className={`sc-player__value block font-display leading-[0.82] font-extrabold tabular-nums ${classes(layout, 'currentScore')}`}>{player.remaining}</span>
+          <span
+            className={`sc-player__value block font-display leading-[0.82] font-extrabold tabular-nums ${classes(layout, 'currentScore')}`}
+          >
+            {player.remaining}
+          </span>
         )}
       </div>
       {progress && (
@@ -352,7 +366,9 @@ function WaitingRow({ player, state, layout, next }: RowProps & { next: boolean 
           {legs && <LegDots won={legs.won} target={legs.target} className="gap-[5px]" dotClass={classes(layout, 'waitingDots')} />}
         </span>
         {(next || last) && (
-          <span className={`flex min-w-0 items-baseline gap-1.5 leading-tight whitespace-nowrap text-(--color-text-muted) ${classes(layout, 'waitingNext')}`}>
+          <span
+            className={`flex min-w-0 items-baseline gap-1.5 leading-tight whitespace-nowrap text-(--color-text-muted) ${classes(layout, 'waitingNext')}`}
+          >
             {next && <span className="truncate">{pl.nextInQueue}</span>}
             {next && last && <span aria-hidden="true">·</span>}
             {last && <LastTurn turn={last} />}
@@ -364,7 +380,9 @@ function WaitingRow({ player, state, layout, next }: RowProps & { next: boolean 
       ) : state.checkouts ? (
         <SessionCounter items={checkoutItems(state.checkouts)} layout={layout} />
       ) : (
-        <span className={`font-display font-bold tabular-nums text-(--color-text-sub) ${classes(layout, 'waitingScore')}`}>{player.remaining}</span>
+        <span className={`font-display font-bold tabular-nums text-(--color-text-sub) ${classes(layout, 'waitingScore')}`}>
+          {player.remaining}
+        </span>
       )}
       {progress && (
         <div className="col-span-full row-start-2">
@@ -378,9 +396,13 @@ function WaitingRow({ player, state, layout, next }: RowProps & { next: boolean 
 function PlacedRow({ player, layout }: { player: MatchSnapshotPlayer; layout: Layout }) {
   const place = player.place ?? 0;
   return (
-    <div className={`sc-player--waiting flex h-full items-center overflow-hidden rounded-(--radius-card) text-(--color-text) ${classes(layout, 'placedCard')}`}>
+    <div
+      className={`sc-player--waiting flex h-full items-center overflow-hidden rounded-(--radius-card) text-(--color-text) ${classes(layout, 'placedCard')}`}
+    >
       <Avatar name={player.name} avatar={player.avatar} color={player.color} size={layout.avatars.placed} />
-      <span className={`min-w-0 flex-1 truncate font-display leading-none font-semibold ${classes(layout, 'placedName')}`}>{player.name}</span>
+      <span className={`min-w-0 flex-1 truncate font-display leading-none font-semibold ${classes(layout, 'placedName')}`}>
+        {player.name}
+      </span>
       <span className="flex shrink-0 items-center gap-2 rounded-(--radius-pill) bg-(--color-surface-soft) px-3.5 py-[7px] font-display text-[17px] leading-none font-bold whitespace-nowrap">
         <PlaceIcon className={place === 1 ? 'text-(--color-gold)' : 'text-(--color-text)'} />
         {pl.place(place)}
@@ -429,7 +451,11 @@ function SessionCounter({ items, layout }: { items: CounterItems; layout: Layout
         const primary = index === items.length - 1;
         return (
           <div key={term} className={`flex flex-col ${classes(layout, primary ? 'counterPrimary' : 'counterItem')}`}>
-            <dt className={`leading-tight uppercase tracking-(--tracking-label) text-(--color-text-muted) ${classes(layout, 'counterTerm')}`}>{term}</dt>
+            <dt
+              className={`leading-tight uppercase tracking-(--tracking-label) text-(--color-text-muted) ${classes(layout, 'counterTerm')}`}
+            >
+              {term}
+            </dt>
             <dd
               className={`leading-none font-bold tabular-nums ${primary ? 'sc-player__value ' : ''}${classes(layout, primary ? 'counterPrimaryValue' : 'counterValue')}`}
             >

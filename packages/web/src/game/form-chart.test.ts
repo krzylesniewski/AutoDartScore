@@ -51,12 +51,27 @@ describe('formChart', () => {
 
 describe('formChart: grid', () => {
   it.each([
-    [[40, 80, 60], [40, 50, 60, 70, 80]],
-    [[60.25, 60.5], [59, 60, 61, 62]],
-    [[20, 95], [20, 40, 60, 80, 100]],
-    [[50, 50], [49, 50, 51]],
+    [
+      [40, 80, 60],
+      [40, 50, 60, 70, 80],
+    ],
+    [
+      [60.25, 60.5],
+      [59, 60, 61, 62],
+    ],
+    [
+      [20, 95],
+      [20, 40, 60, 80, 100],
+    ],
+    [
+      [50, 50],
+      [49, 50, 51],
+    ],
     [[45.5], [44, 45, 46, 47]],
-    [[0, 0], [0, 1, 2]],
+    [
+      [0, 0],
+      [0, 1, 2],
+    ],
   ])('draws round grid lines for %j', (values, lines) => {
     const chart = formChart(values, size);
     expect(chart.grid.map((tick) => tick.value)).toEqual(lines);
@@ -81,7 +96,12 @@ describe('formChart: grid', () => {
 
 describe('formChart: game labels', () => {
   function labels(count: number): { value: number; position: number }[] {
-    return [...formChart(Array.from({ length: count }, () => 50), size).gameLabels];
+    return [
+      ...formChart(
+        Array.from({ length: count }, () => 50),
+        size,
+      ).gameLabels,
+    ];
   }
 
   it('labels a single game in the middle, like the point', () => {
@@ -94,8 +114,13 @@ describe('formChart: game labels', () => {
   });
 
   it('labels every other game for 20 games, starting at game 1', () => {
-    const chart = formChart(Array.from({ length: 20 }, () => 50), size);
+    const chart = formChart(
+      Array.from({ length: 20 }, () => 50),
+      size,
+    );
     expect(chart.gameLabels.map((tick) => tick.value)).toEqual([1, 3, 5, 7, 9, 11, 13, 15, 17, 19]);
-    expect(chart.gameLabels.map((tick) => tick.position)).toEqual(chart.points.filter((_, index) => index % 2 === 0).map((point) => point.x));
+    expect(chart.gameLabels.map((tick) => tick.position)).toEqual(
+      chart.points.filter((_, index) => index % 2 === 0).map((point) => point.x),
+    );
   });
 });

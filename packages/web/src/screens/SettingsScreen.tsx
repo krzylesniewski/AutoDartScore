@@ -25,7 +25,8 @@ const sectionTitle = 'font-display text-(length:--text-label) leading-none font-
 // Globalny pierścień fokusu pomija radio, więc fokus rysuje karta, która je obejmuje.
 const layoutCard =
   'relative flex min-h-11 min-w-0 cursor-pointer flex-col gap-4 overflow-hidden rounded-(--radius-panel) px-3.5 py-4 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--color-focus) sm:px-6 sm:py-5.5 lg:h-85';
-const checkedCard = 'bg-linear-to-b from-(--color-surface-raised) to-(--color-surface) inset-ring-2 inset-ring-(--color-text) shadow-(--shadow-panel)';
+const checkedCard =
+  'bg-linear-to-b from-(--color-surface-raised) to-(--color-surface) inset-ring-2 inset-ring-(--color-text) shadow-(--shadow-panel)';
 const uncheckedCard = 'bg-(--color-surface-softer) shadow-(--shadow-inset-line)';
 
 // Stan czytamy i zapisujemy wprost w localStorage, bez hooka głosu, który tworzy obiekty mowy i dźwięku. Tutaj nie ma czego odczytywać.
@@ -88,7 +89,9 @@ export function SettingsScreen() {
                       <span aria-hidden="true" className="text-xl text-(--color-text-sub) sm:text-[26px]">
                         {option.icon}
                       </span>
-                      <span className={`min-w-0 flex-1 truncate font-display text-2xl leading-none sm:text-[30px] ${checked ? 'font-extrabold' : 'font-bold'}`}>
+                      <span
+                        className={`min-w-0 flex-1 truncate font-display text-2xl leading-none sm:text-[30px] ${checked ? 'font-extrabold' : 'font-bold'}`}
+                      >
                         {option.label}
                       </span>
                       {checked && (

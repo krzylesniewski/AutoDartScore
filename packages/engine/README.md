@@ -67,6 +67,8 @@ Błędy (`errors.ts`): `EngineError` z polem `code`:
 pnpm --filter @autoscore/engine test
 ```
 
+Testy liczą pokrycie (v8) i nie przechodzą, gdy spadnie ono poniżej progów w `vitest.config.ts`.
+
 - `x01-turn.test.ts`: jedna rzutka w turze X01, otwarta tura, trzecia rzutka, trzy rodzaje bustu, zamknięcie na doublu i Bullu, zła rzutka, 4. rzutka w turze.
 - `x01-match.test.ts`: konfiguracja, tura, bust, zamknięcie, legi i mecz, odtwarzanie.
 - `casual-match.test.ts`: zabawa, kolejne zamknięcia, wypadanie z kolejki, ostatnie miejsce, bust po zamknięciu innych graczy, odtwarzanie.

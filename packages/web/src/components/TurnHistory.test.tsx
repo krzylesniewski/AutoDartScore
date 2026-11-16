@@ -29,7 +29,11 @@ function soloState(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {
     legsToWin: null,
     countsToStats: true,
     players: [player('p1', 'Anna', { remaining: 415 })],
-    legTurns: [legTurn('p1', { points: 60, remainingAfter: 441 }), legTurn('p1', { bust: true, remainingAfter: 441 }), legTurn('p1', { points: 26, remainingAfter: 415 })],
+    legTurns: [
+      legTurn('p1', { points: 60, remainingAfter: 441 }),
+      legTurn('p1', { bust: true, remainingAfter: 441 }),
+      legTurn('p1', { points: 26, remainingAfter: 415 }),
+    ],
     ...overrides,
   });
 }
@@ -43,7 +47,10 @@ function freeRunState(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {
     countsToStats: false,
     round: null,
     players: [player('p1', 'Anna', { remaining: null })],
-    legTurns: [legTurn('p1', { darts: [T20, S20, S5], points: 85, remainingAfter: null }), legTurn('p1', { darts: [S5, S5, S20], points: 30, remainingAfter: null, turnIndex: 1 })],
+    legTurns: [
+      legTurn('p1', { darts: [T20, S20, S5], points: 85, remainingAfter: null }),
+      legTurn('p1', { darts: [S5, S5, S20], points: 30, remainingAfter: null, turnIndex: 1 }),
+    ],
     currentDarts: [S20],
     freeRun: { dartsThrown: 7, totalPoints: 135, average: 57.86 },
     ...overrides,
@@ -122,7 +129,11 @@ describe('TurnHistory', () => {
     const state = casual(['Anna', 'Bartek', 'Celina'], {
       currentPlayerId: 'p2',
       players: [player('p1', 'Anna', { place: 1, remaining: 0 }), player('p2', 'Bartek'), player('p3', 'Celina')],
-      legTurns: [legTurn('p1', { points: 140, remainingAfter: 0 }), legTurn('p2', { points: 60, remainingAfter: 441 }), legTurn('p3', { points: 45, remainingAfter: 456 })],
+      legTurns: [
+        legTurn('p1', { points: 140, remainingAfter: 0 }),
+        legTurn('p2', { points: 60, remainingAfter: 441 }),
+        legTurn('p3', { points: 45, remainingAfter: 456 }),
+      ],
     });
     render(<TurnHistory state={state} />);
     const rows = within(table()).getAllByRole('row').slice(1);
@@ -144,34 +155,64 @@ describe('TurnHistory', () => {
       ['Punkty', 'row'],
       ['Zostało', 'row'],
     ]);
-    const [points, remaining] = within(solo).getAllByRole('row').slice(1) as HTMLElement[];
-    expect(within(points as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['60', 'Bust', '26', '…rzuca teraz']);
-    expect(within(remaining as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['441', '441', '415', '']);
+    const [points, remaining] = within(solo).getAllByRole('row').slice(1);
+    expect(
+      within(points as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['60', 'Bust', '26', '…rzuca teraz']);
+    expect(
+      within(remaining as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['441', '441', '415', '']);
   });
 
   it('has no current column in a finished Solo 501', () => {
     const state = soloState({ finished: true, status: 'finished', currentPlayerId: null });
     render(<TurnHistory state={state} />);
     const solo = screen.getByRole('table', { name: 'Przebieg lega' });
-    expect(within(solo).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Tura', '1', '2', '3']);
+    expect(
+      within(solo)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Tura', '1', '2', '3']);
   });
 
   it('shows Przebieg sesji in Free run with the dart labels and the open approach', () => {
     render(<TurnHistory state={freeRunState()} />);
     expect(screen.getByRole('heading', { level: 2, name: 'Przebieg sesji' })).toBeTruthy();
     const session = screen.getByRole('table', { name: 'Przebieg sesji' });
-    expect(within(session).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Tura', 'Rzutki', 'Punkty']);
+    expect(
+      within(session)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Tura', 'Rzutki', 'Punkty']);
     const rows = within(session).getAllByRole('row').slice(1);
-    expect(within(rows[0] as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['T20 · 20 · 5', '85']);
+    expect(
+      within(rows[0] as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['T20 · 20 · 5', '85']);
     const current = rows[2] as HTMLElement;
     expect(current.getAttribute('aria-current')).toBe('true');
-    expect(within(current).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['20 · …rzuca teraz', '20']);
+    expect(
+      within(current)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['20 · …rzuca teraz', '20']);
   });
 
   it('shows only the dots in the open Free run approach before its first dart', () => {
     render(<TurnHistory state={freeRunState({ currentDarts: [] })} />);
-    const rows = within(screen.getByRole('table', { name: 'Przebieg sesji' })).getAllByRole('row').slice(1);
-    expect(within(rows[2] as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['…rzuca teraz', '']);
+    const rows = within(screen.getByRole('table', { name: 'Przebieg sesji' }))
+      .getAllByRole('row')
+      .slice(1);
+    expect(
+      within(rows[2] as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['…rzuca teraz', '']);
   });
 
   it('renders nothing in checkout practice', () => {

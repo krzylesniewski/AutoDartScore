@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { EngineError } from './errors.js';
 import { applyX01Dart, type X01Turn } from './x01-turn.js';
 
-const S = (n: number): Hit => ({ segment: n, multiplier: 1 }) as Hit;
-const D = (n: number): Hit => ({ segment: n, multiplier: 2 }) as Hit;
-const T = (n: number): Hit => ({ segment: n, multiplier: 3 }) as Hit;
+const S = (n: number): Hit => ({ segment: n, multiplier: 1 });
+const D = (n: number): Hit => ({ segment: n, multiplier: 2 });
+const T = (n: number): Hit => ({ segment: n, multiplier: 3 });
 const BULL: Hit = { segment: 25, multiplier: 2 };
 
 // Początek tury z zadanym wynikiem.
@@ -22,7 +22,15 @@ describe('applyX01Dart', () => {
     expect(applyX01Dart(turnAt(301, [T(20), T(20)], 181), T(19))).toEqual({
       outcome: 'turn_completed',
       remaining: 124,
-      event: { type: 'turn_completed', playerId: 'anna', legIndex: 1, turnIndex: 4, darts: [T(20), T(20), T(19)], total: 177, remaining: 124 },
+      event: {
+        type: 'turn_completed',
+        playerId: 'anna',
+        legIndex: 1,
+        turnIndex: 4,
+        darts: [T(20), T(20), T(19)],
+        total: 177,
+        remaining: 124,
+      },
     });
   });
 
@@ -68,9 +76,7 @@ describe('applyX01Dart', () => {
 
   it('rejects an invalid hit with invalid_hit', () => {
     const invalid = { segment: 25, multiplier: 3 } as unknown as Hit;
-    expect(() => applyX01Dart(turnAt(301), invalid)).toThrow(
-      new EngineError('invalid_hit', 'Invalid hit: {"segment":25,"multiplier":3}'),
-    );
+    expect(() => applyX01Dart(turnAt(301), invalid)).toThrow(new EngineError('invalid_hit', 'Invalid hit: {"segment":25,"multiplier":3}'));
     expect(() => applyX01Dart(turnAt(301), invalid)).toThrow(expect.objectContaining({ code: 'invalid_hit' }));
   });
 

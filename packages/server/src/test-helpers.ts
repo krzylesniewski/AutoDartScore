@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { HitEvent, MatchSnapshot, Player } from '@autoscore/schema';
+import type { HitEvent, MatchSnapshot, Player, ThrowResult } from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { expect } from 'vitest';
@@ -79,11 +79,11 @@ export function postThrow(app: FastifyInstance, matchId: string, payload: object
 }
 
 export async function throwDarts(app: FastifyInstance, matchId: string, darts: readonly Dart[]) {
-  const results = [];
+  const results: ThrowResult[] = [];
   for (const dart of darts) {
     const response = await postThrow(app, matchId, hitEvent(matchId, dart));
     expect(response.statusCode).toBe(201);
-    results.push(response.json());
+    results.push(response.json<ThrowResult>());
   }
   return results;
 }
@@ -132,17 +132,29 @@ export async function getMatch(app: FastifyInstance, matchId: string): Promise<M
 }
 
 export async function countRows(db: Kysely<Database>, table: 'players' | 'throws' | 'match_events' | 'player_changes'): Promise<number> {
-  const row = await db.selectFrom(table).select((eb) => eb.fn.countAll<number>().as('count')).executeTakeFirstOrThrow();
+  const row = await db
+    .selectFrom(table)
+    .select((eb) => eb.fn.countAll<number>().as('count'))
+    .executeTakeFirstOrThrow();
   return Number(row.count);
 }
 
 // Store zapisuje created_at z zegara ściennego, więc starszą grę da się zrobić tylko po zapisie.
 export async function backdateMatch(db: Kysely<Database>, matchId: string, createdAt: number): Promise<void> {
-  await db.updateTable('matches').set({ created_at: new Date(createdAt).toISOString() }).where('id', '=', matchId).execute();
+  await db
+    .updateTable('matches')
+    .set({ created_at: new Date(createdAt).toISOString() })
+    .where('id', '=', matchId)
+    .execute();
 }
 
 export async function logEntries(db: Kysely<Database>, matchId: string) {
-  return db.selectFrom('match_events').select(['seq', 'type', 'throw_id', 'player_id', 'reason']).where('match_id', '=', matchId).orderBy('seq').execute();
+  return db
+    .selectFrom('match_events')
+    .select(['seq', 'type', 'throw_id', 'player_id', 'reason'])
+    .where('match_id', '=', matchId)
+    .orderBy('seq')
+    .execute();
 }
 
 export function remaining(state: MatchSnapshot): (number | null)[] {

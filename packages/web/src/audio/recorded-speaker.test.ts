@@ -318,7 +318,11 @@ describe('createRecordedSpeaker', () => {
     audioFor('/audio/pl/events/first_140.mp3').end();
     audioFor('/audio/pl/events/achievement_turn_record.mp3').end();
     await flush();
-    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+    expect(played()).toEqual([
+      '/audio/pl/scores/140.mp3',
+      '/audio/pl/events/first_140.mp3',
+      '/audio/pl/events/achievement_turn_record.mp3',
+    ]);
     expect(fallback.speak).not.toHaveBeenCalled();
   });
 
@@ -337,7 +341,11 @@ describe('createRecordedSpeaker', () => {
     audioFor('/audio/pl/events/first_140.mp3').fail();
     expect(spokenTexts()).toEqual(['Pierwsze sto czterdzieści']);
     finishSpeech(0);
-    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+    expect(played()).toEqual([
+      '/audio/pl/scores/140.mp3',
+      '/audio/pl/events/first_140.mp3',
+      '/audio/pl/events/achievement_turn_record.mp3',
+    ]);
   });
 
   it('reads a rejected middle part, then plays the next clip', async () => {
@@ -348,7 +356,11 @@ describe('createRecordedSpeaker', () => {
     expect(spokenTexts()).toEqual(['Pierwsze sto czterdzieści']);
     playResult = () => Promise.resolve();
     finishSpeech(0);
-    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+    expect(played()).toEqual([
+      '/audio/pl/scores/140.mp3',
+      '/audio/pl/events/first_140.mp3',
+      '/audio/pl/events/achievement_turn_record.mp3',
+    ]);
   });
 
   it('moves on once when a failing part also ends', () => {
@@ -360,7 +372,11 @@ describe('createRecordedSpeaker', () => {
     expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3']);
     finishSpeech(0);
     finishSpeech(0);
-    expect(played()).toEqual(['/audio/pl/scores/140.mp3', '/audio/pl/events/first_140.mp3', '/audio/pl/events/achievement_turn_record.mp3']);
+    expect(played()).toEqual([
+      '/audio/pl/scores/140.mp3',
+      '/audio/pl/events/first_140.mp3',
+      '/audio/pl/events/achievement_turn_record.mp3',
+    ]);
   });
 
   it('reads every part in turn without a global Audio', () => {

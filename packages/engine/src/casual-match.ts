@@ -127,7 +127,12 @@ export function applyCasualThrow(state: CasualMatchState, input: Hit): ApplyResu
   switch (result.outcome) {
     case 'open':
       return {
-        state: { ...state, remaining: withIndex(state.remaining, player, result.remaining), currentDarts: result.darts, dartsThrownInLeg: dartsThrown },
+        state: {
+          ...state,
+          remaining: withIndex(state.remaining, player, result.remaining),
+          currentDarts: result.darts,
+          dartsThrownInLeg: dartsThrown,
+        },
         events: [],
       };
     case 'turn_completed':

@@ -40,7 +40,7 @@ export function CheckoutCard({ state, onCheckout, disabled }: CheckoutCardProps)
       <div aria-hidden="true" className={`${CARD_BOX} invisible max-lg:hidden`}>
         <span className={LABEL}>{pl.checkout}</span>
         <span className={ROUTE}>
-          <span className={CARD_CHIP}>{' '}</span>
+          <span className={CARD_CHIP}> </span>
         </span>
       </div>
     );

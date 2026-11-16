@@ -59,7 +59,11 @@ describe('OverallBoard', () => {
 
   it('groups players by the sign of the difference and keeps the server order', () => {
     render(<OverallBoard overall={overall} />);
-    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Powyżej średniej', 'Poniżej średniej', 'Bez ukończonego lega']);
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
+      'Powyżej średniej',
+      'Poniżej średniej',
+      'Bez ukończonego lega',
+    ]);
     expect(names(group('Powyżej średniej'))).toEqual(['Anna', 'Bartek']);
     expect(names(group('Poniżej średniej'))).toEqual(['Celina', 'Darek']);
     expect(names(group('Bez ukończonego lega'))).toEqual(['Ewa', 'Filip']);
@@ -76,9 +80,21 @@ describe('OverallBoard', () => {
 
   it('shows the average, the signed difference and the darts in each row', () => {
     render(<OverallBoard overall={overall} />);
-    expect(within(group('Powyżej średniej')).getAllByRole('listitem').map((row) => row.textContent)).toEqual(['AAnna80,75+20,25600 lotek', 'BBartek60,50+0,00300 lotek']);
-    expect(within(group('Poniżej średniej')).getAllByRole('listitem').map((row) => row.textContent)).toEqual(['CCelina50,25−10,25250 lotek', 'DDarek40,50−20,0060 lotek']);
-    expect(within(group('Bez ukończonego lega')).getAllByRole('listitem').map((row) => row.textContent)).toEqual(['EEwa—22 lotki', 'FFilip—2 lotki']);
+    expect(
+      within(group('Powyżej średniej'))
+        .getAllByRole('listitem')
+        .map((row) => row.textContent),
+    ).toEqual(['AAnna80,75+20,25600 lotek', 'BBartek60,50+0,00300 lotek']);
+    expect(
+      within(group('Poniżej średniej'))
+        .getAllByRole('listitem')
+        .map((row) => row.textContent),
+    ).toEqual(['CCelina50,25−10,25250 lotek', 'DDarek40,50−20,0060 lotek']);
+    expect(
+      within(group('Bez ukończonego lega'))
+        .getAllByRole('listitem')
+        .map((row) => row.textContent),
+    ).toEqual(['EEwa—22 lotki', 'FFilip—2 lotki']);
   });
 
   it('links each row to the player card', () => {

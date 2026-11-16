@@ -1,3 +1,4 @@
+import type { MatchListItem } from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
@@ -64,8 +65,8 @@ async function expectSameResponses(urls: readonly string[]): Promise<void> {
     const second = await t.app.inject({ method: 'GET', url });
     const reference = await uncached.inject({ method: 'GET', url });
     expect(reference.statusCode, url).toBe(200);
-    expect({ url, status: first.statusCode, body: first.json() }).toEqual({ url, status: 200, body: reference.json() });
-    expect({ url, status: second.statusCode, body: second.json() }).toEqual({ url, status: 200, body: reference.json() });
+    expect({ url, status: first.statusCode, body: first.json<unknown>() }).toEqual({ url, status: 200, body: reference.json<unknown>() });
+    expect({ url, status: second.statusCode, body: second.json<unknown>() }).toEqual({ url, status: 200, body: reference.json<unknown>() });
   }
 }
 
@@ -111,7 +112,10 @@ describe('lists and stats with the replay cache', () => {
     ok(await resume(t.app, paused.id));
     await throwDarts(t.app, paused.id, [S(2)]);
 
-    const urls = endpoints([anna, bartek, celina, darek], [finished.id, inProgress.id, casual.id, solo.id, freeRun.id, checkouts.id, paused.id]);
+    const urls = endpoints(
+      [anna, bartek, celina, darek],
+      [finished.id, inProgress.id, casual.id, solo.id, freeRun.id, checkouts.id, paused.id],
+    );
     await expectSameResponses(urls);
 
     // Każdy krok raz, po nim porównanie. Część kroków idzie przez aplikację bez pamięci podręcznej,
@@ -138,7 +142,9 @@ describe('lists and stats with the replay cache', () => {
     }
 
     const list = await t.app.inject({ method: 'GET', url: '/matches' });
-    const names = list.json().flatMap((item: { players: { name: string }[] }) => item.players.map((player) => player.name));
+    const names = list
+      .json<MatchListItem[]>()
+      .flatMap((item: { players: { name: string }[] }) => item.players.map((player) => player.name));
     expect(names).toContain('Ania');
     expect(names).toContain('Cela');
     expect(names).not.toContain('Anna');

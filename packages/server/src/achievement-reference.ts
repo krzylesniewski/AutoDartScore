@@ -27,7 +27,9 @@ export function createAchievementReference({ store, cache: replays }: Dependenci
   async function build(playerId: string, currentMatchId: string): Promise<PlayerReference> {
     let finishedMatches = 0;
     let records = EMPTY_RECORDS;
-    const matches = (await store.listMatches({ playerId, types: ['match'], countsToStats: true })).filter((match) => match.id !== currentMatchId);
+    const matches = (await store.listMatches({ playerId, types: ['match'], countsToStats: true })).filter(
+      (match) => match.id !== currentMatchId,
+    );
     for (const { match, replay } of await replays.many(matches)) {
       // Porzucona gra nigdy nie jest ukończona, więc też tu odpada.
       if (!isGameFinished(replay.game)) {

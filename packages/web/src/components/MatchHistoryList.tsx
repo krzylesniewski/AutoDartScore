@@ -38,7 +38,9 @@ export function MatchHistoryList({ games, now, onAbandon, busy = false, groupByD
   if (games.length === 0) {
     return <p className="py-3 font-display text-2xl text-(--color-text-muted)">{pl.noGamesInHistory}</p>;
   }
-  const item = (game: MatchListItem) => <HistoryItem key={game.id} game={game} now={now} grouped={groupByDay} onAbandon={onAbandon} busy={busy} />;
+  const item = (game: MatchListItem) => (
+    <HistoryItem key={game.id} game={game} now={now} grouped={groupByDay} onAbandon={onAbandon} busy={busy} />
+  );
   if (!groupByDay) {
     return <ul className="@container flex flex-col gap-2">{games.map(item)}</ul>;
   }
@@ -73,7 +75,8 @@ function HistoryItem({ game, now, grouped, onAbandon, busy }: HistoryItemProps) 
   const row = historyRow(game, now);
   const abandonable = onAbandon !== undefined && canAbandon(game);
   const when = grouped ? formatClock(game.updatedAt) : row.date;
-  const surface = row.status === 'in_progress' ? 'bg-linear-to-r from-(--color-surface-raised) to-(--color-surface)' : 'bg-(--color-surface-softer)';
+  const surface =
+    row.status === 'in_progress' ? 'bg-linear-to-r from-(--color-surface-raised) to-(--color-surface)' : 'bg-(--color-surface-softer)';
   return (
     <li
       className={`flex min-h-18 items-center gap-4 rounded-(--radius-card) py-2 pr-4 pl-5.5 shadow-(--shadow-inset-line) @xl:gap-5 @max-xl:grid @max-xl:grid-cols-[minmax(0,1fr)_auto] @max-xl:gap-x-3 @max-xl:gap-y-2 @max-xl:p-4 ${surface}`}
@@ -110,7 +113,13 @@ function HistoryItem({ game, now, grouped, onAbandon, busy }: HistoryItemProps) 
       {/* W wąskiej karcie dwa przyciski schodzą do osobnego wiersza, żeby nie ściskać odznaki statusu. */}
       <div className={`flex shrink-0 items-center gap-3 @max-xl:justify-self-end ${abandonable ? '@max-xl:col-span-2' : ''}`}>
         {abandonable && (
-          <button type="button" aria-label={pl.abandonGame(row.result)} disabled={busy} onClick={() => onAbandon(game)} className="sc-btn sc-btn--icon sc-btn--outline sc-btn--quiet shrink-0">
+          <button
+            type="button"
+            aria-label={pl.abandonGame(row.result)}
+            disabled={busy}
+            onClick={() => onAbandon(game)}
+            className="sc-btn sc-btn--icon sc-btn--outline sc-btn--quiet shrink-0"
+          >
             <BustIcon />
           </button>
         )}

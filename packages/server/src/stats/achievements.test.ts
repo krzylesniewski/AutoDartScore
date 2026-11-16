@@ -45,7 +45,14 @@ function kinds(newEvents: readonly DomainEvent[], options: Options = {}) {
 }
 
 // Anna wygrywa leg 0 w 12 rzutkach (60, 60, 61, 120), Bartek rzuca 9 rzutek i raz ma bust.
-const LEG_0: readonly DomainEvent[] = [turn('anna', 0, 60), turn('bartek', 0, 26), turn('anna', 0, 60), bust('bartek', 0), turn('anna', 0, 61), turn('bartek', 0, 20)];
+const LEG_0: readonly DomainEvent[] = [
+  turn('anna', 0, 60),
+  turn('bartek', 0, 26),
+  turn('anna', 0, 60),
+  bust('bartek', 0),
+  turn('anna', 0, 61),
+  turn('bartek', 0, 20),
+];
 const WIN_LEG_0: readonly DomainEvent[] = [turn('anna', 0, 120), legWon('anna', 0, 120, 12)];
 
 describe('detectAchievements: turn_record', () => {
@@ -63,8 +70,12 @@ describe('detectAchievements: turn_record', () => {
 
   it('compares the second record of a leg with the first one', () => {
     const earlierEvents = [turn('anna', 0, 80), turn('bartek', 0, 20)];
-    expect(kinds([turn('anna', 0, 80)], { anna: { highestTurn: 60 } })).toEqual([{ playerId: 'anna', kind: 'turn_record', value: 80, previous: 60 }]);
-    expect(kinds([turn('anna', 0, 90)], { anna: { highestTurn: 60 }, earlierEvents })).toEqual([{ playerId: 'anna', kind: 'turn_record', value: 90, previous: 80 }]);
+    expect(kinds([turn('anna', 0, 80)], { anna: { highestTurn: 60 } })).toEqual([
+      { playerId: 'anna', kind: 'turn_record', value: 80, previous: 60 },
+    ]);
+    expect(kinds([turn('anna', 0, 90)], { anna: { highestTurn: 60 }, earlierEvents })).toEqual([
+      { playerId: 'anna', kind: 'turn_record', value: 90, previous: 80 },
+    ]);
   });
 
   it('triggers nothing on a bust', () => {
@@ -165,7 +176,12 @@ describe('detectAchievements: longest_leg', () => {
   });
 
   it('lists the leg winner first', () => {
-    const options = { anna: { highestTurn: 180, mostDartsInLeg: 3 }, bartek: { mostDartsInLeg: 3 }, earlierEvents: LEG_0, playerIds: ['bartek', 'anna'] };
+    const options = {
+      anna: { highestTurn: 180, mostDartsInLeg: 3 },
+      bartek: { mostDartsInLeg: 3 },
+      earlierEvents: LEG_0,
+      playerIds: ['bartek', 'anna'],
+    };
     expect(kinds(WIN_LEG_0, options).map(({ playerId }) => playerId)).toEqual(['anna', 'bartek']);
   });
 });
@@ -191,11 +207,18 @@ describe('detectAchievements', () => {
   });
 
   it('gives nothing to a player who is not eligible', () => {
-    const options = { anna: { highestTurn: 60, mostDartsInLeg: 3 }, bartek: { mostDartsInLeg: 3 }, earlierEvents: LEG_0, eligible: ['bartek'] };
+    const options = {
+      anna: { highestTurn: 60, mostDartsInLeg: 3 },
+      bartek: { mostDartsInLeg: 3 },
+      earlierEvents: LEG_0,
+      eligible: ['bartek'],
+    };
     expect(kinds(WIN_LEG_0, options)).toEqual([{ playerId: 'bartek', kind: 'longest_leg', value: 9, previous: 3 }]);
   });
 
   it('returns achievements without matchId and eventSeq', () => {
-    expect(detect([turn('anna', 0, 100)])).toEqual([{ type: 'achievement', playerId: 'anna', kind: 'first_100', value: 100, previous: null }]);
+    expect(detect([turn('anna', 0, 100)])).toEqual([
+      { type: 'achievement', playerId: 'anna', kind: 'first_100', value: 100, previous: null },
+    ]);
   });
 });

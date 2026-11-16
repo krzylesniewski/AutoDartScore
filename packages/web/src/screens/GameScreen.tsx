@@ -36,10 +36,25 @@ const noticeLink = 'ml-auto inline-flex min-h-11 items-center underline text-(--
 
 export function GameScreen({ matchId }: { matchId: string }) {
   const audio = useAnnouncer();
-  const { state, lastTurn, banner, achievements, error, errorCode, busy, connection, notFound, sendHit, sendRestMiss, sendUndo, sendAbandon, sendResume, sendEndPractice, sendCheckoutAttempt, sendCheckoutSkip } = useMatch(
-    matchId,
-    audio.onLiveMessage,
-  );
+  const {
+    state,
+    lastTurn,
+    banner,
+    achievements,
+    error,
+    errorCode,
+    busy,
+    connection,
+    notFound,
+    sendHit,
+    sendRestMiss,
+    sendUndo,
+    sendAbandon,
+    sendResume,
+    sendEndPractice,
+    sendCheckoutAttempt,
+    sendCheckoutSkip,
+  } = useMatch(matchId, audio.onLiveMessage);
   // Zabawa i trening potrzebują podsumowania dopiero po końcu gry. Free run nigdy się nie kończy.
   const stats = useMatchSummary(matchId, state?.eventSeq ?? null, state !== null && (state.type === 'match' || state.finished));
   const checkoutMode = state?.practiceMode === 'checkouts';
@@ -167,7 +182,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
         onAbandon={() => setAbandoning(true)}
         onResume={sendResume}
         onEndPractice={() => setEnding(true)}
-        turns={legInfoShown ? { open: turnsOpen, controls: legInfoId, onToggle: () => setTurnsOpen(!turnsOpen), buttonRef: turnsButtonRef } : undefined}
+        turns={legInfoShown ? { open: turnsOpen, controls: legInfoId, onToggle: () => setTurnsOpen(!turnsOpen) } : undefined}
+        turnsButtonRef={turnsButtonRef}
       />
       {/* Opakowanie nie przewija się, więc baner poniżej lg trzyma się góry widocznego obszaru.
           Poniżej lg main jest kolumną flex, a prawa kolumna ma display: contents. Dok jest wtedy dzieckiem main.
@@ -176,7 +192,9 @@ export function GameScreen({ matchId }: { matchId: string }) {
           Od lg lewa kolumna przewija się sama, więc rosnąca historia tur nie przesuwa karty zamknięcia ani klawiatury.
           Ujemny margines z równym paddingiem daje miejsce na cień karty rzucającego, który kontener przewijania by przyciął. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <main className={`flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:gap-y-(--space-6) lg:grid lg:grid-cols-[340px_1fr] ${gridRows} lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]`}>
+        <main
+          className={`flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:gap-y-(--space-6) lg:grid lg:grid-cols-[340px_1fr] ${gridRows} lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]`}
+        >
           <div className="flex flex-col gap-4 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:-mx-(--space-page) lg:-mt-1 lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:px-(--space-page) lg:pt-1 lg:pb-1">
             <div className={`contents ${hiddenByTurns}`}>
               {state ? <Scoreboard state={state} /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
@@ -185,7 +203,12 @@ export function GameScreen({ matchId }: { matchId: string }) {
             </div>
             {/* Zamknięty panel zostaje w DOM poniżej lg, żeby aria-controls przycisku „Tury” wskazywało istniejący element. */}
             {state && legInfoShown && (
-              <LegInfo state={state} id={legInfoId} onClose={closeTurns} className={`lg:min-h-[260px] lg:flex-1 ${turnsOpen ? '' : 'max-lg:hidden'}`} />
+              <LegInfo
+                state={state}
+                id={legInfoId}
+                onClose={closeTurns}
+                className={`lg:min-h-[260px] lg:flex-1 ${turnsOpen ? '' : 'max-lg:hidden'}`}
+              />
             )}
           </div>
           {state && !checkoutMode && (
@@ -207,16 +230,18 @@ export function GameScreen({ matchId }: { matchId: string }) {
               </div>
             )}
             {/* Tu dochodzi tylko zakończone Solo 501. Klawiatura znika, a Cofnij zostaje osobno, żeby poprawić źle wpisaną zwycięską rzutkę. */}
-            {state?.finished && !checkoutMode && <UndoButton onUndo={sendUndo} disabled={undoDisabled} countdown={undoCountdown} className="h-14" />}
+            {state?.finished && !checkoutMode && (
+              <UndoButton onUndo={sendUndo} disabled={undoDisabled} countdown={undoCountdown} className="h-14" />
+            )}
             {state?.finished && <MatchSummaryPanel state={state} summary={stats.summary} error={stats.error} />}
             {/* Od lg dok znika z układu, a komunikaty nakładają się na górę prawej kolumny, żeby nie przesuwać klawiatury. */}
-            <div
-              className="sticky bottom-0 z-10 mt-auto flex flex-col gap-3 bg-(--color-bg) pt-3 max-lg:order-2 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:pb-[calc(var(--space-page)_+_env(safe-area-inset-bottom))] lg:contents"
-            >
+            <div className="sticky bottom-0 z-10 mt-auto flex flex-col gap-3 bg-(--color-bg) pt-3 max-lg:order-2 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:pb-[calc(var(--space-page)_+_env(safe-area-inset-bottom))] lg:contents">
               <div className="flex flex-col gap-3 empty:hidden lg:absolute lg:inset-x-0 lg:top-0 lg:z-20">
                 {connection === 'closed' && <Notice text={pl.connectionLost} appearance="raised" />}
                 {shownError && <Notice text={shownError} appearance="raised" />}
-                {undoLocked && <Notice text={pl.matchLocked} tone="status" appearance="raised" icon={<LockIcon className="text-(--color-accent)" />} />}
+                {undoLocked && (
+                  <Notice text={pl.matchLocked} tone="status" appearance="raised" icon={<LockIcon className="text-(--color-accent)" />} />
+                )}
                 {abandoned && (
                   <Notice text={pl.abandonedReadOnly} tone="status" appearance="raised">
                     <a href={HOME_HREF} className={noticeLink}>

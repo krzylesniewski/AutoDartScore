@@ -174,7 +174,10 @@ export function getPlayerStats(playerId: string, filter: StatsFilter, period: St
 }
 
 export function getHeadToHead(playerId: string, opponentId: string, period: StatsPeriod): Promise<HeadToHead> {
-  return request(withQuery(`/players/${encodeURIComponent(playerId)}/head-to-head/${encodeURIComponent(opponentId)}`, { period }), HeadToHead);
+  return request(
+    withQuery(`/players/${encodeURIComponent(playerId)}/head-to-head/${encodeURIComponent(opponentId)}`, { period }),
+    HeadToHead,
+  );
 }
 
 export function getPlayerForm(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<PlayerForm> {

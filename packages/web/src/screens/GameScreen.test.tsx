@@ -2,7 +2,17 @@ import { HitEvent, type LiveMessage, type MatchSnapshot } from '@autoscore/schem
 import { LiveAuthMessage } from '@autoscore/schema';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { casual, checkoutHistory, checkoutPractice, checkoutSession, legTurn, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import {
+  casual,
+  checkoutHistory,
+  checkoutPractice,
+  checkoutSession,
+  legTurn,
+  player,
+  snapshot,
+  summary,
+  summaryPlayer,
+} from '../test/snapshots';
 import { ACHIEVEMENT_DURATION_MS } from '../api/use-match';
 import { GameScreen } from './GameScreen';
 
@@ -151,9 +161,9 @@ beforeEach(() => {
   calls = [];
   summaryCalls = [];
   frequentCalls = [];
-  respond = async (call) => json(201, throwResult(call, initial));
-  respondSummary = async () => json(200, summary({ matchId: MATCH_ID, eventSeq: initial.eventSeq }));
-  respondFrequent = async (playerId) => json(200, { playerId, hits: [] });
+  respond = (call) => Promise.resolve(json(201, throwResult(call, initial)));
+  respondSummary = () => Promise.resolve(json(200, summary({ matchId: MATCH_ID, eventSeq: initial.eventSeq })));
+  respondFrequent = (playerId) => Promise.resolve(json(200, { playerId, hits: [] }));
   FakeAudio.created = [];
   FakeAudio.played = [];
   FakeAudio.loaded = [];
@@ -174,7 +184,7 @@ beforeEach(() => {
         frequentCalls.push(playerId);
         return respondFrequent(playerId);
       }
-      const call = { url, body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined };
+      const call = { url, body: typeof init.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined };
       calls.push(call);
       return respond(call);
     }),
@@ -220,7 +230,7 @@ describe('GameScreen', () => {
     tap('20');
     tap('5');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(true);
     pending.shift()?.();
     await vi.waitFor(() => expect(calls).toHaveLength(2));
     pending.shift()?.();
@@ -229,11 +239,11 @@ describe('GameScreen', () => {
     expect(hits.map((hit) => hit.segment)).toEqual([20, 5]);
     expect(hits.map((hit) => hit.sequence)).toEqual([0, 1]);
     expect(hits[0]?.eventId).not.toBe(hits[1]?.eventId);
-    await vi.waitFor(() => expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false));
+    await vi.waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(false));
   });
 
   it('posts Cofnij to the undo endpoint', async () => {
-    respond = async () => json(200, { undoneThrowId: 't1', state: { ...initial, eventSeq: 5 } });
+    respond = () => Promise.resolve(json(200, { undoneThrowId: 't1', state: { ...initial, eventSeq: 5 } }));
     connect();
     tap('Cofnij');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
@@ -241,14 +251,14 @@ describe('GameScreen', () => {
   });
 
   it('shows Nie ma czego cofnąć on 409 nothing_to_undo', async () => {
-    respond = async () => json(409, { error: 'nothing_to_undo', message: 'Match has no throw to undo' });
+    respond = () => Promise.resolve(json(409, { error: 'nothing_to_undo', message: 'Match has no throw to undo' }));
     connect();
     tap('Cofnij');
     expect(await screen.findByText('Nie ma czego cofnąć')).toBeTruthy();
   });
 
   it('shows a failed throw', async () => {
-    respond = async () => json(409, { error: 'match_finished', message: 'Match is finished' });
+    respond = () => Promise.resolve(json(409, { error: 'match_finished', message: 'Match is finished' }));
     connect();
     tap('Miss');
     expect(await screen.findByText('Nie udało się wysłać rzutki')).toBeTruthy();
@@ -265,11 +275,11 @@ describe('GameScreen', () => {
     tap('5');
     tap('1');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(true);
     act(() => {
       pending.shift()?.();
     });
-    await vi.waitFor(() => expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false));
+    await vi.waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(false));
     await flush();
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe(`/api/matches/${MATCH_ID}/throws`);
@@ -280,7 +290,16 @@ describe('GameScreen', () => {
     vi.useFakeTimers();
     const ws = connect();
     const darts = [{ segment: 20, multiplier: 3 }] as const;
-    ws.serverSend({ type: 'bust', matchId: MATCH_ID, eventSeq: 5, playerId: 'p2', legIndex: 0, turnIndex: 3, darts: [...darts], remaining: 40 });
+    ws.serverSend({
+      type: 'bust',
+      matchId: MATCH_ID,
+      eventSeq: 5,
+      playerId: 'p2',
+      legIndex: 0,
+      turnIndex: 3,
+      darts: [...darts],
+      remaining: 40,
+    });
     const status = screen.getByRole('status');
     expect(within(status).getByText('Bust')).toBeTruthy();
     expect(within(status).getByText('Bartek')).toBeTruthy();
@@ -297,7 +316,11 @@ describe('GameScreen', () => {
 
   it('ignores a state_updated with a lower eventSeq', () => {
     const ws = connect();
-    const older = { ...initial, eventSeq: 3, players: [player('p1', 'Anna', { remaining: 333, legsWon: 0 }), player('p2', 'Bartek', { remaining: 437, legsWon: 0 })] };
+    const older = {
+      ...initial,
+      eventSeq: 3,
+      players: [player('p1', 'Anna', { remaining: 333, legsWon: 0 }), player('p2', 'Bartek', { remaining: 437, legsWon: 0 })],
+    };
     ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: 3, state: older });
     expect(screen.queryByText('333')).toBeNull();
     expect(within(screen.getByRole('region', { name: 'Wyniki' })).getByText('501')).toBeTruthy();
@@ -320,7 +343,7 @@ describe('GameScreen', () => {
     const ws = connect();
     ws.serverClose(1006);
     expect(screen.getByText('Brak połączenia z serwerem. Łączę ponownie…')).toBeTruthy();
-    expect((screen.getByRole('button', { name: '20' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '20' }).disabled).toBe(true);
     act(() => {
       vi.advanceTimersByTime(1000);
     });
@@ -345,7 +368,16 @@ describe('GameScreen', () => {
   it('shows the bust banner outside the dock', () => {
     vi.useFakeTimers();
     const ws = connect();
-    ws.serverSend({ type: 'bust', matchId: MATCH_ID, eventSeq: 5, playerId: 'p2', legIndex: 0, turnIndex: 3, darts: [{ segment: 20, multiplier: 3 }], remaining: 40 });
+    ws.serverSend({
+      type: 'bust',
+      matchId: MATCH_ID,
+      eventSeq: 5,
+      playerId: 'p2',
+      legIndex: 0,
+      turnIndex: 3,
+      darts: [{ segment: 20, multiplier: 3 }],
+      remaining: 40,
+    });
     const status = screen.getByRole('status');
     const dock = screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement;
     expect(within(status).getByText('Bust')).toBeTruthy();
@@ -371,12 +403,27 @@ describe('GameScreen', () => {
       { segment: 20, multiplier: 3 },
       { segment: 20, multiplier: 3 },
     ] as const;
-    ws.serverSend({ type: 'turn_completed', matchId: MATCH_ID, eventSeq: 7, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], total: 180, remaining: 257 });
+    ws.serverSend({
+      type: 'turn_completed',
+      matchId: MATCH_ID,
+      eventSeq: 7,
+      playerId: 'p2',
+      legIndex: 0,
+      turnIndex: 1,
+      darts: [...darts],
+      total: 180,
+      remaining: 257,
+    });
     ws.serverSend({
       type: 'state_updated',
       matchId: MATCH_ID,
       eventSeq: 7,
-      state: { ...initial, eventSeq: 7, currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 257, legsWon: 0 })] },
+      state: {
+        ...initial,
+        eventSeq: 7,
+        currentPlayerId: 'p1',
+        players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 257, legsWon: 0 })],
+      },
     });
     expect(screen.getAllByText('T20')).toHaveLength(3);
     expect(screen.getByText('180')).toBeTruthy();
@@ -396,13 +443,13 @@ describe('GameScreen', () => {
     expect(screen.getByText('2 : 1')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '20' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(false);
     expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
     expect(screen.getByText('Mecz zakończony')).toBeTruthy();
   });
 
   it('brings the game screen back after Cofnij on the match end view', async () => {
-    respond = async () => json(200, { undoneThrowId: 't9', state: { ...initial, eventSeq: 5 } });
+    respond = () => Promise.resolve(json(200, { undoneThrowId: 't9', state: { ...initial, eventSeq: 5 } }));
     connect({
       ...initial,
       finished: true,
@@ -440,8 +487,13 @@ describe('GameScreen', () => {
   });
 
   it('brings the game screen back after Cofnij on the casual end view', async () => {
-    respond = async () =>
-      json(200, { undoneThrowId: 't4', state: { ...finishedCasualGame, eventSeq: 5, finished: false, status: 'in_progress', currentPlayerId: 'p3', placements: [] } });
+    respond = () =>
+      Promise.resolve(
+        json(200, {
+          undoneThrowId: 't4',
+          state: { ...finishedCasualGame, eventSeq: 5, finished: false, status: 'in_progress', currentPlayerId: 'p3', placements: [] },
+        }),
+      );
     connect(finishedCasualGame);
     tap('Cofnij');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
@@ -471,7 +523,10 @@ describe('GameScreen', () => {
 
 describe('keyboard shortcuts and checkout entry', () => {
   // Bartkowi zostaje 40, więc podpowiedź to D20.
-  const onForty: MatchSnapshot = { ...initial, players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 40, legsWon: 0 })] };
+  const onForty: MatchSnapshot = {
+    ...initial,
+    players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 40, legsWon: 0 })],
+  };
 
   function posted() {
     return calls.map((call) => {
@@ -512,7 +567,7 @@ describe('keyboard shortcuts and checkout entry', () => {
   });
 
   it('posts Backspace to the undo endpoint', async () => {
-    respond = async () => json(200, { undoneThrowId: 't1', state: { ...initial, eventSeq: 5 } });
+    respond = () => Promise.resolve(json(200, { undoneThrowId: 't1', state: { ...initial, eventSeq: 5 } }));
     connect();
     fireEvent.keyDown(window, { key: 'Backspace' });
     await vi.waitFor(() => expect(calls).toHaveLength(1));
@@ -615,8 +670,12 @@ describe('Reszta Miss', () => {
 
   // Liczbę brakujących rzutek wylicza serwer, więc klient wysyła jedną komendę niezależnie od stanu tury.
   it.each([0, 1, 2])('posts one rest-miss command with %i darts thrown', async (thrown) => {
-    const start: MatchSnapshot = { ...initial, currentDarts: Array.from({ length: thrown }, () => ({ segment: 20, multiplier: 1 }) as const) };
-    respond = async () => json(200, { throws: [], events: [], state: { ...start, eventSeq: 5, currentDarts: [], currentPlayerId: 'p1' } });
+    const start: MatchSnapshot = {
+      ...initial,
+      currentDarts: Array.from({ length: thrown }, () => ({ segment: 20, multiplier: 1 }) as const),
+    };
+    respond = () =>
+      Promise.resolve(json(200, { throws: [], events: [], state: { ...start, eventSeq: 5, currentDarts: [], currentPlayerId: 'p1' } }));
     connect(start);
     tap('Reszta Miss');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
@@ -625,7 +684,7 @@ describe('Reszta Miss', () => {
   });
 
   it('shows a failed throw after 409 match_finished', async () => {
-    respond = async () => json(409, { error: 'match_finished', message: 'Match is finished' });
+    respond = () => Promise.resolve(json(409, { error: 'match_finished', message: 'Match is finished' }));
     connect();
     tap('Reszta Miss');
     expect(await screen.findByText('Nie udało się wysłać rzutki')).toBeTruthy();
@@ -636,7 +695,7 @@ describe('Reszta Miss', () => {
   it('is disabled and posts nothing while the connection is not open', async () => {
     const ws = connect();
     ws.serverClose(1006);
-    const button = screen.getByRole('button', { name: 'Reszta Miss' }) as HTMLButtonElement;
+    const button = screen.getByRole<HTMLButtonElement>('button', { name: 'Reszta Miss' });
     expect(button.disabled).toBe(true);
     fireEvent.click(button);
     await flush();
@@ -664,12 +723,12 @@ describe('abandon and resume', () => {
   });
 
   it('opens the dialog with the current player preselected and posts the abandon', async () => {
-    respond = async () => json(200, abandonedState);
+    respond = () => Promise.resolve(json(200, abandonedState));
     connect(secondLeg);
     tap('Porzuć mecz');
     expect(within(dialog()).getByText('Gra zostanie zapisana jako porzucona. Wznowisz ją z ekranu startowego.')).toBeTruthy();
-    expect((within(dialog()).getByRole('radio', { name: 'Bartek' }) as HTMLInputElement).checked).toBe(true);
-    expect((within(dialog()).getByRole('radio', { name: 'Anna' }) as HTMLInputElement).checked).toBe(false);
+    expect(within(dialog()).getByRole<HTMLInputElement>('radio', { name: 'Bartek' }).checked).toBe(true);
+    expect(within(dialog()).getByRole<HTMLInputElement>('radio', { name: 'Anna' }).checked).toBe(false);
 
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Porzuć mecz' }));
     await vi.waitFor(() => expect(calls).toHaveLength(1));
@@ -679,7 +738,7 @@ describe('abandon and resume', () => {
   });
 
   it('sends the chosen player and a typed reason', async () => {
-    respond = async () => json(200, abandonedState);
+    respond = () => Promise.resolve(json(200, abandonedState));
     connect(secondLeg);
     tap('Porzuć mecz');
     fireEvent.click(within(dialog()).getByRole('radio', { name: 'Anna' }));
@@ -712,26 +771,26 @@ describe('abandon and resume', () => {
   });
 
   it('shows an abandoned game read-only and resumes it', async () => {
-    respond = async () => json(200, { ...abandonedState, eventSeq: 6, status: 'in_progress', abandonment: null });
+    respond = () => Promise.resolve(json(200, { ...abandonedState, eventSeq: 6, status: 'in_progress', abandonment: null }));
     connect(abandonedState);
     expect(screen.getByText('Porzucony')).toBeTruthy();
     expect(screen.getByText('Mecz porzucony. Tylko do odczytu.')).toBeTruthy();
     // Link w nagłówku i link obok komunikatu.
     expect(screen.getAllByRole('link', { name: 'Ekran startowy' }).map((link) => link.getAttribute('href'))).toEqual(['#/', '#/']);
-    expect((screen.getByRole('button', { name: '20' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: 'Miss' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '20' }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Miss' }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(true);
     expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
 
     tap('Wznów mecz');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/resume`, body: { expectedSeq: 5 } });
-    await vi.waitFor(() => expect((screen.getByRole('button', { name: '20' }) as HTMLButtonElement).disabled).toBe(false));
+    await vi.waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: '20' }).disabled).toBe(false));
     expect(screen.queryByText('Mecz porzucony. Tylko do odczytu.')).toBeNull();
   });
 
   it('shows a failed resume', async () => {
-    respond = async () => json(409, { error: 'match_not_abandoned', message: 'Match is not abandoned' });
+    respond = () => Promise.resolve(json(409, { error: 'match_not_abandoned', message: 'Match is not abandoned' }));
     connect(abandonedState);
     tap('Wznów mecz');
     expect(await screen.findByText('Nie udało się wznowić meczu')).toBeTruthy();
@@ -746,16 +805,21 @@ describe('abandon and resume', () => {
       winnerId: 'p1',
       players: [player('p1', 'Anna', { remaining: 0, legsWon: 1 }), player('p2', 'Bartek', { remaining: 301, legsWon: 0 })],
     };
-    respondSummary = async () =>
-      json(
-        200,
-        summary({
-          matchId: MATCH_ID,
-          finished: true,
-          eventSeq: finished.eventSeq,
-          players: [summaryPlayer('p1', { dartsThrown: 6, average: 150.5, legsWon: 1 }), summaryPlayer('p2', { dartsThrown: 3, average: 0 })],
-          legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [], durationMs: 252_000 }],
-        }),
+    respondSummary = () =>
+      Promise.resolve(
+        json(
+          200,
+          summary({
+            matchId: MATCH_ID,
+            finished: true,
+            eventSeq: finished.eventSeq,
+            players: [
+              summaryPlayer('p1', { dartsThrown: 6, average: 150.5, legsWon: 1 }),
+              summaryPlayer('p2', { dartsThrown: 3, average: 0 }),
+            ],
+            legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [], durationMs: 252_000 }],
+          }),
+        ),
       );
     connect(finished);
     const table = await screen.findByRole('table', { name: 'Podsumowanie meczu' });
@@ -763,12 +827,21 @@ describe('abandon and resume', () => {
     expect(screen.getByText('Leg 1')).toBeTruthy();
     expect(screen.getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(false);
   });
 
   it('shows the live stats panel under the scoreboard in a 1v1 match', async () => {
-    respondSummary = async () =>
-      json(200, summary({ matchId: MATCH_ID, eventSeq: initial.eventSeq, players: [summaryPlayer('p1'), summaryPlayer('p2', { dartsThrown: 3, average: 64 })] }));
+    respondSummary = () =>
+      Promise.resolve(
+        json(
+          200,
+          summary({
+            matchId: MATCH_ID,
+            eventSeq: initial.eventSeq,
+            players: [summaryPlayer('p1'), summaryPlayer('p2', { dartsThrown: 3, average: 64 })],
+          }),
+        ),
+      );
     connect();
     const panel = screen.getByRole('table', { name: 'Statystyki meczu' });
     expect(screen.getByRole('region', { name: 'Wyniki' }).compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -788,7 +861,12 @@ describe('abandon and resume', () => {
     respondSummary = () =>
       new Promise((resolve) => {
         pending.push((eventSeq, average) =>
-          resolve(json(200, summary({ matchId: MATCH_ID, eventSeq, players: [summaryPlayer('p1', { dartsThrown: 3, average }), summaryPlayer('p2')] }))),
+          resolve(
+            json(
+              200,
+              summary({ matchId: MATCH_ID, eventSeq, players: [summaryPlayer('p1', { dartsThrown: 3, average }), summaryPlayer('p2')] }),
+            ),
+          ),
         );
       });
     const ws = connect();
@@ -832,15 +910,23 @@ describe('end practice', () => {
   }
 
   it('hides Zakończ trening before the first dart', () => {
-    connect({ ...freeRun, eventSeq: 0, currentDarts: [], players: [player('p1', 'Anna', { remaining: null })], freeRun: { dartsThrown: 0, totalPoints: 0, average: 0 } });
+    connect({
+      ...freeRun,
+      eventSeq: 0,
+      currentDarts: [],
+      players: [player('p1', 'Anna', { remaining: null })],
+      freeRun: { dartsThrown: 0, totalPoints: 0, average: 0 },
+    });
     expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
   });
 
   it('confirms, posts the end and shows the session read-only', async () => {
-    respond = async () => json(200, endedState);
+    respond = () => Promise.resolve(json(200, endedState));
     connect(freeRun);
     tap('Zakończ trening');
-    expect(within(dialog()).getByText('Trening zostanie zapisany jako zakończony i zniknie z listy gier do dokończenia. Nie da się go wznowić.')).toBeTruthy();
+    expect(
+      within(dialog()).getByText('Trening zostanie zapisany jako zakończony i zniknie z listy gier do dokończenia. Nie da się go wznowić.'),
+    ).toBeTruthy();
 
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Zakończ trening' }));
     await vi.waitFor(() => expect(calls).toHaveLength(1));
@@ -849,9 +935,9 @@ describe('end practice', () => {
     expect(await screen.findByText('Trening zakończony. Tylko do odczytu.')).toBeTruthy();
     expect(screen.getByText('Zakończony')).toBeTruthy();
     expect(screen.getAllByRole('link', { name: 'Ekran startowy' }).map((link) => link.getAttribute('href'))).toEqual(['#/', '#/']);
-    expect((screen.getByRole('button', { name: '20' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: 'Miss' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '20' }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Miss' }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(true);
     expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
     expect(screen.getByText('Anna')).toBeTruthy();
   });
@@ -877,7 +963,7 @@ describe('end practice', () => {
   });
 
   it('shows a failed end', async () => {
-    respond = async () => json(409, { error: 'nothing_to_end', message: 'Match has no throw yet' });
+    respond = () => Promise.resolve(json(409, { error: 'nothing_to_end', message: 'Match has no throw yet' }));
     connect(freeRun);
     tap('Zakończ trening');
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Zakończ trening' }));
@@ -891,7 +977,8 @@ describe('checkout practice', () => {
   const endedState: MatchSnapshot = { ...tried, eventSeq: 3, status: 'ended', endedAt: '2026-10-15T19:00:00.000Z' };
 
   beforeEach(() => {
-    respond = async (call) => (call.url.endsWith('/undo') ? json(200, { undoneThrowId: null, state: { ...fresh, eventSeq: 3 } }) : json(201, tried));
+    respond = (call) =>
+      Promise.resolve(call.url.endsWith('/undo') ? json(200, { undoneThrowId: null, state: { ...fresh, eventSeq: 3 } }) : json(201, tried));
   });
 
   function attemptBodies(): unknown[] {
@@ -944,7 +1031,8 @@ describe('checkout practice', () => {
 
   it('undoes one attempt for a double click on Cofnij', async () => {
     const pending: (() => void)[] = [];
-    respond = () => new Promise((resolve) => pending.push(() => resolve(json(200, { undoneThrowId: null, state: { ...fresh, eventSeq: 3 } }))));
+    respond = () =>
+      new Promise((resolve) => pending.push(() => resolve(json(200, { undoneThrowId: null, state: { ...fresh, eventSeq: 3 } }))));
     connect(tried);
     tap('Cofnij');
     tap('Cofnij');
@@ -957,8 +1045,8 @@ describe('checkout practice', () => {
 
   it('disables Cofnij before the first attempt', () => {
     connect(fresh);
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: 'Udało się' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Udało się' }).disabled).toBe(false);
   });
 
   it('records Enter and 1 as a success and 0 as a failure', async () => {
@@ -1012,7 +1100,10 @@ describe('checkout practice', () => {
 
   describe('Nowa końcówka', () => {
     const skipUrl = `/api/matches/${MATCH_ID}/checkout-skips`;
-    const skippedTried = checkoutPractice(checkoutSession(checkoutHistory([true]), { target: 77, range: '51-100', skips: 1 }), { id: MATCH_ID, eventSeq: 3 });
+    const skippedTried = checkoutPractice(checkoutSession(checkoutHistory([true]), { target: 77, range: '51-100', skips: 1 }), {
+      id: MATCH_ID,
+      eventSeq: 3,
+    });
     const skippedFresh = checkoutPractice(checkoutSession([], { target: 77, range: '51-100', skips: 1 }), { id: MATCH_ID, eventSeq: 2 });
 
     function recentRows(): string[] {
@@ -1023,7 +1114,7 @@ describe('checkout practice', () => {
     }
 
     it('posts once with the last eventSeq on a click and on N', async () => {
-      respond = async () => json(201, skippedFresh);
+      respond = () => Promise.resolve(json(201, skippedFresh));
       connect(fresh);
       tap('Nowa końcówka');
       await vi.waitFor(() => expect(calls).toHaveLength(1));
@@ -1052,7 +1143,7 @@ describe('checkout practice', () => {
     });
 
     it('shows the new target and keeps the counter and the recent attempts', async () => {
-      respond = async () => json(201, skippedTried);
+      respond = () => Promise.resolve(json(201, skippedTried));
       connect(tried);
       const card = screen.getByRole('region', { name: 'Końcówka' });
       expect(within(card).getByText('1 z 1 · 100%')).toBeTruthy();
@@ -1066,9 +1157,12 @@ describe('checkout practice', () => {
     });
 
     it('enables Cofnij after a skip with no attempts', async () => {
-      respond = async (call) => (call.url.endsWith('/undo') ? json(200, { undoneThrowId: null, state: { ...fresh, eventSeq: 3 } }) : json(201, skippedFresh));
+      respond = (call) =>
+        Promise.resolve(
+          call.url.endsWith('/undo') ? json(200, { undoneThrowId: null, state: { ...fresh, eventSeq: 3 } }) : json(201, skippedFresh),
+        );
       connect(fresh);
-      const undoButton = screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement;
+      const undoButton = screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' });
       expect(undoButton.disabled).toBe(true);
       tap('Nowa końcówka');
       await vi.waitFor(() => expect(undoButton.disabled).toBe(false));
@@ -1079,7 +1173,7 @@ describe('checkout practice', () => {
     });
 
     it('shows a failed skip', async () => {
-      respond = async () => json(500, { error: 'internal', message: 'boom' });
+      respond = () => Promise.resolve(json(500, { error: 'internal', message: 'boom' }));
       connect(fresh);
       tap('Nowa końcówka');
       expect(await screen.findByText('Nie udało się wylosować nowej końcówki')).toBeTruthy();
@@ -1154,7 +1248,7 @@ describe('checkout practice', () => {
   });
 
   it('shows a failed attempt', async () => {
-    respond = async () => json(500, { error: 'internal', message: 'boom' });
+    respond = () => Promise.resolve(json(500, { error: 'internal', message: 'boom' }));
     connect(fresh);
     tap('Nie udało się');
     expect(await screen.findByText('Nie udało się zapisać próby')).toBeTruthy();
@@ -1220,7 +1314,17 @@ describe('voice', () => {
   }
 
   function sendTurn(ws: FakeWebSocket): void {
-    sendBatch(ws, { type: 'turn_completed', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], total: 100, remaining: 337 });
+    sendBatch(ws, {
+      type: 'turn_completed',
+      matchId: MATCH_ID,
+      eventSeq: BATCH_SEQ,
+      playerId: 'p2',
+      legIndex: 0,
+      turnIndex: 1,
+      darts: [...darts],
+      total: 100,
+      remaining: 337,
+    });
   }
 
   function toggle(): HTMLElement {
@@ -1242,7 +1346,17 @@ describe('voice', () => {
 
   function sendZeroTurn(ws: FakeWebSocket): void {
     const miss = { segment: 0, multiplier: 0 } as const;
-    sendBatch(ws, { type: 'turn_completed', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [miss, miss, miss], total: 0, remaining: 437 });
+    sendBatch(ws, {
+      type: 'turn_completed',
+      matchId: MATCH_ID,
+      eventSeq: BATCH_SEQ,
+      playerId: 'p2',
+      legIndex: 0,
+      turnIndex: 1,
+      darts: [miss, miss, miss],
+      total: 0,
+      remaining: 437,
+    });
   }
 
   it('says only zero after a 0-point turn by default', async () => {
@@ -1279,10 +1393,22 @@ describe('voice', () => {
 
   it('plays a bust clip and a winner clip', () => {
     const ws = connect();
-    sendBatch(ws, { type: 'bust', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], remaining: 40 });
+    sendBatch(ws, {
+      type: 'bust',
+      matchId: MATCH_ID,
+      eventSeq: BATCH_SEQ,
+      playerId: 'p2',
+      legIndex: 0,
+      turnIndex: 1,
+      darts: [...darts],
+      remaining: 40,
+    });
     expect(FakeAudio.played).toEqual([expect.stringMatching(/^\/audio\/pl\/events\/bust_[123]\.mp3$/)]);
     sendBatch(ws, { type: 'match_won', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legsWon: { p1: 0, p2: 2 } });
-    expect(FakeAudio.played).toEqual([expect.stringMatching(/bust_[123]\.mp3$/), expect.stringMatching(/^\/audio\/pl\/events\/winner_[12]\.mp3$/)]);
+    expect(FakeAudio.played).toEqual([
+      expect.stringMatching(/bust_[123]\.mp3$/),
+      expect.stringMatching(/^\/audio\/pl\/events\/winner_[12]\.mp3$/),
+    ]);
   });
 
   it('plays Game shot on a leg win that does not end the match', () => {
@@ -1412,7 +1538,16 @@ describe('effects', () => {
   }
 
   function sendBust(ws: FakeWebSocket): void {
-    sendBatch(ws, { type: 'bust', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], remaining: 40 });
+    sendBatch(ws, {
+      type: 'bust',
+      matchId: MATCH_ID,
+      eventSeq: BATCH_SEQ,
+      playerId: 'p2',
+      legIndex: 0,
+      turnIndex: 1,
+      darts: [...darts],
+      remaining: 40,
+    });
   }
 
   function toggle(): HTMLElement {
@@ -1441,7 +1576,17 @@ describe('effects', () => {
 
   it('plays nothing on a plain turn', () => {
     const ws = connect();
-    sendBatch(ws, { type: 'turn_completed', matchId: MATCH_ID, eventSeq: BATCH_SEQ, playerId: 'p2', legIndex: 0, turnIndex: 1, darts: [...darts], total: 100, remaining: 337 });
+    sendBatch(ws, {
+      type: 'turn_completed',
+      matchId: MATCH_ID,
+      eventSeq: BATCH_SEQ,
+      playerId: 'p2',
+      legIndex: 0,
+      turnIndex: 1,
+      darts: [...darts],
+      total: 100,
+      remaining: 337,
+    });
     expect(FakeAudioContext.oscillators).toBe(0);
   });
 
@@ -1524,7 +1669,7 @@ describe('GameScreen undo window', () => {
   const LOCKED_TEXT = 'Mecz zamknięty, nie można go już zmienić';
 
   function undoButton(): HTMLButtonElement {
-    return screen.getByRole('button', { name: /^Cofnij/ }) as HTMLButtonElement;
+    return screen.getByRole<HTMLButtonElement>('button', { name: /^Cofnij/ });
   }
 
   function finishedCasual(editableUntil: string) {
@@ -1564,7 +1709,7 @@ describe('GameScreen undo window', () => {
   });
 
   it('announces the locked match as a status', async () => {
-    respond = async () => json(409, { error: 'match_locked', message: `Match ${MATCH_ID} is locked` });
+    respond = () => Promise.resolve(json(409, { error: 'match_locked', message: `Match ${MATCH_ID} is locked` }));
     connect(finishedCasual(new Date(Date.now() + 60_000).toISOString()));
     fireEvent.click(undoButton());
     await screen.findByText(LOCKED_TEXT);
@@ -1574,7 +1719,7 @@ describe('GameScreen undo window', () => {
   });
 
   it('shows the lock notice once on 409 match_locked and disables Cofnij', async () => {
-    respond = async () => json(409, { error: 'match_locked', message: `Match ${MATCH_ID} is locked` });
+    respond = () => Promise.resolve(json(409, { error: 'match_locked', message: `Match ${MATCH_ID} is locked` }));
     connect(finishedCasual(new Date(Date.now() + 60_000).toISOString()));
     expect(undoButton().disabled).toBe(false);
     fireEvent.click(undoButton());
@@ -1585,7 +1730,7 @@ describe('GameScreen undo window', () => {
   });
 
   it('shows the lock notice on 409 match_locked in the match end view', async () => {
-    respond = async () => json(409, { error: 'match_locked', message: `Match ${MATCH_ID} is locked` });
+    respond = () => Promise.resolve(json(409, { error: 'match_locked', message: `Match ${MATCH_ID} is locked` }));
     connect({
       ...initial,
       finished: true,
@@ -1631,11 +1776,15 @@ describe('frequent hits', () => {
 
   function rowLabels(name: string): string[] {
     const group = row(name);
-    return group ? within(group).getAllByRole('button').map((element) => element.textContent ?? '') : [];
+    return group
+      ? within(group)
+          .getAllByRole('button')
+          .map((element) => element.textContent ?? '')
+      : [];
   }
 
   beforeEach(() => {
-    respondFrequent = async (playerId) => json(200, { playerId, hits: playerId === 'p2' ? BARTEK_HITS : ANNA_HITS });
+    respondFrequent = (playerId) => Promise.resolve(json(200, { playerId, hits: playerId === 'p2' ? BARTEK_HITS : ANNA_HITS }));
   });
 
   it('shows the hits of the current thrower', async () => {
@@ -1665,7 +1814,9 @@ describe('frequent hits', () => {
   it('ignores a late response for the previous thrower', async () => {
     const pending = new Map<string, () => void>();
     respondFrequent = (playerId) =>
-      new Promise((resolve) => pending.set(playerId, () => resolve(json(200, { playerId, hits: playerId === 'p2' ? BARTEK_HITS : ANNA_HITS }))));
+      new Promise((resolve) =>
+        pending.set(playerId, () => resolve(json(200, { playerId, hits: playerId === 'p2' ? BARTEK_HITS : ANNA_HITS }))),
+      );
     const ws = connect();
     ws.serverSend({ type: 'state_updated', matchId: MATCH_ID, eventSeq: 7, state: annaThrows });
     await vi.waitFor(() => expect(frequentCalls).toEqual(['p2', 'p1']));
@@ -1684,7 +1835,7 @@ describe('frequent hits', () => {
     ['an error', () => json(500, { error: 'internal', message: 'boom' })],
     ['an empty list', () => json(200, { playerId: 'p2', hits: [] })],
   ])('shows no row buttons after %s', async (_name, response) => {
-    respondFrequent = async () => response();
+    respondFrequent = () => Promise.resolve(response());
     connect();
     await vi.waitFor(() => expect(frequentCalls).toEqual(['p2']));
     await act(flush);
@@ -1716,12 +1867,25 @@ describe('achievements', () => {
   });
 
   function achievement(eventSeq: number, overrides: Partial<Extract<LiveMessage, { type: 'achievement' }>> = {}): LiveMessage {
-    return { type: 'achievement', matchId: MATCH_ID, eventSeq, playerId: 'p2', kind: 'turn_record', value: 140, previous: 121, ...overrides };
+    return {
+      type: 'achievement',
+      matchId: MATCH_ID,
+      eventSeq,
+      playerId: 'p2',
+      kind: 'turn_record',
+      value: 140,
+      previous: 121,
+      ...overrides,
+    };
   }
 
   function notices(): string[] {
     const list = screen.queryByRole('list', { name: 'Osiągnięcia' });
-    return list ? within(list).getAllByRole('listitem').map((item) => item.textContent) : [];
+    return list
+      ? within(list)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent)
+      : [];
   }
 
   it('shows the notice with the player name and the text inside the status overlay', () => {
@@ -1808,7 +1972,10 @@ describe('achievements', () => {
 
 describe('turn panel, checkout card and keypad', () => {
   // Bartkowi zostaje 40, więc karta zamknięcia pokazuje D20.
-  const onForty: MatchSnapshot = { ...initial, players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 40, legsWon: 0 })] };
+  const onForty: MatchSnapshot = {
+    ...initial,
+    players: [player('p1', 'Anna', { remaining: 501, legsWon: 0 }), player('p2', 'Bartek', { remaining: 40, legsWon: 0 })],
+  };
 
   function finishedCasual() {
     return casual(['Anna', 'Bartek', 'Cezary'], {
@@ -1843,7 +2010,9 @@ describe('turn panel, checkout card and keypad', () => {
       [/^Zamknięcie/, 'Enter', 'Enter'],
     ];
     for (const [name, badge, keys] of expected) {
-      const element = within(document.body).getAllByRole('button', { name }).find((candidate) => candidate.hasAttribute('aria-keyshortcuts'));
+      const element = within(document.body)
+        .getAllByRole('button', { name })
+        .find((candidate) => candidate.hasAttribute('aria-keyshortcuts'));
       expect(element?.getAttribute('aria-keyshortcuts')).toBe(keys);
       const found = within(element as HTMLElement)
         .getAllByText(badge)

@@ -13,7 +13,13 @@ const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then((modul
 
 const HOME = '#/';
 
-type Route = { screen: 'home' } | { screen: 'game'; matchId: string } | { screen: 'stats'; playerId: string | null } | { screen: 'history' } | { screen: 'settings' } | null;
+type Route =
+  | { screen: 'home' }
+  | { screen: 'game'; matchId: string }
+  | { screen: 'stats'; playerId: string | null }
+  | { screen: 'history' }
+  | { screen: 'settings' }
+  | null;
 
 function parseRoute(hash: string): Route {
   if (hash === '' || hash === '#' || hash === HOME) {

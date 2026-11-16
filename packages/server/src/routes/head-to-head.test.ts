@@ -42,7 +42,14 @@ describe('GET /players/:id/head-to-head/:opponentId', () => {
       opponentAverage: 0,
       lastPlayedAt: '2026-10-18T10:05:00.000Z',
     });
-    expect(await headToHead(bartek, anna)).toMatchObject({ matchesWon: 0, opponentMatchesWon: 1, legsWon: 0, opponentLegsWon: 1, average: 0, opponentAverage: 150.5 });
+    expect(await headToHead(bartek, anna)).toMatchObject({
+      matchesWon: 0,
+      opponentMatchesWon: 1,
+      legsWon: 0,
+      opponentLegsWon: 1,
+      average: 0,
+      opponentAverage: 150.5,
+    });
   });
 
   it('ignores an abandoned 1v1 game even with a completed leg, and casual games', async () => {

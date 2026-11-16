@@ -35,7 +35,11 @@ describe('checkoutControls', () => {
   });
 
   it('disables Cofnij with 0 attempts and 0 skips', () => {
-    expect(checkoutControls({ status: 'in_progress', checkouts: checkoutSession() }, true)).toEqual({ results: true, skip: true, undo: false });
+    expect(checkoutControls({ status: 'in_progress', checkouts: checkoutSession() }, true)).toEqual({
+      results: true,
+      skip: true,
+      undo: false,
+    });
   });
 
   it('enables Cofnij with only skips', () => {

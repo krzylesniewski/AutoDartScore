@@ -11,9 +11,9 @@ import {
   type X01MatchState,
 } from './index.js';
 
-const S = (n: number): Hit => ({ segment: n, multiplier: 1 }) as Hit;
-const D = (n: number): Hit => ({ segment: n, multiplier: 2 }) as Hit;
-const T = (n: number): Hit => ({ segment: n, multiplier: 3 }) as Hit;
+const S = (n: number): Hit => ({ segment: n, multiplier: 1 });
+const D = (n: number): Hit => ({ segment: n, multiplier: 2 });
+const T = (n: number): Hit => ({ segment: n, multiplier: 3 });
 const BULL: Hit = { segment: 25, multiplier: 2 };
 const OUTER_BULL: Hit = { segment: 25, multiplier: 1 };
 const MISS: Hit = { segment: 0, multiplier: 0 };
@@ -138,9 +138,7 @@ describe('bust', () => {
     ['leaving 1 after a single', 2, [S(1)]],
   ] as const)('busts when %s', (_name, score, hits) => {
     const { state, events } = throwAll(atScore(score), hits);
-    expect(events).toEqual([
-      { type: 'bust', playerId: 'anna', legIndex: 0, turnIndex: 0, darts: [...hits], remaining: score },
-    ]);
+    expect(events).toEqual([{ type: 'bust', playerId: 'anna', legIndex: 0, turnIndex: 0, darts: [...hits], remaining: score }]);
     expect(state.remaining[0]).toBe(score);
     expect(currentPlayerId(state)).toBe('bartek');
   });
@@ -191,7 +189,9 @@ describe('checkout', () => {
 describe('legs and match', () => {
   const quickLeg = (winnerFirst: boolean): Hit[] =>
     // Zwycięzca kończy leg 301 w swojej drugiej turze: 180, potem 121 (T20, T17, D5).
-    winnerFirst ? [T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(17), D(5)] : [MISS, MISS, MISS, T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(17), D(5)];
+    winnerFirst
+      ? [T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(17), D(5)]
+      : [MISS, MISS, MISS, T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(17), D(5)];
 
   const short: X01MatchConfig = { ...config, startingScore: 301 };
 

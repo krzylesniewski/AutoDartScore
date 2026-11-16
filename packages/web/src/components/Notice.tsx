@@ -18,7 +18,13 @@ const APPEARANCE = {
 } as const;
 
 // Komunikat: ikona i tekst, nie sam kolor. Akcent zostaje na ikonie, bo jako tekst na karcie ma za mały kontrast.
-export function Notice({ text, tone = 'alert', appearance = 'plain', icon = <WarningIcon className="text-(--color-accent)" />, children }: NoticeProps) {
+export function Notice({
+  text,
+  tone = 'alert',
+  appearance = 'plain',
+  icon = <WarningIcon className="text-(--color-accent)" />,
+  children,
+}: NoticeProps) {
   return (
     <p role={tone} className={APPEARANCE[appearance]}>
       {icon}

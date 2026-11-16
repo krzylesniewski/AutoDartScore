@@ -145,7 +145,10 @@ describe('createReplayCache', () => {
   it('skips and logs a corrupt match, never caches it and lets one reject', async () => {
     const [a, broken, unreplayable] = [await freeRun(), await freeRun(), await freeRun()];
     // Wpis throw bez throw_id psuje odczyt logu, a undo nie ostatniej rzutki psuje odtworzenie.
-    await db.insertInto('match_events').values({ match_id: broken.id, seq: 2, type: 'throw', throw_id: null, created_at: '2026-11-15T18:00:00.000Z' }).execute();
+    await db
+      .insertInto('match_events')
+      .values({ match_id: broken.id, seq: 2, type: 'throw', throw_id: null, created_at: '2026-11-15T18:00:00.000Z' })
+      .execute();
     const [earlier] = (await store.loadLog(unreplayable.id)).throws.keys();
     await store.appendThrow(hitEvent(unreplayable.id, S(1)));
     await store.appendUndo(unreplayable.id, earlier ?? '');
@@ -154,8 +157,8 @@ describe('createReplayCache', () => {
     const first = await replays.many([broken, a, unreplayable]);
     expect(ids(first)).toEqual([a.id]);
     expect(warn).toHaveBeenCalledTimes(3);
-    expect(warn).toHaveBeenCalledWith({ matchId: broken.id, err: expect.any(Error) }, expect.any(String));
-    expect(warn).toHaveBeenCalledWith({ matchId: unreplayable.id, err: expect.any(Error) }, expect.any(String));
+    expect(warn).toHaveBeenCalledWith({ matchId: broken.id, err: expect.any(Error) as Error }, expect.any(String));
+    expect(warn).toHaveBeenCalledWith({ matchId: unreplayable.id, err: expect.any(Error) as Error }, expect.any(String));
     expect(warn).toHaveBeenLastCalledWith({ skipped: 2 }, expect.any(String));
 
     await replays.many([broken, a, unreplayable]);

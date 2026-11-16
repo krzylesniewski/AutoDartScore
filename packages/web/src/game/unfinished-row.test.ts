@@ -32,7 +32,12 @@ describe('unfinishedRow', () => {
   });
 
   it('shows what is left in Solo 501', () => {
-    const game = snapshot({ type: 'practice', practiceMode: 'solo_501', legsToWin: null, players: [player('p1', 'Anna', { remaining: 132 })] });
+    const game = snapshot({
+      type: 'practice',
+      practiceMode: 'solo_501',
+      legsToWin: null,
+      players: [player('p1', 'Anna', { remaining: 132 })],
+    });
     expect(unfinishedRow(game)).toEqual({ title: 'Trening: Solo 501', detail: 'Anna · zostało 132', state: '132' });
   });
 

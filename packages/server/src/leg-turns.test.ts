@@ -3,9 +3,9 @@ import type { Hit, ThrowRecord } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import { buildLegTurns } from './leg-turns.js';
 
-const S = (segment: number): Hit => ({ segment, multiplier: 1 }) as Hit;
-const D = (segment: number): Hit => ({ segment, multiplier: 2 }) as Hit;
-const T = (segment: number): Hit => ({ segment, multiplier: 3 }) as Hit;
+const S = (segment: number): Hit => ({ segment, multiplier: 1 });
+const D = (segment: number): Hit => ({ segment, multiplier: 2 });
+const T = (segment: number): Hit => ({ segment, multiplier: 3 });
 const MISS = { segment: 0, multiplier: 0 } as Hit;
 
 const LEG: readonly Hit[] = [T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(17), D(5)];
@@ -78,7 +78,14 @@ describe('buildLegTurns', () => {
   });
 
   it('gives no turns in checkout practice', () => {
-    const config: GameConfig = { type: 'practice', practiceMode: 'checkouts', playerId: 'anna', range: '2-50', seed: 1, rule: 'repeat_on_miss' };
+    const config: GameConfig = {
+      type: 'practice',
+      practiceMode: 'checkouts',
+      playerId: 'anna',
+      range: '2-50',
+      seed: 1,
+      rule: 'repeat_on_miss',
+    };
     const { state, events } = replayGame(config, [], [{ type: 'attempt', success: true }]);
     expect(buildLegTurns(state, events, [])).toEqual([]);
   });

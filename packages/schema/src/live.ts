@@ -17,7 +17,16 @@ export type ThrowRegistered = z.infer<typeof ThrowRegistered>;
 export const ThrowUndone = z.object({ type: z.literal('throw_undone'), ...meta, throwId: z.string().min(1) });
 export type ThrowUndone = z.infer<typeof ThrowUndone>;
 
-export const AchievementKind = z.enum(['turn_record', 'checkout_record', 'shortest_leg', 'longest_leg', 'first_100', 'first_120', 'first_140', 'first_180']);
+export const AchievementKind = z.enum([
+  'turn_record',
+  'checkout_record',
+  'shortest_leg',
+  'longest_leg',
+  'first_100',
+  'first_120',
+  'first_140',
+  'first_180',
+]);
 export type AchievementKind = z.infer<typeof AchievementKind>;
 
 // Bez refinementów, żeby zostać poprawnym członkiem unii z dyskryminatorem. previous jest null tylko dla first_*.

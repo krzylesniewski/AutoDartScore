@@ -14,7 +14,7 @@ function TestDialog({ withInitialFocus = false, ...props }: Partial<DialogProps>
 }
 
 function dialog(): HTMLDialogElement {
-  return screen.getByRole('dialog', { name: 'Okno' }) as HTMLDialogElement;
+  return screen.getByRole<HTMLDialogElement>('dialog', { name: 'Okno' });
 }
 
 const openers: HTMLButtonElement[] = [];

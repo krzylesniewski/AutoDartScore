@@ -1,6 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { expect, type APIRequestContext } from '@playwright/test';
-import type { AbandonMatchRequest, CreateMatchRequest, CreatePlayerRequest, FrequentHitsResponse, Hit, HitEvent, LoginRequest, LoginResponse, MatchSnapshot, Player } from '@autoscore/schema';
+import type {
+  AbandonMatchRequest,
+  CreateMatchRequest,
+  CreatePlayerRequest,
+  FrequentHitsResponse,
+  Hit,
+  HitEvent,
+  LoginRequest,
+  LoginResponse,
+  MatchSnapshot,
+  Player,
+} from '@autoscore/schema';
 import { PASSWORD } from '../env';
 
 // T20 ×3, Miss ×3, potem T20, T11, D14: zaczynający zamyka leg 301, kimkolwiek jest.
@@ -36,7 +47,11 @@ export async function createPlayerByApi(request: APIRequestContext, token: strin
   return (await response.json()) as Player;
 }
 
-export async function createMatchByApi(request: APIRequestContext, token: string, playerIds: readonly [string, string]): Promise<MatchSnapshot> {
+export async function createMatchByApi(
+  request: APIRequestContext,
+  token: string,
+  playerIds: readonly [string, string],
+): Promise<MatchSnapshot> {
   const body: CreateMatchRequest = { type: 'match', playerIds: [...playerIds], startingScore: 301, bestOf: 1 };
   const response = await request.post('/matches', { headers: authorization(token), data: body });
   await expect(response).toBeOK();
@@ -62,7 +77,11 @@ export async function createPracticeByApi(
   return (await response.json()) as MatchSnapshot;
 }
 
-export async function frequentHitsByApi(request: APIRequestContext, token: string, playerId: string): Promise<FrequentHitsResponse['hits']> {
+export async function frequentHitsByApi(
+  request: APIRequestContext,
+  token: string,
+  playerId: string,
+): Promise<FrequentHitsResponse['hits']> {
   const response = await request.get(`/players/${encodeURIComponent(playerId)}/frequent-hits`, { headers: authorization(token) });
   await expect(response).toBeOK();
   return ((await response.json()) as FrequentHitsResponse).hits;

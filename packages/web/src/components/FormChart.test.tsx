@@ -5,7 +5,13 @@ import { pl } from '../i18n/pl';
 import { FormChart } from './FormChart';
 
 function form(averages: readonly number[]): PlayerFormPoint[] {
-  return averages.map((average, index) => ({ matchId: `m${index + 1}`, type: 'match', createdAt: '2026-10-15T18:30:00.000Z', average, legs: 1 }));
+  return averages.map((average, index) => ({
+    matchId: `m${index + 1}`,
+    type: 'match',
+    createdAt: '2026-10-15T18:30:00.000Z',
+    average,
+    legs: 1,
+  }));
 }
 
 function chart(): HTMLElement {
@@ -14,7 +20,9 @@ function chart(): HTMLElement {
 
 // Liczby osi mają położenie w stylu inline. Niewidoczna kopia trzymająca szerokość osi go nie ma.
 function axisLabels(container: HTMLElement): (string | null)[][] {
-  return [...container.querySelectorAll('[aria-hidden="true"]')].map((axis) => [...axis.querySelectorAll('span[style]')].map((label) => label.textContent));
+  return [...container.querySelectorAll('[aria-hidden="true"]')].map((axis) =>
+    [...axis.querySelectorAll('span[style]')].map((label) => label.textContent),
+  );
 }
 
 describe('FormChart', () => {

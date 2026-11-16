@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AvatarColorPicker } from './AvatarColorPicker';
 
 function radios(): HTMLInputElement[] {
-  return screen.getAllByRole('radio') as HTMLInputElement[];
+  return screen.getAllByRole<HTMLInputElement>('radio');
 }
 
 describe('AvatarColorPicker', () => {

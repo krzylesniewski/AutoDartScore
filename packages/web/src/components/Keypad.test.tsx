@@ -39,7 +39,7 @@ function setup({ layout = 'ring', disabled = false, undoDisabled = false, checko
     />
   );
   const view = render(keypad({}));
-  const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement;
+  const button = (name: string) => screen.getByRole<HTMLButtonElement>('button', { name });
   const rerender = (next: SetupOptions) => view.rerender(keypad(next));
   return { onHit, onRestMiss, onUndo, button, rerender };
 }
@@ -111,7 +111,11 @@ describe('Keypad', () => {
   it.each(LAYOUTS)('orders the %s layout from the multiplier to 1-20 in dartboard order and the misses', (layout) => {
     setup({ layout });
     expect(buttonNames()).toEqual(['S', 'D', 'T', ...SEGMENTS, '25', 'Bull', 'Miss', 'Reszta Miss', 'Cofnij']);
-    expect(within(screen.getByRole('group', { name: 'Mnożnik' })).getAllByRole('button').map(visibleText)).toEqual(['S', 'D', 'T']);
+    expect(
+      within(screen.getByRole('group', { name: 'Mnożnik' }))
+        .getAllByRole('button')
+        .map(visibleText),
+    ).toEqual(['S', 'D', 'T']);
   });
 
   it('puts each ring key at its ring position', () => {
@@ -223,9 +227,11 @@ describe('Keypad', () => {
       const onHit = vi.fn<(hit: Hit) => void>();
       const onRestMiss = vi.fn<() => void>();
       const onUndo = vi.fn<() => void>();
-      const keypad = (next: boolean) => <Keypad onHit={onHit} onRestMiss={onRestMiss} onUndo={onUndo} disabled={next} undoDisabled={false} checkout={null} />;
+      const keypad = (next: boolean) => (
+        <Keypad onHit={onHit} onRestMiss={onRestMiss} onUndo={onUndo} disabled={next} undoDisabled={false} checkout={null} />
+      );
       const view = render(keypad(disabled));
-      const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement;
+      const button = (name: string) => screen.getByRole<HTMLButtonElement>('button', { name });
       const rerender = (next: boolean) => view.rerender(keypad(next));
       return { onHit, button, rerender };
     }
@@ -713,12 +719,16 @@ describe('Keypad', () => {
     ];
     const anna = (hits: readonly FrequentHit[]): FrequentHits => ({ playerName: 'Anna', hits });
     const row = () => screen.getByRole('group', { name: 'Najczęstsze: Anna' });
-    const rowKey = (name: string) => within(row()).getByRole('button', { name }) as HTMLButtonElement;
+    const rowKey = (name: string) => within(row()).getByRole<HTMLButtonElement>('button', { name });
 
     it.each(LAYOUTS)('names the row after the thrower and labels each hit in the %s layout', (layout) => {
       setup({ layout, frequent: anna(SIX) });
       expect(within(row()).getByText('Najczęstsze: Anna')).toBeTruthy();
-      expect(within(row()).getAllByRole('button').map((element) => element.textContent)).toEqual(['S20', 'D16', 'T20', 'Bull', '25', 'S1']);
+      expect(
+        within(row())
+          .getAllByRole('button')
+          .map((element) => element.textContent),
+      ).toEqual(['S20', 'D16', 'T20', 'Bull', '25', 'S1']);
       expect(screen.getAllByRole('button', { name: '25' })).toHaveLength(2);
       expect(screen.getAllByRole('button', { name: 'Bull' })).toHaveLength(2);
     });

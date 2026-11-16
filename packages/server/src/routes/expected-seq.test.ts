@@ -48,7 +48,7 @@ function attempt(matchId: string, payload: object) {
   return t.app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-attempts`, payload });
 }
 
-async function expectError(response: Response, statusCode: number, code: string) {
+function expectError(response: Response, statusCode: number, code: string) {
   expect(response.statusCode).toBe(statusCode);
   expect(ApiError.parse(response.json()).error).toBe(code);
 }
@@ -95,14 +95,19 @@ describe('expectedSeq on undo', () => {
   ])('rejects %s with 400 invalid_request and writes nothing', async (_name, payload) => {
     const { id } = await match301();
     await throwDarts(t.app, id, [S(20)]);
-    const response = await t.app.inject({ method: 'POST', url: `/matches/${id}/undo`, headers: { 'content-type': 'application/json' }, payload });
-    await expectError(response, 400, 'invalid_request');
+    const response = await t.app.inject({
+      method: 'POST',
+      url: `/matches/${id}/undo`,
+      headers: { 'content-type': 'application/json' },
+      payload,
+    });
+    expectError(response, 400, 'invalid_request');
     expect(await logEntries(t.db, id)).toHaveLength(1);
   });
 
   it('validates the body before looking up the match', async () => {
-    await expectError(await undo(t.app, 'nope', { expectedSeq: -1 }), 400, 'invalid_request');
-    await expectError(await undo(t.app, 'nope', { expectedSeq: 0 }), 404, 'not_found');
+    expectError(await undo(t.app, 'nope', { expectedSeq: -1 }), 400, 'invalid_request');
+    expectError(await undo(t.app, 'nope', { expectedSeq: 0 }), 404, 'not_found');
   });
 
   it.each([
@@ -113,7 +118,12 @@ describe('expectedSeq on undo', () => {
   ])('treats %s as a missing body', async (_name, payload) => {
     const { id } = await match301();
     await throwDarts(t.app, id, [S(20)]);
-    const response = await t.app.inject({ method: 'POST', url: `/matches/${id}/undo`, headers: { 'content-type': 'application/json' }, payload });
+    const response = await t.app.inject({
+      method: 'POST',
+      url: `/matches/${id}/undo`,
+      headers: { 'content-type': 'application/json' },
+      payload,
+    });
     expect(response.statusCode).toBe(200);
   });
 
@@ -121,8 +131,13 @@ describe('expectedSeq on undo', () => {
     const { id } = await match301();
     await throwDarts(t.app, id, [S(20), S(20)]);
     expect((await undo(t.app, id, { expectedSeq: 2, extra: true })).statusCode).toBe(200);
-    const plain = await t.app.inject({ method: 'POST', url: `/matches/${id}/undo`, headers: { 'content-type': 'text/plain' }, payload: '{"expectedSeq":2}' });
-    await expectError(plain, 409, 'stale_state');
+    const plain = await t.app.inject({
+      method: 'POST',
+      url: `/matches/${id}/undo`,
+      headers: { 'content-type': 'text/plain' },
+      payload: '{"expectedSeq":2}',
+    });
+    expectError(plain, 409, 'stale_state');
   });
 });
 
@@ -209,23 +224,23 @@ describe('check order', () => {
     expect((await endPractice(t.app, id)).statusCode).toBe(200);
     await expectStale(await undo(t.app, id, { expectedSeq: 1 }), id, 2);
     // Z aktualnym seq zostaje zwykły błąd z logu.
-    await expectError(await undo(t.app, id, { expectedSeq: 2 }), 409, 'practice_ended');
+    expectError(await undo(t.app, id, { expectedSeq: 2 }), 409, 'practice_ended');
   });
 
   it('answers a stale abandon by a non-participant with not_a_participant', async () => {
     const { id } = await match301();
     const celina = await createPlayer(t.app, 'Celina');
-    await expectError(await abandon(t.app, id, { playerId: celina.id, expectedSeq: 7 }), 400, 'not_a_participant');
+    expectError(await abandon(t.app, id, { playerId: celina.id, expectedSeq: 7 }), 400, 'not_a_participant');
   });
 
   it('checks the match type before expectedSeq', async () => {
     const { id } = await match301();
-    await expectError(await endPractice(t.app, id, { expectedSeq: 7 }), 409, 'not_practice');
-    await expectError(await checkoutSkip(t.app, id, { expectedSeq: 7 }), 409, 'not_checkouts');
+    expectError(await endPractice(t.app, id, { expectedSeq: 7 }), 409, 'not_practice');
+    expectError(await checkoutSkip(t.app, id, { expectedSeq: 7 }), 409, 'not_checkouts');
   });
 
   it('validates the abandon and checkout attempt body before the match lookup', async () => {
-    await expectError(await abandon(t.app, 'nope', { playerId: anna, expectedSeq: -1 }), 400, 'invalid_request');
-    await expectError(await attempt('nope', { success: true, expectedSeq: '1' }), 400, 'invalid_request');
+    expectError(await abandon(t.app, 'nope', { playerId: anna, expectedSeq: -1 }), 400, 'invalid_request');
+    expectError(await attempt('nope', { success: true, expectedSeq: '1' }), 400, 'invalid_request');
   });
 });

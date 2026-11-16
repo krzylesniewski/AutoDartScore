@@ -2,7 +2,8 @@ import type { MatchSnapshot, MatchSummary, MatchSummaryPlayer } from '@autoscore
 import { formatAverage, formatDoubles, formatNumber, NO_VALUE } from '../game/format-stat';
 import { pl } from '../i18n/pl';
 
-const label = 'font-display text-(length:--text-label) leading-5 font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
+const label =
+  'font-display text-(length:--text-label) leading-5 font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 
 const COLUMNS: readonly { header: string; value: (line: MatchSummaryPlayer) => string }[] = [
   { header: pl.average, value: (line) => formatAverage(line.average) },
@@ -35,7 +36,11 @@ export function MatchStatsPanel({ state, summary }: MatchStatsPanelProps) {
             <tr>
               <td />
               {COLUMNS.map((column) => (
-                <th key={column.header} scope="col" className={`${label} px-1 text-right whitespace-nowrap @max-md:text-xs @max-md:tracking-normal`}>
+                <th
+                  key={column.header}
+                  scope="col"
+                  className={`${label} px-1 text-right whitespace-nowrap @max-md:text-xs @max-md:tracking-normal`}
+                >
                   {column.header}
                 </th>
               ))}
@@ -61,7 +66,9 @@ export function MatchStatsPanel({ state, summary }: MatchStatsPanelProps) {
         </table>
       </div>
       {lastLeg && (
-        <p className="truncate leading-6 text-(--color-text-muted)">{pl.lastLeg(pl.legResult(name(lastLeg.winnerId), lastLeg.dartsThrown, lastLeg.checkout))}</p>
+        <p className="truncate leading-6 text-(--color-text-muted)">
+          {pl.lastLeg(pl.legResult(name(lastLeg.winnerId), lastLeg.dartsThrown, lastLeg.checkout))}
+        </p>
       )}
     </section>
   );

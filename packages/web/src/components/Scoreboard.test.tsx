@@ -45,7 +45,9 @@ describe('Scoreboard', () => {
   });
 
   it("gives each avatar the player's own color, not the list position", () => {
-    const state = snapshot({ players: [player('p1', 'Anna', { avatar: '🦊', color: 12 }), player('p2', 'Bartek', { avatar: '🎯', color: 7 })] });
+    const state = snapshot({
+      players: [player('p1', 'Anna', { avatar: '🦊', color: 12 }), player('p2', 'Bartek', { avatar: '🎯', color: 7 })],
+    });
     render(<Scoreboard state={state} />);
     // Stały kolor awatara gracza widać tylko w klasie tokenu. Anna stoi pierwsza, ale ma kolor 12.
     expect(screen.getByText('🦊').className).toContain('bg-(--color-avatar-12)');
@@ -202,7 +204,11 @@ describe('Scoreboard', () => {
   });
 
   it('shows the thrower score in the thrower row', () => {
-    render(<Scoreboard state={snapshot({ players: [player('p1', 'Anna', { remaining: 321, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] })} />);
+    render(
+      <Scoreboard
+        state={snapshot({ players: [player('p1', 'Anna', { remaining: 321, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] })}
+      />,
+    );
     const thrower = screen.getByText(THROWING).closest('li') as HTMLElement;
     expect(within(thrower).getByText('321')).toBeTruthy();
   });
@@ -217,7 +223,10 @@ describe('Scoreboard', () => {
   });
 
   it("rings the thrower avatar in the player's color", () => {
-    const state = snapshot({ currentPlayerId: 'p2', players: [player('p1', 'Anna', { avatar: '🦊', color: 12 }), player('p2', 'Bartek', { avatar: '🎯', color: 7 })] });
+    const state = snapshot({
+      currentPlayerId: 'p2',
+      players: [player('p1', 'Anna', { avatar: '🦊', color: 12 }), player('p2', 'Bartek', { avatar: '🎯', color: 7 })],
+    });
     render(<Scoreboard state={state} />);
     expect(screen.getByText('🎯').style.getPropertyValue('--sc-avatar-color')).toBe('var(--color-avatar-7)');
     expect(screen.getByText('🦊').style.getPropertyValue('--sc-avatar-color')).toBe('');
@@ -229,7 +238,10 @@ describe('Scoreboard leg info', () => {
   function midLeg(bartekLast = legTurn('p2', { points: 60, remainingAfter: 441 })) {
     return snapshot({
       currentPlayerId: 'p1',
-      players: [player('p1', 'Anna', { remaining: 370, legsWon: 0 }), player('p2', 'Bartek', { remaining: bartekLast.remainingAfter ?? 501, legsWon: 0 })],
+      players: [
+        player('p1', 'Anna', { remaining: 370, legsWon: 0 }),
+        player('p2', 'Bartek', { remaining: bartekLast.remainingAfter ?? 501, legsWon: 0 }),
+      ],
       legTurns: [legTurn('p1', { points: 60, remainingAfter: 441 }), bartekLast, legTurn('p1', { points: 71, remainingAfter: 370 })],
     });
   }

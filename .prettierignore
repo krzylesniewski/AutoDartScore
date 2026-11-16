@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+*.md
+*.html
+design/
+rollout/
+spikes/
+fixtures/
+.claude/
+packages/web/public/

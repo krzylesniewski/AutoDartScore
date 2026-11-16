@@ -37,7 +37,10 @@ const missClass = `rounded-(--radius-card) text-[30px] leading-none font-extrabo
 const restMissTone: KeypadKeyTone = { fill: 'bg-transparent text-(--color-text-sub)', border: restBorder };
 const restMissClass = `rounded-(--radius-button) px-1 text-lg leading-none font-semibold shadow-(--shadow-outline) lg:text-[19px] ${keyBase}`;
 const multiplierTone: KeypadKeyTone = { fill: 'bg-transparent text-(--color-text)', border: restBorder };
-const selectedMultiplierTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse) shadow-(--shadow-selected)', border: 'border-(--color-text)' };
+const selectedMultiplierTone: KeypadKeyTone = {
+  fill: 'bg-(--color-text) text-(--color-text-inverse) shadow-(--shadow-selected)',
+  border: 'border-(--color-text)',
+};
 const multiplierClass = `rounded-(--radius-segment) text-2xl font-bold lg:text-[22px] ${keyBase}`;
 const multiplierTray = 'gap-1.5 rounded-(--radius-card) bg-(--color-surface-soft) p-1.5';
 const frequentTone: KeypadKeyTone = { fill: 'bg-(--color-surface-soft) text-(--color-text)', border: restBorder };
@@ -210,13 +213,7 @@ export function Keypad({ onHit, onRestMiss, onUndo, disabled, undoDisabled, chec
       </KeypadKey>
     ),
     restMiss: (className) => (
-      <KeypadKey
-        disabled={disabled}
-        flashOnPress
-        onPress={restMiss}
-        className={`${className} ${restMissClass}`}
-        idleTone={restMissTone}
-      >
+      <KeypadKey disabled={disabled} flashOnPress onPress={restMiss} className={`${className} ${restMissClass}`} idleTone={restMissTone}>
         {pl.restMiss}
       </KeypadKey>
     ),
@@ -269,8 +266,15 @@ function RingKeypad({ keys }: { keys: Keys }) {
   const centreHeight = { height: `max(${MIN_KEY_PX}px, ${RING_CENTER_HEIGHT_PERCENT}cqi)` };
 
   return (
-    <section aria-label={pl.keypad} data-shortcut-keys="" className="@container flex flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(160px,1fr)] lg:gap-3">
-      {keys.multipliers(`grid h-14 grid-cols-3 ${multiplierTray} lg:h-auto lg:w-full lg:max-w-40 lg:grid-cols-1 lg:grid-rows-3 lg:justify-self-end`, 'lg:min-h-14')}
+    <section
+      aria-label={pl.keypad}
+      data-shortcut-keys=""
+      className="@container flex flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(160px,1fr)] lg:gap-3"
+    >
+      {keys.multipliers(
+        `grid h-14 grid-cols-3 ${multiplierTray} lg:h-auto lg:w-full lg:max-w-40 lg:grid-cols-1 lg:grid-rows-3 lg:justify-self-end`,
+        'lg:min-h-14',
+      )}
       <div className={`@container relative ${ringSide}`}>
         {DARTBOARD_ORDER.map((segment, index) => {
           const { left, top } = ringKeyPosition(index);
@@ -281,7 +285,10 @@ function RingKeypad({ keys }: { keys: Keys }) {
             height: ringKeySize,
           });
         })}
-        <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 gap-2" style={{ width: `${RING_CENTER_WIDTH_PERCENT}%` }}>
+        <div
+          className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 gap-2"
+          style={{ width: `${RING_CENTER_WIDTH_PERCENT}%` }}
+        >
           {keys.outerBull(centreKey, centreHeight)}
           {keys.bull(centreKey, centreHeight)}
         </div>
@@ -304,7 +311,9 @@ function GridKeypad({ keys }: { keys: Keys }) {
     <section aria-label={pl.keypad} data-shortcut-keys="" className="flex flex-col gap-2">
       {keys.multipliers(`grid h-14 grid-cols-3 ${multiplierTray} lg:h-[62px]`, '')}
       {keys.frequent('flex h-18 shrink-0 flex-col gap-2', 'grid flex-1 grid-cols-6 gap-2')}
-      <div className="grid grid-cols-5 gap-2 lg:grid-cols-10">{DARTBOARD_ORDER.map((segment) => keys.segment(segment, `h-14 lg:h-[78px] ${gridKey}`))}</div>
+      <div className="grid grid-cols-5 gap-2 lg:grid-cols-10">
+        {DARTBOARD_ORDER.map((segment) => keys.segment(segment, `h-14 lg:h-[78px] ${gridKey}`))}
+      </div>
       <div className="grid grid-cols-6 gap-2 lg:grid-cols-10">
         {keys.outerBull(`col-span-3 h-14 lg:col-span-2 lg:h-[62px] ${gridKey}`)}
         {keys.bull(`col-span-3 h-14 lg:col-span-2 lg:h-[62px] ${gridKey}`)}

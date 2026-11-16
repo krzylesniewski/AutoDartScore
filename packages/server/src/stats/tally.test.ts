@@ -2,9 +2,9 @@ import type { DomainEvent, Hit } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import { EMPTY_TOTALS, mergeTotals, tallyGame, toStatLine, winRatePercent } from './tally.js';
 
-const S = (segment: number): Hit => ({ segment, multiplier: 1 }) as Hit;
-const D = (segment: number): Hit => ({ segment, multiplier: 2 }) as Hit;
-const T = (segment: number): Hit => ({ segment, multiplier: 3 }) as Hit;
+const S = (segment: number): Hit => ({ segment, multiplier: 1 });
+const D = (segment: number): Hit => ({ segment, multiplier: 2 });
+const T = (segment: number): Hit => ({ segment, multiplier: 3 });
 const MISS = { segment: 0, multiplier: 0 } as Hit;
 
 function turn(playerId: string, legIndex: number, darts: Hit[], total: number, remaining: number): DomainEvent {
@@ -183,7 +183,7 @@ describe('tallyGame', () => {
   it('counts only T20, not T19, D20, S20, 25 or Bull', () => {
     const events: DomainEvent[] = [
       turn('anna', 0, [T(19), D(20), S(20)], 117, 384),
-      turn('anna', 0, [S(25), { segment: 25, multiplier: 2 } as Hit, T(20)], 135, 249),
+      turn('anna', 0, [S(25), { segment: 25, multiplier: 2 }, T(20)], 135, 249),
     ];
     expect(line('practice', ['anna'], events, 'anna').t20Hits).toBe(1);
   });
@@ -198,7 +198,7 @@ describe('tallyGame', () => {
   });
 
   it('counts a Bull finish as a double attempt', () => {
-    const events: DomainEvent[] = [turn('anna', 0, [S(10), { segment: 25, multiplier: 2 } as Hit], 60, 0)];
+    const events: DomainEvent[] = [turn('anna', 0, [S(10), { segment: 25, multiplier: 2 }], 60, 0)];
     // Przed pierwszą rzutką zostaje 60 (nie do zamknięcia jedną rzutką), przed drugą 50 (Bull).
     expect(line('practice', ['anna'], events, 'anna').doubleAttempts).toBe(1);
   });
@@ -209,11 +209,23 @@ describe('tallyGame', () => {
       { type: 'player_finished', playerId: 'anna', legIndex: 0, place: 1, checkout: 100, dartsThrown: 2 },
       turn('bartek', 0, [D(16)], 32, 0),
       { type: 'player_finished', playerId: 'bartek', legIndex: 0, place: 2, checkout: 32, dartsThrown: 1 },
-      { type: 'casual_finished', placements: [{ playerId: 'anna', place: 1 }, { playerId: 'bartek', place: 2 }, { playerId: 'celina', place: 3 }] },
+      {
+        type: 'casual_finished',
+        placements: [
+          { playerId: 'anna', place: 1 },
+          { playerId: 'bartek', place: 2 },
+          { playerId: 'celina', place: 3 },
+        ],
+      },
     ];
     const tally = tallyGame('casual', ['anna', 'bartek', 'celina'], events);
     expect(toStatLine(tally.players.get('anna') ?? EMPTY_TOTALS)).toMatchObject({ legsWon: 1, doublesHit: 1, highestCheckout: 100 });
-    expect(toStatLine(tally.players.get('bartek') ?? EMPTY_TOTALS)).toMatchObject({ legsWon: 0, doublesHit: 1, highestCheckout: 32, bestLegDarts: 1 });
+    expect(toStatLine(tally.players.get('bartek') ?? EMPTY_TOTALS)).toMatchObject({
+      legsWon: 0,
+      doublesHit: 1,
+      highestCheckout: 32,
+      bestLegDarts: 1,
+    });
     expect(tally.winnerId).toBe('anna');
     expect(tally.legs).toEqual([]);
   });

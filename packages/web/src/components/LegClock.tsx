@@ -15,7 +15,11 @@ export function LegClock({ state, className }: { state: MatchSnapshot; className
   const freeRun = state.practiceMode === 'free_run';
 
   return (
-    <span role="timer" aria-label={freeRun ? pl.sessionTime(spoken) : pl.legTime(spoken)} className={`flex items-center gap-1 tabular-nums ${className ?? ''}`}>
+    <span
+      role="timer"
+      aria-label={freeRun ? pl.sessionTime(spoken) : pl.legTime(spoken)}
+      className={`flex items-center gap-1 tabular-nums ${className ?? ''}`}
+    >
       <ClockIcon className="text-(--color-text-muted)" />
       <span aria-hidden="true" className="inline-grid">
         <span className="col-start-1 row-start-1">{formatDuration(seconds)}</span>

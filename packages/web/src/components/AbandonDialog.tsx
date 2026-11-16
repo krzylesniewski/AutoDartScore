@@ -33,8 +33,14 @@ export function AbandonDialog({ state, onConfirm, onCancel }: AbandonDialogProps
   return (
     // Fokus na oknie, a nie na polu powodu, żeby na tablecie nie wyskakiwała klawiatura.
     <Dialog labelledBy={titleId} describedBy={textId} className="gap-5" onClose={onCancel}>
-      <h2 id={titleId} className="relative flex items-center gap-3.5 font-display text-[32px] leading-none font-black tracking-[0.01em] uppercase sm:text-[40px]">
-        <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-full bg-(--color-surface-soft) text-2xl">
+      <h2
+        id={titleId}
+        className="relative flex items-center gap-3.5 font-display text-[32px] leading-none font-black tracking-[0.01em] uppercase sm:text-[40px]"
+      >
+        <span
+          aria-hidden="true"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-(--color-surface-soft) text-2xl"
+        >
           <PauseIcon />
         </span>
         {pl.abandonTitle}

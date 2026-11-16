@@ -32,7 +32,10 @@ const finished = snapshot({
 const current = summary({
   finished: true,
   eventSeq: 9,
-  players: [summaryPlayer('p1', { dartsThrown: 30, average: 50, legsWon: 1 }), summaryPlayer('p2', { dartsThrown: 33, average: 60, legsWon: 2 })],
+  players: [
+    summaryPlayer('p1', { dartsThrown: 30, average: 50, legsWon: 1 }),
+    summaryPlayer('p2', { dartsThrown: 33, average: 60, legsWon: 2 }),
+  ],
   legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [], durationMs: 252_000 }],
 });
 
@@ -87,16 +90,16 @@ function lockPath(): string | null | undefined {
 }
 
 function undoButton(name: string | RegExp = /^Cofnij/): HTMLButtonElement {
-  return screen.getByRole('button', { name }) as HTMLButtonElement;
+  return screen.getByRole<HTMLButtonElement>('button', { name });
 }
 
 function rematchButton(): HTMLButtonElement {
-  return screen.getByRole('button', { name: 'Rewanż' }) as HTMLButtonElement;
+  return screen.getByRole<HTMLButtonElement>('button', { name: 'Rewanż' });
 }
 
 beforeEach(() => {
   calls = [];
-  respond = async () => json(201, snapshot({ id: 'm_43' }));
+  respond = () => Promise.resolve(json(201, snapshot({ id: 'm_43' })));
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
@@ -125,7 +128,10 @@ describe('MatchEndView', () => {
     expect(rowHeaders).toHaveLength(10);
     expect(rowHeaders.map((header) => header.textContent)).toContain('Wygrane legi');
     const columns = within(table).getAllByRole('columnheader');
-    expect(columns).toEqual([within(table).getByRole('columnheader', { name: 'Bartek' }), within(table).getByRole('columnheader', { name: 'Anna' })]);
+    expect(columns).toEqual([
+      within(table).getByRole('columnheader', { name: 'Bartek' }),
+      within(table).getByRole('columnheader', { name: 'Anna' }),
+    ]);
   });
 
   it('shows the achievement notices in a status region and keeps Cofnij working', () => {
@@ -133,7 +139,15 @@ describe('MatchEndView', () => {
       achievements: [
         {
           playerName: 'Bartek',
-          achievement: { type: 'achievement', matchId: 'm_1', eventSeq: 9, playerId: 'p2', kind: 'checkout_record', value: 121, previous: 100 },
+          achievement: {
+            type: 'achievement',
+            matchId: 'm_1',
+            eventSeq: 9,
+            playerId: 'p2',
+            kind: 'checkout_record',
+            value: 121,
+            previous: 100,
+          },
         },
       ],
     });
@@ -149,7 +163,10 @@ describe('MatchEndView', () => {
   });
 
   it("gives the avatars the players' own colors, not the list position", () => {
-    const players = [player('p1', 'Anna', { legsWon: 1, avatar: '🦊', color: 12 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯', color: 7 })];
+    const players = [
+      player('p1', 'Anna', { legsWon: 1, avatar: '🦊', color: 12 }),
+      player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯', color: 7 }),
+    ];
     view({ state: { ...finished, players } });
     const table = screen.getByRole('table', { name: 'Podsumowanie meczu' });
     // Stały kolor awatara gracza widać tylko w klasie tokenu. Anna stoi pierwsza, ale ma kolor 12.
@@ -190,7 +207,24 @@ describe('MatchEndView', () => {
   });
 
   it('shows the checkout and the averages of each player in a leg card', () => {
-    view({ summary: { ...current, legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [{ playerId: 'p1', average: 74.2 }, { playerId: 'p2', average: null }], durationMs: 252_000 }] } });
+    view({
+      summary: {
+        ...current,
+        legs: [
+          {
+            legIndex: 0,
+            winnerId: 'p1',
+            checkout: 121,
+            dartsThrown: 6,
+            averages: [
+              { playerId: 'p1', average: 74.2 },
+              { playerId: 'p2', average: null },
+            ],
+            durationMs: 252_000,
+          },
+        ],
+      },
+    });
     const legList = screen.getByRole('list', { name: 'Legi' });
     expect(within(legList).getByText('Leg 1')).toBeTruthy();
     expect(within(legList).getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
@@ -256,7 +290,7 @@ describe('MatchEndView', () => {
   });
 
   it('shows a failed rematch, keeps the hash and enables the button again', async () => {
-    respond = async () => json(500, { error: 'internal', message: 'boom' });
+    respond = () => Promise.resolve(json(500, { error: 'internal', message: 'boom' }));
     window.location.hash = '#/matches/m1';
     view();
     fireEvent.click(rematchButton());
@@ -274,7 +308,7 @@ describe('MatchEndView', () => {
 
   it('disables Cofnij while busy', () => {
     view({ busy: true });
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(true);
   });
 
   it('counts down on Cofnij and then disables it with the lock notice', () => {
@@ -309,7 +343,12 @@ describe('MatchEndView', () => {
   });
 
   it('offers to save a guest but not a saved player', () => {
-    view({ state: { ...finished, players: [player('p1', 'Anna', { legsWon: 1, guest: true }), player('p2', 'Bartek', { remaining: 0, legsWon: 2 })] } });
+    view({
+      state: {
+        ...finished,
+        players: [player('p1', 'Anna', { legsWon: 1, guest: true }), player('p2', 'Bartek', { remaining: 0, legsWon: 2 })],
+      },
+    });
     expect(screen.getByRole('button', { name: 'Zapisz gracza: Anna' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Zapisz gracza: Bartek' })).toBeNull();
   });
@@ -439,7 +478,9 @@ describe('MatchEndView: casual', () => {
     const table = screen.getByRole('table', { name: 'Podsumowanie meczu' });
     const columns = within(table).getAllByRole('columnheader');
     expect(columns.map(visibleText)).toEqual(['1.Celina', '2.Anna', '3.Bartek']);
-    const rowHeaders = within(table).getAllByRole('rowheader').map((header) => header.textContent);
+    const rowHeaders = within(table)
+      .getAllByRole('rowheader')
+      .map((header) => header.textContent);
     expect(rowHeaders).toHaveLength(9);
     expect(rowHeaders).not.toContain('Wygrane legi');
   });
