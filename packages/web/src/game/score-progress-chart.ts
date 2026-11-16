@@ -1,4 +1,4 @@
-import type { LegProgress } from '@autoscore/schema';
+import { DARTS_PER_TURN, type LegProgress } from '@autoscore/schema';
 import type { ChartSize, ChartTick } from './form-chart';
 
 export interface ProgressChartPoint {
@@ -23,7 +23,6 @@ export interface ScoreProgressLayout {
   readonly scoreLabels: readonly ChartTick[];
 }
 
-const DARTS_PER_TURN = 3;
 const MAX_DART_LABELS = 12;
 const MAX_SCORE_LINES = 7;
 

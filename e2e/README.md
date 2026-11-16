@@ -16,6 +16,7 @@ Zestaw obejmuje:
   - „Porzuć mecz” jest ukryte, dopóki nie otworzy się „Menu gry”, a potem da się je kliknąć nad klawiaturą. W oknie przeglądarki wysokim na 400 px panel okna porzucenia mieści się w nim i przewija się sam, a pierścienie w jego rogu nie łapią kliknięć.
 
   Poniżej lg „Tury” zamienia pasek wyników, panel tury, kartę zamknięcia i statystyki meczu na historię tur bez ruszania klawiatury, a bieżąca tura jest widoczna. Od lg historia tur stoi stale w lewej kolumnie, która przewija się sama i kończy się w oknie, tabela historii zaczyna się od bieżącej tury, a „Menu gry” znika, gdy nie ma w nim akcji. Przebieg Solo 501 i Free run zaczyna się od bieżącej tury przy każdej szerokości.
+- `forced-colors.spec.ts`: w trybie wymuszonych kolorów (wysoki kontrast) przycisk „Zaloguj” z fokusem przeniesionym klawiszem Tab z pola hasła ma ciągły obrys 2 px, bo ten tryb usuwa pierścień fokusu rysowany cieniem.
 
 ## Uruchomienie
 

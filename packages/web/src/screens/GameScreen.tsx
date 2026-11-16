@@ -175,7 +175,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
         <main className="flex min-h-0 flex-1 flex-col content-start gap-3 overflow-auto px-3 pt-3 sm:gap-(--space-page) sm:px-(--space-page) sm:pt-(--space-page) lg:gap-y-(--space-6) lg:grid lg:grid-cols-[340px_1fr] lg:grid-rows-[1fr_auto] lg:pb-3 xl:grid-cols-[var(--scoreboard-width)_1fr]">
           <div className="flex flex-col gap-4 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:-mx-(--space-page) lg:-mt-1 lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:px-(--space-page) lg:pt-1 lg:pb-1">
             <div className={`contents ${hiddenByTurns}`}>
-              {state ? <Scoreboard state={state} size="large" /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
+              {state ? <Scoreboard state={state} /> : <p className="font-display text-(--color-text-muted)">{pl.loading}</p>}
               {state?.type === 'match' && <MatchStatsPanel state={state} summary={stats.summary} />}
               {checkouts && <CheckoutRecentAttempts session={checkouts} />}
             </div>

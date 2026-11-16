@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
 import { onUnauthorized } from './api/session';
+import { LazyScreen } from './components/LazyScreen';
 import { Stage } from './components/Stage';
 import { GameScreen } from './screens/GameScreen';
-import { HistoryScreen } from './screens/HistoryScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LoginScreen } from './screens/LoginScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
-import { StatsScreen } from './screens/StatsScreen';
+
+// Ekrany spoza gry wczytują się dopiero po wejściu na nie, żeby pierwsze ładowanie było mniejsze.
+const StatsScreen = lazy(() => import('./screens/StatsScreen').then((module) => ({ default: module.StatsScreen })));
+const HistoryScreen = lazy(() => import('./screens/HistoryScreen').then((module) => ({ default: module.HistoryScreen })));
+const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then((module) => ({ default: module.SettingsScreen })));
 
 const HOME = '#/';
 
@@ -72,24 +75,31 @@ export function App() {
       </Stage>
     );
   }
+  // Klucz z nazwą ekranu, bo drzewo Stage z LazyScreen ma ten sam kształt na trzech trasach i bez niego błąd wczytania jednego ekranu zostałby na następnym.
   if (route?.screen === 'history') {
     return (
       <Stage light="list">
-        <HistoryScreen />
+        <LazyScreen key={route.screen}>
+          <HistoryScreen />
+        </LazyScreen>
       </Stage>
     );
   }
   if (route?.screen === 'settings') {
     return (
       <Stage light="game">
-        <SettingsScreen />
+        <LazyScreen key={route.screen}>
+          <SettingsScreen />
+        </LazyScreen>
       </Stage>
     );
   }
   if (route?.screen === 'stats') {
     return (
       <Stage light="list">
-        <StatsScreen playerId={route.playerId} />
+        <LazyScreen key={route.screen}>
+          <StatsScreen playerId={route.playerId} />
+        </LazyScreen>
       </Stage>
     );
   }
