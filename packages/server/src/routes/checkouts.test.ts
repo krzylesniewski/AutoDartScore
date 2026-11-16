@@ -327,7 +327,12 @@ describe('POST /matches/:id/undo in checkout practice', () => {
     const response = await undo(t.app, id);
     expect(response.statusCode).toBe(200);
     await vi.waitFor(() => expect(messages).toHaveLength(2));
-    expect(LiveMessage.parse(messages[1])).toEqual({ type: 'state_updated', matchId: id, eventSeq: 2, state: response.json<UndoResult>().state });
+    expect(LiveMessage.parse(messages[1])).toEqual({
+      type: 'state_updated',
+      matchId: id,
+      eventSeq: 2,
+      state: response.json<UndoResult>().state,
+    });
   });
 
   it('answers 409 nothing_to_undo without attempts or skips', async () => {

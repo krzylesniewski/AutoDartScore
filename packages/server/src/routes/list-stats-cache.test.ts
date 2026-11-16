@@ -142,7 +142,9 @@ describe('lists and stats with the replay cache', () => {
     }
 
     const list = await t.app.inject({ method: 'GET', url: '/matches' });
-    const names = list.json<MatchListItem[]>().flatMap((item: { players: { name: string }[] }) => item.players.map((player) => player.name));
+    const names = list
+      .json<MatchListItem[]>()
+      .flatMap((item: { players: { name: string }[] }) => item.players.map((player) => player.name));
     expect(names).toContain('Ania');
     expect(names).toContain('Cela');
     expect(names).not.toContain('Anna');
