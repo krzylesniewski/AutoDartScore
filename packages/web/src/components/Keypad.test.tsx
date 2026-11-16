@@ -762,13 +762,24 @@ describe('Keypad', () => {
     });
 
     it.each(LAYOUTS)('shows no row without hits and a row of one key with one hit in the %s layout', (layout) => {
+      // Bez trafień w miejscu rzędu zostaje pusty element ukryty przed czytnikiem ekranu. Nie ma roli ani tekstu, więc widać go tylko w liczbie pustych ukrytych elementów.
+      const hiddenEmpty = () =>
+        [...screen.getByRole('region', { name: 'Klawiatura rzutek' }).querySelectorAll('[aria-hidden="true"]')].filter(
+          (element) => element.childElementCount === 0 && element.textContent === '',
+        ).length;
+      setup({ layout, frequent: anna(SIX) });
+      const withRow = hiddenEmpty();
+      cleanup();
+
       for (const frequent of [null, anna([]), anna(SIX.slice(0, 1))]) {
         setup({ layout, frequent });
         if (frequent?.hits.length) {
           expect(within(row()).getAllByRole('button')).toHaveLength(1);
+          expect(hiddenEmpty()).toBe(withRow);
         } else {
           expect(screen.queryByRole('group', { name: /Najczęstsze/ })).toBeNull();
           expect(screen.getAllByRole('button')).toHaveLength(28);
+          expect(hiddenEmpty()).toBe(withRow + 1);
         }
         cleanup();
       }

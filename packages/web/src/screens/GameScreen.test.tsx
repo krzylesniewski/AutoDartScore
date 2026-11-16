@@ -1900,10 +1900,11 @@ describe('turn panel, checkout card and keypad', () => {
     expect(turnPanel.compareDocumentPosition(undo[0] as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('keeps the checkout card out of the keypad region and inside main', () => {
+  it('keeps the checkout card out of the keypad dock and inside main', () => {
     connect(onForty);
     const card = screen.getByRole('button', { name: /^Zamknięcie/ });
-    expect(keypad().contains(card)).toBe(false);
+    // Dok to bezpośredni kontener klawiatury, w którym poniżej lg stoją też komunikaty o połączeniu.
+    expect(keypad().parentElement?.contains(card)).toBe(false);
     expect(screen.getByRole('main').contains(card)).toBe(true);
   });
 
@@ -1926,11 +1927,11 @@ describe('leg panel', () => {
     return screen.getByRole('heading', { name: 'Historia tur · Leg 1' }).closest('section[id]') as HTMLElement;
   }
 
-  it('puts the leg panel after the stats panel in a 1v1, outside the keypad region', () => {
+  it('puts the leg panel after the stats panel in a 1v1, outside the keypad dock', () => {
     connect(midLeg);
     const stats = screen.getByRole('table', { name: 'Statystyki meczu' });
     expect(stats.compareDocumentPosition(panel()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'Klawiatura rzutek' }).contains(panel())).toBe(false);
+    expect(screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement?.contains(panel())).toBe(false);
   });
 
   it('opens the panel with Tury and keeps the keypad', () => {

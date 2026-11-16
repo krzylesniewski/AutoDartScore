@@ -676,6 +676,18 @@ describe('StatsScreen: player history', () => {
     expect(within(section).getByText('Wygrywa Anna')).toBeTruthy();
     expect(within(section).getByRole('link', { name: 'Szczegóły: Anna 2 : 1 Bartek' }).getAttribute('href')).toBe('#/matches/m9');
   });
+
+  it('repeats the game date in the type line of a history row', async () => {
+    history = [listItem({ id: 'm9', status: 'finished', winnerId: 'p1', players: [player('p1', 'Anna', { legsWon: 2 }), player('p2', 'Bartek', { legsWon: 1 })] })];
+    render(<StatsScreen playerId="p1" />);
+    const section = await screen.findByRole('region', { name: 'Historia gier' });
+    await within(section).findByText('Anna 2 : 1 Bartek');
+    const row = within(section).getAllByRole('listitem')[0] as HTMLElement;
+    const times = [...row.querySelectorAll('time')];
+    expect(times).toHaveLength(2);
+    expect(times[1]?.getAttribute('datetime')).toBe(times[0]?.getAttribute('datetime'));
+    expect(within(row).getByText(/^Mecz 1v1 · /).contains(times[1] as HTMLElement)).toBe(true);
+  });
 });
 
 describe('StatsScreen: period', () => {
@@ -800,5 +812,48 @@ describe('StatsScreen: period', () => {
     expect(await screen.findByText('Brak rzutów')).toBeTruthy();
     expect(screen.queryByText('Nie udało się pobrać statystyk')).toBeNull();
     expect(screen.getByText('Brak ukończonych legów.')).toBeTruthy();
+  });
+});
+
+describe('StatsScreen: keyboard and reading order', () => {
+  // Typ gry i okres są grupami przycisków ze stanem, a typ stoi w kolejności czytania przed okresem.
+  function expectFilters(typeName: string): void {
+    const type = screen.getByRole('region', { name: typeName });
+    const period = screen.getByRole('region', { name: 'Okres' });
+    expect(type.compareDocumentPosition(period) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const buttons = within(type).getAllByRole('button');
+    expect(buttons.length).toBeGreaterThan(1);
+    for (const button of buttons) {
+      expect(button.hasAttribute('aria-pressed')).toBe(true);
+    }
+  }
+
+  it('makes the record tiles one region the keyboard can reach', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    const records = screen.getByRole('region', { name: 'Rekordy' });
+    // Od xl region przewija się sam, więc bez fokusu nie da się go przewinąć z klawiatury.
+    expect(records.getAttribute('tabindex')).toBe('0');
+    expect(records.contains(tile('Najkrótszy leg'))).toBe(true);
+  });
+
+  it('puts the ranking link before the title and hides its arrow from screen readers', async () => {
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    const link = screen.getByRole('link', { name: 'Ranking' });
+    expect(link.compareDocumentPosition(screen.getByRole('heading', { level: 1 })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(link.getAttribute('href')).toBe('#/stats');
+    expect(within(link).getByText('←').getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('shows the type filter as pressable buttons before the period filter in both views', async () => {
+    const { unmount } = render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expectFilters('Typ gry');
+    unmount();
+
+    render(<StatsScreen playerId="p1" />);
+    await screen.findByRole('button', { name: 'Anna' });
+    expectFilters('Typ gier');
   });
 });

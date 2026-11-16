@@ -47,7 +47,7 @@ export async function createPracticeByApi(
   request: APIRequestContext,
   token: string,
   playerId: string,
-  mode: { practiceMode: 'checkouts'; checkoutRange: '2-50' } | { practiceMode: 'solo_501' },
+  mode: { practiceMode: 'checkouts'; checkoutRange: '2-50' } | { practiceMode: 'solo_501' | 'free_run' },
 ): Promise<MatchSnapshot> {
   const body: CreateMatchRequest = { type: 'practice', playerIds: [playerId], ...mode };
   const response = await request.post('/matches', { headers: authorization(token), data: body });

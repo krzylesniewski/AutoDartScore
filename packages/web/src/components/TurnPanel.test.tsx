@@ -30,6 +30,7 @@ describe('TurnPanel', () => {
     expect(screen.getAllByText('czeka na rzutkę')).toHaveLength(1);
     const waiting = screen.getByLabelText('Rzutka 3');
     expect(waiting.textContent).toBe('czeka na rzutkę');
+    expect(waiting.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(screen.getByLabelText('Rzutka 1').textContent).not.toContain('czeka na rzutkę');
   });
 

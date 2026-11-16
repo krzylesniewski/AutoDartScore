@@ -13,6 +13,7 @@ describe('AppNav', () => {
     const settings = within(nav).getByRole('link', { name: 'Ustawienia' });
     expect(settings.getAttribute('href')).toBe('#/settings');
     expect(settings.hasAttribute('aria-disabled')).toBe(false);
+    expect(within(nav).getAllByRole('link').filter((link) => link.hasAttribute('aria-disabled'))).toEqual([]);
     expect(within(nav).queryByText('Wkrótce')).toBeNull();
   });
 
@@ -29,6 +30,16 @@ describe('AppNav', () => {
     const banner = screen.getByRole('banner');
     expect(within(banner).getByText('Kamera: brak')).toBeTruthy();
     expect(within(banner).getByText(/^Głos: /)).toBeTruthy();
+  });
+
+  it.each([true, false])('hides the status dots from screen readers with the voice on: %s', (voiceEnabled) => {
+    render(<AppNav current="history" voiceEnabled={voiceEnabled} />);
+    for (const text of ['Kamera: brak', voiceEnabled ? 'Głos: włączony' : 'Głos: wyłączony']) {
+      // Status to kropka i tekst w jednym elemencie. Kropka jest pusta i ukryta, a stan niesie tekst.
+      const dots = [...(screen.getByText(text).parentElement?.querySelectorAll('[aria-hidden="true"]') ?? [])];
+      expect(dots).toHaveLength(1);
+      expect(dots[0]?.textContent).toBe('');
+    }
   });
 
   it('marks only the current page', () => {

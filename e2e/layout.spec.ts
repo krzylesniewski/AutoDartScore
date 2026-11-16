@@ -14,6 +14,13 @@ const VIEWPORTS = [
 
 // Poniżej lg (1024 px) historia tur otwiera się przyciskiem „Tury”, a od lg stoi stale w lewej kolumnie.
 const LG = 1024;
+const XL = 1280;
+
+// Dolny odstęp strony pod dokiem: 12 px, od sm 28 px.
+const BOTTOM_GAP = 28;
+
+// Niższe niż okno porzucenia meczu, żeby jego panel musiał się przewijać.
+const SHORT_HEIGHT = 400;
 
 const T20: Hit = { segment: 20, multiplier: 3 };
 
@@ -57,20 +64,43 @@ async function expectBoxInViewport(page: Page, control: Locator): Promise<void> 
   await expectInViewport(await boxOf(control), page);
 }
 
-// Czy element leży w poziomie w obrębie najbliższego przodka, który przewija się w poziomie.
-async function insideHorizontalScroll(element: Locator): Promise<boolean> {
-  return element.evaluate((node) => {
-    const rect = node.getBoundingClientRect();
+// sr-only zostawia elementowi pudełko 1×1, które Playwright uznaje za widoczne, więc liczy się też rozmiar.
+async function expectReadable(element: Locator): Promise<void> {
+  await expect(element).toBeVisible();
+  const box = await boxOf(element);
+  expect(box.width).toBeGreaterThan(2);
+  expect(box.height).toBeGreaterThan(2);
+}
+
+// Nakładki ze statusem leżą nad treścią, więc nie mogą łapać kliknięć.
+async function expectStatusOverlaysPassClicks(page: Page): Promise<void> {
+  const overlays = await page
+    .locator('[role="status"]')
+    .evaluateAll((nodes) => nodes.filter((node) => getComputedStyle(node).position === 'absolute').map((node) => getComputedStyle(node).pointerEvents));
+  expect(overlays.length).toBeGreaterThan(0);
+  expect(overlays.filter((value) => value !== 'none')).toEqual([]);
+}
+
+// Pierścienie w rogu panelu okna wystają poza niego. Panel je przycina, więc nie da się go przewinąć w bok.
+async function expectClippedSideways(panel: Locator): Promise<void> {
+  expect(['hidden', 'clip']).toContain(await panel.evaluate((node) => getComputedStyle(node).overflowX));
+}
+
+// Czy element leży w widocznej części najbliższego przodka z overflow auto albo scroll w danej osi.
+async function insideScrollContainer(element: Locator, axis: 'x' | 'y'): Promise<boolean> {
+  return element.evaluate((node, along) => {
+    const overflow = (candidate: Element) => (along === 'x' ? getComputedStyle(candidate).overflowX : getComputedStyle(candidate).overflowY);
     let scroller = node.parentElement;
-    while (scroller && scroller.scrollWidth <= scroller.clientWidth) {
+    while (scroller && !['auto', 'scroll'].includes(overflow(scroller))) {
       scroller = scroller.parentElement;
     }
     if (!scroller) {
-      return true;
+      return false;
     }
+    const rect = node.getBoundingClientRect();
     const box = scroller.getBoundingClientRect();
-    return rect.left >= box.left - 1 && rect.right <= box.right + 1;
-  });
+    return along === 'x' ? rect.left >= box.left - 1 && rect.right <= box.right + 1 : rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1;
+  }, axis);
 }
 
 // Najbliższy przodek z overflow-y auto albo scroll, czyli kontener, w którym element się przewija.
@@ -97,9 +127,30 @@ for (const viewport of VIEWPORTS) {
 
     test('new game screen has no horizontal scroll', async ({ page }) => {
       await page.goto('/#/');
-      await expect(page.getByRole('heading', { level: 1, name: 'Nowa gra' })).toBeVisible();
+      await expectReadable(page.getByRole('heading', { level: 1, name: 'Nowa gra' }));
       await expect(page.getByRole('button', { name: 'Start gry' })).toBeVisible();
       await expectNoHorizontalScroll(page);
+    });
+
+    test('new player dialog keeps its 44 px color swatches inside the dialog', async ({ page }) => {
+      await page.goto('/#/');
+      await page.getByRole('button', { name: '+ Nowy gracz' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Nowy gracz' });
+      await expect(dialog).toBeVisible();
+      const panel = dialog.locator(':scope > div');
+      const panelBox = await boxOf(panel);
+      const swatches = dialog.getByRole('group', { name: 'Kolor' }).getByRole('radio');
+      await expect(swatches).toHaveCount(16);
+      for (const swatch of await swatches.all()) {
+        const box = await boxOf(swatch);
+        expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+        expect(box.x).toBeGreaterThanOrEqual(panelBox.x);
+        expect(box.x + box.width).toBeLessThanOrEqual(panelBox.x + panelBox.width);
+      }
+      await expectClippedSideways(panel);
+      await expectNoHorizontalScroll(page);
+      await dialog.getByRole('button', { name: 'Anuluj' }).click();
+      await expect(dialog).toBeHidden();
     });
 
     test('stats screen has no horizontal scroll', async ({ page }) => {
@@ -124,8 +175,12 @@ for (const viewport of VIEWPORTS) {
       await page.goto('/#/history');
       await page.getByRole('navigation').getByRole('link', { name: 'Ustawienia' }).click();
       await expect(page.getByRole('link', { name: 'Ustawienia' })).toHaveAttribute('aria-current', 'page');
-      await expect(page.getByText('Kamera: brak')).toBeVisible();
-      await expect(page.getByText(/^Głos: /)).toBeVisible();
+      await expectReadable(page.getByText('Kamera: brak'));
+      await expectReadable(page.getByText(/^Głos: /));
+      for (const name of ['Koło', 'Siatka']) {
+        const card = page.locator('label').filter({ has: page.getByRole('radio', { name }) });
+        expect((await boxOf(card)).height).toBeGreaterThanOrEqual(44);
+      }
       await expectNoHorizontalScroll(page);
     });
 
@@ -139,6 +194,7 @@ for (const viewport of VIEWPORTS) {
         // Próbne kliknięcie sprawdza, że nakładka ze statusem nie przykrywa przycisku, i niczego nie zmienia.
         await control.click({ trial: true });
       }
+      await expectStatusOverlaysPassClicks(page);
     });
 
     test('checkout practice has no horizontal scroll and keeps its actions in view', async ({ page, request }) => {
@@ -174,16 +230,29 @@ for (const viewport of VIEWPORTS) {
       await fontsReady(page);
       await expect(keypadKey(page, '20')).toHaveCSS('touch-action', 'manipulation');
       const before = await keypadBox(page);
+      // Wiersze paska wyników mają stałą wysokość, także z linią zbitych punktów i ostatniej tury.
+      const board = await boxOf(scoreboard(page));
 
       await postThrowsByApi(request, token, match.id, BEFORE_BUST);
-      await expect(page.getByRole('button', { name: /^Zamknięcie/ })).toBeVisible();
+      const card = page.getByRole('button', { name: /^Zamknięcie/ });
+      await expect(card).toBeVisible();
       expectSameBox(await keypadBox(page), before);
+      expect(Math.abs((await boxOf(scoreboard(page))).height - board.height)).toBeLessThanOrEqual(1);
+      // Etykieta z liczbą rzutek mieści się na karcie dopiero od xl, a poniżej stoi krótka.
+      const [shown, hidden] = viewport.width >= XL ? [card.getByText(/^Zamknięcie w /), card.getByText('Zamknięcie', { exact: true })] : [card.getByText('Zamknięcie', { exact: true }), card.getByText(/^Zamknięcie w /)];
+      await expectReadable(shown);
+      await expect(hidden).toBeHidden();
 
       await postThrowsByApi(request, token, match.id, [T20]);
       const banner = page.getByRole('status').locator('p').filter({ hasText: 'Bust' });
       await expect(banner).toBeVisible();
-      expectNoOverlap(await boxOf(banner), await keypadBox(page));
-      expectSameBox(await keypadBox(page), before);
+      const bannerBox = await boxOf(banner);
+      const keypad = await keypadBox(page);
+      expectNoOverlap(bannerBox, keypad);
+      expect(bannerBox.y + bannerBox.height).toBeLessThanOrEqual(keypad.y + 1);
+      expectSameBox(keypad, before);
+      expect(Math.abs((await boxOf(scoreboard(page))).height - board.height)).toBeLessThanOrEqual(1);
+      await expectStatusOverlaysPassClicks(page);
     });
 
     test('grid keypad stays in view and in place', async ({ page, context, request }) => {
@@ -243,7 +312,23 @@ for (const viewport of VIEWPORTS) {
       await expect(table.getByRole('columnheader')).toHaveCount(12);
       const current = table.getByRole('cell').filter({ hasText: 'rzuca teraz' });
       await expect(current).toBeVisible();
-      expect(await insideHorizontalScroll(current)).toBe(true);
+      expect(await insideScrollContainer(current, 'x')).toBe(true);
+      await expectNoHorizontalScroll(page);
+    });
+
+    test('Free run history starts at the current approach without horizontal scroll', async ({ page, request }) => {
+      const session = await createPracticeByApi(request, token, players[0].id, { practiceMode: 'free_run' });
+      await page.goto(`/#/matches/${session.id}`);
+      await waitForKeypad(page);
+      await postThrowsByApi(request, token, session.id, TEN_MISSED_TURNS);
+      // Panel poniżej lg jest jeszcze ukryty, a role pomijają ukryte elementy, więc wiersz szukamy po atrybucie.
+      const current = page.locator('tr[aria-current="true"]');
+      await expect(current.locator('th')).toHaveText('11');
+      if (viewport.width < LG) {
+        await page.getByRole('button', { name: 'Tury' }).click();
+      }
+      await expect(page.getByRole('table', { name: 'Przebieg sesji' })).toBeVisible();
+      expect(await insideScrollContainer(current, 'y')).toBe(true);
       await expectNoHorizontalScroll(page);
     });
 
@@ -253,22 +338,32 @@ for (const viewport of VIEWPORTS) {
         await page.goto(`/#/matches/${match.id}`);
         await waitForKeypad(page);
         await fontsReady(page);
-        await postThrowsByApi(request, token, match.id, TEN_MISSED_TURNS);
+        // Po dziesięciu turach znów rzuca zaczynający, więc BEFORE_BUST zostawia mu w trakcie tury 61 z trasą zamknięcia.
+        await postThrowsByApi(request, token, match.id, [...TEN_MISSED_TURNS, ...BEFORE_BUST]);
         // Panel jest jeszcze ukryty, a role pomijają ukryte elementy, więc wiersz szukamy po atrybucie.
         const current = page.locator('tr[aria-current="true"]');
-        await expect(current.locator('th')).toHaveText('6');
+        await expect(current.locator('th')).toHaveText('7');
+        // Otwarty panel zajmuje miejsce paska wyników, panelu tury, karty zamknięcia i statystyk meczu.
+        const swapped = [scoreboard(page), page.getByText('w tej turze'), page.getByRole('button', { name: /^Zamknięcie/ }), page.getByRole('table', { name: 'Statystyki meczu' })];
+        for (const part of swapped) {
+          await expect(part).toBeVisible();
+        }
         const before = await keypadBox(page);
 
         await page.getByRole('button', { name: 'Tury' }).click();
         await expect(page.getByRole('heading', { name: 'Historia tur · Leg 1' })).toBeVisible();
-        await expect(scoreboard(page)).toBeHidden();
+        for (const part of swapped) {
+          await expect(part).toBeHidden();
+        }
         await expect(current).toBeInViewport();
         const open = await keypadBox(page);
         expectSameBox(open, before);
         await expectInViewport(open, page);
 
         await page.getByRole('button', { name: 'Zamknij historię tur' }).click();
-        await expect(scoreboard(page)).toBeVisible();
+        for (const part of swapped) {
+          await expect(part).toBeVisible();
+        }
         expectSameBox(await keypadBox(page), before);
       });
     } else {
@@ -277,8 +372,11 @@ for (const viewport of VIEWPORTS) {
         await page.goto(`/#/matches/${match.id}`);
         await waitForKeypad(page);
         await postThrowsByApi(request, token, match.id, TEN_MISSED_TURNS);
+        const current = page.locator('tr[aria-current="true"]');
+        await expect(current.locator('th')).toHaveText('6');
         await expect(page.getByRole('heading', { name: 'Historia tur · Leg 1' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Tury' })).toBeHidden();
+        await expect(page.getByRole('button', { name: 'Zamknij historię tur' })).toBeHidden();
         await expect(page.getByRole('button', { name: 'Menu gry' })).toBeVisible();
         await expectNoHorizontalScroll(page);
         await expectInViewport(await keypadBox(page), page);
@@ -291,7 +389,8 @@ for (const viewport of VIEWPORTS) {
         expect(column?.holdsKeypad).toBe(false);
         expect(column?.bottom).toBeLessThanOrEqual(viewport.height + 1);
         expect(await page.evaluate(() => (document.scrollingElement ? document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight : 0))).toBeLessThanOrEqual(1);
-        const current = page.locator('tr[aria-current="true"]');
+        // Tabela historii przewija się od dołu, więc bieżąca tura leży w jej widocznej części.
+        expect(await insideScrollContainer(current, 'y')).toBe(true);
         await current.scrollIntoViewIfNeeded();
         await expect(current).toBeInViewport();
         expect(await page.evaluate(() => window.scrollY)).toBe(0);
@@ -326,6 +425,10 @@ for (const viewport of VIEWPORTS) {
         const expectRow = async (thrower: string) => {
           if (thrower === withHits.name && rowShown) {
             await expect(row).toBeVisible();
+            for (const key of await row.getByRole('button').all()) {
+              const box = await boxOf(key);
+              expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+            }
           } else {
             await expect(row).toHaveCount(0);
           }
@@ -365,6 +468,18 @@ for (const viewport of VIEWPORTS) {
       await abandon.click();
       const dialog = page.getByRole('dialog', { name: 'Porzucić mecz?' });
       await expect(dialog).toBeVisible();
+
+      // W niskim oknie przeglądarki panel okna mieści się w nim i przewija się sam. Pierścienie w rogu go nie poszerzają i nie łapią kliknięć.
+      await page.setViewportSize({ width: viewport.width, height: SHORT_HEIGHT });
+      const panel = dialog.locator(':scope > div');
+      await expectInViewport(await boxOf(panel), page);
+      await expectClippedSideways(panel);
+      const sizes = await panel.evaluate((node) => ({
+        overflowY: node.scrollHeight - node.clientHeight,
+        rings: [...node.querySelectorAll('svg[aria-hidden="true"]')].filter((svg) => svg.querySelectorAll('circle').length === 3).map((svg) => getComputedStyle(svg).pointerEvents),
+      }));
+      expect(sizes.overflowY).toBeGreaterThan(0);
+      expect(sizes.rings).toEqual(['none']);
       await dialog.getByRole('button', { name: 'Anuluj' }).click();
       await expect(dialog).toBeHidden();
     });
@@ -378,6 +493,18 @@ for (const viewport of VIEWPORTS) {
       await expectNoHorizontalScroll(page);
       const before = await keypadBox(page);
       await expectInViewport(before, page);
+      expect((await boxOf(keypadKey(page, 'Cofnij'))).height).toBeGreaterThanOrEqual(44);
+      // Pełne słowo mnożnika pokazuje się dopiero od lg, a poniżej sama litera.
+      const word = keypadKey(page, 'S').getByText('Single');
+      if (viewport.width >= LG) {
+        await expectReadable(word);
+      } else {
+        await expect(word).toBeHidden();
+        // Dok trzyma klawiaturę przy dolnej krawędzi okna, nad samym dolnym odstępem strony, także po przewinięciu treści do końca.
+        expect(viewport.height - (before.y + before.height)).toBeLessThanOrEqual(BOTTOM_GAP + 1);
+        await page.getByRole('main').evaluate((main) => main.scrollTo(0, main.scrollHeight));
+        expectSameBox(await keypadBox(page), before);
+      }
 
       const { other } = await currentThrower(page, [players[0].name, players[1].name]);
       await keypadKey(page, '1').click();

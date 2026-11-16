@@ -49,4 +49,14 @@ describe('Podium', () => {
     expect(items).toHaveLength(2);
     expect(screen.queryByText('Darek')).toBeNull();
   });
+
+  it('hides the decorative light from screen readers', () => {
+    const { container } = render(<Podium slots={podiumSlots(three).podium} />);
+    const list = screen.getByRole('list', { name: 'Podium średniej' });
+    // Światło jest jedynym elementem obok listy podium.
+    const light = [...(container.firstElementChild?.children ?? [])].filter((element) => element !== list);
+    expect(light).toHaveLength(1);
+    expect(light[0]?.getAttribute('aria-hidden')).toBe('true');
+    expect(light[0]?.textContent).toBe('');
+  });
 });

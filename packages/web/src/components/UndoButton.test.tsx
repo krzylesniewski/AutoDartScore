@@ -18,7 +18,7 @@ describe('UndoButton', () => {
     const button = screen.getByRole('button', { name: 'Cofnij' });
     expect(button.getAttribute('type')).toBe('button');
     expect(button.getAttribute('aria-keyshortcuts')).toBe('Backspace');
-    expect(within(button).getByText('Backspace')).toBeTruthy();
+    expect(within(button).getByText('Backspace').getAttribute('aria-hidden')).toBe('true');
   });
 
   it('calls onUndo on a click', () => {

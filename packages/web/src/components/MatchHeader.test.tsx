@@ -234,6 +234,7 @@ describe('MatchHeader', () => {
       const chip = screen.getByText('Porzucony');
       expect(header.contains(chip)).toBe(true);
       expect(panel().contains(chip)).toBe(false);
+      expect(header.contains(screen.getByRole('timer'))).toBe(true);
       expect(panel().contains(screen.getByRole('timer'))).toBe(false);
       expect(chip.compareDocumentPosition(panel()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(within(panel()).getByRole('button', { name: 'Wznów mecz' })).toBeTruthy();
@@ -406,10 +407,11 @@ describe('MatchHeader', () => {
       ['a 1v1 in progress', snapshot(), true],
       ['an abandoned 1v1', abandoned(), false],
       ['a finished 1v1', snapshot({ finished: true }), false],
-    ])('offers Porzuć mecz in the menu only in %s', (_name, state, offered) => {
+    ])('shows the menu toggle as an icon and offers Porzuć mecz only in %s', (_name, state, offered) => {
       render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
       const toggle = screen.getByRole('button', { name: 'Menu gry' });
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.querySelector('svg')).not.toBeNull();
       expect(screen.queryByRole('button', { name: 'Porzuć mecz' }) !== null).toBe(offered);
     });
   });
