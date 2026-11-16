@@ -3,24 +3,23 @@ import { describe, expect, it } from 'vitest';
 import { EventBanner } from './EventBanner';
 
 describe('EventBanner', () => {
-  it('shows a bust in the accent block with an icon and the text', () => {
+  it('announces a bust with an icon, the text and the player', () => {
     render(<EventBanner banner={{ kind: 'bust', playerName: 'Anna', place: null }} achievements={[]} />);
-    const banner = screen.getByText('Bust').parentElement;
-    expect(banner?.className.split(' ')).toEqual(expect.arrayContaining(['sc-checkout', 'rounded-(--radius-card)', 'font-bold', 'text-3xl']));
-    expect(banner?.querySelector('svg')).not.toBeNull();
-    expect(banner?.textContent).toContain('Anna');
+    const status = screen.getByRole('status');
+    expect(status.textContent).toBe('BustAnna');
+    expect(status.querySelector('svg')).not.toBeNull();
   });
 
-  it('keeps a won leg cream with a trophy and a card shadow', () => {
+  it('announces a won leg with a trophy, the text and the place', () => {
     render(<EventBanner banner={{ kind: 'win', playerName: 'Anna', place: 1 }} achievements={[]} />);
-    const banner = screen.getByText('Anna').parentElement;
-    expect(banner?.className.split(' ')).toEqual(expect.arrayContaining(['bg-(--color-text)', 'text-(--color-text-inverse)', 'shadow-(--shadow-card)']));
-    expect(banner?.className.split(' ')).not.toContain('sc-checkout');
-    expect(banner?.querySelector('svg')).not.toBeNull();
+    const status = screen.getByRole('status');
+    expect(status.textContent).toContain('Anna');
+    expect(status.textContent).not.toContain('Bust');
+    expect(status.querySelector('svg')).not.toBeNull();
   });
 
-  it('keeps the live region without a banner', () => {
+  it('keeps an empty live region without a banner', () => {
     render(<EventBanner banner={null} achievements={[]} />);
-    expect(screen.getByRole('status').className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'top-0', 'pointer-events-none']));
+    expect(screen.getByRole('status').textContent).toBe('');
   });
 });

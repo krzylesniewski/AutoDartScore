@@ -66,6 +66,8 @@ pnpm --filter @autoscore/web test
 
 Vitest w środowisku jsdom z Testing Library. Konfiguracja jest w bloku `test` w `vite.config.ts`, a przygotowanie środowiska w `src/test-setup.ts`.
 
+Testy jednostkowe sprawdzają zachowanie przez rolę, nazwę, tekst i stan (`aria-*`, `data-pressed`, `data-flash`, `checked`, `disabled`), a nie przez klasy Tailwinda. jsdom nie wczytuje CSS, więc układ (przewijanie, mieszczenie się w oknie, położenie klawiatury) sprawdza `e2e/layout.spec.ts` w prawdziwej przeglądarce. Klasę sprawdzamy tylko wtedy, gdy to ona jest znaczeniem, na przykład stały kolor awatara, i taka linia ma nad sobą komentarz z powodem.
+
 ## Katalog komponentów (describe-me)
 
 Katalog pokazuje stany komponentów zapisane z testów Vitesta, klatka po klatce, oraz zakładkę Foundations z tokenami motywu. Na razie nagrywane są tylko `Scoreboard`, `Keypad` i `MatchEndView`.

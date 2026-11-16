@@ -114,10 +114,4 @@ describe('Dialog', () => {
     expect(() => unmount()).not.toThrow();
     expect(document.activeElement).toBe(document.body);
   });
-
-  it('keeps the panel scrollable when the window is short and clips the corner rings', () => {
-    render(<TestDialog />);
-    const panel = screen.getByRole('heading', { name: 'Okno' }).parentElement;
-    expect(panel?.className.split(' ')).toEqual(expect.arrayContaining(['max-h-full', 'overflow-y-auto', 'overflow-x-hidden']));
-  });
 });

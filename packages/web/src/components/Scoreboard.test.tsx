@@ -47,8 +47,8 @@ describe('Scoreboard', () => {
   it("gives each avatar the player's own color, not the list position", () => {
     const state = snapshot({ players: [player('p1', 'Anna', { avatar: '🦊', color: 12 }), player('p2', 'Bartek', { avatar: '🎯', color: 7 })] });
     render(<Scoreboard state={state} size="large" />);
-    expect(screen.getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
-    expect(screen.getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
+    // Stały kolor awatara gracza widać tylko w klasie tokenu. Anna stoi pierwsza, ale ma kolor 12.
+    expect(screen.getByText('🦊').className).toContain('bg-(--color-avatar-12)');
   });
 
   it('marks the thrower row', () => {
@@ -112,29 +112,18 @@ describe('Scoreboard', () => {
     expect(screen.getByText('122,5')).toBeTruthy();
   });
 
-  it('puts Suma last as the big Free run value in the large size', () => {
+  it('puts Suma last in the Free run counter', () => {
     render(<Scoreboard state={freeRun()} size="large" />);
-    const terms = screen.getAllByRole('term');
-    expect(terms.map((term) => term.textContent)).toEqual(['Rzutki', 'Średnia', 'Suma']);
-    const total = terms[2]?.nextElementSibling;
-    expect(total?.textContent).toBe('245');
-    expect(total?.className.split(' ')).toEqual(expect.arrayContaining(['sc-player__value', 'lg:text-[clamp(72px,28cqi,128px)]']));
-    expect(terms[0]?.nextElementSibling?.className.split(' ')).not.toContain('sc-player__value');
-  });
-
-  it('keeps all three Free run values small in the compact size', () => {
-    render(<Scoreboard state={freeRun()} size="compact" />);
-    for (const value of screen.getAllByRole('definition')) {
-      expect(value.className.split(' ')).not.toContain('sc-player__value');
-      expect(value.className).not.toContain('lg:');
-    }
+    expect(screen.getAllByRole('term').map((term) => term.textContent)).toEqual(['Rzutki', 'Średnia', 'Suma']);
+    expect(screen.getAllByRole('definition').map((value) => value.textContent)).toEqual(['6', '122,5', '245']);
   });
 
   it('shows the attempt counter in checkout practice', () => {
     const results = [true, true, false, true, false, true, false, true, false, true, true, false];
     render(<Scoreboard state={checkoutPractice(checkoutSession(checkoutHistory(results)))} size="large" />);
     const counter = within(screen.getByText('Anna').closest('li') ?? document.body);
-    const terms = counter.getAllByRole('term').map((term) => [term.textContent, term.nextElementSibling?.textContent]);
+    const values = counter.getAllByRole('definition');
+    const terms = counter.getAllByRole('term').map((term, index) => [term.textContent, values[index]?.textContent]);
     expect(terms).toEqual([
       ['Próby', '12'],
       ['Udane', '7'],
@@ -148,23 +137,12 @@ describe('Scoreboard', () => {
     expect(values).toEqual(['0', '0', '—']);
   });
 
-  it.each(['large', 'compact'] as const)('sets all four row heights on the list in %s size', (size) => {
-    render(<Scoreboard state={snapshot()} size={size} />);
-    const section = screen.getByRole('region', { name: 'Wyniki' });
-    expect(section.className.split(' ')).toContain('@container');
-    const list = within(section).getByRole('list');
-    for (const name of ['--row-current', '--row-waiting', '--row-placed', '--row-slot']) {
-      expect(list.className).toContain(`[${name}:`);
-    }
-  });
-
   it('moves the rows by the CSS heights of the rows above them', () => {
     render(<Scoreboard state={casual(['Anna', 'Bartek', 'Celina'])} size="large" />);
     const rows = screen.getAllByRole('listitem');
     expect(rows[0]?.style.transform).toBe(`translateY(${rowsAbove(0, 0, 0)})`);
     expect(rows[2]?.style.transform).toBe(`translateY(${rowsAbove(1, 1, 0)})`);
     expect(rows[3]?.style.transform).toBe(`translateY(${rowsAbove(1, 2, 0)})`);
-    expect(rows[3]?.className.split(' ')).toContain('h-(--row-slot)');
     expect(screen.getByRole('list').style.height).toBe(rowsAbove(1, 2, 1));
   });
 
@@ -194,11 +172,13 @@ describe('Scoreboard', () => {
     expect(screen.getByRole('img', { name: 'Zostało 170 z 301 punktów' })).toBeTruthy();
   });
 
-  it('marks only the thrower bar as current', () => {
+  it('puts the thrower bar in the thrower row', () => {
     const players = [player('p1', 'Anna', { remaining: 400, legsWon: 0 }), player('p2', 'Bartek', { remaining: 300, legsWon: 0 })];
     render(<Scoreboard state={snapshot({ currentPlayerId: 'p2', players })} size="large" />);
-    expect(screen.getByRole('img', { name: 'Zostało 300 z 501 punktów' }).className.split(' ')).toContain('sc-progress--current');
-    expect(screen.getByRole('img', { name: 'Zostało 400 z 501 punktów' }).className.split(' ')).not.toContain('sc-progress--current');
+    const thrower = screen.getByText(THROWING).closest('li') as HTMLElement;
+    expect(thrower.getAttribute('aria-current')).toBe('true');
+    expect(within(thrower).getByRole('img', { name: 'Zostało 300 z 501 punktów' })).toBeTruthy();
+    expect(within(thrower).queryByRole('img', { name: 'Zostało 400 z 501 punktów' })).toBeNull();
   });
 
   it('shows no progress bar in Free run', () => {
@@ -235,37 +215,26 @@ describe('Scoreboard', () => {
     expect(screen.queryByText(/rzutka/)).toBeNull();
   });
 
-  it('draws the thrower in a raised card that holds its rings and the score', () => {
+  it('shows the thrower score in the thrower row', () => {
     render(<Scoreboard state={snapshot({ players: [player('p1', 'Anna', { remaining: 321, legsWon: 0 }), player('p2', 'Bartek', { legsWon: 0 })] })} size="large" />);
-    const card = screen.getByText(THROWING).closest('li')?.firstElementChild;
-    expect(card?.className.split(' ')).toEqual(expect.arrayContaining(['sc-player--current', 'relative', 'overflow-hidden']));
-    expect(card?.querySelector(':scope > svg.sc-card-rings')).not.toBeNull();
-    expect(screen.getByText('321').closest('.sc-player--current')).toBe(card);
-    expect(screen.getByText('321').classList).toContain('sc-player__value');
+    const thrower = screen.getByText(THROWING).closest('li') as HTMLElement;
+    expect(within(thrower).getByText('321')).toBeTruthy();
   });
 
-  it('draws the waiting players in soft rows', () => {
-    render(<Scoreboard state={snapshot()} size="large" />);
-    const card = screen.getByText('Bartek').closest('li')?.firstElementChild;
-    expect(card?.className.split(' ')).toEqual(expect.arrayContaining(['sc-player--waiting', 'relative', 'overflow-hidden']));
-  });
-
-  it('hides the card rings from screen readers', () => {
+  it('hides every drawing from screen readers', () => {
     const { container } = render(<Scoreboard state={snapshot()} size="large" />);
-    const rings = container.querySelectorAll('svg.sc-card-rings');
-    expect(rings.length).toBeGreaterThan(0);
-    for (const svg of rings) {
-      expect(svg.getAttribute('aria-hidden')).toBe('true');
+    const drawings = container.querySelectorAll('svg');
+    expect(drawings.length).toBeGreaterThan(0);
+    for (const svg of drawings) {
+      expect(svg.closest('[aria-hidden="true"]')).not.toBeNull();
     }
   });
 
   it("rings the thrower avatar in the player's color", () => {
     const state = snapshot({ currentPlayerId: 'p2', players: [player('p1', 'Anna', { avatar: '🦊', color: 12 }), player('p2', 'Bartek', { avatar: '🎯', color: 7 })] });
     render(<Scoreboard state={state} size="large" />);
-    const thrower = screen.getByText('🎯');
-    expect(thrower.classList).toContain('sc-avatar--current');
-    expect(thrower.style.getPropertyValue('--sc-avatar-color')).toBe('var(--color-avatar-7)');
-    expect(screen.getByText('🦊').classList).not.toContain('sc-avatar--current');
+    expect(screen.getByText('🎯').style.getPropertyValue('--sc-avatar-color')).toBe('var(--color-avatar-7)');
+    expect(screen.getByText('🦊').style.getPropertyValue('--sc-avatar-color')).toBe('');
   });
 });
 
@@ -287,14 +256,7 @@ describe('Scoreboard leg info', () => {
     render(<Scoreboard state={midLeg()} size="large" />);
     const visible = within(row('Anna')).getByText('▼ 131 w 2 turach');
     expect(visible.getAttribute('aria-hidden')).toBe('true');
-    const label = within(row('Anna')).getByText('Zbite 131 punktów w 2 turach');
-    expect(label.className.split(' ')).toContain('sr-only');
-  });
-
-  it('puts the knocked-off line next to the big score from lg and under the bar below lg', () => {
-    render(<Scoreboard state={midLeg()} size="large" />);
-    const line = within(row('Anna')).getByText('▼ 131 w 2 turach').parentElement as HTMLElement;
-    expect(line.className.split(' ')).toEqual(expect.arrayContaining(['row-start-3', 'lg:row-start-2', 'lg:self-end', 'text-(--color-text)']));
+    expect(within(row('Anna')).getByText('Zbite 131 punktów w 2 turach').getAttribute('aria-hidden')).toBeNull();
   });
 
   it("shows the last turn of a waiting player after the next player's label", () => {
@@ -302,7 +264,7 @@ describe('Scoreboard leg info', () => {
     const bartek = row('Bartek');
     expect(within(bartek).getByText('następny')).toBeTruthy();
     expect(within(bartek).getByText('▼ 60').getAttribute('aria-hidden')).toBe('true');
-    expect(within(bartek).getByText('Ostatnia tura: 60 punktów').className.split(' ')).toContain('sr-only');
+    expect(within(bartek).getByText('Ostatnia tura: 60 punktów').getAttribute('aria-hidden')).toBeNull();
   });
 
   it('shows the last turn alone for a waiting player who is not next', () => {
@@ -322,7 +284,7 @@ describe('Scoreboard leg info', () => {
     const bust = within(bartek).getByText('Bust');
     expect(bust.getAttribute('aria-hidden')).toBe('true');
     expect(bust.querySelector('svg')).toBeTruthy();
-    expect(within(bartek).getByText('Ostatnia tura: bust').className.split(' ')).toContain('sr-only');
+    expect(within(bartek).getByText('Ostatnia tura: bust').getAttribute('aria-hidden')).toBeNull();
     expect(within(bartek).queryByText(/^▼/)).toBeNull();
   });
 
@@ -351,19 +313,5 @@ describe('Scoreboard leg info', () => {
     expect(screen.queryByText(/▼/)).toBeNull();
     expect(screen.queryByText(/^Zbite/)).toBeNull();
     expect(screen.queryByText(/^Ostatnia tura/)).toBeNull();
-  });
-
-  it('keeps the phone thrower row height with and without the knocked-off line', () => {
-    const { unmount } = render(<Scoreboard state={snapshot()} size="large" />);
-    const before = screen.getByRole('list').className;
-    unmount();
-    render(<Scoreboard state={midLeg()} size="large" />);
-    expect(before.split(' ')).toContain('[--row-current:100px]');
-    expect(screen.getByRole('list').className).toBe(before);
-  });
-
-  it('keeps the old phone thrower row height in the compact size', () => {
-    render(<Scoreboard state={snapshot()} size="compact" />);
-    expect(screen.getByRole('list').className.split(' ')).toContain('[--row-current:88px]');
   });
 });

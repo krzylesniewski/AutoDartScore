@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, type APIRequestContext } from '@playwright/test';
-import type { CreateMatchRequest, CreatePlayerRequest, Hit, HitEvent, LoginRequest, LoginResponse, MatchSnapshot, Player } from '@autoscore/schema';
+import type { AbandonMatchRequest, CreateMatchRequest, CreatePlayerRequest, FrequentHitsResponse, Hit, HitEvent, LoginRequest, LoginResponse, MatchSnapshot, Player } from '@autoscore/schema';
 import { PASSWORD } from '../env';
 
 // T20 ×3, Miss ×3, potem T20, T11, D14: zaczynający zamyka leg 301, kimkolwiek jest.
@@ -15,6 +15,8 @@ export const FINISHING_DARTS: readonly Hit[] = [
   { segment: 11, multiplier: 3 },
   { segment: 14, multiplier: 2 },
 ];
+
+export const MISS: Hit = { segment: 0, multiplier: 0 };
 
 function authorization(token: string): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
@@ -39,6 +41,30 @@ export async function createMatchByApi(request: APIRequestContext, token: string
   const response = await request.post('/matches', { headers: authorization(token), data: body });
   await expect(response).toBeOK();
   return (await response.json()) as MatchSnapshot;
+}
+
+export async function createPracticeByApi(
+  request: APIRequestContext,
+  token: string,
+  playerId: string,
+  mode: { practiceMode: 'checkouts'; checkoutRange: '2-50' } | { practiceMode: 'solo_501' | 'free_run' },
+): Promise<MatchSnapshot> {
+  const body: CreateMatchRequest = { type: 'practice', playerIds: [playerId], ...mode };
+  const response = await request.post('/matches', { headers: authorization(token), data: body });
+  await expect(response).toBeOK();
+  return (await response.json()) as MatchSnapshot;
+}
+
+export async function frequentHitsByApi(request: APIRequestContext, token: string, playerId: string): Promise<FrequentHitsResponse['hits']> {
+  const response = await request.get(`/players/${encodeURIComponent(playerId)}/frequent-hits`, { headers: authorization(token) });
+  await expect(response).toBeOK();
+  return ((await response.json()) as FrequentHitsResponse).hits;
+}
+
+export async function abandonMatchByApi(request: APIRequestContext, token: string, matchId: string, playerId: string): Promise<void> {
+  const body: AbandonMatchRequest = { playerId };
+  const response = await request.post(`/matches/${matchId}/abandon`, { headers: authorization(token), data: body });
+  await expect(response).toBeOK();
 }
 
 // Rzutki trafiają do bieżącego rzucającego, po kolei, każda z własnym eventId.

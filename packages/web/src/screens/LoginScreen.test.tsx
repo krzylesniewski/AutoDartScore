@@ -62,7 +62,7 @@ describe('LoginScreen', () => {
     expect((screen.getByLabelText('Hasło') as HTMLInputElement).value).toBe('wrong');
   });
 
-  it('ties a wrong password to the field and keeps the error text out of the accent color', async () => {
+  it('ties a wrong password to the field', async () => {
     respond = () => json(401, { error: 'invalid_password', message: 'Invalid password' });
     render(<LoginScreen onLoggedIn={onLoggedIn} />);
     const field = screen.getByLabelText('Hasło');
@@ -72,8 +72,6 @@ describe('LoginScreen', () => {
     expect(field.getAttribute('aria-invalid')).toBe('true');
     expect(alert.id).not.toBe('');
     expect(field.getAttribute('aria-describedby')).toBe(alert.id);
-    expect(alert.className.split(' ')).not.toContain('text-(--color-accent)');
-    expect(alert.className.split(' ')).toContain('text-(--color-text)');
   });
 
   it('shows too many attempts on 429', async () => {

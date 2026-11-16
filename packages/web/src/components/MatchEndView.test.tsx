@@ -128,7 +128,7 @@ describe('MatchEndView', () => {
     expect(columns).toEqual([within(table).getByRole('columnheader', { name: 'Bartek' }), within(table).getByRole('columnheader', { name: 'Anna' })]);
   });
 
-  it('shows the achievement notices in a status overlay that keeps the buttons clickable', () => {
+  it('shows the achievement notices in a status region and keeps Cofnij working', () => {
     const props = view({
       achievements: [
         {
@@ -139,9 +139,6 @@ describe('MatchEndView', () => {
     });
     const status = screen.getByRole('status');
     expect(within(status).getByRole('list', { name: pl.achievements }).textContent).toBe('Bartek Rekord zamknięcia: 121 (było 100)');
-    expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'pointer-events-none']));
-    expect(status.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['relative', 'flex-1']));
-    expect(status.parentElement?.contains(screen.getByRole('main'))).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: pl.undo }));
     expect(props.onUndo).toHaveBeenCalledOnce();
   });
@@ -154,13 +151,9 @@ describe('MatchEndView', () => {
   it("gives the avatars the players' own colors, not the list position", () => {
     const players = [player('p1', 'Anna', { legsWon: 1, avatar: '🦊', color: 12 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯', color: 7 })];
     view({ state: { ...finished, players } });
-    const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
-    expect(within(card).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
-    expect(within(card).getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
     const table = screen.getByRole('table', { name: 'Podsumowanie meczu' });
-    expect(within(table).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
-    const leg = screen.getByText('Leg 1').closest('li') as HTMLElement;
-    expect(within(leg).getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
+    // Stały kolor awatara gracza widać tylko w klasie tokenu. Anna stoi pierwsza, ale ma kolor 12.
+    expect(within(table).getByText('🦊').className).toContain('bg-(--color-avatar-12)');
   });
 
   const times = { startedAt: '2026-10-21T18:00:00.000Z', finishedAt: '2026-10-21T19:03:05.000Z', pausedMs: 60_000 };
@@ -291,7 +284,6 @@ describe('MatchEndView', () => {
       render(<CountingView state={{ ...finished, finishedAt: '2026-10-21T20:00:00.000Z', editableUntil: '2026-10-21T20:05:00.000Z' }} />);
       const button = undoButton('Cofnij (4:12)');
       expect(button.disabled).toBe(false);
-      expect(button.className.split(' ')).toContain('tabular-nums');
       expect(screen.queryByText('Mecz zamknięty, nie można go już zmienić')).toBeNull();
 
       act(() => {
@@ -358,31 +350,14 @@ function visibleText(element: Element): string {
   return copy.textContent ?? '';
 }
 
-function ancestors(element: Element): Element[] {
-  const list: Element[] = [];
-  for (let node = element.parentElement; node; node = node.parentElement) {
-    list.push(node);
-  }
-  return list;
-}
-
 describe('MatchEndView: winner glow', () => {
   const players = [player('p1', 'Anna', { legsWon: 1, avatar: '🦊' }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯' })];
 
-  it('rings only the winner avatar', () => {
+  it('names only the winner in the winner card', () => {
     view({ state: { ...finished, players } });
     const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
-    const ring = 'shadow-(--shadow-winner-avatar)';
-    expect(within(card).getByText('🎯').parentElement?.classList).toContain(ring);
-    expect(ancestors(within(card).getByText('🦊')).some((node) => node.classList.contains(ring))).toBe(false);
-  });
-
-  it('puts a hidden gold halo inside the winner card', () => {
-    view();
-    const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
-    const halo = [...card.querySelectorAll('[aria-hidden="true"]')].find((node) => node.classList.contains('bg-(image:--gradient-winner-halo)'));
-    expect(halo).toBeTruthy();
-    expect(halo?.classList).toContain('pointer-events-none');
+    expect(within(card).getByText('Bartek wygrywa')).toBeTruthy();
+    expect(within(card).queryByText('Anna wygrywa')).toBeNull();
   });
 });
 

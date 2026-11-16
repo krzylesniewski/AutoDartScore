@@ -27,11 +27,21 @@ export function keypadRegion(page: Page): Locator {
 }
 
 export async function keypadBox(page: Page): Promise<Box> {
-  const box = await keypadRegion(page).boundingBox();
+  return boxOf(keypadRegion(page));
+}
+
+export async function boxOf(locator: Locator): Promise<Box> {
+  const box = await locator.boundingBox();
   if (box === null) {
-    throw new Error('The keypad region has no bounding box');
+    throw new Error(`${locator.toString()} has no bounding box`);
   }
   return box;
+}
+
+export function expectNoOverlap(first: Box, second: Box): void {
+  const where = `boxes ${JSON.stringify(first)} and ${JSON.stringify(second)}`;
+  const apart = first.x + first.width <= second.x || second.x + second.width <= first.x || first.y + first.height <= second.y || second.y + second.height <= first.y;
+  expect(apart, where).toBe(true);
 }
 
 export async function expectInViewport(box: Box, page: Page): Promise<void> {

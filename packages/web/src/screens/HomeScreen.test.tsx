@@ -119,7 +119,10 @@ function summary(): HTMLElement {
 }
 
 function summaryRows(): [string, string][] {
-  return [...summary().querySelectorAll('dt')].map((term) => [term.textContent ?? '', term.nextElementSibling?.textContent ?? '']);
+  const values = within(summary()).queryAllByRole('definition');
+  return within(summary())
+    .queryAllByRole('term')
+    .map((term, index) => [term.textContent ?? '', values[index]?.textContent ?? '']);
 }
 
 function unfinished(): HTMLElement {
@@ -349,15 +352,13 @@ describe('HomeScreen: new game form', () => {
     expect(startBar().textContent).toMatch(/Anna.*vs.*Bartek/);
   });
 
-  it("shows each player's own avatar color on the tiles, in the summary and in the start bar", async () => {
+  it("shows each player's own avatar color in the start bar", async () => {
     render(<HomeScreen />);
     await chips();
-    expect(button('Anna').firstElementChild?.classList).toContain('bg-(--color-avatar-1)');
-    expect(button('Bartek').firstElementChild?.classList).toContain('bg-(--color-avatar-7)');
     fireEvent.click(button('Anna'));
     fireEvent.click(button('Bartek'));
-    expect(within(summary()).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
-    expect(within(startBar()).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
+    // Stały kolor awatara gracza widać tylko w klasie tokenu. Bartek stoi drugi, ale ma kolor 7.
+    expect(within(startBar()).getByText('🎯').className).toContain('bg-(--color-avatar-7)');
   });
 
   it('counts 3 players in the bar for Zabawa', async () => {
@@ -414,12 +415,7 @@ describe('HomeScreen: new game form', () => {
   });
 });
 
-// jsdom nie stosuje media ani container queries, więc testy sprawdzają klasy układu, a nie wymiary.
-describe('HomeScreen: responsive layout', () => {
-  function classes(element: Element | null | undefined): string[] {
-    return [...(element?.classList ?? [])];
-  }
-
+describe('HomeScreen: option groups and navigation', () => {
   it('describes the starting score and legs groups', async () => {
     render(<HomeScreen />);
     await chips();
@@ -444,28 +440,9 @@ describe('HomeScreen: responsive layout', () => {
     }
   });
 
-  it('narrows the right column on a tablet and keeps it on a monitor', async () => {
-    render(<HomeScreen />);
-    await chips();
-    expect(classes(summary().parentElement)).toEqual(expect.arrayContaining(['lg:w-85', 'xl:w-110']));
-  });
-
-  it('stretches Start gry on a phone and sizes it per width', async () => {
-    render(<HomeScreen />);
-    await chips();
-    expect(classes(button('Start gry'))).toEqual(expect.arrayContaining(['w-full', 'lg:w-auto', 'lg:h-17', 'xl:h-15']));
-  });
-
-  it('lays out the players in 2, 3 or 4 columns', async () => {
-    render(<HomeScreen />);
-    await chips();
-    expect(classes(button('+ Nowy gracz').parentElement)).toEqual(expect.arrayContaining(['grid-cols-2', 'lg:grid-cols-3', 'xl:grid-cols-4']));
-  });
-
-  it('wraps the navigation and keeps the link names', async () => {
+  it('keeps the navigation link names', async () => {
     render(<HomeScreen />);
     const nav = screen.getByRole('navigation', { name: 'Główna nawigacja' });
-    expect(classes(nav)).toContain('flex-wrap');
     for (const name of ['Nowa gra', 'Statystyki', 'Historia']) {
       expect(within(nav).getByRole('link', { name })).toBeTruthy();
     }
@@ -551,7 +528,7 @@ describe('HomeScreen: new player dialog', () => {
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({ name: 'Gosia', guest: false, color: 6 });
-    expect(button('Gosia').firstElementChild?.classList).toContain('bg-(--color-avatar-6)');
+    expect(button('Gosia')).toBeTruthy();
   });
 
   it('sends no color when none is chosen', async () => {
@@ -768,40 +745,40 @@ describe('HomeScreen: Scena look', () => {
     return [...tile.querySelectorAll('span[aria-hidden="true"]')].filter((span) => span.querySelector('svg'));
   }
 
-  it('shows the title as a visible h1', async () => {
+  it('shows the title as an h1', async () => {
     render(<HomeScreen />);
     await chips();
     const title = screen.getByRole('heading', { level: 1, name: 'Nowa gra' });
     expect(title.tagName).toBe('H1');
-    expect(title.classList).not.toContain('sr-only');
   });
 
-  it('marks only the selected type tile with a hidden check badge and an accent ring', async () => {
+  it('marks only the selected type tile as pressed with a hidden check badge', async () => {
     render(<HomeScreen />);
     await chips();
     const selected = screen.getByRole('button', { name: 'Mecz 1v1', description: 'Dwóch graczy, best of N legów' });
     const other = screen.getByRole('button', { name: 'Zabawa', description: '3-4 graczy, walka o miejsca' });
+    expect(selected.getAttribute('aria-pressed')).toBe('true');
     expect(badges(selected)).toHaveLength(1);
-    expect(selected.classList).toContain('inset-ring-(--color-accent)');
+    expect(other.getAttribute('aria-pressed')).toBe('false');
     expect(badges(other)).toHaveLength(0);
-    expect(other.classList).not.toContain('inset-ring-(--color-accent)');
 
     fireEvent.click(other);
+    expect(other.getAttribute('aria-pressed')).toBe('true');
     expect(badges(other)).toHaveLength(1);
+    expect(selected.getAttribute('aria-pressed')).toBe('false');
     expect(badges(selected)).toHaveLength(0);
   });
 
-  it("rings a picked player's tile in the player's color and keeps the name as the button name", async () => {
+  it('marks a picked player tile as pressed with a check badge and keeps the name as the button name', async () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('Bartek'));
     const picked = button('Bartek');
-    expect(picked.classList).toContain('inset-ring-(--color-avatar-7)');
+    expect(picked.getAttribute('aria-pressed')).toBe('true');
     expect(badges(picked)).toHaveLength(1);
-    expect(picked.firstElementChild?.textContent).toBe('🎯');
-    expect(picked.lastChild?.textContent).toBe('Bartek');
+    expect(within(picked).getByText('🎯').getAttribute('aria-hidden')).toBe('true');
     const unpicked = button('Anna');
-    expect([...unpicked.classList].filter((name) => name.startsWith('inset-ring-'))).toEqual([]);
+    expect(unpicked.getAttribute('aria-pressed')).toBe('false');
     expect(badges(unpicked)).toHaveLength(0);
   });
 });

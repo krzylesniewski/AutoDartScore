@@ -340,32 +340,16 @@ describe('GameScreen', () => {
     ws.serverClose(1006);
     const dock = screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement;
     expect(dock?.contains(screen.getByText('Brak połączenia z serwerem. Łączę ponownie…'))).toBe(true);
-    expect(dock?.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'lg:contents']));
   });
 
-  it('shows the bust banner outside the dock at the top of the screen', () => {
+  it('shows the bust banner outside the dock', () => {
     vi.useFakeTimers();
     const ws = connect();
     ws.serverSend({ type: 'bust', matchId: MATCH_ID, eventSeq: 5, playerId: 'p2', legIndex: 0, turnIndex: 3, darts: [{ segment: 20, multiplier: 3 }], remaining: 40 });
     const status = screen.getByRole('status');
     const dock = screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement;
+    expect(within(status).getByText('Bust')).toBeTruthy();
     expect(dock?.contains(status)).toBe(false);
-    expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'top-0']));
-  });
-
-  it('pushes the dock to the bottom when the content is short', () => {
-    connect();
-    const dock = screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement;
-    expect(dock?.className.split(' ')).toEqual(expect.arrayContaining(['mt-auto', 'sticky', 'bottom-0', 'lg:contents']));
-  });
-
-  it('overlays the notices from lg instead of moving them above the turn', () => {
-    vi.useFakeTimers();
-    const ws = connect();
-    ws.serverClose(1006);
-    const notices = screen.getByText('Brak połączenia z serwerem. Łączę ponownie…').parentElement;
-    expect(notices?.className.split(' ')).toContain('lg:absolute');
-    expect(notices?.className.split(' ')).not.toContain('lg:order-first');
   });
 
   it('closes the socket on unmount and never reconnects', () => {
@@ -414,7 +398,7 @@ describe('GameScreen', () => {
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
-    expect(screen.getByText('Mecz zakończony').closest('.sticky')).toBeNull();
+    expect(screen.getByText('Mecz zakończony')).toBeTruthy();
   });
 
   it('brings the game screen back after Cofnij on the match end view', async () => {
@@ -448,8 +432,8 @@ describe('GameScreen', () => {
 
   it('shows the casual end view without Rewanż in a finished casual game', () => {
     connect(finishedCasualGame);
-    const heading = screen.getByRole('heading', { name: 'Zabawa zakończona · ranking miejsc' });
-    expect(heading.closest('.sticky')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Zabawa zakończona · ranking miejsc' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect(screen.queryByText('Koniec meczu')).toBeNull();
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Rewanż' })).toBeNull();
@@ -787,7 +771,7 @@ describe('abandon and resume', () => {
       json(200, summary({ matchId: MATCH_ID, eventSeq: initial.eventSeq, players: [summaryPlayer('p1'), summaryPlayer('p2', { dartsThrown: 3, average: 64 })] }));
     connect();
     const panel = screen.getByRole('table', { name: 'Statystyki meczu' });
-    expect(panel.closest('section')?.previousElementSibling).toBe(screen.getByRole('region', { name: 'Wyniki' }));
+    expect(screen.getByRole('region', { name: 'Wyniki' }).compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(await within(panel).findByText('64,00')).toBeTruthy();
     expect(summaryCalls).toEqual([`/api/matches/${MATCH_ID}/summary`]);
   });
@@ -1201,13 +1185,7 @@ describe('checkout practice', () => {
   it('keeps the recent attempts under the scoreboard', () => {
     connect(tried);
     const recent = screen.getByRole('region', { name: 'Ostatnie próby' });
-    expect(recent.previousElementSibling?.getAttribute('aria-label')).toBe('Wyniki');
-  });
-
-  it('keeps the actions in the bottom dock', () => {
-    connect(fresh);
-    const dock = screen.getByRole('button', { name: 'Udało się' }).closest('.sticky');
-    expect(dock?.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'lg:contents']));
+    expect(screen.getByRole('region', { name: 'Wyniki' }).compareDocumentPosition(recent) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -1754,7 +1732,6 @@ describe('achievements', () => {
     expect(within(list).getByText('Bartek')).toBeTruthy();
     expect(within(list).getByText('Rekord tury: 140 (było 121)', { exact: false })).toBeTruthy();
     expect(list.querySelector('svg')).not.toBeNull();
-    expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'pointer-events-none']));
   });
 
   it('groups achievements with the same eventSeq and replaces them on a new one', () => {
@@ -1826,7 +1803,6 @@ describe('achievements', () => {
     ws.serverSend(achievement(4, { kind: 'shortest_leg', value: 15, previous: 18 }));
     const status = screen.getByRole('status');
     expect(within(status).getByRole('list', { name: 'Osiągnięcia' }).textContent).toBe('Bartek Najkrótszy leg: 15 lotek (było 18)');
-    expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'pointer-events-none']));
   });
 });
 
@@ -1869,10 +1845,10 @@ describe('turn panel, checkout card and keypad', () => {
     for (const [name, badge, keys] of expected) {
       const element = within(document.body).getAllByRole('button', { name }).find((candidate) => candidate.hasAttribute('aria-keyshortcuts'));
       expect(element?.getAttribute('aria-keyshortcuts')).toBe(keys);
-      const badges = element?.querySelectorAll('span[aria-hidden="true"]');
-      const found = [...(badges ?? [])].filter((span) => span.textContent === badge && span.className.split(' ').includes('lg:block'));
+      const found = within(element as HTMLElement)
+        .getAllByText(badge)
+        .filter((span) => span.getAttribute('aria-hidden') === 'true');
       expect(found).toHaveLength(1);
-      expect(found[0]?.className.split(' ')).toContain('hidden');
     }
   });
 
@@ -1920,21 +1896,16 @@ describe('turn panel, checkout card and keypad', () => {
     expect(screen.queryByRole('region', { name: 'Klawiatura rzutek' })).toBeNull();
     expect((undo[0] as HTMLButtonElement).disabled).toBe(false);
     expect(undo[0]?.getAttribute('aria-keyshortcuts')).toBe('Backspace');
-    // Panel tury ma opakowanie, które chowa go poniżej lg przy otwartej historii tur.
     const turnPanel = screen.getByText('w tej turze').closest('section') as HTMLElement;
-    expect(turnPanel.parentElement?.nextElementSibling).toBe(undo[0]);
+    expect(turnPanel.compareDocumentPosition(undo[0] as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('keeps the checkout card out of the keypad dock', () => {
+  it('keeps the checkout card out of the keypad dock and inside main', () => {
     connect(onForty);
     const card = screen.getByRole('button', { name: /^Zamknięcie/ });
-    const dock = keypad().parentElement as HTMLElement;
-    expect(dock.contains(card)).toBe(false);
-    expect(dock.className.split(' ')).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'mt-auto', 'lg:contents', 'max-lg:order-2']));
-    const slot = card.parentElement as HTMLElement;
-    expect(slot.parentElement?.tagName).toBe('MAIN');
-    // Od lg karta jest na dole prawej kolumny, pod klawiaturą, a lewa kolumna zostaje dla paska wyników i historii tur.
-    expect(slot.className.split(' ')).toEqual(expect.arrayContaining(['max-lg:order-1', 'lg:col-start-2', 'lg:row-start-2']));
+    // Dok to bezpośredni kontener klawiatury, w którym poniżej lg stoją też komunikaty o połączeniu.
+    expect(keypad().parentElement?.contains(card)).toBe(false);
+    expect(screen.getByRole('main').contains(card)).toBe(true);
   });
 
   it('shows the turn total and no checkout card without a route', () => {
@@ -1956,62 +1927,22 @@ describe('leg panel', () => {
     return screen.getByRole('heading', { name: 'Historia tur · Leg 1' }).closest('section[id]') as HTMLElement;
   }
 
-  function classesOf(element: Element | null | undefined): string[] {
-    return element?.className.split(' ') ?? [];
-  }
-
-  function closestHidden(element: HTMLElement): boolean {
-    let node: HTMLElement | null = element;
-    while (node) {
-      if (classesOf(node).includes('max-lg:hidden')) {
-        return true;
-      }
-      node = node.parentElement;
-    }
-    return false;
-  }
-
-  function keypadDock(): HTMLElement {
-    return screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement as HTMLElement;
-  }
-
-  it('puts the leg panel after the stats panel in the left column of a 1v1, outside the dock', () => {
+  it('puts the leg panel after the stats panel in a 1v1, outside the keypad dock', () => {
     connect(midLeg);
-    const stats = screen.getByRole('table', { name: 'Statystyki meczu' }).closest('section') as HTMLElement;
-    const column = screen.getByRole('region', { name: 'Wyniki' }).parentElement?.parentElement as HTMLElement;
-    expect(column.contains(stats)).toBe(true);
-    expect(column.contains(panel())).toBe(true);
+    const stats = screen.getByRole('table', { name: 'Statystyki meczu' });
     expect(stats.compareDocumentPosition(panel()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(column.lastElementChild).toBe(panel());
-    expect(keypadDock().contains(panel())).toBe(false);
+    expect(screen.getByRole('region', { name: 'Klawiatura rzutek' }).parentElement?.contains(panel())).toBe(false);
   });
 
-  it('lets the left column scroll on its own from lg and the panel fill it', () => {
-    connect(midLeg);
-    const column = panel().parentElement as HTMLElement;
-    expect(classesOf(column)).toEqual(expect.arrayContaining(['lg:min-h-0', 'lg:overflow-y-auto', 'lg:overflow-x-hidden', 'lg:col-start-1', 'lg:row-start-1']));
-    expect(classesOf(panel())).toEqual(expect.arrayContaining(['lg:flex-1', 'lg:min-h-[260px]']));
-  });
-
-  it('opens the panel below lg with Tury in place of the scoreboard, the turn and the checkout card', () => {
+  it('opens the panel with Tury and keeps the keypad', () => {
     connect(midLeg);
     const tury = screen.getByRole('button', { name: 'Tury' });
     expect(tury.getAttribute('aria-expanded')).toBe('false');
     expect(tury.getAttribute('aria-controls')).toBe(panel().id);
-    expect(classesOf(panel())).toContain('max-lg:hidden');
-    const scoreboard = screen.getByRole('region', { name: 'Wyniki' });
-    const turnPanel = screen.getByText('w tej turze').closest('section') as HTMLElement;
-    const checkoutSlot = screen.getByRole('button', { name: /^Zamknięcie/ }).parentElement as HTMLElement;
-    expect([scoreboard, turnPanel, checkoutSlot].map(closestHidden)).toEqual([false, false, false]);
 
     fireEvent.click(tury);
     expect(tury.getAttribute('aria-expanded')).toBe('true');
-    expect(classesOf(panel())).not.toContain('max-lg:hidden');
-    expect([scoreboard, turnPanel, checkoutSlot].map(closestHidden)).toEqual([true, true, true]);
-    const stats = screen.getByRole('table', { name: 'Statystyki meczu' });
-    expect(closestHidden(stats)).toBe(true);
-    expect(classesOf(keypadDock())).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'mt-auto', 'lg:contents']));
-    expect(closestHidden(keypadDock())).toBe(false);
+    expect(screen.getByRole('region', { name: 'Klawiatura rzutek' })).toBeTruthy();
   });
 
   it('closes the panel with its close button and moves focus back to Tury', () => {
@@ -2020,9 +1951,7 @@ describe('leg panel', () => {
     fireEvent.click(tury);
     fireEvent.click(screen.getByRole('button', { name: 'Zamknij historię tur' }));
     expect(tury.getAttribute('aria-expanded')).toBe('false');
-    expect(classesOf(panel())).toContain('max-lg:hidden');
     expect(document.activeElement).toBe(tury);
-    expect(closestHidden(screen.getByRole('region', { name: 'Wyniki' }))).toBe(false);
   });
 
   it('shows the turn history and the leg tiles from legTurns', () => {

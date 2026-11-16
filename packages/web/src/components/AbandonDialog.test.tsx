@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { player } from '../test/snapshots';
 import { AbandonDialog } from './AbandonDialog';
@@ -20,21 +20,20 @@ describe('AbandonDialog', () => {
       const card = radio.closest('label');
       expect(card).not.toBeNull();
       expect(card?.textContent).toContain(name);
-      expect(card?.querySelector('.rounded-full.font-bold[aria-hidden="true"]')?.textContent).toBe(name.charAt(0));
-      expect(radio.className.split(' ')).toContain('sr-only');
-      expect(card?.className.split(' ')).toContain('has-focus-visible:outline-(--color-focus)');
+      expect(within(card as HTMLElement).getByText(name.charAt(0)).getAttribute('aria-hidden')).toBe('true');
     }
     expect((screen.getByRole('radio', { name: 'Bartek' }) as HTMLInputElement).checked).toBe(true);
   });
 
-  it('marks the checked card with a ring and the other with an inset line', () => {
+  it('checks the clicked card and unchecks the other', () => {
     renderDialog();
-    const checked = screen.getByRole('radio', { name: 'Bartek' }).closest('label');
-    const unchecked = screen.getByRole('radio', { name: 'Anna' }).closest('label');
-    expect(checked?.className.split(' ')).toContain('inset-ring-(--color-text)');
-    expect(unchecked?.className.split(' ')).toContain('shadow-(--shadow-inset-line)');
-    fireEvent.click(screen.getByRole('radio', { name: 'Anna' }));
-    expect(screen.getByRole('radio', { name: 'Anna' }).closest('label')?.className.split(' ')).toContain('inset-ring-(--color-text)');
+    const anna = screen.getByRole('radio', { name: 'Anna' }) as HTMLInputElement;
+    const bartek = screen.getByRole('radio', { name: 'Bartek' }) as HTMLInputElement;
+    expect(bartek.checked).toBe(true);
+    expect(anna.checked).toBe(false);
+    fireEvent.click(anna);
+    expect(anna.checked).toBe(true);
+    expect(bartek.checked).toBe(false);
   });
 
   it('describes itself with the text and focuses the window', () => {

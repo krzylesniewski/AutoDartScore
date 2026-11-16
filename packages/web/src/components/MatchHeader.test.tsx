@@ -1,5 +1,5 @@
 import type { MatchSnapshot } from '@autoscore/schema';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot } from '../test/snapshots';
 import { MatchHeader } from './MatchHeader';
@@ -177,31 +177,17 @@ describe('MatchHeader', () => {
     }
 
     it('opens and closes the panel with the toggle', () => {
-      render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
-      expect(toggle().classList.contains('lg:hidden')).toBe(false);
+      render(<MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
-      expect(panel().classList.contains('hidden')).toBe(true);
-      expect(panel().classList.contains('lg:contents')).toBe(true);
+      expect(within(panel()).getByRole('button', { name: 'Porzuć mecz' })).toBeTruthy();
+      expect(within(panel()).getByRole('button', { name: 'Głos' })).toBeTruthy();
       expect(panel().contains(screen.getByText('Best of 3'))).toBe(false);
 
       fireEvent.click(toggle());
       expect(toggle().getAttribute('aria-expanded')).toBe('true');
-      expect(panel().classList.contains('hidden')).toBe(false);
 
       fireEvent.click(toggle());
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
-      expect(panel().classList.contains('hidden')).toBe(true);
-    });
-
-    it('lifts the bar above the keypad dock only while the menu is open', () => {
-      render(<MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
-      const header = screen.getByRole('banner');
-      expect(header.classList.contains('z-10')).toBe(true);
-      fireEvent.click(toggle());
-      expect(header.classList.contains('z-30')).toBe(true);
-      expect(header.classList.contains('z-10')).toBe(false);
-      fireEvent.click(screen.getByRole('button', { name: 'Porzuć mecz' }));
-      expect(header.classList.contains('z-10')).toBe(true);
     });
 
     it('closes on Escape and returns the focus to the toggle', () => {
@@ -209,7 +195,6 @@ describe('MatchHeader', () => {
       fireEvent.click(toggle());
       fireEvent.keyDown(document, { key: 'Escape' });
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
-      expect(panel().classList.contains('hidden')).toBe(true);
       expect(document.activeElement).toBe(toggle());
     });
 
@@ -221,7 +206,6 @@ describe('MatchHeader', () => {
 
       fireEvent.pointerDown(document.body);
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
-      expect(panel().classList.contains('hidden')).toBe(true);
     });
 
     it('calls onAbandon from the menu and closes it', () => {
@@ -246,11 +230,14 @@ describe('MatchHeader', () => {
       const onResume = vi.fn();
       const state = snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T19:00:00.000Z' } });
       render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onResume={onResume} />);
-      expect(panel().contains(screen.getByText('Porzucony'))).toBe(false);
       const header = screen.getByRole('banner');
-      expect(screen.getByText('Porzucony').parentElement).toBe(header);
-      expect(screen.getByRole('timer').parentElement).toBe(header);
-      expect(screen.getByRole('button', { name: 'Wznów mecz' }).parentElement).toBe(panel());
+      const chip = screen.getByText('Porzucony');
+      expect(header.contains(chip)).toBe(true);
+      expect(panel().contains(chip)).toBe(false);
+      expect(header.contains(screen.getByRole('timer'))).toBe(true);
+      expect(panel().contains(screen.getByRole('timer'))).toBe(false);
+      expect(chip.compareDocumentPosition(panel()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(within(panel()).getByRole('button', { name: 'Wznów mecz' })).toBeTruthy();
       for (const name of ['Wznów mecz', 'Głos', 'Efekty dźwiękowe', 'Menu gry']) {
         expect(screen.getAllByRole('button', { name })).toHaveLength(1);
       }
@@ -394,7 +381,7 @@ describe('MatchHeader', () => {
       renderHeader(snapshot({ round: 7 }));
       const toggle = screen.getByRole('button', { name: 'Menu gry' });
       const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
-      expect(panel?.classList.contains('hidden')).toBe(true);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(panel?.contains(screen.getByText('Kolejka 7'))).toBe(false);
       expect(panel?.contains(screen.getByRole('timer'))).toBe(false);
     });
@@ -414,20 +401,18 @@ describe('MatchHeader', () => {
       expect(list.textContent).not.toContain('·');
       expect(list.contains(screen.getByText('Leg 1'))).toBe(false);
       expect(list.contains(screen.getByText('Kolejka 4'))).toBe(false);
-      expect(screen.getByRole('timer').classList.contains('sc-clock')).toBe(true);
-      expect(screen.getByRole('button', { name: 'Głos' }).classList.contains('sc-btn--icon')).toBe(true);
     });
 
     it.each([
-      ['a 1v1 in progress', snapshot(), false],
-      ['an abandoned 1v1', abandoned(), true],
-      ['a finished 1v1', snapshot({ finished: true }), true],
-    ])('hides the menu toggle from lg only without menu actions in %s', (_name, state, hidden) => {
-      renderHeader(state);
+      ['a 1v1 in progress', snapshot(), true],
+      ['an abandoned 1v1', abandoned(), false],
+      ['a finished 1v1', snapshot({ finished: true }), false],
+    ])('shows the menu toggle as an icon and offers Porzuć mecz only in %s', (_name, state, offered) => {
+      render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
       const toggle = screen.getByRole('button', { name: 'Menu gry' });
-      expect(toggle.classList.contains('lg:hidden')).toBe(hidden);
-      expect(toggle.classList.contains('sc-btn--icon')).toBe(true);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(toggle.querySelector('svg')).not.toBeNull();
+      expect(screen.queryByRole('button', { name: 'Porzuć mecz' }) !== null).toBe(offered);
     });
   });
 
@@ -441,23 +426,20 @@ describe('MatchHeader', () => {
       expect(screen.queryByRole('button', { name: 'Tury' })).toBeNull();
     });
 
-    it('shows the Tury button below lg, before the menu, pointing to the panel', () => {
+    it('shows the Tury button before the menu, pointing to the panel', () => {
       const onToggle = vi.fn();
       renderHeader({ open: false, controls: 'leg-info', onToggle });
       const button = screen.getByRole('button', { name: 'Tury' });
-      expect(button.className.split(' ')).toEqual(expect.arrayContaining(['lg:hidden', 'h-11']));
       expect(button.getAttribute('aria-expanded')).toBe('false');
       expect(button.getAttribute('aria-controls')).toBe('leg-info');
-      expect(button.nextElementSibling).toBe(screen.getByRole('button', { name: 'Menu gry' }));
+      expect(button.compareDocumentPosition(screen.getByRole('button', { name: 'Menu gry' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       fireEvent.click(button);
       expect(onToggle).toHaveBeenCalledOnce();
     });
 
     it('marks the open panel on the button', () => {
       renderHeader({ open: true, controls: 'leg-info', onToggle: vi.fn() });
-      const button = screen.getByRole('button', { name: 'Tury' });
-      expect(button.getAttribute('aria-expanded')).toBe('true');
-      expect(button.className.split(' ')).toContain('bg-(--color-text)');
+      expect(screen.getByRole('button', { name: 'Tury' }).getAttribute('aria-expanded')).toBe('true');
     });
   });
 });
