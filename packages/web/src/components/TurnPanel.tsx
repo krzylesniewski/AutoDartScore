@@ -1,11 +1,9 @@
 import { hitPoints } from '@autoscore/engine';
-import type { Hit, MatchSnapshot } from '@autoscore/schema';
+import { DARTS_PER_TURN, type Hit, type MatchSnapshot } from '@autoscore/schema';
 import type { LastTurn } from '../api/use-match';
 import { hitLabel } from '../game/hit-label';
 import { pl } from '../i18n/pl';
 import { BustIcon, TargetIcon } from './icons';
-
-const DARTS_PER_TURN = 3;
 
 export interface TurnPanelProps {
   state: MatchSnapshot;

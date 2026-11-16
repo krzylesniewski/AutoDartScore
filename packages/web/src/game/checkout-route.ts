@@ -1,7 +1,5 @@
-import type { Hit, MatchSnapshot } from '@autoscore/schema';
+import { DARTS_PER_TURN, type Hit, type MatchSnapshot } from '@autoscore/schema';
 import { suggestCheckout } from './checkout';
-
-const DARTS_PER_TURN = 3;
 
 // Jedna trasa dla panelu zamknięcia i dla Enter, żeby obie drogi wpisywały tę samą rzutkę.
 export function checkoutRoute(state: MatchSnapshot): Hit[] | null {

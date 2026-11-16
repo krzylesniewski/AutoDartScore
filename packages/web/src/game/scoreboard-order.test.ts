@@ -8,13 +8,13 @@ function ids(order: readonly { id: string }[]): string[] {
 
 describe('scoreboardOrder', () => {
   it('puts the thrower first in a 1v1 match', () => {
-    expect(ids(scoreboardOrder(snapshot({ currentPlayerId: 'p2' }), true))).toEqual(['p2', 'p1']);
-    expect(ids(scoreboardOrder(snapshot({ currentPlayerId: 'p1' }), true))).toEqual(['p1', 'p2']);
+    expect(ids(scoreboardOrder(snapshot({ currentPlayerId: 'p2' })))).toEqual(['p2', 'p1']);
+    expect(ids(scoreboardOrder(snapshot({ currentPlayerId: 'p1' })))).toEqual(['p1', 'p2']);
   });
 
   it('rotates four casual players around the third one', () => {
     const state = casual(['Anna', 'Bartek', 'Celina', 'Darek'], { currentPlayerId: 'p3' });
-    expect(ids(scoreboardOrder(state, true))).toEqual(['p3', 'p4', 'p1', 'p2']);
+    expect(ids(scoreboardOrder(state))).toEqual(['p3', 'p4', 'p1', 'p2']);
   });
 
   it('moves finished casual players to the bottom by place', () => {
@@ -27,12 +27,7 @@ describe('scoreboardOrder', () => {
         player('p4', 'Darek'),
       ],
     });
-    expect(ids(scoreboardOrder(state, true))).toEqual(['p4', 'p2', 'p3', 'p1']);
-  });
-
-  it('keeps creation order without rotation', () => {
-    const state = casual(['Anna', 'Bartek', 'Celina'], { currentPlayerId: 'p3' });
-    expect(ids(scoreboardOrder(state, false))).toEqual(['p1', 'p2', 'p3']);
+    expect(ids(scoreboardOrder(state))).toEqual(['p4', 'p2', 'p3', 'p1']);
   });
 
   it('keeps creation order once the game is over', () => {
@@ -42,6 +37,6 @@ describe('scoreboardOrder', () => {
       winnerId: 'p2',
       players: [player('p1', 'Anna', { legsWon: 1 }), player('p2', 'Bartek', { legsWon: 2, remaining: 0 })],
     });
-    expect(ids(scoreboardOrder(state, true))).toEqual(['p1', 'p2']);
+    expect(ids(scoreboardOrder(state))).toEqual(['p1', 'p2']);
   });
 });
