@@ -415,8 +415,7 @@ describe('HomeScreen: new game form', () => {
   });
 });
 
-// jsdom nie stosuje media ani container queries, więc testy sprawdzają klasy układu, a nie wymiary.
-describe('HomeScreen: responsive layout', () => {
+describe('HomeScreen: option groups and navigation', () => {
   it('describes the starting score and legs groups', async () => {
     render(<HomeScreen />);
     await chips();
