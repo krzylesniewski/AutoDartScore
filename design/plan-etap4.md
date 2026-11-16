@@ -122,8 +122,8 @@ Równolegle mogą iść: Q1, Q2, Q4, Q5, Q6. Reszta czeka na pliki, które dziel
 **Zależy od:** Q4, Q7.
 
 **Zmiana:**
-1. `useMatch` wysyła `expectedSeq` z każdą komendą z Q7. Odpowiedź 409 `stale_state` przyjmuje stan z odpowiedzi i nie pokazuje błędu (cofnięcie już się wykonało albo stan się zmienił), poza przypadkiem, gdy gracz ma zobaczyć, że nic nie cofnięto.
-2. „Reszta Miss” to jedno zapytanie `rest-miss`; pętla i logika tury znikają z frontu.
+1. `useMatch` wysyła `expectedSeq` z każdą komendą z Q7. Odpowiedź 409 `stale_state` na Cofnij, próbę i pominięcie końcówki (oraz ich cofnięcia) i „Resztę Miss” przyjmuje stan z odpowiedzi i nie pokazuje błędu: ekran pokazuje aktualny stan, a komenda nie jest ponawiana. Komendy potwierdzane w oknie (porzucenie, wznowienie, koniec treningu) po `stale_state` są ponawiane jeden raz z `eventSeq` ze stanu z odpowiedzi; druga odmowa pokazuje dotychczasowy tekst błędu tej komendy (decyzja 2026-11-15).
+2. „Reszta Miss” to jedno zapytanie `rest-miss`; pętla znika z frontu. Zostaje dzisiejsza mała blokada (ten sam rzucający i liczba rzutek), żeby zakolejkowana „Reszta Miss” nie trafiła do następnego gracza.
 
 **Testy:** podwójne Cofnij wysyła drugie zapytanie z tym samym `expectedSeq` i po 409 stan jest spójny; „Reszta Miss” wysyła jedno zapytanie; błąd „Reszty Miss” nie zostawia częściowej tury.
 
@@ -253,6 +253,30 @@ Równolegle mogą iść: Q1, Q2, Q4, Q5, Q6. Reszta czeka na pliki, które dziel
 5. `CLAUDE.md` jest tylko do czytania: PR podaje w opisie zdania do poprawy (liczba checków CI, nowe komendy), a autor je wpisuje.
 
 **Testy:** wszystkie joby zielone; czas CI przed i po w opisie PR.
+
+---
+
+## Dodatek z feedbacku autora (2026-11-16)
+
+### Q18: karta zamknięcia wypełnia wolne miejsce na dużych ekranach (web)
+
+**Zależy od:** Q16. **Przed:** Q17. To jedyny PR etapu, który celowo zmienia wygląd (wyjątek od zasady „zachowanie bez zmian”).
+
+**Prośba:** „Na dużych ekranach »zakończenie« jest niepotrzebnie małe, bo jest miejsce nad nim. Czy można zrobić je dynamicznie, tak żeby wykorzystywało całe wolne miejsce?” (`feedback-graczy.md`, 2026-11-16; zrzut około 2560×1250, zabawa 4 graczy).
+
+**Dziś:** od `lg` karta zamknięcia stoi w prawej kolumnie pod klawiaturą i ma stałą wysokość około 80 px (`CheckoutCard.tsx`, rząd `auto` w siatce `GameScreen.tsx`). Koło klawiatury ma górny limit 600 px (`Keypad.tsx`), a `--keypad-ring-reserve` w `packages/web/src/theme.css` zakłada kartę 80 px. Na wysokim ekranie między klawiaturą a kartą zostaje około 230 px pustego miejsca.
+
+**Zmiana:**
+1. Od `lg` karta zamknięcia bierze całą wolną wysokość prawej kolumny pod klawiaturą: minimum 80 px jak dziś, bez sztywnego maksimum wysokości. Klawiatura (koło albo siatka) nie zmienia rozmiaru ani położenia względem stanu sprzed zmiany, przy żadnej szerokości.
+2. Rozmiar trasy (chipy, np. „D1”, „T20 T17 Bull”) i etykiety rośnie z wysokością karty przez jednostki kontenera (`cqh`/`cqi` w `clamp()`), z górnym limitem dobranym tak, żeby trasa z trzech rzutek mieściła się w jednej linii przy każdej szerokości `lg`+. Oznaczenie skrótu „Enter” i dekoracyjna tarcza zostają w rogu.
+3. Niewidoczna karta zastępcza (bez trasy) ma tę samą wysokość co karta z trasą, więc nic nie skacze, gdy trasa się pojawia albo znika.
+4. Tam, gdzie wolnego miejsca nie ma (np. 1440×810), karta wygląda jak dziś (80 px). Decyzja autora 2026-11-16 (pytanie z briefu Q18): przy 1280×800 i 1024×768 klawiaturę ogranicza szerokość kolumny, więc wolne miejsce jest i karta też rośnie.
+5. Poniżej `lg` bez zmian.
+6. Dotyczy meczu 1v1, zabawy i Solo 501 (wszędzie, gdzie jest karta zamknięcia).
+
+**Testy:** sprawdzenia układu w przeglądarce (e2e z Q11) przy 1280×800, 1920×1080 i 2560×1250: karta sięga od dolnej krawędzi klawiatury (z odstępem kolumny) do dołu obszaru treści, brak przewijania strony, położenie i rozmiar klawiatury takie same z trasą i bez trasy; przy 1440×810 wysokość karty jak przed zmianą, a przy 1280×800 i 1024×768 karta rośnie i nie wychodzi poza kolumnę. Zrzuty tych trzech rozmiarów z trasą z jednej i z trzech rzutek w opisie PR.
+
+**Poza zakresem:** powiększanie klawiatury, zmiany lewej kolumny, zmiany poniżej `lg`.
 
 ## Poza zakresem etapu 4
 
