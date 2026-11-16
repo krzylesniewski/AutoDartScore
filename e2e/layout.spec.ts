@@ -1,8 +1,8 @@
 import { expect, test, type Locator, type Page, type WebSocketRoute } from '@playwright/test';
 import type { Hit, Player } from '@autoscore/schema';
-import { FINISHING_DARTS, MISS, abandonMatchByApi, createMatchByApi, createPlayerByApi, createPracticeByApi, frequentHitsByApi, loginByApi, postThrowsByApi } from './helpers/api';
+import { FINISHING_DARTS, MISS, abandonMatchByApi, createCasualByApi, createMatchByApi, createPlayerByApi, createPracticeByApi, frequentHitsByApi, loginByApi, postThrowsByApi } from './helpers/api';
 import { currentThrower, keypadKey, scoreboard, throwerRow, waitForKeypad } from './helpers/game';
-import { boxOf, expectInViewport, expectNoHorizontalScroll, expectNoOverlap, expectSameBox, keypadBox } from './helpers/layout';
+import { boxOf, expectInViewport, expectNoHorizontalScroll, expectNoOverlap, expectSameBox, keypadBox, type Box } from './helpers/layout';
 import { uniqueName, useToken } from './helpers/session';
 
 const VIEWPORTS = [
@@ -520,3 +520,206 @@ for (const viewport of VIEWPORTS) {
     });
   });
 }
+
+const CARD_VIEWPORTS = [
+  { width: 1024, height: 768 },
+  { width: 1280, height: 800 },
+  { width: 1440, height: 810 },
+  { width: 1920, height: 1080 },
+  { width: 2560, height: 1250 },
+] as const;
+
+// Od lg karta zamknięcia stoi 18 px pod klawiaturą, a main ma 12 px dolnego odstępu.
+const CARD_GAP = 18;
+const MAIN_BOTTOM_GAP = 12;
+
+// Przy 1440×810 koło zabiera całą wysokość, więc karta ma minimum.
+const NO_FREE_SPACE_WIDTH = 1440;
+
+const T19: Hit = { segment: 19, multiplier: 3 };
+const S14: Hit = { segment: 14, multiplier: 1 };
+
+// Z 301 zaczynający zostaje na 170 („T20 T20 Bull”), a drugi gracz pudłuje całą turę.
+const TO_170: readonly Hit[] = [T20, T19, S14, MISS, MISS, MISS];
+
+function checkoutCard(page: Page): Locator {
+  return page.getByRole('button', { name: /^Zamknięcie/ });
+}
+
+// Niewidoczna karta ma visibility: hidden, więc Playwright nie podaje jej pudełka.
+async function placeholderBox(page: Page): Promise<Box> {
+  const placeholder = page.getByRole('main').locator('div.invisible[aria-hidden="true"]');
+  await expect(placeholder).toHaveCount(1);
+  return placeholder.evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  });
+}
+
+async function expectNoVerticalScroll(page: Page): Promise<void> {
+  const measured = await page.evaluate(() => {
+    const scrolling = document.scrollingElement;
+    const main = document.querySelector('main');
+    return [
+      ...(scrolling ? [{ name: 'document.scrollingElement', overflow: scrolling.scrollHeight - scrolling.clientHeight }] : []),
+      ...(main ? [{ name: 'main', overflow: main.scrollHeight - main.clientHeight }] : []),
+    ];
+  });
+  for (const { name, overflow } of measured) {
+    expect(overflow, name).toBeLessThanOrEqual(1);
+  }
+}
+
+function expectNear(actual: number, expected: number, what: string): void {
+  expect(Math.abs(actual - expected), `${what}: ${actual}, expected ${expected}`).toBeLessThanOrEqual(1);
+}
+
+function expectInside(inner: Box, outer: Box): void {
+  const where = `box ${JSON.stringify(inner)} inside ${JSON.stringify(outer)}`;
+  expect(inner.x, where).toBeGreaterThanOrEqual(outer.x - 0.5);
+  expect(inner.y, where).toBeGreaterThanOrEqual(outer.y - 0.5);
+  expect(inner.x + inner.width, where).toBeLessThanOrEqual(outer.x + outer.width + 0.5);
+  expect(inner.y + inner.height, where).toBeLessThanOrEqual(outer.y + outer.height + 0.5);
+}
+
+async function expectCardFills(page: Page, card: Box, keypad: Box): Promise<void> {
+  const main = await boxOf(page.getByRole('main'));
+  expectNear(card.y, keypad.y + keypad.height + CARD_GAP, 'card top');
+  expectNear(card.y + card.height, main.y + main.height - MAIN_BOTTOM_GAP, 'card bottom');
+  expectNear(card.x, keypad.x, 'card x');
+  expectNear(card.width, keypad.width, 'card width');
+  expectNoOverlap(card, keypad);
+}
+
+async function waitForRoute(page: Page, route: string): Promise<void> {
+  await expect(checkoutCard(page)).toHaveAttribute('aria-label', new RegExp(`^Zamknięcie w \\d rzut\\S+: ${route}\\. `));
+}
+
+// Etykieta karty z liczbą rzutek stoi od xl, a poniżej krótka.
+function visibleLabel(card: Locator, width: number): Locator {
+  return width >= XL ? card.getByText(/^Zamknięcie w /) : card.getByText('Zamknięcie', { exact: true });
+}
+
+async function expectRouteOnOneLine(page: Page, width: number): Promise<void> {
+  const card = checkoutCard(page);
+  const cardBox = await boxOf(card);
+  const twenties = card.getByText('T20', { exact: true });
+  const first = await boxOf(twenties.first());
+  const chips = [first, await boxOf(twenties.nth(1)), await boxOf(card.getByText('Bull', { exact: true }))];
+  const label = await boxOf(visibleLabel(card, width));
+  const badge = await boxOf(card.getByText('Enter', { exact: true }));
+  expectNoOverlap(label, first);
+  for (const chip of chips) {
+    expectNear(chip.y, first.y, 'chip top');
+    expectInside(chip, cardBox);
+    expectNoOverlap(chip, badge);
+  }
+}
+
+test.describe('checkout card fills the free height from lg', () => {
+  for (const viewport of CARD_VIEWPORTS) {
+    test.describe(`${viewport.width}×${viewport.height}`, () => {
+      test.use({ viewport });
+
+      test('ring keypad in 1v1 keeps its box while the card fills the space under it', async ({ page, request }) => {
+        const match = await createMatchByApi(request, token, [players[0].id, players[1].id]);
+        await page.goto(`/#/matches/${match.id}`);
+        await waitForKeypad(page);
+        await fontsReady(page);
+        const keypad = await keypadBox(page);
+        const placeholder = await placeholderBox(page);
+        await expectCardFills(page, placeholder, keypad);
+        await expectNoVerticalScroll(page);
+        await expectNoHorizontalScroll(page);
+
+        await postThrowsByApi(request, token, match.id, TO_170);
+        await waitForRoute(page, 'T20, T20, Bull');
+        const card = await boxOf(checkoutCard(page));
+        expectSameBox(await keypadBox(page), keypad);
+        expectSameBox(card, placeholder);
+        await expectCardFills(page, card, keypad);
+        await expectRouteOnOneLine(page, viewport.width);
+        await expectNoVerticalScroll(page);
+        await expectNoHorizontalScroll(page);
+        if (viewport.width === NO_FREE_SPACE_WIDTH) {
+          expectNear(card.height, 80, 'card height');
+          await expect(checkoutCard(page).getByText('Bull', { exact: true })).toHaveCSS('font-size', '52px');
+          const label = visibleLabel(checkoutCard(page), viewport.width);
+          await expect(label).toHaveCSS('font-size', '19px');
+          await expect(label).toHaveCSS('font-weight', '700');
+        } else if (viewport.width <= XL) {
+          expect(card.height).toBeGreaterThan(100);
+        }
+
+        await postThrowsByApi(request, token, match.id, [T20, T20]);
+        await waitForRoute(page, 'Bull');
+        const oneDart = await boxOf(checkoutCard(page));
+        expectSameBox(await keypadBox(page), keypad);
+        expectSameBox(oneDart, placeholder);
+        await expectCardFills(page, oneDart, keypad);
+        await expectNoVerticalScroll(page);
+        await expectNoHorizontalScroll(page);
+      });
+    });
+  }
+
+  test.describe('1920×1080 grid keypad and Solo 501', () => {
+    test.use({ viewport: { width: 1920, height: 1080 } });
+
+    test('grid keypad keeps its box while the card fills the space under it', async ({ page, context, request }) => {
+      await context.addInitScript(() => window.localStorage.setItem('autoscore.keypadLayout', 'grid'));
+      const match = await createMatchByApi(request, token, [players[0].id, players[1].id]);
+      await page.goto(`/#/matches/${match.id}`);
+      await waitForKeypad(page);
+      await fontsReady(page);
+      // Klawisze koła mają pozycję w stylu inline, a siatka nie.
+      await expect(keypadKey(page, '20')).not.toHaveAttribute('style', /left/);
+      const keypad = await keypadBox(page);
+      await expectCardFills(page, await placeholderBox(page), keypad);
+
+      await postThrowsByApi(request, token, match.id, TO_170);
+      await waitForRoute(page, 'T20, T20, Bull');
+      expectSameBox(await keypadBox(page), keypad);
+      await expectCardFills(page, await boxOf(checkoutCard(page)), keypad);
+      await expectRouteOnOneLine(page, 1920);
+    });
+
+    test('Solo 501 keeps the keypad box while the card fills the space under it', async ({ page, request }) => {
+      const solo = await createPracticeByApi(request, token, players[0].id, { practiceMode: 'solo_501' });
+      await page.goto(`/#/matches/${solo.id}`);
+      await waitForKeypad(page);
+      await fontsReady(page);
+      const keypad = await keypadBox(page);
+      await expectCardFills(page, await placeholderBox(page), keypad);
+
+      // Sześć razy T20 zostawia 141 z trasą na trzy rzutki.
+      await postThrowsByApi(request, token, solo.id, Array.from({ length: 6 }, () => T20));
+      await expect(checkoutCard(page)).toHaveAttribute('aria-label', /^Zamknięcie w 3 rzutkach: /);
+      expectSameBox(await keypadBox(page), keypad);
+      await expectCardFills(page, await boxOf(checkoutCard(page)), keypad);
+      await expectNoVerticalScroll(page);
+    });
+  });
+
+  test.describe('2560×1250 casual', () => {
+    test.use({ viewport: { width: 2560, height: 1250 } });
+
+    test('casual with 4 players keeps the keypad box while the card fills the space under it', async ({ page, request }) => {
+      const extra = [await createPlayerByApi(request, token, uniqueName('Ala')), await createPlayerByApi(request, token, uniqueName('Olek'))];
+      const casual = await createCasualByApi(request, token, [players[0].id, players[1].id, ...extra.map((player) => player.id)]);
+      await page.goto(`/#/matches/${casual.id}`);
+      await waitForKeypad(page);
+      await fontsReady(page);
+      const keypad = await keypadBox(page);
+      await expectCardFills(page, await placeholderBox(page), keypad);
+
+      // Zaczynający zostaje na 170, a trzej pozostali pudłują swoje tury.
+      await postThrowsByApi(request, token, casual.id, [T20, T19, S14, ...Array.from({ length: 9 }, () => MISS)]);
+      await waitForRoute(page, 'T20, T20, Bull');
+      expectSameBox(await keypadBox(page), keypad);
+      await expectCardFills(page, await boxOf(checkoutCard(page)), keypad);
+      await expectRouteOnOneLine(page, 2560);
+      await expectNoVerticalScroll(page);
+    });
+  });
+});

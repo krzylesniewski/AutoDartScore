@@ -15,6 +15,12 @@ Zestaw obejmuje:
   - Klawisze najczęstszych trafień i pola koloru w oknie nowego gracza mają co najmniej 44 px. Pola koloru mieszczą się w poziomie w panelu okna.
   - „Porzuć mecz” jest ukryte, dopóki nie otworzy się „Menu gry”, a potem da się je kliknąć nad klawiaturą. W oknie przeglądarki wysokim na 400 px panel okna porzucenia mieści się w nim i przewija się sam, a pierścienie w jego rogu nie łapią kliknięć.
 
+  Osobny blok sprawdza kartę zamknięcia od lg przy 1024×768, 1280×800, 1440×810, 1920×1080 i 2560×1250:
+  - W meczu 1v1 z kołem karta zaczyna się 18 px pod klawiaturą, kończy 12 px nad dołem main i ma szerokość klawiatury. Klawiatura ma to samo pudełko przy niewidocznej karcie, przy trasie „T20 T20 Bull” i przy trasie „Bull”, a niewidoczna karta ma pudełko widocznej. Ani dokument, ani main nie przewija się w pionie ani w poziomie.
+  - Przy 1440×810 nie ma wolnego miejsca, więc karta ma 80 px, rzutki 52 px, a etykieta 19 px. Przy 1024×768 i 1280×800 karta ma ponad 100 px.
+  - Trzy rzutki „T20 T20 Bull” stoją w jednym rzędzie wewnątrz karty i nie nachodzą na widoczną etykietę ani na znaczek Enter.
+  - Tak samo karta wypełnia miejsce w siatce i w Solo 501 przy 1920×1080 oraz w zabawie z 4 graczami przy 2560×1250.
+
   Poniżej lg „Tury” zamienia pasek wyników, panel tury, kartę zamknięcia i statystyki meczu na historię tur bez ruszania klawiatury, a bieżąca tura jest widoczna. Od lg historia tur stoi stale w lewej kolumnie, która przewija się sama i kończy się w oknie, tabela historii zaczyna się od bieżącej tury, a „Menu gry” znika, gdy nie ma w nim akcji. Przebieg Solo 501 i Free run zaczyna się od bieżącej tury przy każdej szerokości.
 - `forced-colors.spec.ts`: w trybie wymuszonych kolorów (wysoki kontrast) przycisk „Zaloguj” z fokusem przeniesionym klawiszem Tab z pola hasła ma ciągły obrys 2 px, bo ten tryb usuwa pierścień fokusu rysowany cieniem.
 
