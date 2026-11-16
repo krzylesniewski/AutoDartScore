@@ -1,0 +1,5 @@
+# Commity, które git blame pomija: tylko masowe formatowanie, bez zmian w logice.
+# Lokalnie: git config blame.ignoreRevsFile .git-blame-ignore-revs (GitHub czyta ten plik sam).
+
+# Etap 4, Q17 (#116): formatowanie repo Prettierem, razem z poprawkami lintera
+e85b69b47b7ebb894262d7008dd9db80b820bce6

@@ -243,7 +243,7 @@ pnpm e2e         # testy end-to-end w Chromium (opis w e2e/README.md)
 pnpm --filter @autoscore/engine test   # testy jednego pakietu
 ```
 
-Kod formatuje Prettier według `.prettierrc.json`: pojedyncze cudzysłowy i szerokość linii 140. Markdown i HTML nie są formatowane, listę wyłączeń ma `.prettierignore`.
+Kod formatuje Prettier według `.prettierrc.json`: pojedyncze cudzysłowy i szerokość linii 140. Markdown i HTML nie są formatowane, listę wyłączeń ma `.prettierignore`. Commit jednorazowego formatowania jest w `.git-blame-ignore-revs`, więc `git blame` go pomija (lokalnie po `git config blame.ignoreRevsFile .git-blame-ignore-revs`, GitHub sam).
 
 ESLint sprawdza reguły typescript-eslint z informacją o typach, a w `packages/web` także reguły React hooks. Testy `engine` i `schema` liczą pokrycie i nie przechodzą poniżej progów z ich `vitest.config.ts`.
 
