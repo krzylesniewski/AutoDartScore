@@ -55,10 +55,10 @@ describe('App', () => {
     expect(stageLight()).toBe('game');
   });
 
-  it('opens the settings on #/settings', () => {
+  it('opens the settings on #/settings', async () => {
     window.location.hash = '#/settings';
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Ustawienia' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ustawienia' })).toBeTruthy();
     const link = screen.getByRole('link', { name: 'Ustawienia' });
     expect(link.getAttribute('href')).toBe('#/settings');
     expect(link.getAttribute('aria-current')).toBe('page');
@@ -68,7 +68,7 @@ describe('App', () => {
   it('opens the match history on #/history', async () => {
     window.location.hash = '#/history';
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Historia' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Historia' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Historia' }).getAttribute('aria-current')).toBe('page');
     expect(await screen.findByText('Brak gier w historii.')).toBeTruthy();
     expect(urls).toContain('/api/matches');
@@ -91,7 +91,7 @@ describe('App', () => {
   it('opens the ranking on #/stats', async () => {
     window.location.hash = '#/stats';
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
     await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all&period=all'));
     expect(stageLight()).toBe('list');
   });
@@ -99,7 +99,7 @@ describe('App', () => {
   it('opens the statistics of the player in #/stats/:playerId', async () => {
     window.location.hash = `#/stats/${encodeURIComponent('p 2')}`;
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
     await vi.waitFor(() => expect(urls).toContain('/api/players/p%202/stats?type=all&period=all'));
     expect((await screen.findByRole('button', { name: 'Bartek' })).getAttribute('aria-pressed')).toBe('true');
   });
