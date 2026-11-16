@@ -136,8 +136,8 @@ describe('achievement live messages', () => {
     await finishedMatch([anna, bartek]);
     const { id } = await match301([anna, bartek]);
     const [, , last] = await throwDarts(t.app, id, TON);
-    expect(Object.keys(last).sort()).toEqual(['events', 'state', 'throw']);
-    expect(last.events.map((event: { type: string }) => event.type)).toEqual(['turn_completed']);
+    expect(Object.keys(last!).sort()).toEqual(['events', 'state', 'throw']);
+    expect(last!.events.map((event: { type: string }) => event.type)).toEqual(['turn_completed']);
   });
 
   it('sends nothing to a guest', async () => {

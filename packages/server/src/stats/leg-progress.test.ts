@@ -2,9 +2,9 @@ import type { DomainEvent, Hit } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import { buildLegProgress } from './leg-progress.js';
 
-const S = (segment: number): Hit => ({ segment, multiplier: 1 }) as Hit;
-const D = (segment: number): Hit => ({ segment, multiplier: 2 }) as Hit;
-const T = (segment: number): Hit => ({ segment, multiplier: 3 }) as Hit;
+const S = (segment: number): Hit => ({ segment, multiplier: 1 });
+const D = (segment: number): Hit => ({ segment, multiplier: 2 });
+const T = (segment: number): Hit => ({ segment, multiplier: 3 });
 const MISS = { segment: 0, multiplier: 0 } as Hit;
 
 function turn(playerId: string, legIndex: number, darts: Hit[], total: number, remaining: number): DomainEvent {

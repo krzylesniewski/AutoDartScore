@@ -16,7 +16,7 @@ describe('AbandonDialog', () => {
   it('shows each player as a card label that wraps a radio and an avatar', () => {
     renderDialog();
     for (const name of ['Anna', 'Bartek']) {
-      const radio = screen.getByRole('radio', { name }) as HTMLInputElement;
+      const radio = screen.getByRole<HTMLInputElement>('radio', { name });
       const card = radio.closest('label');
       expect(card).not.toBeNull();
       expect(card?.textContent).toContain(name);
@@ -26,13 +26,13 @@ describe('AbandonDialog', () => {
           .getAttribute('aria-hidden'),
       ).toBe('true');
     }
-    expect((screen.getByRole('radio', { name: 'Bartek' }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole<HTMLInputElement>('radio', { name: 'Bartek' }).checked).toBe(true);
   });
 
   it('checks the clicked card and unchecks the other', () => {
     renderDialog();
-    const anna = screen.getByRole('radio', { name: 'Anna' }) as HTMLInputElement;
-    const bartek = screen.getByRole('radio', { name: 'Bartek' }) as HTMLInputElement;
+    const anna = screen.getByRole<HTMLInputElement>('radio', { name: 'Anna' });
+    const bartek = screen.getByRole<HTMLInputElement>('radio', { name: 'Bartek' });
     expect(bartek.checked).toBe(true);
     expect(anna.checked).toBe(false);
     fireEvent.click(anna);

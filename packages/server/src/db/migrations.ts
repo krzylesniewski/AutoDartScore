@@ -170,19 +170,19 @@ const migrations: Record<string, Migration> = {
 };
 
 const provider: MigrationProvider = {
-  getMigrations: async () => migrations,
+  getMigrations: () => Promise.resolve(migrations),
 };
 
 export async function migrateToLatest<DB>(db: Kysely<DB>): Promise<void> {
   const { error } = await new Migrator({ db, provider }).migrateToLatest();
   if (error) {
-    throw error;
+    throw error instanceof Error ? error : new Error('Migration failed', { cause: error });
   }
 }
 
 export async function migrateTo<DB>(db: Kysely<DB>, target: string): Promise<void> {
   const { error } = await new Migrator({ db, provider }).migrateTo(target);
   if (error) {
-    throw error;
+    throw error instanceof Error ? error : new Error('Migration failed', { cause: error });
   }
 }

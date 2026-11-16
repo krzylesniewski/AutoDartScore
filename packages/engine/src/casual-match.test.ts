@@ -10,9 +10,9 @@ import {
   type CasualMatchState,
 } from './index.js';
 
-const S = (n: number): Hit => ({ segment: n, multiplier: 1 }) as Hit;
-const D = (n: number): Hit => ({ segment: n, multiplier: 2 }) as Hit;
-const T = (n: number): Hit => ({ segment: n, multiplier: 3 }) as Hit;
+const S = (n: number): Hit => ({ segment: n, multiplier: 1 });
+const D = (n: number): Hit => ({ segment: n, multiplier: 2 });
+const T = (n: number): Hit => ({ segment: n, multiplier: 3 });
 const BULL: Hit = { segment: 25, multiplier: 2 };
 const OUTER_BULL: Hit = { segment: 25, multiplier: 1 };
 const MISS: Hit = { segment: 0, multiplier: 0 };

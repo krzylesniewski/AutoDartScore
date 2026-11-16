@@ -7,13 +7,13 @@ interface Loaded {
   readonly hits: readonly FrequentHit[];
 }
 
-// Najczęstsze trafienia rzucającego, pobierane przy każdej zmianie gracza. null w trakcie ładowania i po błędzie.
+// Najczęstsze trafienia rzucającego, pobierane przy każdej zmianie gracza.
+// null, dopóki nie przyjdzie lista tego gracza, i po błędzie.
 // Lista jest zwracana tylko dla gracza, dla którego przyszła, więc nie pojawia się pod imieniem następnego.
 export function useFrequentHits(playerId: string | null): readonly FrequentHit[] | null {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   useEffect(() => {
-    setLoaded(null);
     if (playerId === null) {
       return;
     }
@@ -25,7 +25,11 @@ export function useFrequentHits(playerId: string | null): readonly FrequentHit[]
         }
       },
       // Po błędzie rząd zostaje pusty, a klawiatura działa bez niego.
-      () => undefined,
+      () => {
+        if (!cancelled) {
+          setLoaded(null);
+        }
+      },
     );
     return () => {
       cancelled = true;

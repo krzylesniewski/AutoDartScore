@@ -20,13 +20,14 @@ export interface MatchHeaderProps {
   onEndPractice?: () => void;
   // Przycisk „Tury” poniżej lg. Bez tego propsa nagłówek go nie ma.
   turns?: TurnsToggle | undefined;
+  // Ref przycisku „Tury” osobno od turns, bo react-hooks/refs uznaje każdy odczyt obiektu z refem za odczyt refa w renderze.
+  turnsButtonRef?: Ref<HTMLButtonElement> | undefined;
 }
 
 export interface TurnsToggle {
   open: boolean;
   controls: string;
   onToggle(): void;
-  buttonRef?: Ref<HTMLButtonElement> | undefined;
 }
 
 const meta = 'font-display font-semibold whitespace-nowrap text-(--color-text-sub)';
@@ -51,6 +52,7 @@ export function MatchHeader({
   onResume,
   onEndPractice,
   turns,
+  turnsButtonRef,
 }: MatchHeaderProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -182,7 +184,7 @@ export function MatchHeader({
       </div>
       {turns && (
         <button
-          ref={turns.buttonRef}
+          ref={turnsButtonRef}
           type="button"
           aria-expanded={turns.open}
           aria-controls={turns.controls}

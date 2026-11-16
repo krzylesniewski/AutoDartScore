@@ -71,17 +71,17 @@ function networkError(): Promise<Response> {
 
 // Jak prawdziwy fetch: przerwany sygnał odrzuca żądanie powodem przerwania.
 function fakeFetch(url: string, init: RequestInit = {}): Promise<Response> {
-  const call = { url, body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined };
+  const call = { url, body: typeof init.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined };
   calls.push(call);
   const signal = init.signal;
   if (!signal) {
     return respond(call);
   }
   if (signal.aborted) {
-    return Promise.reject(signal.reason);
+    return Promise.reject(signal.reason as Error);
   }
   const aborted = new Promise<never>((_, reject) => {
-    signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+    signal.addEventListener('abort', () => reject(signal.reason as Error), { once: true });
   });
   return Promise.race([respond(call), aborted]);
 }

@@ -73,13 +73,13 @@ beforeEach(() => {
     );
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string, init?: RequestInit) => {
+    vi.fn((url: string, init?: RequestInit) => {
       if (init?.method === 'POST') {
-        posts.push({ url, body: JSON.parse(String(init.body)) });
-        return abandonResponse();
+        posts.push({ url, body: JSON.parse(init.body as string) });
+        return Promise.resolve(abandonResponse());
       }
       urls.push(url);
-      return failing ? json(500, { error: 'internal_error', message: 'Internal server error' }) : json(200, games);
+      return Promise.resolve(failing ? json(500, { error: 'internal_error', message: 'Internal server error' }) : json(200, games));
     }),
   );
 });

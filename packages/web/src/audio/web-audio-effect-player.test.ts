@@ -32,11 +32,13 @@ class FakeAudioContext {
   currentTime = 2;
   destination = new FakeNode();
   oscillators: FakeOscillator[] = [];
-  resume = vi.fn(async () => {
+  resume = vi.fn(() => {
     this.state = 'running';
+    return Promise.resolve();
   });
-  close = vi.fn(async () => {
+  close = vi.fn(() => {
     this.state = 'closed';
+    return Promise.resolve();
   });
 
   constructor() {

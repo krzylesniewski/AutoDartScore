@@ -51,7 +51,7 @@ function errorCode(response: { json(): unknown }): string {
   return ApiError.parse(response.json()).error;
 }
 
-async function expectError(response: { statusCode: number; json(): unknown }, statusCode: number, code: string) {
+function expectError(response: { statusCode: number; json(): unknown }, statusCode: number, code: string) {
   expect(response.statusCode).toBe(statusCode);
   expect(errorCode(response)).toBe(code);
 }
@@ -96,16 +96,16 @@ describe('POST /matches/:id/end', () => {
     await endOk(id);
     const entries = await logEntries(t.db, id);
 
-    await expectError(await postThrow(t.app, id, hitEvent(id, S(5))), 409, 'practice_ended');
+    expectError(await postThrow(t.app, id, hitEvent(id, S(5))), 409, 'practice_ended');
 
     const resent = await postThrow(t.app, id, earlier);
     expect(resent.statusCode).toBe(200);
     expect(resent.json()).toMatchObject({ events: [], state: { status: 'ended' } });
 
-    await expectError(await undo(t.app, id), 409, 'practice_ended');
-    await expectError(await abandon(t.app, id, { playerId: anna }), 409, 'practice_ended');
-    await expectError(await resume(t.app, id), 409, 'match_not_abandoned');
-    await expectError(await endPractice(t.app, id), 409, 'practice_ended');
+    expectError(await undo(t.app, id), 409, 'practice_ended');
+    expectError(await abandon(t.app, id, { playerId: anna }), 409, 'practice_ended');
+    expectError(await resume(t.app, id), 409, 'match_not_abandoned');
+    expectError(await endPractice(t.app, id), 409, 'practice_ended');
 
     expect(await logEntries(t.db, id)).toEqual(entries);
     expect(await countRows(t.db, 'throws')).toBe(1);
@@ -117,13 +117,13 @@ describe('POST /matches/:id/end', () => {
   ])('answers 409 not_practice for a %s', async (_type, payload) => {
     const { id } = await createGame(t.app, payload());
     await throwDarts(t.app, id, [S(20)]);
-    await expectError(await endPractice(t.app, id), 409, 'not_practice');
+    expectError(await endPractice(t.app, id), 409, 'not_practice');
     expect(await logEntries(t.db, id)).toHaveLength(1);
   });
 
   it('answers 409 nothing_to_end without throws', async () => {
     const { id } = await freeRun();
-    await expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
+    expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
     expect(await logEntries(t.db, id)).toHaveLength(0);
   });
 
@@ -132,25 +132,25 @@ describe('POST /matches/:id/end', () => {
     await throwDarts(t.app, id, [S(20), S(5)]);
     expect((await undo(t.app, id)).statusCode).toBe(200);
     expect((await undo(t.app, id)).statusCode).toBe(200);
-    await expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
+    expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
     expect(await logEntries(t.db, id)).toHaveLength(4);
   });
 
   it('answers 409 match_finished for a checked-out solo 501', async () => {
     const { id } = await solo501();
     await throwDarts(t.app, id, [T(20), T(20), T(20), T(20), T(20), T(20), T(20), T(19), D(12)]);
-    await expectError(await endPractice(t.app, id), 409, 'match_finished');
+    expectError(await endPractice(t.app, id), 409, 'match_finished');
   });
 
   it('answers 409 match_abandoned for an abandoned practice', async () => {
     const { id } = await freeRun();
     await throwDarts(t.app, id, [S(20)]);
     expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
-    await expectError(await endPractice(t.app, id), 409, 'match_abandoned');
+    expectError(await endPractice(t.app, id), 409, 'match_abandoned');
   });
 
   it('answers an unknown match with 404', async () => {
-    await expectError(await endPractice(t.app, 'nope'), 404, 'not_found');
+    expectError(await endPractice(t.app, 'nope'), 404, 'not_found');
   });
 
   it('ignores an empty and a broken JSON body', async () => {

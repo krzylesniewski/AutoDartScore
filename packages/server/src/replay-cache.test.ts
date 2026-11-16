@@ -157,8 +157,8 @@ describe('createReplayCache', () => {
     const first = await replays.many([broken, a, unreplayable]);
     expect(ids(first)).toEqual([a.id]);
     expect(warn).toHaveBeenCalledTimes(3);
-    expect(warn).toHaveBeenCalledWith({ matchId: broken.id, err: expect.any(Error) }, expect.any(String));
-    expect(warn).toHaveBeenCalledWith({ matchId: unreplayable.id, err: expect.any(Error) }, expect.any(String));
+    expect(warn).toHaveBeenCalledWith({ matchId: broken.id, err: expect.any(Error) as Error }, expect.any(String));
+    expect(warn).toHaveBeenCalledWith({ matchId: unreplayable.id, err: expect.any(Error) as Error }, expect.any(String));
     expect(warn).toHaveBeenLastCalledWith({ skipped: 2 }, expect.any(String));
 
     await replays.many([broken, a, unreplayable]);

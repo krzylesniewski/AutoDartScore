@@ -23,27 +23,28 @@ function choiceStyle(selected: boolean): string {
   return `${choice} ${selected ? 'bg-(--color-text) font-extrabold text-(--color-text-inverse) shadow-(--shadow-selected)' : 'bg-transparent font-bold text-(--color-text)'}`;
 }
 
-type Games = { status: 'loading' } | { status: 'ready'; games: MatchListItem[] } | { status: 'error' };
+type Settled = { status: 'ready'; games: MatchListItem[] } | { status: 'error' };
+type Games = { status: 'loading' } | Settled;
 
 export function HistoryScreen() {
   const [type, setType] = useState<MatchType | null>(null);
-  const [games, setGames] = useState<Games>({ status: 'loading' });
+  const [settled, setSettled] = useState<{ type: MatchType | null; games: Settled } | null>(null);
+  const games: Games = settled !== null && settled.type === type ? settled.games : { status: 'loading' };
   const [abandoning, setAbandoning] = useState<MatchListItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setGames({ status: 'loading' });
     listMatches(type ? { type } : {}).then(
       (value) => {
         if (!cancelled) {
-          setGames({ status: 'ready', games: value });
+          setSettled({ type, games: { status: 'ready', games: value } });
         }
       },
       () => {
         if (!cancelled) {
-          setGames({ status: 'error' });
+          setSettled({ type, games: { status: 'error' } });
         }
       },
     );
@@ -65,9 +66,9 @@ export function HistoryScreen() {
         abandonment: state.abandonment,
         updatedAt: state.abandonment?.at ?? game.updatedAt,
       };
-      setGames((current) =>
-        current.status === 'ready'
-          ? { status: 'ready', games: current.games.map((item) => (item.id === game.id ? updated : item)) }
+      setSettled((current) =>
+        current !== null && current.games.status === 'ready'
+          ? { ...current, games: { status: 'ready', games: current.games.games.map((item) => (item.id === game.id ? updated : item)) } }
           : current,
       );
     } catch {

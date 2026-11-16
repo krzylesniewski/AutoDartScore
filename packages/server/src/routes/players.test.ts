@@ -93,7 +93,7 @@ describe('players', () => {
       payload: '{"name": ',
     });
     expect(response.statusCode).toBe(400);
-    expect(ApiError.parse(response.json())).toEqual({ error: 'invalid_request', message: expect.any(String) });
+    expect(ApiError.parse(response.json())).toEqual({ error: 'invalid_request', message: expect.any(String) as string });
   });
 
   it('answers an unknown route with 404 and the ApiError shape', async () => {

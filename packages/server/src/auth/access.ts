@@ -32,26 +32,37 @@ export async function registerAccessControl(
     });
   }
 
-  app.addHook('onRequest', async (request) => {
+  // Hak w formie z callbackiem: bez async Fastify czeka na done, więc każda ścieżka musi je wywołać.
+  app.addHook('onRequest', (request, _reply, done) => {
+    const error = accessError(request);
+    if (error === null) {
+      done();
+    } else {
+      done(error);
+    }
+  });
+
+  function accessError(request: FastifyRequest): HttpError | null {
     // WebSocket uwierzytelnia się pierwszą wiadomością, bo przeglądarka nie ustawi nagłówka Authorization.
     if (request.ws) {
       const origin = request.headers.origin;
       if (corsOrigins !== null && origin !== undefined && !corsOrigins.includes(origin)) {
-        throw new HttpError(403, 'forbidden_origin', `Origin ${origin} is not allowed`);
+        return new HttpError(403, 'forbidden_origin', `Origin ${origin} is not allowed`);
       }
-      return;
+      return null;
     }
     const route = request.routeOptions.url ?? '';
     if (auth === null || request.method === 'OPTIONS' || PUBLIC_ROUTES.has(route)) {
-      return;
+      return null;
     }
     // Przeglądarka pobiera front bez tokenu, bo ekran logowania jest jego częścią. Decyduje dopasowana trasa, nie surowy adres.
     if ((request.method === 'GET' || request.method === 'HEAD') && webRoutes.has(route)) {
-      return;
+      return null;
     }
     const token = bearerToken(request);
     if (token === null || !verifyToken(auth, token, now())) {
-      throw unauthorized();
+      return unauthorized();
     }
-  });
+    return null;
+  }
 }

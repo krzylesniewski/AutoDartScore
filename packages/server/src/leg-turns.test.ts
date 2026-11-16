@@ -3,9 +3,9 @@ import type { Hit, ThrowRecord } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import { buildLegTurns } from './leg-turns.js';
 
-const S = (segment: number): Hit => ({ segment, multiplier: 1 }) as Hit;
-const D = (segment: number): Hit => ({ segment, multiplier: 2 }) as Hit;
-const T = (segment: number): Hit => ({ segment, multiplier: 3 }) as Hit;
+const S = (segment: number): Hit => ({ segment, multiplier: 1 });
+const D = (segment: number): Hit => ({ segment, multiplier: 2 });
+const T = (segment: number): Hit => ({ segment, multiplier: 3 });
 const MISS = { segment: 0, multiplier: 0 } as Hit;
 
 const LEG: readonly Hit[] = [T(20), T(20), T(20), MISS, MISS, MISS, T(20), T(17), D(5)];

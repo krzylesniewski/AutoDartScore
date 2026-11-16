@@ -93,7 +93,7 @@ function expectNoSecrets(body: unknown) {
   expect(JSON.stringify(body)).not.toMatch(/seed|rule|repeat_on_miss|new_each_attempt/i);
 }
 
-async function expectError(response: { statusCode: number; json(): unknown }, statusCode: number, code: string) {
+function expectError(response: { statusCode: number; json(): unknown }, statusCode: number, code: string) {
   expect(response.statusCode).toBe(statusCode);
   expect(ApiError.parse(response.json()).error).toBe(code);
 }
@@ -167,7 +167,7 @@ describe('POST /matches with practiceMode checkouts', () => {
     ['an unknown range', { type: 'practice', practiceMode: 'checkouts', playerIds: ['p'], checkoutRange: '0-50' }],
   ])('rejects %s with 400', async (_name, payload) => {
     const response = await t.app.inject({ method: 'POST', url: '/matches', payload: { ...payload, playerIds: [anna] } });
-    await expectError(response, 400, 'invalid_request');
+    expectError(response, 400, 'invalid_request');
     expect(await t.db.selectFrom('matches').selectAll().execute()).toEqual([]);
   });
 });
@@ -229,19 +229,19 @@ describe('POST /matches/:id/checkout-attempts', () => {
   ])('rejects %s with 400', async (_name, payload) => {
     const { id } = await checkouts();
     const response = await t.app.inject({ method: 'POST', url: `/matches/${id}/checkout-attempts`, payload });
-    await expectError(response, 400, 'invalid_request');
+    expectError(response, 400, 'invalid_request');
     expect(await logEntries(t.db, id)).toEqual([]);
   });
 
   it('answers 404 for an unknown match', async () => {
-    await expectError(await checkoutAttempt(t.app, 'missing', true), 404, 'not_found');
+    expectError(await checkoutAttempt(t.app, 'missing', true), 404, 'not_found');
   });
 
   it('answers 409 not_checkouts in a 1v1 match and a Free run', async () => {
     const match = await createGame(t.app, { type: 'match', playerIds: [anna, bartek] });
     const freeRun = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     for (const { id } of [match, freeRun]) {
-      await expectError(await checkoutAttempt(t.app, id, true), 409, 'not_checkouts');
+      expectError(await checkoutAttempt(t.app, id, true), 409, 'not_checkouts');
       expect(await logEntries(t.db, id)).toEqual([]);
     }
   });
@@ -250,16 +250,16 @@ describe('POST /matches/:id/checkout-attempts', () => {
     const { id } = await checkouts();
     await attemptOk(id, false);
     expect((await endPractice(t.app, id)).statusCode).toBe(200);
-    await expectError(await checkoutAttempt(t.app, id, true), 409, 'practice_ended');
-    await expectError(await undo(t.app, id), 409, 'practice_ended');
+    expectError(await checkoutAttempt(t.app, id, true), 409, 'practice_ended');
+    expectError(await undo(t.app, id), 409, 'practice_ended');
     expect((await getMatch(t.app, id)).checkouts).toMatchObject({ attempts: 1 });
   });
 
   it('answers 409 match_abandoned in an abandoned session', async () => {
     const { id } = await checkouts();
     expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
-    await expectError(await checkoutAttempt(t.app, id, true), 409, 'match_abandoned');
-    await expectError(await undo(t.app, id), 409, 'match_abandoned');
+    expectError(await checkoutAttempt(t.app, id, true), 409, 'match_abandoned');
+    expectError(await undo(t.app, id), 409, 'match_abandoned');
   });
 });
 
@@ -267,7 +267,7 @@ describe('POST /matches/:id/throws in checkout practice', () => {
   it('answers 409 throws_not_allowed and stores no throw', async () => {
     const { id } = await checkouts();
     const throwsBefore = await countRows(t.db, 'throws');
-    await expectError(await postThrow(t.app, id, hitEvent(id, T(20))), 409, 'throws_not_allowed');
+    expectError(await postThrow(t.app, id, hitEvent(id, T(20))), 409, 'throws_not_allowed');
     expect(await countRows(t.db, 'throws')).toBe(throwsBefore);
     expect(await logEntries(t.db, id)).toEqual([]);
   });
@@ -327,17 +327,17 @@ describe('POST /matches/:id/undo in checkout practice', () => {
     const response = await undo(t.app, id);
     expect(response.statusCode).toBe(200);
     await vi.waitFor(() => expect(messages).toHaveLength(2));
-    expect(LiveMessage.parse(messages[1])).toEqual({ type: 'state_updated', matchId: id, eventSeq: 2, state: response.json().state });
+    expect(LiveMessage.parse(messages[1])).toEqual({ type: 'state_updated', matchId: id, eventSeq: 2, state: response.json<UndoResult>().state });
   });
 
   it('answers 409 nothing_to_undo without attempts or skips', async () => {
     const { id } = await checkouts();
-    await expectError(await undo(t.app, id), 409, 'nothing_to_undo');
+    expectError(await undo(t.app, id), 409, 'nothing_to_undo');
     await attemptOk(id, true);
     await skipOk(id);
     await undoOk(id);
     await undoOk(id);
-    await expectError(await undo(t.app, id), 409, 'nothing_to_undo');
+    expectError(await undo(t.app, id), 409, 'nothing_to_undo');
     expect(await logTypes(id)).toEqual(['checkout_attempt', 'checkout_skipped', 'checkout_skip_undone', 'checkout_attempt_undone']);
   });
 
@@ -470,14 +470,14 @@ describe('POST /matches/:id/checkout-skips', () => {
   });
 
   it('answers 404 for an unknown match', async () => {
-    await expectError(await checkoutSkip(t.app, 'missing'), 404, 'not_found');
+    expectError(await checkoutSkip(t.app, 'missing'), 404, 'not_found');
   });
 
   it('answers 409 not_checkouts in a 1v1 match and a Free run', async () => {
     const match = await createGame(t.app, { type: 'match', playerIds: [anna, bartek] });
     const freeRun = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     for (const { id } of [match, freeRun]) {
-      await expectError(await checkoutSkip(t.app, id), 409, 'not_checkouts');
+      expectError(await checkoutSkip(t.app, id), 409, 'not_checkouts');
       expect(await logEntries(t.db, id)).toEqual([]);
     }
   });
@@ -486,14 +486,14 @@ describe('POST /matches/:id/checkout-skips', () => {
     const { id } = await checkouts();
     await attemptOk(id, false);
     expect((await endPractice(t.app, id)).statusCode).toBe(200);
-    await expectError(await checkoutSkip(t.app, id), 409, 'practice_ended');
+    expectError(await checkoutSkip(t.app, id), 409, 'practice_ended');
     expect((await getMatch(t.app, id)).checkouts).toMatchObject({ attempts: 1, skips: 0 });
   });
 
   it('answers 409 match_abandoned in an abandoned session', async () => {
     const { id } = await checkouts();
     expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
-    await expectError(await checkoutSkip(t.app, id), 409, 'match_abandoned');
+    expectError(await checkoutSkip(t.app, id), 409, 'match_abandoned');
     expect((await getMatch(t.app, id)).checkouts).toMatchObject({ skips: 0 });
   });
 });
@@ -543,7 +543,7 @@ describe('effectiveCheckoutSteps', () => {
 describe('POST /matches/:id/end in checkout practice', () => {
   it('answers 409 nothing_to_end before the first attempt and 200 after it', async () => {
     const { id } = await checkouts();
-    await expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
+    expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
     const before = await attemptOk(id, false);
 
     const response = await endPractice(t.app, id);
@@ -557,7 +557,7 @@ describe('POST /matches/:id/end in checkout practice', () => {
     const { id } = await checkouts();
     await skipOk(id);
     await skipOk(id);
-    await expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
+    expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
     await attemptOk(id, false);
     expect((await endPractice(t.app, id)).statusCode).toBe(200);
   });
@@ -566,7 +566,7 @@ describe('POST /matches/:id/end in checkout practice', () => {
     const { id } = await checkouts();
     await attemptOk(id, true);
     expect((await undo(t.app, id)).statusCode).toBe(200);
-    await expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
+    expectError(await endPractice(t.app, id), 409, 'nothing_to_end');
   });
 });
 
@@ -624,7 +624,7 @@ describe('stats after a checkout practice', () => {
     for (const response of responses) {
       expect(response.statusCode).toBe(200);
     }
-    return responses.map((response) => response.json());
+    return responses.map((response) => response.json<unknown>());
   }
 
   it('leaves the player stats and rankings unchanged', async () => {

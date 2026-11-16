@@ -18,12 +18,13 @@ const bartek: Player = {
 beforeEach(() => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(
-      async () =>
+    vi.fn(() =>
+      Promise.resolve(
         new Response(JSON.stringify({ error: 'player_name_taken', message: 'Player name Anna is already taken' }), {
           status: 409,
           headers: { 'content-type': 'application/json' },
         }),
+      ),
     ),
   );
 });
@@ -56,12 +57,13 @@ describe('EditPlayerDialog', () => {
   });
 
   it('does not send an unchanged avatar, so an older text avatar still saves', async () => {
-    const fetchMock = vi.fn(
-      async () =>
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
         new Response(JSON.stringify({ ...bartek, avatar: 'KL', name: 'Bartek K' }), {
           status: 200,
           headers: { 'content-type': 'application/json' },
         }),
+      ),
     );
     vi.stubGlobal('fetch', fetchMock);
     const onSaved = vi.fn();
@@ -69,14 +71,15 @@ describe('EditPlayerDialog', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Imię' }), { target: { value: 'Bartek K' } });
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
-    const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as Record<string, unknown>;
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string) as Record<string, unknown>;
     expect(body).toEqual({ name: 'Bartek K', color: 7 });
   });
 
   it('sends the emoji picked from the grid', async () => {
-    const fetchMock = vi.fn(
-      async () =>
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
         new Response(JSON.stringify({ ...bartek, avatar: '🎮' }), { status: 200, headers: { 'content-type': 'application/json' } }),
+      ),
     );
     vi.stubGlobal('fetch', fetchMock);
     const onSaved = vi.fn();
@@ -84,7 +87,7 @@ describe('EditPlayerDialog', () => {
     fireEvent.click(screen.getByRole('radio', { name: '🎮' }));
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
-    const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as Record<string, unknown>;
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string) as Record<string, unknown>;
     expect(body).toEqual({ name: 'Bartek', avatar: '🎮', color: 7 });
   });
 
@@ -97,19 +100,19 @@ describe('EditPlayerDialog', () => {
     const onCancel = vi.fn();
     render(<EditPlayerDialog player={bartek} onSaved={vi.fn()} onCancel={onCancel} />);
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
-    await vi.waitFor(() => expect((screen.getByRole('button', { name: 'Anuluj' }) as HTMLButtonElement).disabled).toBe(true));
+    await vi.waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Anuluj' }).disabled).toBe(true));
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
     expect(onCancel).not.toHaveBeenCalled();
-    expect((screen.getByRole('dialog') as HTMLDialogElement).open).toBe(true);
+    expect(screen.getByRole<HTMLDialogElement>('dialog').open).toBe(true);
     finish(json(500, { error: 'internal_error', message: 'Internal server error' }));
-    await vi.waitFor(() => expect((screen.getByRole('button', { name: 'Anuluj' }) as HTMLButtonElement).disabled).toBe(false));
+    await vi.waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Anuluj' }).disabled).toBe(false));
   });
 
   it('shows a Polish alert instead of the server message on a 500', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => json(500, { error: 'internal_error', message: 'Internal server error' })),
+      vi.fn(() => Promise.resolve(json(500, { error: 'internal_error', message: 'Internal server error' }))),
     );
     render(<EditPlayerDialog player={bartek} onSaved={vi.fn()} onCancel={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
@@ -120,7 +123,7 @@ describe('EditPlayerDialog', () => {
   it('shows a Polish text instead of the English message on a 400 invalid_request', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => json(400, { error: 'invalid_request', message: 'Invalid request: name: Too big' })),
+      vi.fn(() => Promise.resolve(json(400, { error: 'invalid_request', message: 'Invalid request: name: Too big' }))),
     );
     render(<EditPlayerDialog player={bartek} onSaved={vi.fn()} onCancel={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));

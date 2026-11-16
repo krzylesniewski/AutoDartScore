@@ -225,6 +225,6 @@ describe('GET /players/:id/frequent-hits', () => {
     await playGame(200 * DAY_MS);
     const response = await getOk(`/players/${anna}/frequent-hits`);
     expect(response).not.toHaveProperty('period');
-    expect(response).toMatchObject({ hits: expect.arrayContaining([expect.objectContaining({ segment: 20, multiplier: 3 })]) });
+    expect(response).toMatchObject({ hits: expect.arrayContaining([expect.objectContaining({ segment: 20, multiplier: 3 })]) as unknown });
   });
 });

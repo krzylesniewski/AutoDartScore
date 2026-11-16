@@ -182,11 +182,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
         onAbandon={() => setAbandoning(true)}
         onResume={sendResume}
         onEndPractice={() => setEnding(true)}
-        turns={
-          legInfoShown
-            ? { open: turnsOpen, controls: legInfoId, onToggle: () => setTurnsOpen(!turnsOpen), buttonRef: turnsButtonRef }
-            : undefined
-        }
+        turns={legInfoShown ? { open: turnsOpen, controls: legInfoId, onToggle: () => setTurnsOpen(!turnsOpen) } : undefined}
+        turnsButtonRef={turnsButtonRef}
       />
       {/* Opakowanie nie przewija się, więc baner poniżej lg trzyma się góry widocznego obszaru.
           Poniżej lg main jest kolumną flex, a prawa kolumna ma display: contents. Dok jest wtedy dzieckiem main.

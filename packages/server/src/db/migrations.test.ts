@@ -1,4 +1,5 @@
 import { checkoutTarget } from '@autoscore/engine';
+import type { MatchSnapshot } from '@autoscore/schema';
 import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
@@ -84,7 +85,7 @@ describe('migrateToLatest', () => {
       const response = await app.inject({ method: 'GET', url: '/matches/m1' });
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({ eventSeq: 3, status: 'in_progress', currentDarts: [{ segment: 20, multiplier: 3 }] });
-      expect(response.json().players.map((player: { remaining: number }) => player.remaining)).toEqual([241, 301]);
+      expect(response.json<MatchSnapshot>().players.map((player) => player.remaining)).toEqual([241, 301]);
     } finally {
       await app.close();
       await db.destroy();
@@ -204,7 +205,7 @@ describe('migrateToLatest', () => {
         freeRun: null,
         checkouts: null,
       });
-      expect(match.json().players.map((player: { remaining: number }) => player.remaining)).toEqual([241, 301]);
+      expect(match.json<MatchSnapshot>().players.map((player) => player.remaining)).toEqual([241, 301]);
 
       const freeRun = await app.inject({ method: 'GET', url: '/matches/f1' });
       expect(freeRun.statusCode).toBe(200);
@@ -224,11 +225,11 @@ describe('migrateToLatest', () => {
       expect(created.json()).toMatchObject({ practiceMode: 'checkouts', checkouts: { range: '2-50', attempts: 0 } });
       const attempt = await app.inject({
         method: 'POST',
-        url: `/matches/${created.json().id}/checkout-attempts`,
+        url: `/matches/${created.json<MatchSnapshot>().id}/checkout-attempts`,
         payload: { success: true },
       });
       expect(attempt.statusCode).toBe(201);
-      expect(attempt.json().checkouts).toMatchObject({ attempts: 1, successes: 1 });
+      expect(attempt.json<MatchSnapshot>().checkouts).toMatchObject({ attempts: 1, successes: 1 });
     } finally {
       await app.close();
       await db.destroy();
@@ -287,7 +288,7 @@ describe('migrateToLatest', () => {
     try {
       const session = await app.inject({ method: 'GET', url: '/matches/c1' });
       expect(session.statusCode).toBe(200);
-      expect(session.json().checkouts).toEqual({
+      expect(session.json<MatchSnapshot>().checkouts).toEqual({
         range: '51-100',
         target: target(3),
         attempts: 3,
@@ -302,8 +303,8 @@ describe('migrateToLatest', () => {
 
       const failed = await app.inject({ method: 'POST', url: '/matches/c1/checkout-attempts', payload: { success: false } });
       expect(failed.statusCode).toBe(201);
-      expect(failed.json().checkouts).toMatchObject({ target: target(4), attempts: 4 });
-      expect(failed.json().checkouts.history.at(-1)).toEqual({ target: target(3), success: false });
+      expect(failed.json<MatchSnapshot>().checkouts).toMatchObject({ target: target(4), attempts: 4 });
+      expect(failed.json<MatchSnapshot>().checkouts?.history.at(-1)).toEqual({ target: target(3), success: false });
     } finally {
       await app.close();
       await db.destroy();

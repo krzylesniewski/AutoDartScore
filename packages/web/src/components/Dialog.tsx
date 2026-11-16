@@ -15,7 +15,8 @@ export interface DialogProps {
 export function Dialog({ labelledBy, describedBy, busy = false, initialFocus, className = '', onClose, children }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
-  // Pusta lista zależności, żeby wpisane w miejscu onClose wywołujących nie otwierało okna od nowa.
+  // Bez onClose w zależnościach, żeby wpisane w miejscu onClose wywołujących nie otwierało okna od nowa.
+  // initialFocus to obiekt z useRef wywołującego, więc się nie zmienia.
   useEffect(() => {
     // React czyści ref przed cleanupem, więc element trzeba zapamiętać tutaj.
     const dialog = ref.current;
@@ -36,7 +37,7 @@ export function Dialog({ labelledBy, describedBy, busy = false, initialFocus, cl
         opener.focus();
       }
     };
-  }, []);
+  }, [initialFocus]);
 
   function onKeyDown(event: KeyboardEvent<HTMLDialogElement>): void {
     if (event.key !== 'Escape') {

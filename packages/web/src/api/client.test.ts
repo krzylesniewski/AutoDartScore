@@ -11,7 +11,7 @@ describe('409 replies', () => {
     const state = snapshot({ id: 'm1', eventSeq: 9 });
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => json(409, { error: 'stale_state', message: 'Match state changed', state })),
+      vi.fn(() => Promise.resolve(json(409, { error: 'stale_state', message: 'Match state changed', state }))),
     );
     const caught: unknown = await undo('m1', 7).catch((error: unknown) => error);
     expect(caught).toBeInstanceOf(StaleStateRequestError);
@@ -28,7 +28,7 @@ describe('409 replies', () => {
   it('rejects a 409 with another code with a plain ApiRequestError', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => json(409, { error: 'nothing_to_undo', message: 'Match has no throw to undo' })),
+      vi.fn(() => Promise.resolve(json(409, { error: 'nothing_to_undo', message: 'Match has no throw to undo' }))),
     );
     const caught: unknown = await undo('m1', 7).catch((error: unknown) => error);
     expect(caught).toBeInstanceOf(ApiRequestError);
@@ -39,8 +39,8 @@ describe('409 replies', () => {
 
 describe('undo request', () => {
   function stubUndo() {
-    const fetch = vi.fn<typeof globalThis.fetch>(async () =>
-      json(200, { undoneThrowId: 't1', state: snapshot({ id: 'm1', eventSeq: 8 }) }),
+    const fetch = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(json(200, { undoneThrowId: 't1', state: snapshot({ id: 'm1', eventSeq: 8 }) })),
     );
     vi.stubGlobal('fetch', fetch);
     return fetch;
@@ -59,7 +59,7 @@ describe('undo request', () => {
     await undo('m1', 7);
     const init = fetch.mock.calls[0]?.[1];
     expect(init?.method).toBe('POST');
-    expect(JSON.parse(String(init?.body))).toEqual({ expectedSeq: 7 });
+    expect(JSON.parse(init?.body as string)).toEqual({ expectedSeq: 7 });
     expect(new Headers(init?.headers).get('content-type')).toBe('application/json');
   });
 });
@@ -72,7 +72,9 @@ afterEach(() => {
 describe('request time limit', () => {
   it('passes a timeout signal to fetch', async () => {
     const timeout = vi.spyOn(AbortSignal, 'timeout');
-    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify(snapshot({ id: 'm1' })), { status: 200 }));
+    const fetch = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(new Response(JSON.stringify(snapshot({ id: 'm1' })), { status: 200 })),
+    );
     vi.stubGlobal('fetch', fetch);
     await getMatch('m1');
     const signal = fetch.mock.calls[0]?.[1]?.signal;

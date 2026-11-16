@@ -126,7 +126,7 @@ beforeEach(() => {
   window.location.hash = '#/stats';
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string, init: RequestInit = {}) => {
+    vi.fn((url: string, init: RequestInit = {}) => {
       urls.push(url);
       const method = init.method ?? 'GET';
       const body: unknown = typeof init.body === 'string' ? JSON.parse(init.body) : undefined;
@@ -145,33 +145,35 @@ beforeEach(() => {
               }
             : player,
         );
-        return json(
-          200,
-          profiles.find((player) => player.id === id),
+        return Promise.resolve(
+          json(
+            200,
+            profiles.find((player) => player.id === id),
+          ),
         );
       }
       if (url === '/api/players?archived=include') {
-        return json(200, profiles);
+        return Promise.resolve(json(200, profiles));
       }
       if (url.startsWith('/api/stats/overall')) {
-        return overall(new URL(url, 'http://localhost').searchParams.get('period') ?? '');
+        return Promise.resolve(overall(new URL(url, 'http://localhost').searchParams.get('period') ?? ''));
       }
       if (url.startsWith('/api/stats/rankings')) {
         const query = new URL(url, 'http://localhost').searchParams;
-        return json(200, { ...rankings, filter: query.get('type'), period: query.get('period') });
+        return Promise.resolve(json(200, { ...rankings, filter: query.get('type'), period: query.get('period') }));
       }
       const formRequest = /^\/api\/players\/([^/]+)\/form\?type=(\w+)&period=(\w+)$/.exec(url);
       if (formRequest) {
-        return json(200, { playerId: formRequest[1], filter: formRequest[2], period: formRequest[3], points: form });
+        return Promise.resolve(json(200, { playerId: formRequest[1], filter: formRequest[2], period: formRequest[3], points: form }));
       }
       const headToHeadRequest = /\/head-to-head\/([^/?]+)\?period=(\w+)$/.exec(url);
       if (headToHeadRequest) {
-        return json(200, { ...headToHead(decodeURIComponent(headToHeadRequest[1] ?? '')), period: headToHeadRequest[2] });
+        return Promise.resolve(json(200, { ...headToHead(decodeURIComponent(headToHeadRequest[1] ?? '')), period: headToHeadRequest[2] }));
       }
       if (url.startsWith('/api/matches?')) {
-        return json(200, history);
+        return Promise.resolve(json(200, history));
       }
-      return respondStats(url);
+      return Promise.resolve(respondStats(url));
     }),
   );
 });
@@ -346,7 +348,7 @@ describe('StatsScreen: ranking', () => {
   it('shows an error when the ranking fails to load', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => json(500, { error: 'internal_error', message: 'Internal server error' })),
+      vi.fn(() => Promise.resolve(json(500, { error: 'internal_error', message: 'Internal server error' }))),
     );
     render(<StatsScreen playerId={null} />);
     expect(await screen.findByText('Nie udało się pobrać statystyk')).toBeTruthy();
@@ -533,9 +535,9 @@ describe('StatsScreen: player card', () => {
   it('shows Brak graczy without profiles', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
+      vi.fn((url: string) => {
         urls.push(url);
-        return json(200, []);
+        return Promise.resolve(json(200, []));
       }),
     );
     render(<StatsScreen playerId="p1" />);
@@ -553,7 +555,7 @@ describe('StatsScreen: player profile', () => {
     render(<StatsScreen playerId="p1" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Edytuj profil' }));
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
-    expect((within(dialog).getByLabelText('Imię') as HTMLInputElement).value).toBe('Anna');
+    expect(within(dialog).getByLabelText<HTMLInputElement>('Imię').value).toBe('Anna');
     fireEvent.change(within(dialog).getByLabelText('Imię'), { target: { value: ' Ania ' } });
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Inne emoji' }), { target: { value: '🦊' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
@@ -571,9 +573,9 @@ describe('StatsScreen: player profile', () => {
     render(<StatsScreen playerId="p2" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Edytuj profil' }));
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
-    const checked = (within(within(dialog).getByRole('group', { name: 'Kolor' })).getAllByRole('radio') as HTMLInputElement[]).filter(
-      (radio) => radio.checked,
-    );
+    const checked = within(within(dialog).getByRole('group', { name: 'Kolor' }))
+      .getAllByRole<HTMLInputElement>('radio')
+      .filter((radio) => radio.checked);
     expect(checked.map((radio) => radio.getAttribute('aria-label'))).toEqual(['Różowy']);
     expect(checked[0]?.closest('label')?.textContent).toBe('✓');
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Błękitny' }));
@@ -613,7 +615,7 @@ describe('StatsScreen: player profile', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Edytuj profil' }));
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
-    expect((within(dialog).getByRole('radio', { name: '🎯' }) as HTMLInputElement).checked).toBe(true);
+    expect(within(dialog).getByRole<HTMLInputElement>('radio', { name: '🎯' }).checked).toBe(true);
     fireEvent.click(within(dialog).getByRole('radio', { name: /Bez emoji/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
     await vi.waitFor(() =>
@@ -626,7 +628,7 @@ describe('StatsScreen: player profile', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Edytuj profil' }));
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => json(400, { error: 'invalid_request', message: 'Invalid request: name: Too big' })),
+      vi.fn(() => Promise.resolve(json(400, { error: 'invalid_request', message: 'Invalid request: name: Too big' }))),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
     expect(await within(screen.getByRole('dialog')).findByText(pl.invalidRequest)).toBeTruthy();

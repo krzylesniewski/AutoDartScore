@@ -39,7 +39,7 @@ function setup({ layout = 'ring', disabled = false, undoDisabled = false, checko
     />
   );
   const view = render(keypad({}));
-  const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement;
+  const button = (name: string) => screen.getByRole<HTMLButtonElement>('button', { name });
   const rerender = (next: SetupOptions) => view.rerender(keypad(next));
   return { onHit, onRestMiss, onUndo, button, rerender };
 }
@@ -231,7 +231,7 @@ describe('Keypad', () => {
         <Keypad onHit={onHit} onRestMiss={onRestMiss} onUndo={onUndo} disabled={next} undoDisabled={false} checkout={null} />
       );
       const view = render(keypad(disabled));
-      const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement;
+      const button = (name: string) => screen.getByRole<HTMLButtonElement>('button', { name });
       const rerender = (next: boolean) => view.rerender(keypad(next));
       return { onHit, button, rerender };
     }
@@ -719,7 +719,7 @@ describe('Keypad', () => {
     ];
     const anna = (hits: readonly FrequentHit[]): FrequentHits => ({ playerName: 'Anna', hits });
     const row = () => screen.getByRole('group', { name: 'Najczęstsze: Anna' });
-    const rowKey = (name: string) => within(row()).getByRole('button', { name }) as HTMLButtonElement;
+    const rowKey = (name: string) => within(row()).getByRole<HTMLButtonElement>('button', { name });
 
     it.each(LAYOUTS)('names the row after the thrower and labels each hit in the %s layout', (layout) => {
       setup({ layout, frequent: anna(SIX) });

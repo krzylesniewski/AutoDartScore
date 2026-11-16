@@ -283,14 +283,14 @@ describe('MatchSummaryPanel: saving a guest', () => {
     status = 200;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: RequestInit = {}) => {
+      vi.fn((url: string, init: RequestInit = {}) => {
         const body: unknown = typeof init.body === 'string' ? JSON.parse(init.body) : undefined;
         requests.push({ url, method: init.method ?? 'GET', body });
         const response =
           status === 200
             ? { id: 'p2', name: 'Bartek', avatar: null, color: 7, guest: false, archivedAt: null, createdAt: '2026-10-15T18:30:00.000Z' }
             : { error: 'internal_error', message: 'Internal server error' };
-        return new Response(JSON.stringify(response), { status, headers: { 'content-type': 'application/json' } });
+        return Promise.resolve(new Response(JSON.stringify(response), { status, headers: { 'content-type': 'application/json' } }));
       }),
     );
   });

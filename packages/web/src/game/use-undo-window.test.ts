@@ -41,6 +41,24 @@ describe('useUndoWindow', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('counts from the current time when the game finishes long after mount', () => {
+    const { result, rerender } = renderHook(({ state }) => useUndoWindow(state), { initialProps: { state: snapshot() } });
+    act(() => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+    const now = Date.now();
+    rerender({
+      state: snapshot({
+        finished: true,
+        currentPlayerId: null,
+        winnerId: 'p1',
+        finishedAt: new Date(now).toISOString(),
+        editableUntil: new Date(now + 5 * 60_000).toISOString(),
+      }),
+    });
+    expect(result.current).toEqual({ locked: false, secondsLeft: 300 });
+  });
+
   it('clears the interval on unmount', () => {
     const { unmount } = renderHook(() => useUndoWindow(finished));
     expect(vi.getTimerCount()).toBe(1);

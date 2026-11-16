@@ -31,7 +31,7 @@ describe('UndoButton', () => {
   it('does nothing while disabled', () => {
     const onUndo = vi.fn<() => void>();
     render(<UndoButton onUndo={onUndo} disabled />);
-    const button = screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement;
+    const button = screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' });
     expect(button.disabled).toBe(true);
     fireEvent.click(button);
     expect(onUndo).not.toHaveBeenCalled();

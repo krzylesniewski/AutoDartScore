@@ -155,7 +155,7 @@ describe('TurnHistory', () => {
       ['Punkty', 'row'],
       ['Zostało', 'row'],
     ]);
-    const [points, remaining] = within(solo).getAllByRole('row').slice(1) as HTMLElement[];
+    const [points, remaining] = within(solo).getAllByRole('row').slice(1);
     expect(
       within(points as HTMLElement)
         .getAllByRole('cell')

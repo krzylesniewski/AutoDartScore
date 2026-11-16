@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { MatchListItem } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   LEG_301,
@@ -117,7 +118,7 @@ async function insertCorruptMatches(): Promise<void> {
 
 async function get(url: string) {
   const response = await t.app.inject({ method: 'GET', url });
-  return { statusCode: response.statusCode, body: response.json() };
+  return { statusCode: response.statusCode, body: response.json<unknown>() };
 }
 
 function aggregates(): Promise<{ statusCode: number; body: unknown }[]> {
@@ -147,7 +148,7 @@ describe('corrupt matches', () => {
     const list = await listMatches(t.app);
     expect(
       list
-        .json()
+        .json<MatchListItem[]>()
         .map((item: { id: string }) => item.id)
         .sort(),
     ).toEqual([finished.id, unfinished.id].sort());

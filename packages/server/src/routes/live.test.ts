@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { LiveMessage, RestMissResult } from '@autoscore/schema';
+import { LiveMessage, RestMissResult, type ThrowResult } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   D,
@@ -96,7 +96,7 @@ describe('GET /matches/:id/live', () => {
       'state_updated',
     ]);
     expect(messages.every((message) => message.matchId === id && message.eventSeq === 9)).toBe(true);
-    expect(messages.at(-1)).toEqual({ type: 'state_updated', matchId: id, eventSeq: 9, state: response.json().state });
+    expect(messages.at(-1)).toEqual({ type: 'state_updated', matchId: id, eventSeq: 9, state: response.json<ThrowResult>().state });
   });
 
   it('sends the closed turns of the leg in state_updated like the throw response', async () => {
@@ -112,7 +112,7 @@ describe('GET /matches/:id/live', () => {
       throw new Error(`Expected state_updated, got ${last?.type}`);
     }
     expect(last.state.legTurns).toHaveLength(1);
-    expect(last.state.legTurns).toEqual(response.json().state.legTurns);
+    expect(last.state.legTurns).toEqual(response.json<ThrowResult>().state.legTurns);
   });
 
   it('sends throw_undone and then state_updated after an undo', async () => {
@@ -124,7 +124,7 @@ describe('GET /matches/:id/live', () => {
     expect((await undo(t.app, id)).statusCode).toBe(200);
     const messages = (await received(subscriber, 3)).slice(1);
     expect(messages).toEqual([
-      { type: 'throw_undone', matchId: id, eventSeq: 2, throwId: thrown.throw.id },
+      { type: 'throw_undone', matchId: id, eventSeq: 2, throwId: thrown!.throw.id },
       expect.objectContaining({ type: 'state_updated', eventSeq: 2 }),
     ]);
   });

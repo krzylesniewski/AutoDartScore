@@ -90,16 +90,16 @@ function lockPath(): string | null | undefined {
 }
 
 function undoButton(name: string | RegExp = /^Cofnij/): HTMLButtonElement {
-  return screen.getByRole('button', { name }) as HTMLButtonElement;
+  return screen.getByRole<HTMLButtonElement>('button', { name });
 }
 
 function rematchButton(): HTMLButtonElement {
-  return screen.getByRole('button', { name: 'Rewanż' }) as HTMLButtonElement;
+  return screen.getByRole<HTMLButtonElement>('button', { name: 'Rewanż' });
 }
 
 beforeEach(() => {
   calls = [];
-  respond = async () => json(201, snapshot({ id: 'm_43' }));
+  respond = () => Promise.resolve(json(201, snapshot({ id: 'm_43' })));
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
@@ -290,7 +290,7 @@ describe('MatchEndView', () => {
   });
 
   it('shows a failed rematch, keeps the hash and enables the button again', async () => {
-    respond = async () => json(500, { error: 'internal', message: 'boom' });
+    respond = () => Promise.resolve(json(500, { error: 'internal', message: 'boom' }));
     window.location.hash = '#/matches/m1';
     view();
     fireEvent.click(rematchButton());
@@ -308,7 +308,7 @@ describe('MatchEndView', () => {
 
   it('disables Cofnij while busy', () => {
     view({ busy: true });
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(true);
   });
 
   it('counts down on Cofnij and then disables it with the lock notice', () => {

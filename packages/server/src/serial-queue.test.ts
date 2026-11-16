@@ -28,7 +28,7 @@ describe('createSerialQueue', () => {
     const order: string[] = [];
     let release = () => {};
     const blocked = queue('m1', () => new Promise<void>((resolve) => (release = resolve)).then(() => void order.push('m1')));
-    await queue('m2', async () => void order.push('m2'));
+    await queue('m2', () => Promise.resolve(void order.push('m2')));
     release();
     await blocked;
     expect(order).toEqual(['m2', 'm1']);

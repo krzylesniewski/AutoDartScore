@@ -10,8 +10,8 @@ import {
   type FreeRunState,
 } from './index.js';
 
-const S = (n: number): Hit => ({ segment: n, multiplier: 1 }) as Hit;
-const T = (n: number): Hit => ({ segment: n, multiplier: 3 }) as Hit;
+const S = (n: number): Hit => ({ segment: n, multiplier: 1 });
+const T = (n: number): Hit => ({ segment: n, multiplier: 3 });
 const MISS: Hit = { segment: 0, multiplier: 0 };
 
 const config: FreeRunConfig = { playerId: 'anna' };

@@ -38,7 +38,7 @@ function match301(bestOf = 3) {
   return createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301, bestOf });
 }
 
-async function expectError(response: Response, statusCode: number, code: string) {
+function expectError(response: Response, statusCode: number, code: string) {
   expect(response.statusCode).toBe(statusCode);
   expect(ApiError.parse(response.json()).error).toBe(code);
 }
@@ -132,19 +132,19 @@ describe('POST /matches/:id/rest-miss', () => {
   it('rejects a finished match with match_finished', async () => {
     const { id } = await match301(1);
     await throwDarts(t.app, id, LEG_301);
-    await expectError(await restMiss(t.app, id, { eventId: randomUUID() }), 409, 'match_finished');
+    expectError(await restMiss(t.app, id, { eventId: randomUUID() }), 409, 'match_finished');
     expect(await logEntries(t.db, id)).toHaveLength(LEG_301.length);
   });
 
   it('rejects a checkout practice with throws_not_allowed', async () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'checkouts', playerIds: [anna], checkoutRange: '2-50' });
-    await expectError(await restMiss(t.app, id, { eventId: randomUUID() }), 409, 'throws_not_allowed');
+    expectError(await restMiss(t.app, id, { eventId: randomUUID() }), 409, 'throws_not_allowed');
   });
 
   it('rejects an abandoned match with match_abandoned', async () => {
     const { id } = await match301();
     expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
-    await expectError(await restMiss(t.app, id, { eventId: randomUUID() }), 409, 'match_abandoned');
+    expectError(await restMiss(t.app, id, { eventId: randomUUID() }), 409, 'match_abandoned');
     expect(await countRows(t.db, 'throws')).toBe(0);
   });
 
@@ -152,14 +152,14 @@ describe('POST /matches/:id/rest-miss', () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     await throwDarts(t.app, id, [S(20)]);
     expect((await endPractice(t.app, id)).statusCode).toBe(200);
-    await expectError(await restMiss(t.app, id, { eventId: randomUUID() }), 409, 'practice_ended');
+    expectError(await restMiss(t.app, id, { eventId: randomUUID() }), 409, 'practice_ended');
   });
 
   it('rejects an eventId already used by a normal throw with event_id_conflict', async () => {
     const { id } = await match301();
     const hit = hitEvent(id, S(20));
     expect((await postThrow(t.app, id, hit)).statusCode).toBe(201);
-    await expectError(await restMiss(t.app, id, { eventId: hit.eventId }), 409, 'event_id_conflict');
+    expectError(await restMiss(t.app, id, { eventId: hit.eventId }), 409, 'event_id_conflict');
     expect(await logEntries(t.db, id)).toHaveLength(1);
   });
 
@@ -168,20 +168,20 @@ describe('POST /matches/:id/rest-miss', () => {
     const second = await match301();
     const eventId = randomUUID();
     await restMissOk(first.id, { eventId });
-    await expectError(await restMiss(t.app, second.id, { eventId }), 409, 'event_id_conflict');
+    expectError(await restMiss(t.app, second.id, { eventId }), 409, 'event_id_conflict');
     expect(await logEntries(t.db, second.id)).toHaveLength(0);
   });
 
   it('rejects a missing body and a non-UUID eventId with 400', async () => {
     const { id } = await match301();
-    await expectError(await t.app.inject({ method: 'POST', url: `/matches/${id}/rest-miss` }), 400, 'invalid_request');
-    await expectError(await restMiss(t.app, id, { eventId: 'abc' }), 400, 'invalid_request');
-    await expectError(await restMiss(t.app, id, { eventId: randomUUID(), expectedSeq: -1 }), 400, 'invalid_request');
+    expectError(await t.app.inject({ method: 'POST', url: `/matches/${id}/rest-miss` }), 400, 'invalid_request');
+    expectError(await restMiss(t.app, id, { eventId: 'abc' }), 400, 'invalid_request');
+    expectError(await restMiss(t.app, id, { eventId: randomUUID(), expectedSeq: -1 }), 400, 'invalid_request');
     expect(await countRows(t.db, 'throws')).toBe(0);
   });
 
   it('answers an unknown match with a valid body with 404', async () => {
-    await expectError(await restMiss(t.app, 'nope', { eventId: randomUUID() }), 404, 'not_found');
+    expectError(await restMiss(t.app, 'nope', { eventId: randomUUID() }), 404, 'not_found');
   });
 
   it('passes the turn to the next player in a casual game', async () => {

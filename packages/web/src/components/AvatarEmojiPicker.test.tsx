@@ -50,7 +50,7 @@ describe('AvatarEmojiPicker', () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole('radio', { name: '👾' }));
     expect(value()).toBe('👾');
-    expect((screen.getByRole('radio', { name: '👾' }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole<HTMLInputElement>('radio', { name: '👾' }).checked).toBe(true);
     fireEvent.click(screen.getByRole('radio', { name: /Bez emoji/ }));
     expect(value()).toBe('');
   });

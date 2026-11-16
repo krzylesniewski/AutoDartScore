@@ -1,4 +1,4 @@
-import { LiveMessage } from '@autoscore/schema';
+import { LiveMessage, type MatchSnapshot, type Player } from '@autoscore/schema';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createToken } from '../auth/credentials.js';
 import { S, createGame, createPlayers, hitEvent, setup, type TestApp } from '../test-helpers.js';
@@ -47,7 +47,7 @@ async function createMatch(app: TestApp['app']): Promise<string> {
   for (const name of ['Anna', 'Bartek']) {
     const response = await app.inject({ method: 'POST', url: '/players', headers, payload: { name } });
     expect(response.statusCode).toBe(201);
-    ids.push(response.json().id);
+    ids.push(response.json<Player>().id);
   }
   const response = await app.inject({
     method: 'POST',
@@ -56,7 +56,7 @@ async function createMatch(app: TestApp['app']): Promise<string> {
     payload: { type: 'match', playerIds: ids, startingScore: 301 },
   });
   expect(response.statusCode).toBe(201);
-  return response.json().id;
+  return response.json<MatchSnapshot>().id;
 }
 
 async function connect(app: TestApp['app'], path: string, headers: Record<string, string> = {}): Promise<Client> {

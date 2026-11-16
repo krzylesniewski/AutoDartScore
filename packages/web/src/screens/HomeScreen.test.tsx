@@ -85,7 +85,7 @@ beforeEach(() => {
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
       const method = init.method ?? 'GET';
-      const call = { url, method, body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined };
+      const call = { url, method, body: typeof init.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined };
       calls.push(call);
       const custom = respond(call);
       if (custom) {
@@ -119,7 +119,7 @@ afterEach(() => {
 });
 
 function button(name: string | RegExp): HTMLButtonElement {
-  return screen.getByRole('button', { name }) as HTMLButtonElement;
+  return screen.getByRole<HTMLButtonElement>('button', { name });
 }
 
 function pressed(name: string | RegExp): string | null {
@@ -515,7 +515,7 @@ describe('HomeScreen: new player dialog', () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('+ Nowy gracz'));
-    const radios = within(within(dialog()).getByRole('group', { name: 'Kolor' })).getAllByRole('radio') as HTMLInputElement[];
+    const radios = within(within(dialog()).getByRole('group', { name: 'Kolor' })).getAllByRole<HTMLInputElement>('radio');
     expect(radios.map((radio) => radio.getAttribute('aria-label'))).toEqual([
       'Bursztynowy',
       'Niebieski',
@@ -545,7 +545,7 @@ describe('HomeScreen: new player dialog', () => {
     fireEvent.click(button('+ Nowy gracz'));
     fireEvent.change(within(dialog()).getByLabelText('Imię'), { target: { value: 'Gosia' } });
     fireEvent.click(within(dialog()).getByRole('radio', { name: 'Turkusowy' }));
-    expect((within(dialog()).getByRole('radio', { name: 'Turkusowy' }) as HTMLInputElement).checked).toBe(true);
+    expect(within(dialog()).getByRole<HTMLInputElement>('radio', { name: 'Turkusowy' }).checked).toBe(true);
     expect(within(dialog()).queryByText('Bez wyboru kolor zostanie dobrany automatycznie.')).toBeNull();
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Dodaj' }));
 
@@ -664,7 +664,7 @@ describe('HomeScreen: games to finish', () => {
       call.url.endsWith('/abandon') ? Promise.resolve(json(200, snapshot({ id: 'm_second', status: 'abandoned' }))) : null;
     fireEvent.click(within(live).getByRole('button', { name: 'Porzuć: Celina vs Darek' }));
     const dialog = screen.getByRole('dialog', { name: 'Porzucić mecz?' });
-    expect((within(dialog).getByRole('radio', { name: 'Celina' }) as HTMLInputElement).checked).toBe(true);
+    expect(within(dialog).getByRole<HTMLInputElement>('radio', { name: 'Celina' }).checked).toBe(true);
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Darek' }));
     games = [
       firstLeg,

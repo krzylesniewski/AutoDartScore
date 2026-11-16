@@ -5,7 +5,7 @@ import { Keypad } from '../components/Keypad';
 import { SettingsScreen } from './SettingsScreen';
 
 function radio(name: string): HTMLInputElement {
-  return screen.getByRole('radio', { name }) as HTMLInputElement;
+  return screen.getByRole<HTMLInputElement>('radio', { name });
 }
 
 function toggle(name: string): HTMLElement {

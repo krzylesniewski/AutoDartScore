@@ -125,8 +125,8 @@ describe('POST /matches/:id/throws', () => {
     const { id, anna, bartek } = await match301();
     const [first, , third] = await throwDarts(t.app, id, [T(20), S(5), S(1)]);
     expect(ThrowResult.parse(first).events).toEqual([]);
-    expect(first.state).toMatchObject({ eventSeq: 1, currentDarts: [{ segment: 20, multiplier: 3 }], currentPlayerId: anna });
-    expect(third.events).toEqual([
+    expect(first!.state).toMatchObject({ eventSeq: 1, currentDarts: [{ segment: 20, multiplier: 3 }], currentPlayerId: anna });
+    expect(third!.events).toEqual([
       {
         type: 'turn_completed',
         playerId: anna,
@@ -141,8 +141,8 @@ describe('POST /matches/:id/throws', () => {
         remaining: 235,
       },
     ]);
-    expect(third.state).toMatchObject({ eventSeq: 3, currentPlayerId: bartek, turnIndex: 1, currentDarts: [] });
-    expect(remaining(third.state)).toEqual([235, 301]);
+    expect(third!.state).toMatchObject({ eventSeq: 3, currentPlayerId: bartek, turnIndex: 1, currentDarts: [] });
+    expect(remaining(third!.state)).toEqual([235, 301]);
   });
 
   it('restores the score from the start of the turn on a bust', async () => {
@@ -150,9 +150,9 @@ describe('POST /matches/:id/throws', () => {
     await throwDarts(t.app, id, [T(20), T(20), T(20), MISS, MISS, MISS]); // anna 121
     const results = await throwDarts(t.app, id, [T(20), T(20)]); // 121 - 60 - 60 = 1, bust
     const bust = results[1];
-    expect(bust.events).toEqual([expect.objectContaining({ type: 'bust', playerId: anna, remaining: 121 })]);
-    expect(bust.state.currentPlayerId).toBe(bartek);
-    expect(remaining(bust.state)).toEqual([121, 301]);
+    expect(bust!.events).toEqual([expect.objectContaining({ type: 'bust', playerId: anna, remaining: 121 })]);
+    expect(bust!.state.currentPlayerId).toBe(bartek);
+    expect(remaining(bust!.state)).toEqual([121, 301]);
   });
 
   it('finishes a best-of-1 match and rejects a further throw', async () => {
@@ -192,7 +192,7 @@ describe('POST /matches/:id/throws', () => {
     const { id } = await match301();
     const hit = hitEvent(id, S(20), { source: 'camera-1', sequence: 42, confidence: 0.4, detectedAt: '2026-10-15T18:30:12.345Z' });
     const result = ThrowResult.parse((await postThrow(t.app, id, hit)).json());
-    expect(result.throw).toEqual({ ...hit, id: expect.any(String), receivedAt: expect.any(String) });
+    expect(result.throw).toEqual({ ...hit, id: expect.any(String) as string, receivedAt: expect.any(String) as string });
   });
 });
 
@@ -207,9 +207,9 @@ describe('idempotency', () => {
     const again = await postThrow(t.app, id, hit);
     expect(again.statusCode).toBe(200);
     const result = ThrowResult.parse(again.json());
-    expect(result.throw).toEqual(first.json().throw);
+    expect(result.throw).toEqual(first.json<ThrowResult>().throw);
     expect(result.events).toEqual([]);
-    expect(result.state).toEqual(first.json().state);
+    expect(result.state).toEqual(first.json<ThrowResult>().state);
     expect(await countRows(t.db, 'throws')).toBe(1);
     expect(await logEntries(t.db, id)).toHaveLength(1);
   });
@@ -269,8 +269,8 @@ describe('casual game', () => {
     await turn([T(20), T(20), T(20)]); // bartek 121
     await turn([MISS, MISS, MISS]); // celina 301
     const annaOut = await turn([T(20), T(17), D(5)]);
-    expect(annaOut.at(-1).events.map((event: { type: string }) => event.type)).toEqual(['turn_completed', 'player_finished']);
-    expect(annaOut.at(-1).state.currentPlayerId).toBe(bartek);
+    expect(annaOut.at(-1)!.events.map((event: { type: string }) => event.type)).toEqual(['turn_completed', 'player_finished']);
+    expect(annaOut.at(-1)!.state.currentPlayerId).toBe(bartek);
 
     const bartekOut = await turn([T(20), T(17), D(5)]);
     const last = ThrowResult.parse(bartekOut.at(-1));
