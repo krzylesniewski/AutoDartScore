@@ -221,7 +221,7 @@ Kod ekranów statystyk, historii i ustawień wczytuje się dopiero po wejściu n
 pnpm --filter @autoscore/web test
 ```
 
-Vitest w środowisku jsdom z Testing Library. Konfiguracja jest w bloku `test` w `vite.config.ts`, a przygotowanie środowiska w `src/test-setup.ts`.
+Vitest z Testing Library w dwóch projektach z bloku `test.projects` w `vite.config.ts`. Projekt `node` uruchamia pliki `*.test.ts` w środowisku node, bez kosztu jsdom. Projekt `dom` uruchamia w jsdom wszystkie `*.test.tsx` i pliki `.ts` z listy `DOM_TESTS`, a środowisko przygotowuje mu `src/test-setup.ts`. Nowy test `.ts`, który potrzebuje DOM (na przykład `localStorage` albo `renderHook`), trzeba dopisać do `DOM_TESTS`. Jeden projekt uruchamia `pnpm --filter @autoscore/web exec vitest run --project node` (albo `dom`).
 
 Testy jednostkowe sprawdzają zachowanie przez rolę, nazwę, tekst i stan (`aria-*`, `data-pressed`, `data-flash`, `checked`, `disabled`), a nie przez klasy Tailwinda. jsdom nie wczytuje CSS, więc układ (przewijanie, mieszczenie się w oknie, położenie klawiatury) sprawdza `e2e/layout.spec.ts` w prawdziwej przeglądarce. Klasę sprawdzamy tylko wtedy, gdy to ona jest znaczeniem, na przykład stały kolor awatara, i taka linia ma nad sobą komentarz z powodem.
 
