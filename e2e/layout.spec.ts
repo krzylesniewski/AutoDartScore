@@ -1,6 +1,17 @@
 import { expect, test, type Locator, type Page, type WebSocketRoute } from '@playwright/test';
 import type { Hit, Player } from '@autoscore/schema';
-import { FINISHING_DARTS, MISS, abandonMatchByApi, createCasualByApi, createMatchByApi, createPlayerByApi, createPracticeByApi, frequentHitsByApi, loginByApi, postThrowsByApi } from './helpers/api';
+import {
+  FINISHING_DARTS,
+  MISS,
+  abandonMatchByApi,
+  createCasualByApi,
+  createMatchByApi,
+  createPlayerByApi,
+  createPracticeByApi,
+  frequentHitsByApi,
+  loginByApi,
+  postThrowsByApi,
+} from './helpers/api';
 import { currentThrower, keypadKey, scoreboard, throwerRow, waitForKeypad } from './helpers/game';
 import { boxOf, expectInViewport, expectNoHorizontalScroll, expectNoOverlap, expectSameBox, keypadBox, type Box } from './helpers/layout';
 import { uniqueName, useToken } from './helpers/session';
@@ -76,7 +87,9 @@ async function expectReadable(element: Locator): Promise<void> {
 async function expectStatusOverlaysPassClicks(page: Page): Promise<void> {
   const overlays = await page
     .locator('[role="status"]')
-    .evaluateAll((nodes) => nodes.filter((node) => getComputedStyle(node).position === 'absolute').map((node) => getComputedStyle(node).pointerEvents));
+    .evaluateAll((nodes) =>
+      nodes.filter((node) => getComputedStyle(node).position === 'absolute').map((node) => getComputedStyle(node).pointerEvents),
+    );
   expect(overlays.length).toBeGreaterThan(0);
   expect(overlays.filter((value) => value !== 'none')).toEqual([]);
 }
@@ -89,7 +102,8 @@ async function expectClippedSideways(panel: Locator): Promise<void> {
 // Czy element leży w widocznej części najbliższego przodka z overflow auto albo scroll w danej osi.
 async function insideScrollContainer(element: Locator, axis: 'x' | 'y'): Promise<boolean> {
   return element.evaluate((node, along) => {
-    const overflow = (candidate: Element) => (along === 'x' ? getComputedStyle(candidate).overflowX : getComputedStyle(candidate).overflowY);
+    const overflow = (candidate: Element) =>
+      along === 'x' ? getComputedStyle(candidate).overflowX : getComputedStyle(candidate).overflowY;
     let scroller = node.parentElement;
     while (scroller && !['auto', 'scroll'].includes(overflow(scroller))) {
       scroller = scroller.parentElement;
@@ -99,7 +113,9 @@ async function insideScrollContainer(element: Locator, axis: 'x' | 'y'): Promise
     }
     const rect = node.getBoundingClientRect();
     const box = scroller.getBoundingClientRect();
-    return along === 'x' ? rect.left >= box.left - 1 && rect.right <= box.right + 1 : rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1;
+    return along === 'x'
+      ? rect.left >= box.left - 1 && rect.right <= box.right + 1
+      : rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1;
   }, axis);
 }
 
@@ -189,7 +205,10 @@ for (const viewport of VIEWPORTS) {
       await expect(page.getByRole('button', { name: 'Rewanż', exact: true })).toBeVisible();
       await fontsReady(page);
       await expectNoHorizontalScroll(page);
-      for (const control of [page.getByRole('button', { name: 'Rewanż', exact: true }), page.getByRole('link', { name: 'Nowy mecz', exact: true })]) {
+      for (const control of [
+        page.getByRole('button', { name: 'Rewanż', exact: true }),
+        page.getByRole('link', { name: 'Nowy mecz', exact: true }),
+      ]) {
         await expectBoxInViewport(page, control);
         // Próbne kliknięcie sprawdza, że nakładka ze statusem nie przykrywa przycisku, i niczego nie zmienia.
         await control.click({ trial: true });
@@ -239,7 +258,10 @@ for (const viewport of VIEWPORTS) {
       expectSameBox(await keypadBox(page), before);
       expect(Math.abs((await boxOf(scoreboard(page))).height - board.height)).toBeLessThanOrEqual(1);
       // Etykieta z liczbą rzutek mieści się na karcie dopiero od xl, a poniżej stoi krótka.
-      const [shown, hidden] = viewport.width >= XL ? [card.getByText(/^Zamknięcie w /), card.getByText('Zamknięcie', { exact: true })] : [card.getByText('Zamknięcie', { exact: true }), card.getByText(/^Zamknięcie w /)];
+      const [shown, hidden] =
+        viewport.width >= XL
+          ? [card.getByText(/^Zamknięcie w /), card.getByText('Zamknięcie', { exact: true })]
+          : [card.getByText('Zamknięcie', { exact: true }), card.getByText(/^Zamknięcie w /)];
       await expectReadable(shown);
       await expect(hidden).toBeHidden();
 
@@ -344,7 +366,12 @@ for (const viewport of VIEWPORTS) {
         const current = page.locator('tr[aria-current="true"]');
         await expect(current.locator('th')).toHaveText('7');
         // Otwarty panel zajmuje miejsce paska wyników, panelu tury, karty zamknięcia i statystyk meczu.
-        const swapped = [scoreboard(page), page.getByText('w tej turze'), page.getByRole('button', { name: /^Zamknięcie/ }), page.getByRole('table', { name: 'Statystyki meczu' })];
+        const swapped = [
+          scoreboard(page),
+          page.getByText('w tej turze'),
+          page.getByRole('button', { name: /^Zamknięcie/ }),
+          page.getByRole('table', { name: 'Statystyki meczu' }),
+        ];
         for (const part of swapped) {
           await expect(part).toBeVisible();
         }
@@ -388,7 +415,11 @@ for (const viewport of VIEWPORTS) {
         expect(column?.holdsScoreboard).toBe(true);
         expect(column?.holdsKeypad).toBe(false);
         expect(column?.bottom).toBeLessThanOrEqual(viewport.height + 1);
-        expect(await page.evaluate(() => (document.scrollingElement ? document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight : 0))).toBeLessThanOrEqual(1);
+        expect(
+          await page.evaluate(() =>
+            document.scrollingElement ? document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight : 0,
+          ),
+        ).toBeLessThanOrEqual(1);
         // Tabela historii przewija się od dołu, więc bieżąca tura leży w jej widocznej części.
         expect(await insideScrollContainer(current, 'y')).toBe(true);
         await current.scrollIntoViewIfNeeded();
@@ -476,7 +507,9 @@ for (const viewport of VIEWPORTS) {
       await expectClippedSideways(panel);
       const sizes = await panel.evaluate((node) => ({
         overflowY: node.scrollHeight - node.clientHeight,
-        rings: [...node.querySelectorAll('svg[aria-hidden="true"]')].filter((svg) => svg.querySelectorAll('circle').length === 3).map((svg) => getComputedStyle(svg).pointerEvents),
+        rings: [...node.querySelectorAll('svg[aria-hidden="true"]')]
+          .filter((svg) => svg.querySelectorAll('circle').length === 3)
+          .map((svg) => getComputedStyle(svg).pointerEvents),
       }));
       expect(sizes.overflowY).toBeGreaterThan(0);
       expect(sizes.rings).toEqual(['none']);
@@ -693,7 +726,12 @@ test.describe('checkout card fills the free height from lg', () => {
       await expectCardFills(page, await placeholderBox(page), keypad);
 
       // Sześć razy T20 zostawia 141 z trasą na trzy rzutki.
-      await postThrowsByApi(request, token, solo.id, Array.from({ length: 6 }, () => T20));
+      await postThrowsByApi(
+        request,
+        token,
+        solo.id,
+        Array.from({ length: 6 }, () => T20),
+      );
       await expect(checkoutCard(page)).toHaveAttribute('aria-label', /^Zamknięcie w 3 rzutkach: /);
       expectSameBox(await keypadBox(page), keypad);
       await expectCardFills(page, await boxOf(checkoutCard(page)), keypad);
@@ -705,7 +743,10 @@ test.describe('checkout card fills the free height from lg', () => {
     test.use({ viewport: { width: 2560, height: 1250 } });
 
     test('casual with 4 players keeps the keypad box while the card fills the space under it', async ({ page, request }) => {
-      const extra = [await createPlayerByApi(request, token, uniqueName('Ala')), await createPlayerByApi(request, token, uniqueName('Olek'))];
+      const extra = [
+        await createPlayerByApi(request, token, uniqueName('Ala')),
+        await createPlayerByApi(request, token, uniqueName('Olek')),
+      ];
       const casual = await createCasualByApi(request, token, [players[0].id, players[1].id, ...extra.map((player) => player.id)]);
       await page.goto(`/#/matches/${casual.id}`);
       await waitForKeypad(page);

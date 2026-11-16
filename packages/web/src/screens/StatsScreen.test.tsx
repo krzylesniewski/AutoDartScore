@@ -1,4 +1,13 @@
-import type { HeadToHead, MatchListItem, Player, PlayerFormPoint, PlayerStats, RankingEntry, StatsOverall, StatsRankings } from '@autoscore/schema';
+import type {
+  HeadToHead,
+  MatchListItem,
+  Player,
+  PlayerFormPoint,
+  PlayerStats,
+  RankingEntry,
+  StatsOverall,
+  StatsRankings,
+} from '@autoscore/schema';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pl } from '../i18n/pl';
@@ -136,7 +145,10 @@ beforeEach(() => {
               }
             : player,
         );
-        return json(200, profiles.find((player) => player.id === id));
+        return json(
+          200,
+          profiles.find((player) => player.id === id),
+        );
       }
       if (url === '/api/players?archived=include') {
         return json(200, profiles);
@@ -200,7 +212,11 @@ describe('StatsScreen: ranking', () => {
     expect(urls).toContain('/api/stats/rankings?type=all&period=all');
 
     const list = tile('Średnia (3 rzutki)');
-    expect(rows(within(list).getByRole('list', { name: 'Podium średniej' }))).toEqual(['AAnna61,50Miejsce 125 legów', '🎯Bartek55,25Miejsce 221 legów', 'CCelina40,00Miejsce 33 legi']);
+    expect(rows(within(list).getByRole('list', { name: 'Podium średniej' }))).toEqual([
+      'AAnna61,50Miejsce 125 legów',
+      '🎯Bartek55,25Miejsce 221 legów',
+      'CCelina40,00Miejsce 33 legi',
+    ]);
     expect(rows(within(list).getByRole('list', { name: 'Dalsze miejsca' }))).toEqual(['DDarek2 legi70,00']);
     for (const [name, id] of [
       ['Anna', 'p1'],
@@ -208,7 +224,11 @@ describe('StatsScreen: ranking', () => {
       ['Celina', 'p3'],
       ['Darek', 'p4'],
     ] as const) {
-      expect(within(list).getByRole('link', { name: new RegExp(name) }).getAttribute('href')).toBe(`#/stats/${id}`);
+      expect(
+        within(list)
+          .getByRole('link', { name: new RegExp(name) })
+          .getAttribute('href'),
+      ).toBe(`#/stats/${id}`);
     }
     expect(within(list).getByText('Średnia od 3 ukończonych legów.')).toBeTruthy();
   });
@@ -218,7 +238,11 @@ describe('StatsScreen: ranking', () => {
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
     const tiles = ['Win rate', 'Rekordowy leg (średnia)', 'Najwyższe zamknięcie', 'Najkrótszy leg', 'Najwyższa tura', 'Trafienia T20'];
     const records = screen.getByRole('region', { name: 'Rekordy' });
-    expect(within(records).getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual(tiles);
+    expect(
+      within(records)
+        .getAllByRole('region')
+        .map((region) => region.getAttribute('aria-label')),
+    ).toEqual(tiles);
     expect(screen.queryByText('% doubli')).toBeNull();
     expect(within(tile('Rekordowy leg (średnia)')).getByText('3 rzutki')).toBeTruthy();
     expect(rows(tile('Rekordowy leg (średnia)'))).toEqual(['1.AAnna98,33', '2.🎯Bartek86,50', '3.CCelina74,20']);
@@ -284,7 +308,18 @@ describe('StatsScreen: ranking', () => {
   });
 
   it('shows one message instead of the list and tiles without games', async () => {
-    rankings = { ...rankingsFixture, games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [], winRate: [], t20Hits: [] };
+    rankings = {
+      ...rankingsFixture,
+      games: 0,
+      legs: 0,
+      players: [],
+      bestLegAverage: [],
+      highestCheckout: [],
+      shortestLeg: [],
+      highestTurn: [],
+      winRate: [],
+      t20Hits: [],
+    };
     render(<StatsScreen playerId={null} />);
     expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
     expect(screen.getByText('Ranking graczy z całej historii · 0 gier, 0 legów')).toBeTruthy();
@@ -378,7 +413,13 @@ describe('StatsScreen: overall', () => {
     expect(value('Legi')).toBe('61');
     expect(within(card()).getAllByRole('term')).toHaveLength(4);
 
-    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Typ gry', 'Okres', 'Powyżej średniej', 'Poniżej średniej', 'Bez ukończonego lega']);
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
+      'Typ gry',
+      'Okres',
+      'Powyżej średniej',
+      'Poniżej średniej',
+      'Bez ukończonego lega',
+    ]);
     expect(rows(screen.getByRole('region', { name: 'Powyżej średniej' }))).toEqual(['AAnna150,50+75,256 lotek']);
     expect(rows(screen.getByRole('region', { name: 'Poniżej średniej' }))).toEqual(['🎯Bartek0,00−75,253 lotki']);
     expect(rows(screen.getByRole('region', { name: 'Bez ukończonego lega' }))).toEqual(['CCelina—12 lotek']);
@@ -518,7 +559,9 @@ describe('StatsScreen: player profile', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Ania' })).toBeTruthy();
-    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([{ url: '/api/players/p1', method: 'PATCH', body: { name: 'Ania', avatar: '🦊', color: 1 } }]);
+    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([
+      { url: '/api/players/p1', method: 'PATCH', body: { name: 'Ania', avatar: '🦊', color: 1 } },
+    ]);
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByRole('button', { name: 'Ania' }).getAttribute('aria-pressed')).toBe('true');
     expect(urls.filter((url) => url === '/api/players?archived=include')).toHaveLength(2);
@@ -528,16 +571,22 @@ describe('StatsScreen: player profile', () => {
     render(<StatsScreen playerId="p2" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Edytuj profil' }));
     const dialog = screen.getByRole('dialog', { name: 'Edytuj profil' });
-    const checked = (within(within(dialog).getByRole('group', { name: 'Kolor' })).getAllByRole('radio') as HTMLInputElement[]).filter((radio) => radio.checked);
+    const checked = (within(within(dialog).getByRole('group', { name: 'Kolor' })).getAllByRole('radio') as HTMLInputElement[]).filter(
+      (radio) => radio.checked,
+    );
     expect(checked.map((radio) => radio.getAttribute('aria-label'))).toEqual(['Różowy']);
     expect(checked[0]?.closest('label')?.textContent).toBe('✓');
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Błękitny' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([{ url: '/api/players/p2', method: 'PATCH', body: { name: 'Bartek', color: 12 } }]);
+    expect(requests.filter((request) => request.method === 'PATCH')).toEqual([
+      { url: '/api/players/p2', method: 'PATCH', body: { name: 'Bartek', color: 12 } },
+    ]);
     // Stały kolor awatara gracza widać tylko w klasie tokenu, więc nowy kolor na karcie sprawdza klasa.
-    await vi.waitFor(() => expect(within(screen.getByRole('region', { name: 'Bartek' })).getByText('🎯').className).toContain('bg-(--color-avatar-12)'));
+    await vi.waitFor(() =>
+      expect(within(screen.getByRole('region', { name: 'Bartek' })).getByText('🎯').className).toContain('bg-(--color-avatar-12)'),
+    );
   });
 
   it('keeps the chosen head-to-head opponent after an edit', async () => {
@@ -548,7 +597,11 @@ describe('StatsScreen: player profile', () => {
     fireEvent.change(screen.getByLabelText('Imię'), { target: { value: 'Ania' } });
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Ania' })).toBeTruthy();
-    expect(within(screen.getByRole('region', { name: 'Bilans 1v1' })).getByRole('button', { name: 'Bartek' }).getAttribute('aria-pressed')).toBe('true');
+    expect(
+      within(screen.getByRole('region', { name: 'Bilans 1v1' }))
+        .getByRole('button', { name: 'Bartek' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 
   it('sends avatar null for an empty avatar, and Escape cancels', async () => {
@@ -563,7 +616,9 @@ describe('StatsScreen: player profile', () => {
     expect((within(dialog).getByRole('radio', { name: '🎯' }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(within(dialog).getByRole('radio', { name: /Bez emoji/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Zapisz' }));
-    await vi.waitFor(() => expect(requests.find((request) => request.method === 'PATCH')?.body).toEqual({ name: 'Anna', avatar: null, color: 1 }));
+    await vi.waitFor(() =>
+      expect(requests.find((request) => request.method === 'PATCH')?.body).toEqual({ name: 'Anna', avatar: null, color: 1 }),
+    );
   });
 
   it('shows an API error in the edit dialog', async () => {
@@ -623,7 +678,11 @@ describe('StatsScreen: form chart', () => {
     expect(chart.querySelectorAll('circle')).toHaveLength(2);
     expect(chart.querySelector('path')).not.toBeNull();
     const values = within(chart.parentElement as HTMLElement).getByRole('list');
-    expect(within(values).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Gra 1: 45,50', 'Gra 2: 60,25']);
+    expect(
+      within(values)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Gra 1: 45,50', 'Gra 2: 60,25']);
     expect(chart.parentElement?.textContent).toContain('60,25');
   });
 
@@ -644,7 +703,17 @@ describe('StatsScreen: head-to-head', () => {
   }
 
   it('shows matches, legs and both averages against the chosen opponent', async () => {
-    headToHead = (opponentId) => ({ ...emptyHeadToHead, opponentId, matchesPlayed: 4, matchesWon: 3, opponentMatchesWon: 1, legsWon: 7, opponentLegsWon: 4, average: 61.5, opponentAverage: 55.25 });
+    headToHead = (opponentId) => ({
+      ...emptyHeadToHead,
+      opponentId,
+      matchesPlayed: 4,
+      matchesWon: 3,
+      opponentMatchesWon: 1,
+      legsWon: 7,
+      opponentLegsWon: 4,
+      average: 61.5,
+      opponentAverage: 55.25,
+    });
     render(<StatsScreen playerId="p1" />);
     await screen.findByRole('region', { name: 'Bilans 1v1' });
     expect(within(panel()).getByText('Wybierz rywala.')).toBeTruthy();
@@ -668,7 +737,14 @@ describe('StatsScreen: head-to-head', () => {
 
 describe('StatsScreen: player history', () => {
   it('lists the games of the player with links to the details', async () => {
-    history = [listItem({ id: 'm9', status: 'finished', winnerId: 'p1', players: [player('p1', 'Anna', { legsWon: 2 }), player('p2', 'Bartek', { legsWon: 1 })] })];
+    history = [
+      listItem({
+        id: 'm9',
+        status: 'finished',
+        winnerId: 'p1',
+        players: [player('p1', 'Anna', { legsWon: 2 }), player('p2', 'Bartek', { legsWon: 1 })],
+      }),
+    ];
     render(<StatsScreen playerId="p1" />);
     const section = await screen.findByRole('region', { name: 'Historia gier' });
     expect(await within(section).findByText('Anna 2 : 1 Bartek')).toBeTruthy();
@@ -678,7 +754,14 @@ describe('StatsScreen: player history', () => {
   });
 
   it('repeats the game date in the type line of a history row', async () => {
-    history = [listItem({ id: 'm9', status: 'finished', winnerId: 'p1', players: [player('p1', 'Anna', { legsWon: 2 }), player('p2', 'Bartek', { legsWon: 1 })] })];
+    history = [
+      listItem({
+        id: 'm9',
+        status: 'finished',
+        winnerId: 'p1',
+        players: [player('p1', 'Anna', { legsWon: 2 }), player('p2', 'Bartek', { legsWon: 1 })],
+      }),
+    ];
     render(<StatsScreen playerId="p1" />);
     const section = await screen.findByRole('region', { name: 'Historia gier' });
     await within(section).findByText('Anna 2 : 1 Bartek');
@@ -686,7 +769,11 @@ describe('StatsScreen: player history', () => {
     const times = [...row.querySelectorAll('time')];
     expect(times).toHaveLength(2);
     expect(times[1]?.getAttribute('datetime')).toBe(times[0]?.getAttribute('datetime'));
-    expect(within(row).getByText(/^Mecz 1v1 · /).contains(times[1] as HTMLElement)).toBe(true);
+    expect(
+      within(row)
+        .getByText(/^Mecz 1v1 · /)
+        .contains(times[1] as HTMLElement),
+    ).toBe(true);
   });
 });
 
@@ -755,8 +842,14 @@ describe('StatsScreen: period', () => {
       expect(urls).toContain('/api/players/p1/form?type=all&period=30d');
       expect(urls).toContain('/api/players/p1/head-to-head/p2?period=30d');
     });
-    expect(within(screen.getByRole('region', { name: 'Bilans 1v1' })).getByRole('button', { name: 'Bartek' }).getAttribute('aria-pressed')).toBe('true');
-    expect(await within(screen.getByRole('region', { name: 'Bilans 1v1' })).findByText('Brak ukończonych meczów 1v1 z tym graczem.')).toBeTruthy();
+    expect(
+      within(screen.getByRole('region', { name: 'Bilans 1v1' }))
+        .getByRole('button', { name: 'Bartek' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(
+      await within(screen.getByRole('region', { name: 'Bilans 1v1' })).findByText('Brak ukończonych meczów 1v1 z tym graczem.'),
+    ).toBeTruthy();
     expect(urls.filter((url) => url.startsWith('/api/matches'))).toEqual(['/api/matches?playerId=p1']);
   });
 
@@ -797,7 +890,18 @@ describe('StatsScreen: period', () => {
   it('shows the empty ranking text for a period without games', async () => {
     render(<StatsScreen playerId={null} />);
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
-    rankings = { ...rankingsFixture, games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [], winRate: [], t20Hits: [] };
+    rankings = {
+      ...rankingsFixture,
+      games: 0,
+      legs: 0,
+      players: [],
+      bestLegAverage: [],
+      highestCheckout: [],
+      shortestLeg: [],
+      highestTurn: [],
+      winRate: [],
+      t20Hits: [],
+    };
     fireEvent.click(periodButton('30 dni'));
     expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
     expect(screen.getByText('Ranking graczy z ostatnich 30 dni · 0 gier, 0 legów')).toBeTruthy();
@@ -805,7 +909,10 @@ describe('StatsScreen: period', () => {
   });
 
   it('shows Brak rzutów for a player without throws in the period', async () => {
-    respondStats = (url) => (url.endsWith('period=30d') ? json(200, { ...stats('p1'), ...statLine(), period: '30d', matchesPlayed: 0, matchesWon: 0, winRate: null }) : json(200, stats('p1')));
+    respondStats = (url) =>
+      url.endsWith('period=30d')
+        ? json(200, { ...stats('p1'), ...statLine(), period: '30d', matchesPlayed: 0, matchesWon: 0, winRate: null })
+        : json(200, stats('p1'));
     render(<StatsScreen playerId="p1" />);
     await vi.waitFor(() => expect(document.querySelector('dl')).not.toBeNull());
     fireEvent.click(periodButton('30 dni'));

@@ -4,7 +4,15 @@ import { DomainEvent } from './index.js';
 describe('DomainEvent', () => {
   it('parses each event type', () => {
     const events = [
-      { type: 'turn_completed', playerId: 'p1', legIndex: 0, turnIndex: 0, darts: [{ segment: 20, multiplier: 3 }], total: 60, remaining: 441 },
+      {
+        type: 'turn_completed',
+        playerId: 'p1',
+        legIndex: 0,
+        turnIndex: 0,
+        darts: [{ segment: 20, multiplier: 3 }],
+        total: 60,
+        remaining: 441,
+      },
       { type: 'bust', playerId: 'p1', legIndex: 0, turnIndex: 5, darts: [{ segment: 20, multiplier: 1 }], remaining: 16 },
       { type: 'leg_won', playerId: 'p1', legIndex: 0, checkout: 40, dartsThrown: 15 },
       { type: 'match_won', playerId: 'p1', legsWon: { p1: 2, p2: 1 } },
@@ -30,12 +38,22 @@ describe('DomainEvent', () => {
   it('rejects a turn with more than 3 darts', () => {
     const dart = { segment: 1, multiplier: 1 };
     expect(
-      DomainEvent.safeParse({ type: 'turn_completed', playerId: 'p1', legIndex: 0, turnIndex: 0, darts: [dart, dart, dart, dart], total: 4, remaining: 497 }).success,
+      DomainEvent.safeParse({
+        type: 'turn_completed',
+        playerId: 'p1',
+        legIndex: 0,
+        turnIndex: 0,
+        darts: [dart, dart, dart, dart],
+        total: 4,
+        remaining: 497,
+      }).success,
     ).toBe(false);
   });
 
   it.each([0, 5])('rejects player_finished with place %i', (place) => {
-    expect(DomainEvent.safeParse({ type: 'player_finished', playerId: 'p1', legIndex: 0, place, checkout: 40, dartsThrown: 18 }).success).toBe(false);
+    expect(
+      DomainEvent.safeParse({ type: 'player_finished', playerId: 'p1', legIndex: 0, place, checkout: 40, dartsThrown: 18 }).success,
+    ).toBe(false);
   });
 
   it('rejects casual_finished with a single placement', () => {

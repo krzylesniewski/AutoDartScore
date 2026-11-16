@@ -63,7 +63,13 @@ export function HeadToHeadPanel({ player, opponents, period }: HeadToHeadPanelPr
           ) : (
             <div role="group" aria-label={pl.opponent} className="flex min-w-0 flex-wrap gap-2">
               {opponents.map((candidate) => (
-                <button key={candidate.id} type="button" aria-pressed={candidate.id === opponentId} onClick={() => setOpponentId(candidate.id)} className={chipStyle(candidate.id === opponentId)}>
+                <button
+                  key={candidate.id}
+                  type="button"
+                  aria-pressed={candidate.id === opponentId}
+                  onClick={() => setOpponentId(candidate.id)}
+                  className={chipStyle(candidate.id === opponentId)}
+                >
                   <Avatar name={candidate.name} avatar={candidate.avatar} color={candidate.color} />
                   <span className="min-w-0 truncate">{candidate.name}</span>
                 </button>
@@ -79,8 +85,12 @@ export function HeadToHeadPanel({ player, opponents, period }: HeadToHeadPanelPr
             {pl.headToHeadFailed}
           </p>
         )}
-        {result.status === 'ready' && result.value.matchesPlayed === 0 && <p className="font-display text-2xl text-(--color-text-muted)">{pl.headToHeadEmpty}</p>}
-        {result.status === 'ready' && result.value.matchesPlayed > 0 && <Results value={result.value} playerName={player.name} opponentName={opponent?.name ?? ''} />}
+        {result.status === 'ready' && result.value.matchesPlayed === 0 && (
+          <p className="font-display text-2xl text-(--color-text-muted)">{pl.headToHeadEmpty}</p>
+        )}
+        {result.status === 'ready' && result.value.matchesPlayed > 0 && (
+          <Results value={result.value} playerName={player.name} opponentName={opponent?.name ?? ''} />
+        )}
       </div>
     </section>
   );

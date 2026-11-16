@@ -100,7 +100,11 @@ const scenarios: readonly Scenario[] = [
   },
   { name: 'solo 501 to the checkout', config: solo, hits: soloTurns.flat() },
   { name: 'solo 501 stopped mid-turn', config: solo, hits: [...MAX, T(20), MISS] },
-  { name: 'free run', config: { type: 'practice', practiceMode: 'free_run', playerId: 'sam' }, hits: [T(20), MISS, BULL, OUTER_BULL, S(5), D(16), T(19)] },
+  {
+    name: 'free run',
+    config: { type: 'practice', practiceMode: 'free_run', playerId: 'sam' },
+    hits: [T(20), MISS, BULL, OUTER_BULL, S(5), D(16), T(19)],
+  },
   {
     name: 'checkouts repeat_on_miss',
     config: { type: 'practice', practiceMode: 'checkouts', playerId: 'sam', range: '2-50', seed: 12345, rule: 'repeat_on_miss' },

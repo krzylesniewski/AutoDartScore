@@ -145,7 +145,10 @@ describe('createReplayCache', () => {
   it('skips and logs a corrupt match, never caches it and lets one reject', async () => {
     const [a, broken, unreplayable] = [await freeRun(), await freeRun(), await freeRun()];
     // Wpis throw bez throw_id psuje odczyt logu, a undo nie ostatniej rzutki psuje odtworzenie.
-    await db.insertInto('match_events').values({ match_id: broken.id, seq: 2, type: 'throw', throw_id: null, created_at: '2026-11-15T18:00:00.000Z' }).execute();
+    await db
+      .insertInto('match_events')
+      .values({ match_id: broken.id, seq: 2, type: 'throw', throw_id: null, created_at: '2026-11-15T18:00:00.000Z' })
+      .execute();
     const [earlier] = (await store.loadLog(unreplayable.id)).throws.keys();
     await store.appendThrow(hitEvent(unreplayable.id, S(1)));
     await store.appendUndo(unreplayable.id, earlier ?? '');

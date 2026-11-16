@@ -68,7 +68,11 @@ const abandoned = item({
   legsToWin: null,
   status: 'abandoned',
   abandonment: { playerId: 'p2', reason: null, at: '2026-10-18T09:30:00.000Z' },
-  players: [player('p1', 'Anna', { remaining: 0, place: 1 }), player('p2', 'Bartek', { remaining: 77 }), player('p5', 'Ela', { remaining: 201 })],
+  players: [
+    player('p1', 'Anna', { remaining: 0, place: 1 }),
+    player('p2', 'Bartek', { remaining: 77 }),
+    player('p5', 'Ela', { remaining: 201 }),
+  ],
   updatedAt: '2026-10-18T09:30:00.000Z',
 });
 
@@ -92,7 +96,15 @@ beforeEach(() => {
       }
       if (url === '/api/players') {
         const body = call.body as { name: string; avatar?: string; color?: number; guest: boolean };
-        return json(201, { id: 'p_new', name: body.name, avatar: body.avatar ?? null, color: body.color ?? 2, guest: body.guest, archivedAt: null, createdAt });
+        return json(201, {
+          id: 'p_new',
+          name: body.name,
+          avatar: body.avatar ?? null,
+          color: body.color ?? 2,
+          guest: body.guest,
+          archivedAt: null,
+          createdAt,
+        });
       }
       if (url === '/api/matches?status=unfinished') {
         return json(200, games);
@@ -199,11 +211,11 @@ describe('HomeScreen: new game form', () => {
     expect(within(screen.getByRole('group', { name: 'Punkty startowe' })).getAllByRole('button')).toHaveLength(3);
     expect(within(screen.getByRole('group', { name: 'Liczba legów' })).getAllByRole('button')).toHaveLength(3);
     fireEvent.click(button('Trening'));
-    expect(within(screen.getByRole('group', { name: 'Tryb treningu' })).getAllByRole('button').map((segment) => segment.textContent)).toEqual([
-      'Free run',
-      'Solo 501',
-      'Końcówki',
-    ]);
+    expect(
+      within(screen.getByRole('group', { name: 'Tryb treningu' }))
+        .getAllByRole('button')
+        .map((segment) => segment.textContent),
+    ).toEqual(['Free run', 'Solo 501', 'Końcówki']);
   });
 
   it('shows the checkout range group only for Końcówki, with 2-50 preselected', async () => {
@@ -213,7 +225,11 @@ describe('HomeScreen: new game form', () => {
     expect(screen.queryByRole('group', { name: 'Przedział końcówek' })).toBeNull();
     fireEvent.click(button('Końcówki'));
     const range = screen.getByRole('group', { name: 'Przedział końcówek', description: '2-50 albo 51-100' });
-    expect(within(range).getAllByRole('button').map((segment) => segment.textContent)).toEqual(['2-50', '51-100']);
+    expect(
+      within(range)
+        .getAllByRole('button')
+        .map((segment) => segment.textContent),
+    ).toEqual(['2-50', '51-100']);
     expect(pressed('2-50')).toBe('true');
     expect(pressed('51-100')).toBe('false');
     fireEvent.click(button('Solo 501'));
@@ -403,7 +419,8 @@ describe('HomeScreen: new game form', () => {
   });
 
   it('shows a Polish text instead of the server message when the game cannot start', async () => {
-    respond = (call) => (call.url === '/api/matches' ? Promise.resolve(json(400, { error: 'unknown_player', message: 'Unknown player p2' })) : null);
+    respond = (call) =>
+      call.url === '/api/matches' ? Promise.resolve(json(400, { error: 'unknown_player', message: 'Unknown player p2' })) : null;
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('Anna'));
@@ -427,7 +444,9 @@ describe('HomeScreen: option groups and navigation', () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('Trening'));
-    expect(screen.getByRole('group', { name: 'Tryb treningu', description: 'swobodne rzucanie, zejście z 501 albo losowe końcówki' })).toBeTruthy();
+    expect(
+      screen.getByRole('group', { name: 'Tryb treningu', description: 'swobodne rzucanie, zejście z 501 albo losowe końcówki' }),
+    ).toBeTruthy();
   });
 
   it('offers no exit or entry rule groups in any game type', async () => {
@@ -479,7 +498,11 @@ describe('HomeScreen: new player dialog', () => {
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Dodaj' }));
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({ name: 'Gosia', guest: false, avatar: '🦊' });
+    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({
+      name: 'Gosia',
+      guest: false,
+      avatar: '🦊',
+    });
     expect(pressed('Gosia')).toBe('true');
     expect(screen.getByText('Gracze (6)')).toBeTruthy();
     expect(chipNames()[0]).toBe('Gosia');
@@ -527,7 +550,11 @@ describe('HomeScreen: new player dialog', () => {
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Dodaj' }));
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({ name: 'Gosia', guest: false, color: 6 });
+    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({
+      name: 'Gosia',
+      guest: false,
+      color: 6,
+    });
     expect(button('Gosia')).toBeTruthy();
   });
 
@@ -623,7 +650,8 @@ describe('HomeScreen: games to finish', () => {
   it('shows a failed resume and stays on the list', async () => {
     render(<HomeScreen />);
     const paused = await row('Zabawa, 3 graczy');
-    respond = (call) => (call.url.endsWith('/resume') ? Promise.resolve(json(409, { error: 'match_not_abandoned', message: 'Match is not abandoned' })) : null);
+    respond = (call) =>
+      call.url.endsWith('/resume') ? Promise.resolve(json(409, { error: 'match_not_abandoned', message: 'Match is not abandoned' })) : null;
     fireEvent.click(within(paused).getByRole('button', { name: 'Dokończ: Zabawa, 3 graczy' }));
     expect(await within(unfinished()).findByText('Nie udało się wznowić meczu')).toBeTruthy();
     expect(window.location.hash).toBe('#/');
@@ -632,12 +660,17 @@ describe('HomeScreen: games to finish', () => {
   it('abandons a game after the dialog and reloads the list', async () => {
     render(<HomeScreen />);
     const live = await row('Celina vs Darek');
-    respond = (call) => (call.url.endsWith('/abandon') ? Promise.resolve(json(200, snapshot({ id: 'm_second', status: 'abandoned' }))) : null);
+    respond = (call) =>
+      call.url.endsWith('/abandon') ? Promise.resolve(json(200, snapshot({ id: 'm_second', status: 'abandoned' }))) : null;
     fireEvent.click(within(live).getByRole('button', { name: 'Porzuć: Celina vs Darek' }));
     const dialog = screen.getByRole('dialog', { name: 'Porzucić mecz?' });
     expect((within(dialog).getByRole('radio', { name: 'Celina' }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Darek' }));
-    games = [firstLeg, { ...secondLeg, status: 'abandoned', abandonment: { playerId: 'p4', reason: null, at: '2026-10-18T11:00:00.000Z' } }, abandoned];
+    games = [
+      firstLeg,
+      { ...secondLeg, status: 'abandoned', abandonment: { playerId: 'p4', reason: null, at: '2026-10-18T11:00:00.000Z' } },
+      abandoned,
+    ];
     fireEvent.click(within(dialog).getByRole('button', { name: 'Porzuć mecz' }));
 
     await vi.waitFor(() => expect(within(unfinished()).getAllByText('Porzucony')).toHaveLength(2));
@@ -649,7 +682,8 @@ describe('HomeScreen: games to finish', () => {
   it('shows a failed abandon', async () => {
     render(<HomeScreen />);
     const live = await row('Celina vs Darek');
-    respond = (call) => (call.url.endsWith('/abandon') ? Promise.resolve(json(409, { error: 'match_finished', message: 'Match is finished' })) : null);
+    respond = (call) =>
+      call.url.endsWith('/abandon') ? Promise.resolve(json(409, { error: 'match_finished', message: 'Match is finished' })) : null;
     fireEvent.click(within(live).getByRole('button', { name: 'Porzuć: Celina vs Darek' }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Porzuć mecz' }));
     expect(await within(unfinished()).findByText('Nie udało się porzucić meczu')).toBeTruthy();
@@ -688,14 +722,21 @@ describe('HomeScreen: games to finish', () => {
     it('ends the session after the dialog and reloads the list', async () => {
       render(<HomeScreen />);
       const practice = await row('Trening: Free run');
-      respond = (call) => (call.url.endsWith('/end') ? Promise.resolve(json(200, snapshot({ id: 'm_free', type: 'practice', status: 'ended', endedAt: '2026-10-18T11:00:00.000Z' }))) : null);
+      respond = (call) =>
+        call.url.endsWith('/end')
+          ? Promise.resolve(json(200, snapshot({ id: 'm_free', type: 'practice', status: 'ended', endedAt: '2026-10-18T11:00:00.000Z' })))
+          : null;
       fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
       const dialog = screen.getByRole('dialog', { name: 'Zakończyć trening?' });
       games = [emptySolo, firstLeg];
       fireEvent.click(within(dialog).getByRole('button', { name: 'Zakończ trening' }));
 
       await vi.waitFor(() => expect(within(unfinished()).queryByText('Trening: Free run')).toBeNull());
-      expect(calls.find((call) => call.url === '/api/matches/m_free/end')).toEqual({ url: '/api/matches/m_free/end', method: 'POST', body: undefined });
+      expect(calls.find((call) => call.url === '/api/matches/m_free/end')).toEqual({
+        url: '/api/matches/m_free/end',
+        method: 'POST',
+        body: undefined,
+      });
       expect(calls.filter((call) => call.url === '/api/matches?status=unfinished')).toHaveLength(2);
       expect(screen.queryByRole('dialog')).toBeNull();
     });
@@ -716,7 +757,8 @@ describe('HomeScreen: games to finish', () => {
     it('shows a failed end', async () => {
       render(<HomeScreen />);
       const practice = await row('Trening: Free run');
-      respond = (call) => (call.url.endsWith('/end') ? Promise.resolve(json(409, { error: 'practice_ended', message: 'Match is ended' })) : null);
+      respond = (call) =>
+        call.url.endsWith('/end') ? Promise.resolve(json(409, { error: 'practice_ended', message: 'Match is ended' })) : null;
       fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
       fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Zakończ trening' }));
       expect(await within(unfinished()).findByText('Nie udało się zakończyć treningu')).toBeTruthy();
@@ -732,7 +774,10 @@ describe('HomeScreen: games to finish', () => {
   });
 
   it('shows an error when the list fails to load', async () => {
-    respond = (call) => (call.url === '/api/matches?status=unfinished' ? Promise.resolve(json(500, { error: 'internal_error', message: 'Internal server error' })) : null);
+    respond = (call) =>
+      call.url === '/api/matches?status=unfinished'
+        ? Promise.resolve(json(500, { error: 'internal_error', message: 'Internal server error' }))
+        : null;
     render(<HomeScreen />);
     expect(await screen.findByText('Nie udało się pobrać listy gier')).toBeTruthy();
     expect(screen.queryByText('Brak gier do dokończenia.')).toBeNull();

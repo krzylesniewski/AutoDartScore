@@ -49,21 +49,30 @@ async function createMatch(app: TestApp['app']): Promise<string> {
     expect(response.statusCode).toBe(201);
     ids.push(response.json().id);
   }
-  const response = await app.inject({ method: 'POST', url: '/matches', headers, payload: { type: 'match', playerIds: ids, startingScore: 301 } });
+  const response = await app.inject({
+    method: 'POST',
+    url: '/matches',
+    headers,
+    payload: { type: 'match', playerIds: ids, startingScore: 301 },
+  });
   expect(response.statusCode).toBe(201);
   return response.json().id;
 }
 
 async function connect(app: TestApp['app'], path: string, headers: Record<string, string> = {}): Promise<Client> {
   const client = { messages: [] as unknown[], pings: 0, closeCode: null as number | null };
-  const socket: TestSocket = await app.injectWS(path, { headers }, {
-    onInit(ws: TestSocket) {
-      ws.on('message', (data) => client.messages.push(JSON.parse(data.toString())));
-      ws.on('ping', (data) => ws.pong(data));
-      ws.on('ping', () => client.pings++);
-      ws.on('close', (code) => (client.closeCode = code));
+  const socket: TestSocket = await app.injectWS(
+    path,
+    { headers },
+    {
+      onInit(ws: TestSocket) {
+        ws.on('message', (data) => client.messages.push(JSON.parse(data.toString())));
+        ws.on('ping', (data) => ws.pong(data));
+        ws.on('ping', () => client.pings++);
+        ws.on('close', (code) => (client.closeCode = code));
+      },
     },
-  });
+  );
   sockets.push(socket);
   return Object.assign(client, { socket });
 }
@@ -90,7 +99,10 @@ describe('live WebSocket with a password', () => {
     ['a non-auth message', JSON.stringify({ type: 'subscribe', token })],
     ['a bad token', JSON.stringify({ type: 'auth', token: `${token}x` })],
     ['an expired token', JSON.stringify({ type: 'auth', token: createToken(auth, now) })],
-    ['a token signed for another password', JSON.stringify({ type: 'auth', token: createToken({ ...auth, password: 'stare' }, now + 60_000) })],
+    [
+      'a token signed for another password',
+      JSON.stringify({ type: 'auth', token: createToken({ ...auth, password: 'stare' }, now + 60_000) }),
+    ],
   ])('closes with 4401 after %s', async (_name, message) => {
     const { app } = await start({ auth });
     const client = await connect(app, `/matches/${await createMatch(app)}/live`);

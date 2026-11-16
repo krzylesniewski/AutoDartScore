@@ -32,7 +32,12 @@ describe('players', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const at = (minute: number) => vi.setSystemTime(new Date(Date.UTC(2026, 9, 18, 18, minute)));
     at(0);
-    const [anna, bartek, celina, darek] = [await createPlayer(t.app, 'Anna'), await createPlayer(t.app, 'Bartek'), await createPlayer(t.app, 'Celina'), await createPlayer(t.app, 'Darek')];
+    const [anna, bartek, celina, darek] = [
+      await createPlayer(t.app, 'Anna'),
+      await createPlayer(t.app, 'Bartek'),
+      await createPlayer(t.app, 'Celina'),
+      await createPlayer(t.app, 'Darek'),
+    ];
     at(1);
     const annaGame = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna.id] });
     at(2);
@@ -58,7 +63,11 @@ describe('players', () => {
     expect(guest.color).toBe(defaultPlayerColor(guest.id));
     for (let read = 0; read < 2; read++) {
       const list = await t.app.inject({ method: 'GET', url: '/players' });
-      expect(Player.array().parse(list.json()).map((player) => player.color)).toEqual([defaultPlayerColor(anna.id)]);
+      expect(
+        Player.array()
+          .parse(list.json())
+          .map((player) => player.color),
+      ).toEqual([defaultPlayerColor(anna.id)]);
     }
     const game = await createGame(t.app, { type: 'casual', playerIds: [anna.id, guest.id], startingScore: 301 });
     expect(game.players.map((player) => player.color)).toEqual([defaultPlayerColor(anna.id), defaultPlayerColor(guest.id)]);
@@ -145,6 +154,14 @@ describe('profile changes', () => {
     expect(players.json()).toHaveLength(2);
 
     const matches = await t.app.inject({ method: 'GET', url: '/matches' });
-    expect(matches.json()).toMatchObject([{ id: game.id, players: [{ id: anna.id, name: 'Anka', avatar: '🎯', color: 11 }, { id: bartek.id, name: 'Bartek' }] }]);
+    expect(matches.json()).toMatchObject([
+      {
+        id: game.id,
+        players: [
+          { id: anna.id, name: 'Anka', avatar: '🎯', color: 11 },
+          { id: bartek.id, name: 'Bartek' },
+        ],
+      },
+    ]);
   });
 });

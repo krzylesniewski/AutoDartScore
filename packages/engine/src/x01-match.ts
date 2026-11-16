@@ -50,12 +50,7 @@ export function createX01Match(config: X01MatchConfig): X01MatchState {
   return startLeg(config, 0, config.firstPlayerIndex, [0, 0]);
 }
 
-function startLeg(
-  config: X01MatchConfig,
-  legIndex: number,
-  starter: 0 | 1,
-  legsWon: readonly [number, number],
-): X01MatchState {
+function startLeg(config: X01MatchConfig, legIndex: number, starter: 0 | 1, legsWon: readonly [number, number]): X01MatchState {
   return {
     config,
     legIndex,
@@ -119,7 +114,12 @@ export function applyThrow(state: X01MatchState, input: Hit): ApplyResult<X01Mat
   switch (result.outcome) {
     case 'open':
       return {
-        state: { ...state, remaining: withIndex(state.remaining, player, result.remaining), currentDarts: result.darts, dartsThrownInLeg: dartsThrown },
+        state: {
+          ...state,
+          remaining: withIndex(state.remaining, player, result.remaining),
+          currentDarts: result.darts,
+          dartsThrownInLeg: dartsThrown,
+        },
         events: [],
       };
     case 'turn_completed':

@@ -128,7 +128,10 @@ export function CommentOffIcon({ className }: IconProps) {
 export function TargetIcon({ className }: IconProps) {
   return (
     <Svg className={className}>
-      <path fillRule="evenodd" d="M12 2a10 10 0 110 20 10 10 0 010-20zm0 2a8 8 0 100 16 8 8 0 000-16zm0 3a5 5 0 110 10 5 5 0 010-10zm0 2a3 3 0 100 6 3 3 0 000-6zm0 1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
+      <path
+        fillRule="evenodd"
+        d="M12 2a10 10 0 110 20 10 10 0 010-20zm0 2a8 8 0 100 16 8 8 0 000-16zm0 3a5 5 0 110 10 5 5 0 010-10zm0 2a3 3 0 100 6 3 3 0 000-6zm0 1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"
+      />
     </Svg>
   );
 }

@@ -52,21 +52,23 @@ export const CreateMatchRequest = z.discriminatedUnion('type', [
 export type CreateMatchRequest = z.infer<typeof CreateMatchRequest>;
 
 // Trafienie w takiej postaci, w jakiej przyszło, plus identyfikator nadany przez serwer i czas odbioru.
-export const ThrowRecord = z.object({
-  id: z.string().min(1),
-  matchId: z.string().min(1),
-  eventId: z.uuid(),
-  source: HitSource,
-  sequence: z.int().min(0),
-  segment: Segment,
-  multiplier: Multiplier,
-  confidence: z.number().min(0).max(1),
-  detectedAt: z.iso.datetime(),
-  receivedAt: z.iso.datetime(),
-}).refine((record) => Hit.safeParse(record).success, {
-  message: 'Invalid segment and multiplier combination',
-  path: ['multiplier'],
-});
+export const ThrowRecord = z
+  .object({
+    id: z.string().min(1),
+    matchId: z.string().min(1),
+    eventId: z.uuid(),
+    source: HitSource,
+    sequence: z.int().min(0),
+    segment: Segment,
+    multiplier: Multiplier,
+    confidence: z.number().min(0).max(1),
+    detectedAt: z.iso.datetime(),
+    receivedAt: z.iso.datetime(),
+  })
+  .refine((record) => Hit.safeParse(record).success, {
+    message: 'Invalid segment and multiplier combination',
+    path: ['multiplier'],
+  });
 export type ThrowRecord = z.infer<typeof ThrowRecord>;
 
 export const MatchSnapshotPlayer = z.object({

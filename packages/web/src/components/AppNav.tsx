@@ -57,7 +57,10 @@ export function AppNav({ current, voiceEnabled: shownVoice }: AppNavProps) {
 function Status({ on, text }: { on: boolean; text: string }) {
   return (
     <span className="sc-status leading-tight whitespace-nowrap max-lg:gap-1.5 max-lg:bg-transparent max-lg:p-0 max-lg:text-[13px]">
-      <span aria-hidden="true" className={`size-2 shrink-0 rounded-full lg:size-2.5 ${on ? 'bg-(--color-status-ok)' : 'border-2 border-(--color-text-muted)'}`} />
+      <span
+        aria-hidden="true"
+        className={`size-2 shrink-0 rounded-full lg:size-2.5 ${on ? 'bg-(--color-status-ok)' : 'border-2 border-(--color-text-muted)'}`}
+      />
       <span>{text}</span>
     </span>
   );

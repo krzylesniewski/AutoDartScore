@@ -1,7 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { ApiError, MatchListItem, Player, PlayerStats, StatsRankings } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LEG_301, countRows, createGame, createPlayer, createPlayers, getMatch, patchPlayer, setup, throwDarts, type TestApp } from '../test-helpers.js';
+import {
+  LEG_301,
+  countRows,
+  createGame,
+  createPlayer,
+  createPlayers,
+  getMatch,
+  patchPlayer,
+  setup,
+  throwDarts,
+  type TestApp,
+} from '../test-helpers.js';
 
 let t: TestApp;
 beforeEach(async () => {
@@ -64,7 +75,12 @@ describe('PATCH /players/:id', () => {
     await patch(anna.id, { avatar: '🦊' });
 
     expect(await countRows(t.db, 'player_changes')).toBe(2);
-    const changes = await t.db.selectFrom('player_changes').select(['seq', 'name', 'avatar']).where('player_id', '=', anna.id).orderBy('seq').execute();
+    const changes = await t.db
+      .selectFrom('player_changes')
+      .select(['seq', 'name', 'avatar'])
+      .where('player_id', '=', anna.id)
+      .orderBy('seq')
+      .execute();
     expect(changes).toEqual([
       { seq: 1, name: 'Ania', avatar: null },
       { seq: 2, name: 'Ania', avatar: '🦊' },
@@ -79,7 +95,12 @@ describe('PATCH /players/:id', () => {
 
     expect(await patch(anna.id, { name: 'Ania' })).toEqual({ ...anna, name: 'Ania', color: 9 });
     expect((await players()).find((player) => player.id === anna.id)?.color).toBe(9);
-    const changes = await t.db.selectFrom('player_changes').select(['seq', 'name', 'color']).where('player_id', '=', anna.id).orderBy('seq').execute();
+    const changes = await t.db
+      .selectFrom('player_changes')
+      .select(['seq', 'name', 'color'])
+      .where('player_id', '=', anna.id)
+      .orderBy('seq')
+      .execute();
     expect(changes).toEqual([
       { seq: 1, name: 'Anna', color: 9 },
       { seq: 2, name: 'Ania', color: 9 },

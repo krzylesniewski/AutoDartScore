@@ -212,11 +212,15 @@ describe('live updates', () => {
     const { id } = await freeRun();
     await throwDarts(t.app, id, [S(20)]);
     const messages: unknown[] = [];
-    const socket: TestSocket = await t.app.injectWS(`/matches/${id}/live`, {}, {
-      onInit(ws: TestSocket) {
-        ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+    const socket: TestSocket = await t.app.injectWS(
+      `/matches/${id}/live`,
+      {},
+      {
+        onInit(ws: TestSocket) {
+          ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+        },
       },
-    });
+    );
     try {
       await vi.waitFor(() => expect(messages).toHaveLength(1));
       await endOk(id);

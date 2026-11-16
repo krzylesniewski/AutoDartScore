@@ -8,7 +8,9 @@ describe('setupLine', () => {
   });
 
   it('describes Zabawa', () => {
-    expect(setupLine({ ...INITIAL_SETUP, type: 'casual', startingScore: 701 })).toBe('701 · Jeden leg, ranking miejsc · Straight-in, double-out · Losowanie przy starcie');
+    expect(setupLine({ ...INITIAL_SETUP, type: 'casual', startingScore: 701 })).toBe(
+      '701 · Jeden leg, ranking miejsc · Straight-in, double-out · Losowanie przy starcie',
+    );
   });
 
   it('describes Free run', () => {
@@ -20,7 +22,9 @@ describe('setupLine', () => {
   });
 
   it('describes checkout practice with its range', () => {
-    expect(setupLine({ ...INITIAL_SETUP, type: 'practice', practiceMode: 'checkouts' })).toBe('Końcówki · 2-50 · Po pudle ta sama końcówka, nowa po trafieniu albo pominięciu');
+    expect(setupLine({ ...INITIAL_SETUP, type: 'practice', practiceMode: 'checkouts' })).toBe(
+      'Końcówki · 2-50 · Po pudle ta sama końcówka, nowa po trafieniu albo pominięciu',
+    );
     expect(setupLine({ ...INITIAL_SETUP, type: 'practice', practiceMode: 'checkouts', checkoutRange: '51-100' })).toBe(
       'Końcówki · 51-100 · Po pudle ta sama końcówka, nowa po trafieniu albo pominięciu',
     );

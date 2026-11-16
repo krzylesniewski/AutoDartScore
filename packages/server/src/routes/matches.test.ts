@@ -305,7 +305,11 @@ describe('practice', () => {
   it('never finishes a free run and counts its darts', async () => {
     const [anna] = await createPlayers(t.app, 1);
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
-    const results = await throwDarts(t.app, id, Array.from({ length: 10 }, () => S(20)));
+    const results = await throwDarts(
+      t.app,
+      id,
+      Array.from({ length: 10 }, () => S(20)),
+    );
     expect(results.every((result) => result.events.length === 0)).toBe(true);
     const state = await getMatch(t.app, id);
     expect(state).toMatchObject({

@@ -20,7 +20,10 @@ async function addPlayer(page: Page, name: string): Promise<void> {
 }
 
 function statValue(page: Page, term: string) {
-  return page.locator('dt').filter({ hasText: new RegExp(`^${term}$`) }).locator('xpath=following-sibling::dd[1]');
+  return page
+    .locator('dt')
+    .filter({ hasText: new RegExp(`^${term}$`) })
+    .locator('xpath=following-sibling::dd[1]');
 }
 
 test('plays a 1v1 game through the UI on the production configuration', async ({ page, context, request }) => {

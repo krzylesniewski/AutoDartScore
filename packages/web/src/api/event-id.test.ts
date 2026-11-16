@@ -3,7 +3,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { newEventId } from './event-id';
 
 function hitWith(eventId: string) {
-  return { eventId, matchId: 'm1', source: 'keypad', sequence: 0, segment: 20, multiplier: 1, confidence: 1, detectedAt: '2026-10-15T18:30:12.345Z' };
+  return {
+    eventId,
+    matchId: 'm1',
+    source: 'keypad',
+    sequence: 0,
+    segment: 20,
+    multiplier: 1,
+    confidence: 1,
+    detectedAt: '2026-10-15T18:30:12.345Z',
+  };
 }
 
 describe('newEventId', () => {

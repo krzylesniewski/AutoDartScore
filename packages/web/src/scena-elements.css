@@ -51,7 +51,6 @@
   }
 }
 
-
 .sc-stage__content {
   position: relative;
   height: 100%;
@@ -193,7 +192,10 @@
   }
 
   .sc-avatar--current {
-    box-shadow: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--sc-avatar-color), 0 0 24px 2px var(--sc-avatar-color);
+    box-shadow:
+      0 0 0 3px var(--color-surface),
+      0 0 0 5px var(--sc-avatar-color),
+      0 0 24px 2px var(--sc-avatar-color);
   }
 
   .sc-player--current {
@@ -356,7 +358,9 @@
   }
 
   .sc-key--bull {
-    box-shadow: 0 0 0 2px var(--color-accent) inset, var(--shadow-key);
+    box-shadow:
+      0 0 0 2px var(--color-accent) inset,
+      var(--shadow-key);
   }
 
   .sc-chip {
@@ -372,14 +376,30 @@
  * Poza warstwami, żeby podczas fokusu wygrywał z utility cieni. Radio i checkbox są pominięte:
  * aplikacja chowa część z nich i rysuje fokus na sąsiednim elemencie albo etykiecie, więc pierścień by się zdublował.
  */
-:where(a[href], button, input:not([type="radio"], [type="checkbox"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+:where(
+  a[href],
+  button,
+  input:not([type="radio"], [type="checkbox"]),
+  select,
+  textarea,
+  summary,
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
 
 /* Tryb wymuszonych kolorów (wysoki kontrast) usuwa cienie, a z nimi pierścień fokusu. CanvasText to kolor systemowy tego trybu. */
 @media (forced-colors: active) {
-  :where(a[href], button, input:not([type="radio"], [type="checkbox"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  :where(
+    a[href],
+    button,
+    input:not([type="radio"], [type="checkbox"]),
+    select,
+    textarea,
+    summary,
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
     outline: 2px solid CanvasText;
     outline-offset: 2px;
   }

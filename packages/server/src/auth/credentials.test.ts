@@ -79,9 +79,12 @@ describe('createToken and verifyToken', () => {
     expect(verifyToken(auth, `v2.${'9'.repeat(20)}.${signature}`, now)).toBe(false);
   });
 
-  it.each(['zażółć.gęślą.jaźń', 'v2.ąę.🎯', `v2.${expiresAt}.${'ż'.repeat(43)}`, '\u0000.\u0000.\u0000'])('rejects the garbage %j', (token) => {
-    expect(verifyToken(auth, token, now)).toBe(false);
-  });
+  it.each(['zażółć.gęślą.jaźń', 'v2.ąę.🎯', `v2.${expiresAt}.${'ż'.repeat(43)}`, '\u0000.\u0000.\u0000'])(
+    'rejects the garbage %j',
+    (token) => {
+      expect(verifyToken(auth, token, now)).toBe(false);
+    },
+  );
 });
 
 describe('passwordMatches', () => {

@@ -209,11 +209,23 @@ describe('tallyGame', () => {
       { type: 'player_finished', playerId: 'anna', legIndex: 0, place: 1, checkout: 100, dartsThrown: 2 },
       turn('bartek', 0, [D(16)], 32, 0),
       { type: 'player_finished', playerId: 'bartek', legIndex: 0, place: 2, checkout: 32, dartsThrown: 1 },
-      { type: 'casual_finished', placements: [{ playerId: 'anna', place: 1 }, { playerId: 'bartek', place: 2 }, { playerId: 'celina', place: 3 }] },
+      {
+        type: 'casual_finished',
+        placements: [
+          { playerId: 'anna', place: 1 },
+          { playerId: 'bartek', place: 2 },
+          { playerId: 'celina', place: 3 },
+        ],
+      },
     ];
     const tally = tallyGame('casual', ['anna', 'bartek', 'celina'], events);
     expect(toStatLine(tally.players.get('anna') ?? EMPTY_TOTALS)).toMatchObject({ legsWon: 1, doublesHit: 1, highestCheckout: 100 });
-    expect(toStatLine(tally.players.get('bartek') ?? EMPTY_TOTALS)).toMatchObject({ legsWon: 0, doublesHit: 1, highestCheckout: 32, bestLegDarts: 1 });
+    expect(toStatLine(tally.players.get('bartek') ?? EMPTY_TOTALS)).toMatchObject({
+      legsWon: 0,
+      doublesHit: 1,
+      highestCheckout: 32,
+      bestLegDarts: 1,
+    });
     expect(tally.winnerId).toBe('anna');
     expect(tally.legs).toEqual([]);
   });

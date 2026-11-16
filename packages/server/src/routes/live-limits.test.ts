@@ -48,7 +48,12 @@ async function createMatch(app: TestApp['app']): Promise<string> {
     expect(response.statusCode).toBe(201);
     ids.push(response.json().id);
   }
-  const response = await app.inject({ method: 'POST', url: '/matches', headers, payload: { type: 'match', playerIds: ids, startingScore: 301 } });
+  const response = await app.inject({
+    method: 'POST',
+    url: '/matches',
+    headers,
+    payload: { type: 'match', playerIds: ids, startingScore: 301 },
+  });
   expect(response.statusCode).toBe(201);
   return response.json().id;
 }
@@ -56,16 +61,20 @@ async function createMatch(app: TestApp['app']): Promise<string> {
 // Klient injectWS sam nie odpowiada na ping, więc odpowiedź trzeba włączyć jawnie.
 async function connect(app: TestApp['app'], path: string, { pong = true } = {}): Promise<Client> {
   const client = { messages: [] as unknown[], pings: 0, closeCode: null as number | null };
-  const socket: TestSocket = await app.injectWS(path, {}, {
-    onInit(ws: TestSocket) {
-      ws.on('message', (data) => client.messages.push(JSON.parse(data.toString())));
-      if (pong) {
-        ws.on('ping', (data) => ws.pong(data));
-      }
-      ws.on('ping', () => client.pings++);
-      ws.on('close', (code) => (client.closeCode = code));
+  const socket: TestSocket = await app.injectWS(
+    path,
+    {},
+    {
+      onInit(ws: TestSocket) {
+        ws.on('message', (data) => client.messages.push(JSON.parse(data.toString())));
+        if (pong) {
+          ws.on('ping', (data) => ws.pong(data));
+        }
+        ws.on('ping', () => client.pings++);
+        ws.on('close', (code) => (client.closeCode = code));
+      },
     },
-  });
+  );
   sockets.push(socket);
   return Object.assign(client, { socket });
 }

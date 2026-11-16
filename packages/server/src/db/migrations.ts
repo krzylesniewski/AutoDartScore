@@ -4,7 +4,15 @@ import { Migrator, type Migration, type MigrationProvider } from 'kysely/migrati
 // Kształt starej tabeli match_events, z której kopiujemy wiersze. Typ Database opisuje już tabelę po migracji.
 interface LifecycleMigrationTables {
   match_events: { match_id: string; seq: number; type: string; throw_id: string | null; created_at: string };
-  match_events_next: { match_id: string; seq: number; type: string; throw_id: string | null; player_id: string | null; reason: string | null; created_at: string };
+  match_events_next: {
+    match_id: string;
+    seq: number;
+    type: string;
+    throw_id: string | null;
+    player_id: string | null;
+    reason: string | null;
+    created_at: string;
+  };
 }
 
 interface CheckoutRuleMigrationTables {

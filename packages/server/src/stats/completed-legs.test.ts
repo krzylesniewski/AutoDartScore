@@ -56,12 +56,20 @@ describe('completedPlayerLegs', () => {
       { type: 'player_finished', playerId: 'anna', legIndex: 0, place: 1, checkout: 121, dartsThrown: 6 },
       turn('bartek', 0, [S(20), S(20), S(20)], 60, 181),
     ];
-    expect(completedPlayerLegs('casual', ['anna', 'bartek', 'celina'], events)).toEqual([{ playerId: 'anna', legIndex: 0, points: 301, darts: 6 }]);
+    expect(completedPlayerLegs('casual', ['anna', 'bartek', 'celina'], events)).toEqual([
+      { playerId: 'anna', legIndex: 0, points: 301, darts: 6 },
+    ]);
   });
 
   it('counts every player once the casual game is over, in any event order', () => {
     const events: DomainEvent[] = [
-      { type: 'casual_finished', placements: [{ playerId: 'anna', place: 1 }, { playerId: 'bartek', place: 2 }] },
+      {
+        type: 'casual_finished',
+        placements: [
+          { playerId: 'anna', place: 1 },
+          { playerId: 'bartek', place: 2 },
+        ],
+      },
       turn('anna', 0, [T(20), T(20), T(20)], 180, 121),
       turn('bartek', 0, [MISS, MISS, MISS], 0, 301),
     ];
@@ -72,7 +80,10 @@ describe('completedPlayerLegs', () => {
   });
 
   it('drops a player without darts in a completed leg', () => {
-    const events: DomainEvent[] = [turn('anna', 0, [T(20), T(17), D(5)], 121, 0), { type: 'leg_won', playerId: 'anna', legIndex: 0, checkout: 121, dartsThrown: 3 }];
+    const events: DomainEvent[] = [
+      turn('anna', 0, [T(20), T(17), D(5)], 121, 0),
+      { type: 'leg_won', playerId: 'anna', legIndex: 0, checkout: 121, dartsThrown: 3 },
+    ];
     expect(completedPlayerLegs('match', ['anna', 'bartek'], events)).toEqual([{ playerId: 'anna', legIndex: 0, points: 121, darts: 3 }]);
   });
 

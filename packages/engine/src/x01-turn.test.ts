@@ -22,7 +22,15 @@ describe('applyX01Dart', () => {
     expect(applyX01Dart(turnAt(301, [T(20), T(20)], 181), T(19))).toEqual({
       outcome: 'turn_completed',
       remaining: 124,
-      event: { type: 'turn_completed', playerId: 'anna', legIndex: 1, turnIndex: 4, darts: [T(20), T(20), T(19)], total: 177, remaining: 124 },
+      event: {
+        type: 'turn_completed',
+        playerId: 'anna',
+        legIndex: 1,
+        turnIndex: 4,
+        darts: [T(20), T(20), T(19)],
+        total: 177,
+        remaining: 124,
+      },
     });
   });
 
@@ -68,9 +76,7 @@ describe('applyX01Dart', () => {
 
   it('rejects an invalid hit with invalid_hit', () => {
     const invalid = { segment: 25, multiplier: 3 } as unknown as Hit;
-    expect(() => applyX01Dart(turnAt(301), invalid)).toThrow(
-      new EngineError('invalid_hit', 'Invalid hit: {"segment":25,"multiplier":3}'),
-    );
+    expect(() => applyX01Dart(turnAt(301), invalid)).toThrow(new EngineError('invalid_hit', 'Invalid hit: {"segment":25,"multiplier":3}'));
     expect(() => applyX01Dart(turnAt(301), invalid)).toThrow(expect.objectContaining({ code: 'invalid_hit' }));
   });
 

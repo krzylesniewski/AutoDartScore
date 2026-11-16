@@ -20,11 +20,7 @@ export const Hit = z
   })
   .refine(
     ({ segment, multiplier }) =>
-      segment === MISS_SEGMENT
-        ? multiplier === 0
-        : segment === BULL_SEGMENT
-          ? multiplier === 1 || multiplier === 2
-          : multiplier >= 1,
+      segment === MISS_SEGMENT ? multiplier === 0 : segment === BULL_SEGMENT ? multiplier === 1 || multiplier === 2 : multiplier >= 1,
     { message: 'Invalid segment and multiplier combination' },
   );
 export type Hit = z.infer<typeof Hit>;
@@ -34,17 +30,19 @@ export type HitSource = z.infer<typeof HitSource>;
 
 // Zdarzenie trafienia wysyłane do API przez dowolne źródło.
 // eventId zapewnia idempotencję: ponowne wysłanie tego samego zdarzenia nie dubluje rzutki.
-export const HitEvent = z.object({
-  eventId: z.uuid(),
-  matchId: z.string().min(1),
-  source: HitSource,
-  sequence: z.int().min(0),
-  segment: Segment,
-  multiplier: Multiplier,
-  confidence: z.number().min(0).max(1),
-  detectedAt: z.iso.datetime(),
-}).refine((event) => Hit.safeParse(event).success, {
-  message: 'Invalid segment and multiplier combination',
-  path: ['multiplier'],
-});
+export const HitEvent = z
+  .object({
+    eventId: z.uuid(),
+    matchId: z.string().min(1),
+    source: HitSource,
+    sequence: z.int().min(0),
+    segment: Segment,
+    multiplier: Multiplier,
+    confidence: z.number().min(0).max(1),
+    detectedAt: z.iso.datetime(),
+  })
+  .refine((event) => Hit.safeParse(event).success, {
+    message: 'Invalid segment and multiplier combination',
+    path: ['multiplier'],
+  });
 export type HitEvent = z.infer<typeof HitEvent>;

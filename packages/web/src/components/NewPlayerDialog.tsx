@@ -37,7 +37,12 @@ export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
       const trimmedAvatar = avatar.trim();
       // Bez wyboru kolor dobiera serwer.
       onCreated(
-        await createPlayer({ name: name.trim(), guest: false, ...(trimmedAvatar ? { avatar: trimmedAvatar } : {}), ...(color === null ? {} : { color }) }),
+        await createPlayer({
+          name: name.trim(),
+          guest: false,
+          ...(trimmedAvatar ? { avatar: trimmedAvatar } : {}),
+          ...(color === null ? {} : { color }),
+        }),
       );
     } catch (caught) {
       if (caught instanceof ApiRequestError && caught.code === 'player_name_taken') {
@@ -85,7 +90,11 @@ export function NewPlayerDialog({ onCreated, onCancel }: NewPlayerDialogProps) {
           </p>
         )}
         <div className="mt-1.5 grid grid-cols-2 gap-3">
-          <button type="submit" disabled={saving || name.trim() === ''} className="sc-btn sc-btn--primary h-15 rounded-(--radius-button) text-[26px]">
+          <button
+            type="submit"
+            disabled={saving || name.trim() === ''}
+            className="sc-btn sc-btn--primary h-15 rounded-(--radius-button) text-[26px]"
+          >
             {pl.addPlayer}
           </button>
           <button type="button" disabled={saving} onClick={onCancel} className="sc-btn h-15 text-[24px] font-bold">

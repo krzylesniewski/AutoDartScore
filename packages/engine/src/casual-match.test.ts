@@ -156,7 +156,10 @@ describe('checkout', () => {
 
   it('ends a two-player game at the first checkout', () => {
     const twoPlayers = createCasualMatch({ ...config, playerIds: ['anna', 'bartek'] });
-    const { state, events } = throwAll(midGame({ remaining: [60, 301], turnStartRemaining: 60, currentPlayerIndex: 0 }, twoPlayers), [S(20), D(20)]);
+    const { state, events } = throwAll(midGame({ remaining: [60, 301], turnStartRemaining: 60, currentPlayerIndex: 0 }, twoPlayers), [
+      S(20),
+      D(20),
+    ]);
     expect(events).toEqual([
       { type: 'turn_completed', playerId: 'anna', legIndex: 0, turnIndex: 0, darts: [S(20), D(20)], total: 60, remaining: 0 },
       { type: 'player_finished', playerId: 'anna', legIndex: 0, place: 1, checkout: 60, dartsThrown: 2 },
@@ -328,7 +331,10 @@ describe('round in the leg', () => {
 
   it('has no round once the game is finished', () => {
     const twoPlayers = createCasualMatch({ ...config, playerIds: ['anna', 'bartek'] });
-    const finished = applyCasualThrow(midGame({ remaining: [40, 301], turnStartRemaining: 40, currentPlayerIndex: 0 }, twoPlayers), D(20)).state;
+    const finished = applyCasualThrow(
+      midGame({ remaining: [40, 301], turnStartRemaining: 40, currentPlayerIndex: 0 }, twoPlayers),
+      D(20),
+    ).state;
     expect(finished.finished).toBe(true);
     expect(round(finished)).toBeNull();
   });

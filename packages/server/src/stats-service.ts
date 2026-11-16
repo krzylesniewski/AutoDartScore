@@ -1,5 +1,19 @@
 import { isGameFinished, type GameState } from '@autoscore/engine';
-import type { DomainEvent, FrequentHitsResponse, HeadToHead, Hit, LegProgress, MatchSummary, MatchType, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsPeriod, StatsRankings } from '@autoscore/schema';
+import type {
+  DomainEvent,
+  FrequentHitsResponse,
+  HeadToHead,
+  Hit,
+  LegProgress,
+  MatchSummary,
+  MatchType,
+  PlayerForm,
+  PlayerStats,
+  StatsFilter,
+  StatsOverall,
+  StatsPeriod,
+  StatsRankings,
+} from '@autoscore/schema';
 import { HttpError, notFound } from './errors.js';
 import type { MatchReplay, ReplayCache } from './replay-cache.js';
 import { closedPauses, type ReplayedMatch } from './replay.js';
@@ -106,7 +120,7 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
       let matchesWon = 0;
       for (const { match, replay } of await statsGames(playerId, filter, period)) {
         const { finished, playerIds, events, tally } = replayed(match, replay);
-        totals =mergeTotals(totals, tally.players.get(playerId) ?? EMPTY_TOTALS);
+        totals = mergeTotals(totals, tally.players.get(playerId) ?? EMPTY_TOTALS);
         for (const leg of completedPlayerLegs(match.type, playerIds, events)) {
           if (leg.playerId === playerId) {
             legPoints += leg.points;
@@ -120,7 +134,16 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
           matchesWon += tally.winnerId === playerId ? 1 : 0;
         }
       }
-      return { ...toStatLine(totals), average: threeDartAverage(legPoints, legDarts), playerId, filter, period, matchesPlayed, matchesWon, winRate: winRatePercent(matchesWon, matchesPlayed) };
+      return {
+        ...toStatLine(totals),
+        average: threeDartAverage(legPoints, legDarts),
+        playerId,
+        filter,
+        period,
+        matchesPlayed,
+        matchesWon,
+        winRate: winRatePercent(matchesWon, matchesPlayed),
+      };
     },
 
     async matchSummary(matchId) {
@@ -150,11 +173,18 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
 
     async rankings(filter, period) {
       // Zarchiwizowany gracz zostaje w rankingu. Ukrywa go tylko wybór graczy do nowej gry.
-      return { filter, period, ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames(filter, period) }) };
+      return {
+        filter,
+        period,
+        ...buildRankings({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames(filter, period) }),
+      };
     },
 
     async overall(period) {
-      return { period, ...buildOverall({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames('all', period) }) };
+      return {
+        period,
+        ...buildOverall({ players: await store.listPlayers({ includeArchived: true }), games: await rankedGames('all', period) }),
+      };
     },
 
     async headToHead(playerId, opponentId, period) {
@@ -165,7 +195,9 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
       await requirePlayer(opponentId);
       const games: HeadToHeadGame[] = [];
       const playedAt: string[] = [];
-      const withOpponent = (await statsMatches(playerId, 'match', period)).filter((match) => match.players.some((player) => player.id === opponentId));
+      const withOpponent = (await statsMatches(playerId, 'match', period)).filter((match) =>
+        match.players.some((player) => player.id === opponentId),
+      );
       for (const { match, replay } of await cache.many(withOpponent)) {
         const { finished, events, tally, lastActivityAt } = replayed(match, replay);
         // Porzucona albo trwająca gra nie ma zwycięzcy, więc nie wchodzi do bilansu.

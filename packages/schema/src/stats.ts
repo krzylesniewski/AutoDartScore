@@ -213,14 +213,16 @@ export type PlayerForm = z.infer<typeof PlayerForm>;
 // Najczęstsze trafienia gracza z zamkniętych tur gier liczonych do statystyk, bez Miss.
 export const FREQUENT_HITS_LIMIT = 6;
 
-export const FrequentHit = z.object({
-  segment: Segment,
-  multiplier: Multiplier,
-  count: z.int().min(1),
-}).refine((hit) => Hit.safeParse(hit).success && hit.segment !== MISS_SEGMENT, {
-  message: 'Invalid segment and multiplier combination',
-  path: ['multiplier'],
-});
+export const FrequentHit = z
+  .object({
+    segment: Segment,
+    multiplier: Multiplier,
+    count: z.int().min(1),
+  })
+  .refine((hit) => Hit.safeParse(hit).success && hit.segment !== MISS_SEGMENT, {
+    message: 'Invalid segment and multiplier combination',
+    path: ['multiplier'],
+  });
 export type FrequentHit = z.infer<typeof FrequentHit>;
 
 export const FrequentHitsResponse = z.object({

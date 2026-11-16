@@ -182,7 +182,11 @@ export function gameConfig(match: MatchSetup): GameConfig {
 }
 
 // Stan gry zawsze z odtworzenia logu. Wynik odtworzenia może trzymać replay-cache.ts, ale tylko dla niezmienionego logu.
-export function replayMatch(match: StoredMatch, throws: readonly ThrowRecord[], checkoutSteps: readonly CheckoutStep[] = []): ApplyResult<GameState> {
+export function replayMatch(
+  match: StoredMatch,
+  throws: readonly ThrowRecord[],
+  checkoutSteps: readonly CheckoutStep[] = [],
+): ApplyResult<GameState> {
   return replayGame(
     gameConfig(match),
     throws.map(({ segment, multiplier }) => ({ segment, multiplier })),

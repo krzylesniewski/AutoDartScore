@@ -62,7 +62,10 @@ describe('token check', () => {
     ['a bare token', createToken(auth, Date.parse('2027-01-01T00:00:00.000Z'))],
     ['a garbage token', 'Bearer not-a-token'],
     ['an expired token', `Bearer ${createToken(auth, Date.parse('2026-10-20T18:00:00.000Z'))}`],
-    ['a token signed with another secret', `Bearer ${createToken({ password, tokenSecret: 'o'.repeat(32) }, Date.parse('2027-01-01T00:00:00.000Z'))}`],
+    [
+      'a token signed with another secret',
+      `Bearer ${createToken({ password, tokenSecret: 'o'.repeat(32) }, Date.parse('2027-01-01T00:00:00.000Z'))}`,
+    ],
     ['a correctly signed v1 token', `Bearer ${legacyV1Token(Date.parse('2027-01-01T00:00:00.000Z'))}`],
   ])('rejects %s with 401', async (_name, authorization) => {
     const { app } = await withAuth();
@@ -182,7 +185,11 @@ describe('POST /auth/login', () => {
 describe('client address behind a proxy', () => {
   async function failTenTimes(app: TestApp['app'], forwardedFor: (attempt: number) => string): Promise<void> {
     for (let attempt = 1; attempt <= MAX_FAILURES_PER_CLIENT; attempt++) {
-      const response = await login(app, { password: `zgadywanie-${attempt}` }, { remoteAddress: '192.168.1.1', forwardedFor: forwardedFor(attempt) });
+      const response = await login(
+        app,
+        { password: `zgadywanie-${attempt}` },
+        { remoteAddress: '192.168.1.1', forwardedFor: forwardedFor(attempt) },
+      );
       expect(response.statusCode, `attempt ${attempt}`).toBe(401);
     }
   }

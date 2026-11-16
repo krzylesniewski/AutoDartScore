@@ -33,7 +33,10 @@ export function formatPercent(value: number | null): string {
   return value === null ? NO_VALUE : `${formatDecimal(value, 1)}%`;
 }
 
-export function formatDoublesParts(line: Pick<PlayerStatLine, 'doublesPercent' | 'doublesHit' | 'doubleAttempts'>): { value: string; detail: string | null } {
+export function formatDoublesParts(line: Pick<PlayerStatLine, 'doublesPercent' | 'doublesHit' | 'doubleAttempts'>): {
+  value: string;
+  detail: string | null;
+} {
   if (line.doublesPercent === null) {
     return { value: NO_VALUE, detail: null };
   }

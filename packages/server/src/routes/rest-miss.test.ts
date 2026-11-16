@@ -56,14 +56,20 @@ describe('POST /matches/:id/rest-miss', () => {
     [2, 1],
   ])('with %i darts in the turn writes %i Misses and passes the turn', async (thrown, misses) => {
     const { id } = await match301();
-    await throwDarts(t.app, id, Array.from({ length: thrown }, () => T(20)));
+    await throwDarts(
+      t.app,
+      id,
+      Array.from({ length: thrown }, () => T(20)),
+    );
     const eventId = randomUUID();
 
     const result = await restMissOk(id, { eventId });
     expect(result.throws).toHaveLength(misses);
     expect(result.throws[0]?.eventId).toBe(eventId);
     expect(new Set(result.throws.map((record) => record.eventId)).size).toBe(misses);
-    expect(result.throws.map(({ source, sequence, segment, multiplier, confidence }) => ({ source, sequence, segment, multiplier, confidence }))).toEqual(
+    expect(
+      result.throws.map(({ source, sequence, segment, multiplier, confidence }) => ({ source, sequence, segment, multiplier, confidence })),
+    ).toEqual(
       Array.from({ length: misses }, (_, sequence) => ({ source: REST_MISS_SOURCE, sequence, segment: 0, multiplier: 0, confidence: 1 })),
     );
     expect(result.events.map((event) => event.type)).toEqual(['turn_completed']);

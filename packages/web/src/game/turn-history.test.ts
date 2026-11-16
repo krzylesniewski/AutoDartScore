@@ -65,7 +65,11 @@ describe('turnHistory', () => {
   it('gives the place to the closing turn of a casual player and marks the rows after it out of the queue', () => {
     const state = casual(['Anna', 'Bartek', 'Celina'], {
       currentPlayerId: 'p2',
-      players: [player('p1', 'Anna', { place: 1, remaining: 0 }), player('p2', 'Bartek', { remaining: 200 }), player('p3', 'Celina', { remaining: 300 })],
+      players: [
+        player('p1', 'Anna', { place: 1, remaining: 0 }),
+        player('p2', 'Bartek', { remaining: 200 }),
+        player('p3', 'Celina', { remaining: 300 }),
+      ],
       legTurns: [
         legTurn('p1', { points: 100, remainingAfter: 401 }),
         legTurn('p2', { points: 60, remainingAfter: 441 }),

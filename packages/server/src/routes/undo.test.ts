@@ -1,6 +1,21 @@
 import { ApiError, UndoResult } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { D, LEG_301, S, T, countRows, createGame, createPlayers, getMatch, logEntries, remaining, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
+import {
+  D,
+  LEG_301,
+  S,
+  T,
+  countRows,
+  createGame,
+  createPlayers,
+  getMatch,
+  logEntries,
+  remaining,
+  setup,
+  throwDarts,
+  undo,
+  type TestApp,
+} from '../test-helpers.js';
 
 let t: TestApp;
 let anna: string;

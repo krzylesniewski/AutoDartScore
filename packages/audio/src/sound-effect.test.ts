@@ -17,7 +17,14 @@ const turn = (total: number, darts: Hit[] = [T20, T20, T20]): TurnCompleted => (
 const legWon: LegWon = { type: 'leg_won', playerId: 'anna', legIndex: 0, checkout: 40, dartsThrown: 15 };
 const matchWon: MatchWon = { type: 'match_won', playerId: 'anna', legsWon: { anna: 2, bartek: 1 } };
 const bust: Bust = { type: 'bust', playerId: 'anna', legIndex: 0, turnIndex: 4, darts: [T20], remaining: 40 };
-const finished = (place: number): PlayerFinished => ({ type: 'player_finished', playerId: 'anna', legIndex: 0, place, checkout: 40, dartsThrown: 15 });
+const finished = (place: number): PlayerFinished => ({
+  type: 'player_finished',
+  playerId: 'anna',
+  legIndex: 0,
+  place,
+  checkout: 40,
+  dartsThrown: 15,
+});
 const casualFinished: CasualFinished = {
   type: 'casual_finished',
   placements: [

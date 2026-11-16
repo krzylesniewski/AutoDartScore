@@ -9,7 +9,11 @@ const T20 = { segment: 20, multiplier: 3 } as const;
 const midLeg = snapshot({
   currentPlayerId: 'p1',
   currentDarts: [T20],
-  legTurns: [legTurn('p1', { points: 60, remainingAfter: 441 }), legTurn('p2', { points: 100, remainingAfter: 401 }), legTurn('p1', { bust: true, darts: [T20, T20], remainingAfter: 441 })],
+  legTurns: [
+    legTurn('p1', { points: 60, remainingAfter: 441 }),
+    legTurn('p2', { points: 100, remainingAfter: 401 }),
+    legTurn('p1', { bust: true, darts: [T20, T20], remainingAfter: 441 }),
+  ],
 });
 
 function tile(label: string): HTMLElement {

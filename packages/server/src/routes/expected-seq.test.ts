@@ -95,7 +95,12 @@ describe('expectedSeq on undo', () => {
   ])('rejects %s with 400 invalid_request and writes nothing', async (_name, payload) => {
     const { id } = await match301();
     await throwDarts(t.app, id, [S(20)]);
-    const response = await t.app.inject({ method: 'POST', url: `/matches/${id}/undo`, headers: { 'content-type': 'application/json' }, payload });
+    const response = await t.app.inject({
+      method: 'POST',
+      url: `/matches/${id}/undo`,
+      headers: { 'content-type': 'application/json' },
+      payload,
+    });
     await expectError(response, 400, 'invalid_request');
     expect(await logEntries(t.db, id)).toHaveLength(1);
   });
@@ -113,7 +118,12 @@ describe('expectedSeq on undo', () => {
   ])('treats %s as a missing body', async (_name, payload) => {
     const { id } = await match301();
     await throwDarts(t.app, id, [S(20)]);
-    const response = await t.app.inject({ method: 'POST', url: `/matches/${id}/undo`, headers: { 'content-type': 'application/json' }, payload });
+    const response = await t.app.inject({
+      method: 'POST',
+      url: `/matches/${id}/undo`,
+      headers: { 'content-type': 'application/json' },
+      payload,
+    });
     expect(response.statusCode).toBe(200);
   });
 
@@ -121,7 +131,12 @@ describe('expectedSeq on undo', () => {
     const { id } = await match301();
     await throwDarts(t.app, id, [S(20), S(20)]);
     expect((await undo(t.app, id, { expectedSeq: 2, extra: true })).statusCode).toBe(200);
-    const plain = await t.app.inject({ method: 'POST', url: `/matches/${id}/undo`, headers: { 'content-type': 'text/plain' }, payload: '{"expectedSeq":2}' });
+    const plain = await t.app.inject({
+      method: 'POST',
+      url: `/matches/${id}/undo`,
+      headers: { 'content-type': 'text/plain' },
+      payload: '{"expectedSeq":2}',
+    });
     await expectError(plain, 409, 'stale_state');
   });
 });

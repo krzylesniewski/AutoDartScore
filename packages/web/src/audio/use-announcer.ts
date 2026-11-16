@@ -124,25 +124,31 @@ export function useAnnouncer(): UseAnnouncer {
     }
   }, []);
 
-  const setVoiceEnabled = useCallback((next: boolean) => {
-    writeVoiceEnabled(next);
-    voiceRef.current = next;
-    if (!next) {
-      audio.current?.speech.cancel();
-      stopWhenSilent();
-    }
-    setVoiceState(next);
-  }, [stopWhenSilent]);
+  const setVoiceEnabled = useCallback(
+    (next: boolean) => {
+      writeVoiceEnabled(next);
+      voiceRef.current = next;
+      if (!next) {
+        audio.current?.speech.cancel();
+        stopWhenSilent();
+      }
+      setVoiceState(next);
+    },
+    [stopWhenSilent],
+  );
 
-  const setEffectsEnabled = useCallback((next: boolean) => {
-    writeEffectsEnabled(next);
-    effectsRef.current = next;
-    if (!next) {
-      audio.current?.player.stop();
-      stopWhenSilent();
-    }
-    setEffectsState(next);
-  }, [stopWhenSilent]);
+  const setEffectsEnabled = useCallback(
+    (next: boolean) => {
+      writeEffectsEnabled(next);
+      effectsRef.current = next;
+      if (!next) {
+        audio.current?.player.stop();
+        stopWhenSilent();
+      }
+      setEffectsState(next);
+    },
+    [stopWhenSilent],
+  );
 
   const onLiveMessage = useCallback((message: LiveMessage) => {
     if (voiceRef.current || effectsRef.current) {

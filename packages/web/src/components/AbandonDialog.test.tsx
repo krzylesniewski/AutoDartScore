@@ -20,7 +20,11 @@ describe('AbandonDialog', () => {
       const card = radio.closest('label');
       expect(card).not.toBeNull();
       expect(card?.textContent).toContain(name);
-      expect(within(card as HTMLElement).getByText(name.charAt(0)).getAttribute('aria-hidden')).toBe('true');
+      expect(
+        within(card as HTMLElement)
+          .getByText(name.charAt(0))
+          .getAttribute('aria-hidden'),
+      ).toBe('true');
     }
     expect((screen.getByRole('radio', { name: 'Bartek' }) as HTMLInputElement).checked).toBe(true);
   });

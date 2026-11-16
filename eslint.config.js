@@ -2,7 +2,18 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['**/node_modules/', '**/dist/', '**/dist.new/', '**/dist.prev/', '**/coverage/', 'spikes/', '**/.describe-me/', '**/describe-me-dist/'] },
+  {
+    ignores: [
+      '**/node_modules/',
+      '**/dist/',
+      '**/dist.new/',
+      '**/dist.prev/',
+      '**/coverage/',
+      'spikes/',
+      '**/.describe-me/',
+      '**/describe-me-dist/',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
 );

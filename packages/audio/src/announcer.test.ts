@@ -170,14 +170,21 @@ describe('createAnnouncer', () => {
   it('cancels the running announcement on throw_undone', () => {
     send([turnCompleted(5, 140), achievement(5, 'turn_record'), stateUpdated(5)]);
     announcer.handle({ type: 'throw_undone', matchId: MATCH_ID, eventSeq: 6, throwId: 't_5' });
-    expect(speaker.calls).toEqual(['cancel', 'speak:scores/140.mp3|sto czterdzieści + events/achievement_turn_record.mp3|Nowy rekord tury', 'cancel']);
+    expect(speaker.calls).toEqual([
+      'cancel',
+      'speak:scores/140.mp3|sto czterdzieści + events/achievement_turn_record.mp3|Nowy rekord tury',
+      'cancel',
+    ]);
   });
 
   it('does not cancel the running announcement on a later state_updated without an announcement', () => {
     send([turnCompleted(5, 140), achievement(5, 'turn_record'), stateUpdated(5)]);
     send([throwRegistered(6), stateUpdated(6)]);
     send([throwRegistered(7), stateUpdated(7)]);
-    expect(speaker.calls).toEqual(['cancel', 'speak:scores/140.mp3|sto czterdzieści + events/achievement_turn_record.mp3|Nowy rekord tury']);
+    expect(speaker.calls).toEqual([
+      'cancel',
+      'speak:scores/140.mp3|sto czterdzieści + events/achievement_turn_record.mp3|Nowy rekord tury',
+    ]);
   });
 
   it('cancels and drops the buffer on throw_undone', () => {
@@ -228,8 +235,22 @@ class FakeEffectPlayer implements EffectPlayer {
 
 const EFFECT_MS = 500;
 
-const legWon = (eventSeq: number): LiveMessage => ({ type: 'leg_won', matchId: MATCH_ID, eventSeq, playerId: 'anna', legIndex: 0, checkout: 40, dartsThrown: 15 });
-const matchWon = (eventSeq: number): LiveMessage => ({ type: 'match_won', matchId: MATCH_ID, eventSeq, playerId: 'anna', legsWon: { anna: 2, bartek: 0 } });
+const legWon = (eventSeq: number): LiveMessage => ({
+  type: 'leg_won',
+  matchId: MATCH_ID,
+  eventSeq,
+  playerId: 'anna',
+  legIndex: 0,
+  checkout: 40,
+  dartsThrown: 15,
+});
+const matchWon = (eventSeq: number): LiveMessage => ({
+  type: 'match_won',
+  matchId: MATCH_ID,
+  eventSeq,
+  playerId: 'anna',
+  legsWon: { anna: 2, bartek: 0 },
+});
 const bustBatch = (eventSeq: number): LiveMessage[] => [throwRegistered(eventSeq), bust(eventSeq), stateUpdated(eventSeq)];
 
 describe('createAnnouncer with effects', () => {

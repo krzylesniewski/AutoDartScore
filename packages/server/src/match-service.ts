@@ -72,7 +72,10 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
   }
 
   // Profile graczy zawsze z przekazanej gry, nawet gdy odtworzenie pochodzi z pamięci podręcznej.
-  function toState(match: StoredMatch, { game, events, throws, seq, abandonment, endedAt, finishedAt, times }: ReplayedMatch): MatchSnapshot {
+  function toState(
+    match: StoredMatch,
+    { game, events, throws, seq, abandonment, endedAt, finishedAt, times }: ReplayedMatch,
+  ): MatchSnapshot {
     return toSnapshot(match, game, seq, { abandonment, endedAt, finishedAt, lockMs: matchLockMs, events, throws, ...times });
   }
 
@@ -187,7 +190,11 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
   }
 
   // Tylko mecz 1v1 i tylko zapisane profile, które mają już za sobą inny ukończony mecz 1v1.
-  async function achievements(match: StoredMatch, earlierEvents: readonly DomainEvent[], newEvents: readonly DomainEvent[]): Promise<DetectedAchievement[]> {
+  async function achievements(
+    match: StoredMatch,
+    earlierEvents: readonly DomainEvent[],
+    newEvents: readonly DomainEvent[],
+  ): Promise<DetectedAchievement[]> {
     if (match.type !== 'match' || !newEvents.some((event) => event.type === 'turn_completed')) {
       return [];
     }
@@ -372,19 +379,16 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         }
         const detected = await achievements(match, events, newEvents);
         const detectedAt = new Date(now()).toISOString();
-        const hits = Array.from(
-          { length: count },
-          (_, sequence): NewThrow => ({
-            eventId: sequence === 0 ? request.eventId : randomUUID(),
-            matchId: id,
-            source: REST_MISS_SOURCE,
-            sequence,
-            segment: MISS_SEGMENT,
-            multiplier: 0,
-            confidence: 1,
-            detectedAt,
-          }),
-        );
+        const hits = Array.from({ length: count }, (_, sequence): NewThrow => ({
+          eventId: sequence === 0 ? request.eventId : randomUUID(),
+          matchId: id,
+          source: REST_MISS_SOURCE,
+          sequence,
+          segment: MISS_SEGMENT,
+          multiplier: 0,
+          confidence: 1,
+          detectedAt,
+        }));
         let appended;
         try {
           appended = await store.appendThrows(hits);
@@ -400,7 +404,12 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         // Zdarzenia domenowe mają eventSeq ostatniego state_updated, bo na nim głos czyta wynik, a panel pokazuje ostatnią turę.
         const meta = { matchId: id, eventSeq: state.eventSeq };
         hub.publish(id, [
-          ...appended.throws.map((record, index): LiveMessage => ({ type: 'throw_registered', matchId: id, eventSeq: appended.seqs[index] ?? state.eventSeq, throw: record })),
+          ...appended.throws.map((record, index): LiveMessage => ({
+            type: 'throw_registered',
+            matchId: id,
+            eventSeq: appended.seqs[index] ?? state.eventSeq,
+            throw: record,
+          })),
           ...newEvents.map((event): LiveMessage => ({ ...event, ...meta })),
           ...detected.map((achievement): LiveMessage => ({ ...achievement, ...meta })),
           { type: 'state_updated', ...meta, state },
@@ -547,7 +556,22 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         if (query.status === 'unfinished' && (state.status === 'finished' || state.status === 'ended')) {
           continue;
         }
-        const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements } = state;
+        const {
+          id,
+          type,
+          practiceMode,
+          startingScore,
+          legsToWin,
+          createdAt,
+          status,
+          currentPlayerId,
+          legIndex,
+          players,
+          freeRun,
+          checkouts,
+          winnerId,
+          placements,
+        } = state;
         items.push({
           id,
           type,

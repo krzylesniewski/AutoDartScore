@@ -1,6 +1,21 @@
 import { ApiError, MatchSummary, PlayerStats } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { D, LEG_301, MISS, S, T, abandon, createGame, createPlayer, createPlayers, endPractice, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
+import {
+  D,
+  LEG_301,
+  MISS,
+  S,
+  T,
+  abandon,
+  createGame,
+  createPlayer,
+  createPlayers,
+  endPractice,
+  setup,
+  throwDarts,
+  undo,
+  type TestApp,
+} from '../test-helpers.js';
 
 let t: TestApp;
 let anna: string;
@@ -92,12 +107,36 @@ const noThrows = {
 describe('GET /players/:id/stats', () => {
   it('counts the LEG_301 match for both players', async () => {
     await playLeg301();
-    expect(await stats(anna)).toEqual({ ...annaLeg301, playerId: anna, filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 1, winRate: 100 });
-    expect(await stats(bartek)).toEqual({ ...bartekLeg301, playerId: bartek, filter: 'all', period: 'all', matchesPlayed: 1, matchesWon: 0, winRate: 0 });
+    expect(await stats(anna)).toEqual({
+      ...annaLeg301,
+      playerId: anna,
+      filter: 'all',
+      period: 'all',
+      matchesPlayed: 1,
+      matchesWon: 1,
+      winRate: 100,
+    });
+    expect(await stats(bartek)).toEqual({
+      ...bartekLeg301,
+      playerId: bartek,
+      filter: 'all',
+      period: 'all',
+      matchesPlayed: 1,
+      matchesWon: 0,
+      winRate: 0,
+    });
   });
 
   it('gives zeros and nulls to a player without throws', async () => {
-    expect(await stats(anna)).toEqual({ ...noThrows, playerId: anna, filter: 'all', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null });
+    expect(await stats(anna)).toEqual({
+      ...noThrows,
+      playerId: anna,
+      filter: 'all',
+      period: 'all',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      winRate: null,
+    });
   });
 
   it('counts a Solo 501 under practice, but not under match', async () => {
@@ -119,13 +158,28 @@ describe('GET /players/:id/stats', () => {
       winRate: null,
       t20Hits: 7,
     });
-    expect(await stats(anna, 'match')).toEqual({ ...noThrows, playerId: anna, filter: 'match', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null });
+    expect(await stats(anna, 'match')).toEqual({
+      ...noThrows,
+      playerId: anna,
+      filter: 'match',
+      period: 'all',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      winRate: null,
+    });
   });
 
   it('adds Solo 501 to checkouts and best leg, but not to legs or matches won', async () => {
     await playLeg301();
     await playSolo501();
-    expect(await stats(anna)).toMatchObject({ dartsThrown: 15, highestCheckout: 141, bestLegDarts: 6, legsWon: 1, matchesPlayed: 1, matchesWon: 1 });
+    expect(await stats(anna)).toMatchObject({
+      dartsThrown: 15,
+      highestCheckout: 141,
+      bestLegDarts: 6,
+      legsWon: 1,
+      matchesPlayed: 1,
+      matchesWon: 1,
+    });
   });
 
   it('never counts Free run throws', async () => {
@@ -134,7 +188,15 @@ describe('GET /players/:id/stats', () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     await throwDarts(t.app, id, [T(20), T(20), T(20), T(20), T(20), T(20)]);
     expect(await stats(anna)).toEqual(before);
-    expect(await stats(anna, 'practice')).toEqual({ ...noThrows, playerId: anna, filter: 'practice', period: 'all', matchesPlayed: 0, matchesWon: 0, winRate: null });
+    expect(await stats(anna, 'practice')).toEqual({
+      ...noThrows,
+      playerId: anna,
+      filter: 'practice',
+      period: 'all',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      winRate: null,
+    });
   });
 
   it('does not count an undone throw', async () => {
@@ -148,7 +210,14 @@ describe('GET /players/:id/stats', () => {
   it('separates casual games and counts 1st place as a won leg and match', async () => {
     const { id } = await createGame(t.app, { type: 'casual', playerIds: [anna, bartek], startingScore: 301 });
     await throwDarts(t.app, id, LEG_301);
-    expect(await stats(anna, 'casual')).toMatchObject({ dartsThrown: 6, highestCheckout: 121, legsWon: 1, matchesPlayed: 1, matchesWon: 1, winRate: 100 });
+    expect(await stats(anna, 'casual')).toMatchObject({
+      dartsThrown: 6,
+      highestCheckout: 121,
+      legsWon: 1,
+      matchesPlayed: 1,
+      matchesWon: 1,
+      winRate: 100,
+    });
     expect(await stats(bartek, 'casual')).toMatchObject({ dartsThrown: 3, legsWon: 0, matchesPlayed: 1, matchesWon: 0, winRate: 0 });
     expect(await stats(anna, 'match')).toMatchObject({ dartsThrown: 0, matchesPlayed: 0 });
   });
@@ -168,7 +237,15 @@ describe('GET /players/:id/stats', () => {
     await throwDarts(t.app, id, [T(20), T(20), T(20)]);
     expect((await abandon(t.app, id, { playerId: anna })).statusCode).toBe(200);
 
-    expect(await stats(anna)).toMatchObject({ dartsThrown: 3, points: 180, average: null, legsWon: 0, matchesPlayed: 0, matchesWon: 0, winRate: null });
+    expect(await stats(anna)).toMatchObject({
+      dartsThrown: 3,
+      points: 180,
+      average: null,
+      legsWon: 0,
+      matchesPlayed: 0,
+      matchesWon: 0,
+      winRate: null,
+    });
   });
 
   it('takes the win rate from finished games only', async () => {
@@ -330,7 +407,16 @@ describe('GET /matches/:id/summary', () => {
   it('gives zeros and nulls for a Free run', async () => {
     const { id } = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna] });
     await throwDarts(t.app, id, [T(20), T(20), T(20)]);
-    expect(await summary(id)).toEqual({ matchId: id, type: 'practice', finished: false, eventSeq: 3, players: [{ ...noThrows, playerId: anna }], legs: [], lastLegProgress: null, checkouts: null });
+    expect(await summary(id)).toEqual({
+      matchId: id,
+      type: 'practice',
+      finished: false,
+      eventSeq: 3,
+      players: [{ ...noThrows, playerId: anna }],
+      legs: [],
+      lastLegProgress: null,
+      checkouts: null,
+    });
   });
 
   it('lists the Solo 501 leg', async () => {

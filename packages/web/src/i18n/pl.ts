@@ -156,7 +156,8 @@ export const pl = {
   dartsThrown: 'Rzutki',
   checkout: 'Zamknięcie',
   checkoutInDarts,
-  checkoutCardLabel: (route: readonly string[], first: string) => `${checkoutInDarts(route.length)}: ${route.join(', ')}. ${checkoutClickHint(first)}`,
+  checkoutCardLabel: (route: readonly string[], first: string) =>
+    `${checkoutInDarts(route.length)}: ${route.join(', ')}. ${checkoutClickHint(first)}`,
   thisTurn: 'w tej turze',
   undo: 'Cofnij',
   undoWithTime: (time: string) => `Cofnij (${time})`,
@@ -264,7 +265,8 @@ export const pl = {
   freeRunDetail: (name: string, dartsThrown: number) => `${name} · ${darts(dartsThrown)}`,
   activityToday: (time: string) => `dziś ${time}`,
   activityYesterday: 'wczoraj',
-  rankingSubtitle: (gameCount: number, legCount: number, period: StatsPeriod) => `Ranking graczy ${periodPhrase[period]} · ${games(gameCount)}, ${legsCount(legCount)}`,
+  rankingSubtitle: (gameCount: number, legCount: number, period: StatsPeriod) =>
+    `Ranking graczy ${periodPhrase[period]} · ${games(gameCount)}, ${legsCount(legCount)}`,
   ranking: 'Ranking',
   averageFootnote: `Średnia od ${MIN_LEGS_FOR_AVERAGE} ukończonych legów.`,
   tileBestLeg: 'Rekordowy leg (średnia)',
@@ -288,7 +290,8 @@ export const pl = {
   periodAll: 'Cały czas',
   periodPhrase,
   filterOverall: 'Overall',
-  overallSubtitle: (period: StatsPeriod) => (period === 'all' ? 'Wszystkie gry liczone do statystyk razem' : `Wszystkie gry ${periodPhrase[period]} liczone do statystyk razem`),
+  overallSubtitle: (period: StatsPeriod) =>
+    period === 'all' ? 'Wszystkie gry liczone do statystyk razem' : `Wszystkie gry ${periodPhrase[period]} liczone do statystyk razem`,
   overallDarts: 'Lotki łącznie',
   overallAverage: 'Średnia ogólna (3 rzutki)',
   overallGames: 'Gry',
@@ -342,7 +345,8 @@ export const pl = {
   archive: 'Archiwizuj',
   restore: 'Przywróć',
   archiveTitle: 'Zarchiwizować gracza?',
-  archiveText: (name: string) => `${name} zniknie z wyboru graczy do nowej gry. Statystyki, ranking i historia zostają. Gracza przywrócisz na jego karcie.`,
+  archiveText: (name: string) =>
+    `${name} zniknie z wyboru graczy do nowej gry. Statystyki, ranking i historia zostają. Gracza przywrócisz na jego karcie.`,
   updatePlayerFailed: 'Nie udało się zapisać zmian',
   savePlayer: 'Zapisz gracza',
   savePlayerOf: (name: string) => `Zapisz gracza: ${name}`,

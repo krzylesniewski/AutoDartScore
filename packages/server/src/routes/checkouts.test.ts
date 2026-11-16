@@ -151,7 +151,11 @@ describe('POST /matches with practiceMode checkouts', () => {
     ];
     for (const payload of games) {
       const { id } = await createGame(t.app, payload);
-      const row = await t.db.selectFrom('matches').select(['checkout_range', 'checkout_seed', 'checkout_rule']).where('id', '=', id).executeTakeFirstOrThrow();
+      const row = await t.db
+        .selectFrom('matches')
+        .select(['checkout_range', 'checkout_seed', 'checkout_rule'])
+        .where('id', '=', id)
+        .executeTakeFirstOrThrow();
       expect(row).toEqual({ checkout_range: null, checkout_seed: null, checkout_rule: null });
     }
   });
@@ -201,11 +205,15 @@ describe('POST /matches/:id/checkout-attempts', () => {
   it('publishes state_updated', async () => {
     const { id } = await checkouts();
     const messages: unknown[] = [];
-    const socket: TestSocket = await t.app.injectWS(`/matches/${id}/live`, {}, {
-      onInit(ws: TestSocket) {
-        ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+    const socket: TestSocket = await t.app.injectWS(
+      `/matches/${id}/live`,
+      {},
+      {
+        onInit(ws: TestSocket) {
+          ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+        },
       },
-    });
+    );
     sockets.push(socket);
     await vi.waitFor(() => expect(messages).toHaveLength(1));
 
@@ -286,7 +294,13 @@ describe('POST /matches/:id/undo in checkout practice', () => {
     });
     expect(result.state.eventSeq).toBe(3);
     expect(await getMatch(t.app, id)).toEqual(result.state);
-    expect((await logEntries(t.db, id)).at(-1)).toEqual({ seq: 3, type: 'checkout_attempt_undone', throw_id: null, player_id: null, reason: null });
+    expect((await logEntries(t.db, id)).at(-1)).toEqual({
+      seq: 3,
+      type: 'checkout_attempt_undone',
+      throw_id: null,
+      player_id: null,
+      reason: null,
+    });
 
     // Po cofnięciu to samo losowanie daje ten sam cel.
     const again = await attemptOk(id, true);
@@ -298,11 +312,15 @@ describe('POST /matches/:id/undo in checkout practice', () => {
     const { id } = await checkouts();
     await attemptOk(id, true);
     const messages: unknown[] = [];
-    const socket: TestSocket = await t.app.injectWS(`/matches/${id}/live`, {}, {
-      onInit(ws: TestSocket) {
-        ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+    const socket: TestSocket = await t.app.injectWS(
+      `/matches/${id}/live`,
+      {},
+      {
+        onInit(ws: TestSocket) {
+          ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+        },
       },
-    });
+    );
     sockets.push(socket);
     await vi.waitFor(() => expect(messages).toHaveLength(1));
 
@@ -334,7 +352,13 @@ describe('POST /matches/:id/undo in checkout practice', () => {
     expect(state.checkouts).toEqual(before.checkouts);
     expect(state.eventSeq).toBe(3);
     expect(await getMatch(t.app, id)).toEqual(state);
-    expect((await logEntries(t.db, id)).at(-1)).toEqual({ seq: 3, type: 'checkout_skip_undone', throw_id: null, player_id: null, reason: null });
+    expect((await logEntries(t.db, id)).at(-1)).toEqual({
+      seq: 3,
+      type: 'checkout_skip_undone',
+      throw_id: null,
+      player_id: null,
+      reason: null,
+    });
     expectNoSecrets(state);
   });
 
@@ -412,7 +436,12 @@ describe('POST /matches/:id/checkout-skips', () => {
 
   it('ignores any body', async () => {
     const { id } = await checkouts();
-    const response = await t.app.inject({ method: 'POST', url: `/matches/${id}/checkout-skips`, headers: { 'content-type': 'application/json' }, payload: '{bad' });
+    const response = await t.app.inject({
+      method: 'POST',
+      url: `/matches/${id}/checkout-skips`,
+      headers: { 'content-type': 'application/json' },
+      payload: '{bad',
+    });
     expect(response.statusCode).toBe(201);
     expect(MatchSnapshot.parse(response.json()).checkouts?.skips).toBe(1);
   });
@@ -420,11 +449,15 @@ describe('POST /matches/:id/checkout-skips', () => {
   it('publishes only state_updated', async () => {
     const { id } = await checkouts();
     const messages: unknown[] = [];
-    const socket: TestSocket = await t.app.injectWS(`/matches/${id}/live`, {}, {
-      onInit(ws: TestSocket) {
-        ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+    const socket: TestSocket = await t.app.injectWS(
+      `/matches/${id}/live`,
+      {},
+      {
+        onInit(ws: TestSocket) {
+          ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+        },
       },
-    });
+    );
     sockets.push(socket);
     await vi.waitFor(() => expect(messages).toHaveLength(1));
 
@@ -486,8 +519,20 @@ describe('effectiveCheckoutSteps', () => {
   });
 
   it.each([
-    ['an attempt undo after a skip', [{ seq: 1, type: 'checkout_skipped', createdAt: at }, { seq: 2, type: 'checkout_attempt_undone', createdAt: at }]],
-    ['a skip undo after an attempt', [{ seq: 1, type: 'checkout_attempt', success: true, createdAt: at }, { seq: 2, type: 'checkout_skip_undone', createdAt: at }]],
+    [
+      'an attempt undo after a skip',
+      [
+        { seq: 1, type: 'checkout_skipped', createdAt: at },
+        { seq: 2, type: 'checkout_attempt_undone', createdAt: at },
+      ],
+    ],
+    [
+      'a skip undo after an attempt',
+      [
+        { seq: 1, type: 'checkout_attempt', success: true, createdAt: at },
+        { seq: 2, type: 'checkout_skip_undone', createdAt: at },
+      ],
+    ],
     ['an attempt undo without steps', [{ seq: 1, type: 'checkout_attempt_undone', createdAt: at }]],
     ['a skip undo without steps', [{ seq: 1, type: 'checkout_skip_undone', createdAt: at }]],
   ] satisfies [string, LogEntry[]][])('throws on %s', (_name, entries) => {
@@ -535,7 +580,11 @@ describe('GET /matches with checkout practice', () => {
       const response = await listMatches(t.app, query);
       expect(response.statusCode).toBe(200);
       const items = MatchListItem.array().parse(response.json());
-      expect(items.find((item) => item.id === id)).toMatchObject({ practiceMode: 'checkouts', status: 'in_progress', checkouts: state.checkouts });
+      expect(items.find((item) => item.id === id)).toMatchObject({
+        practiceMode: 'checkouts',
+        status: 'in_progress',
+        checkouts: state.checkouts,
+      });
       expect(items.find((item) => item.id === freeRun.id)?.checkouts).toBeNull();
     }
     expectNoSecrets((await listMatches(t.app)).json());

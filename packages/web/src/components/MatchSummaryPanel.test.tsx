@@ -38,13 +38,67 @@ const matchSummary = summary({
   finished: true,
   eventSeq: 30,
   players: [
-    summaryPlayer('p1', { dartsThrown: 45, average: 60.2, first9Average: 81, scores100: 2, scores60: 4, highestCheckout: 40, doubleAttempts: 4, doublesHit: 1, doublesPercent: 25, bestLegDarts: 15, legsWon: 1 }),
-    summaryPlayer('p2', { dartsThrown: 48, average: 62.5, first9Average: 70.33, scores180: 1, scores140: 1, highestCheckout: 121, doubleAttempts: 3, doublesHit: 2, doublesPercent: 66.7, bestLegDarts: 12, legsWon: 2 }),
+    summaryPlayer('p1', {
+      dartsThrown: 45,
+      average: 60.2,
+      first9Average: 81,
+      scores100: 2,
+      scores60: 4,
+      highestCheckout: 40,
+      doubleAttempts: 4,
+      doublesHit: 1,
+      doublesPercent: 25,
+      bestLegDarts: 15,
+      legsWon: 1,
+    }),
+    summaryPlayer('p2', {
+      dartsThrown: 48,
+      average: 62.5,
+      first9Average: 70.33,
+      scores180: 1,
+      scores140: 1,
+      highestCheckout: 121,
+      doubleAttempts: 3,
+      doublesHit: 2,
+      doublesPercent: 66.7,
+      bestLegDarts: 12,
+      legsWon: 2,
+    }),
   ],
   legs: [
-    { legIndex: 0, winnerId: 'p2', checkout: 121, dartsThrown: 12, averages: [{ playerId: 'p1', average: 55 }, { playerId: 'p2', average: 75.25 }], durationMs: 252_000 },
-    { legIndex: 1, winnerId: 'p1', checkout: 40, dartsThrown: 15, averages: [{ playerId: 'p1', average: 100.2 }, { playerId: 'p2', average: 60 }], durationMs: 301_000 },
-    { legIndex: 2, winnerId: 'p2', checkout: 32, dartsThrown: 21, averages: [{ playerId: 'p1', average: 40 }, { playerId: 'p2', average: 43 }], durationMs: 425_000 },
+    {
+      legIndex: 0,
+      winnerId: 'p2',
+      checkout: 121,
+      dartsThrown: 12,
+      averages: [
+        { playerId: 'p1', average: 55 },
+        { playerId: 'p2', average: 75.25 },
+      ],
+      durationMs: 252_000,
+    },
+    {
+      legIndex: 1,
+      winnerId: 'p1',
+      checkout: 40,
+      dartsThrown: 15,
+      averages: [
+        { playerId: 'p1', average: 100.2 },
+        { playerId: 'p2', average: 60 },
+      ],
+      durationMs: 301_000,
+    },
+    {
+      legIndex: 2,
+      winnerId: 'p2',
+      checkout: 32,
+      dartsThrown: 21,
+      averages: [
+        { playerId: 'p1', average: 40 },
+        { playerId: 'p2', average: 43 },
+      ],
+      durationMs: 425_000,
+    },
   ],
 });
 
@@ -94,7 +148,11 @@ describe('MatchSummaryPanel', () => {
       type: 'casual',
       finished: true,
       eventSeq: 40,
-      players: [summaryPlayer('p1', { average: 40 }), summaryPlayer('p2', { average: 30 }), summaryPlayer('p3', { average: 50, legsWon: 1 })],
+      players: [
+        summaryPlayer('p1', { average: 40 }),
+        summaryPlayer('p2', { average: 30 }),
+        summaryPlayer('p3', { average: 50, legsWon: 1 }),
+      ],
     });
     render(<MatchSummaryPanel state={state} summary={casualSummary} error={false} />);
     expect(screen.getByText('1. miejsce Celina')).toBeTruthy();
@@ -119,8 +177,20 @@ describe('MatchSummaryPanel', () => {
       type: 'practice',
       finished: true,
       eventSeq: 9,
-      players: [summaryPlayer('p1', { dartsThrown: 9, average: 167, first9Average: 167, scores180: 2, scores140: 1, highestCheckout: 141, bestLegDarts: 9 })],
-      legs: [{ legIndex: 0, winnerId: 'p1', checkout: 141, dartsThrown: 9, averages: [{ playerId: 'p1', average: 167 }], durationMs: 95_000 }],
+      players: [
+        summaryPlayer('p1', {
+          dartsThrown: 9,
+          average: 167,
+          first9Average: 167,
+          scores180: 2,
+          scores140: 1,
+          highestCheckout: 141,
+          bestLegDarts: 9,
+        }),
+      ],
+      legs: [
+        { legIndex: 0, winnerId: 'p1', checkout: 141, dartsThrown: 9, averages: [{ playerId: 'p1', average: 167 }], durationMs: 95_000 },
+      ],
     });
     render(<MatchSummaryPanel state={state} summary={soloSummary} error={false} />);
     expect(columnNames()).toEqual(['Anna']);
@@ -150,7 +220,15 @@ describe('MatchSummaryPanel', () => {
 
 describe('MatchSummaryPanel: game time', () => {
   const times = { startedAt: '2026-10-21T18:00:00.000Z', finishedAt: '2026-10-21T18:15:34.000Z', pausedMs: 3 * 60_000 };
-  const finishedCasual = casual(['Anna', 'Bartek'], { finished: true, currentPlayerId: null, round: null, placements: [{ playerId: 'p1', place: 1 }, { playerId: 'p2', place: 2 }] });
+  const finishedCasual = casual(['Anna', 'Bartek'], {
+    finished: true,
+    currentPlayerId: null,
+    round: null,
+    placements: [
+      { playerId: 'p1', place: 1 },
+      { playerId: 'p2', place: 2 },
+    ],
+  });
   const finishedSolo = snapshot({
     type: 'practice',
     practiceMode: 'solo_501',
@@ -173,7 +251,12 @@ describe('MatchSummaryPanel: game time', () => {
   });
 
   it('shows Czas gry of a casual game next to its summary', () => {
-    const casualSummary = summary({ type: 'casual', finished: true, eventSeq: finishedCasual.eventSeq, players: [summaryPlayer('p1'), summaryPlayer('p2')] });
+    const casualSummary = summary({
+      type: 'casual',
+      finished: true,
+      eventSeq: finishedCasual.eventSeq,
+      players: [summaryPlayer('p1'), summaryPlayer('p2')],
+    });
     render(<MatchSummaryPanel state={{ ...finishedCasual, ...times }} summary={casualSummary} error={false} />);
     expect(screen.getByRole('table', { name: 'Podsumowanie meczu' })).toBeTruthy();
     expect(screen.getByText('Czas gry')).toBeTruthy();
@@ -216,7 +299,10 @@ describe('MatchSummaryPanel: saving a guest', () => {
     vi.unstubAllGlobals();
   });
 
-  const withGuest = snapshot({ ...match, players: [player('p1', 'Anna', { legsWon: 1 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, guest: true })] });
+  const withGuest = snapshot({
+    ...match,
+    players: [player('p1', 'Anna', { legsWon: 1 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, guest: true })],
+  });
 
   it('saves a guest with PATCH guest false and then says Zapisano', async () => {
     render(<MatchSummaryPanel state={withGuest} summary={matchSummary} error={false} />);
@@ -289,7 +375,13 @@ describe('MatchSummaryPanel: score progress chart', () => {
   });
 
   it('shows no chart for a finished practice game even with the progress set', () => {
-    const soloSummary = summary({ type: 'practice', finished: true, eventSeq: 9, players: [summaryPlayer('p1')], lastLegProgress: legProgress({ p1: [441, 381] }, { startingScore: 501 }) });
+    const soloSummary = summary({
+      type: 'practice',
+      finished: true,
+      eventSeq: 9,
+      players: [summaryPlayer('p1')],
+      lastLegProgress: legProgress({ p1: [441, 381] }, { startingScore: 501 }),
+    });
     render(<MatchSummaryPanel state={solo} summary={soloSummary} error={false} />);
     expect(chart()).toBeNull();
   });

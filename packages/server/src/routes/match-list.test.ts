@@ -1,6 +1,19 @@
 import { ApiError, MatchListItem } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LEG_301, S, T, abandon, createGame, createPlayer, createPlayers, endPractice, listMatches, setup, throwDarts, type TestApp } from '../test-helpers.js';
+import {
+  LEG_301,
+  S,
+  T,
+  abandon,
+  createGame,
+  createPlayer,
+  createPlayers,
+  endPractice,
+  listMatches,
+  setup,
+  throwDarts,
+  type TestApp,
+} from '../test-helpers.js';
 
 let t: TestApp;
 beforeEach(async () => {

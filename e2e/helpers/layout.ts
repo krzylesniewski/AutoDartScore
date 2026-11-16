@@ -18,7 +18,10 @@ export async function expectNoHorizontalScroll(page: Page): Promise<void> {
     ];
   });
   for (const { name, scrollWidth, clientWidth } of measured) {
-    expect(scrollWidth - clientWidth, `${name} at ${page.url()}: scrollWidth ${scrollWidth}, clientWidth ${clientWidth}`).toBeLessThanOrEqual(1);
+    expect(
+      scrollWidth - clientWidth,
+      `${name} at ${page.url()}: scrollWidth ${scrollWidth}, clientWidth ${clientWidth}`,
+    ).toBeLessThanOrEqual(1);
   }
 }
 
@@ -40,7 +43,11 @@ export async function boxOf(locator: Locator): Promise<Box> {
 
 export function expectNoOverlap(first: Box, second: Box): void {
   const where = `boxes ${JSON.stringify(first)} and ${JSON.stringify(second)}`;
-  const apart = first.x + first.width <= second.x || second.x + second.width <= first.x || first.y + first.height <= second.y || second.y + second.height <= first.y;
+  const apart =
+    first.x + first.width <= second.x ||
+    second.x + second.width <= first.x ||
+    first.y + first.height <= second.y ||
+    second.y + second.height <= first.y;
   expect(apart, where).toBe(true);
 }
 

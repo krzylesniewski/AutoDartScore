@@ -69,7 +69,13 @@ describe('POST /matches/:id/abandon', () => {
       abandonment: { playerId: anna, reason: 'koniec prądu' },
     });
     expect(Date.parse(state.abandonment?.at ?? '')).not.toBeNaN();
-    expect((await logEntries(t.db, id)).at(-1)).toEqual({ seq: 3, type: 'match_abandoned', throw_id: null, player_id: anna, reason: 'koniec prądu' });
+    expect((await logEntries(t.db, id)).at(-1)).toEqual({
+      seq: 3,
+      type: 'match_abandoned',
+      throw_id: null,
+      player_id: anna,
+      reason: 'koniec prądu',
+    });
     expect(await countRows(t.db, 'throws')).toBe(throwsBefore);
     expect(await getMatch(t.app, id)).toEqual(state);
   });
@@ -279,11 +285,15 @@ describe('live updates', () => {
   it('broadcasts only state_updated on abandon and resume', async () => {
     const { id } = await match301();
     const messages: unknown[] = [];
-    const socket: TestSocket = await t.app.injectWS(`/matches/${id}/live`, {}, {
-      onInit(ws: TestSocket) {
-        ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+    const socket: TestSocket = await t.app.injectWS(
+      `/matches/${id}/live`,
+      {},
+      {
+        onInit(ws: TestSocket) {
+          ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+        },
       },
-    });
+    );
     try {
       await vi.waitFor(() => expect(messages).toHaveLength(1));
       await abandonOk(id, { playerId: anna });
@@ -292,7 +302,11 @@ describe('live updates', () => {
 
       const parsed = messages.map((message) => LiveMessage.parse(message));
       expect(parsed.map((message) => message.type)).toEqual(['state_updated', 'state_updated', 'state_updated']);
-      expect(parsed.map((message) => (message.type === 'state_updated' ? message.state.status : null))).toEqual(['in_progress', 'abandoned', 'in_progress']);
+      expect(parsed.map((message) => (message.type === 'state_updated' ? message.state.status : null))).toEqual([
+        'in_progress',
+        'abandoned',
+        'in_progress',
+      ]);
       expect(parsed.map((message) => message.eventSeq)).toEqual([0, 1, 2]);
     } finally {
       socket.terminate();

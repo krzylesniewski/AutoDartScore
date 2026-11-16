@@ -32,7 +32,13 @@ const D = (n: number): Hit => ({ segment: n, multiplier: 2 }) as Hit;
 const T = (n: number): Hit => ({ segment: n, multiplier: 3 }) as Hit;
 const MISS: Hit = { segment: 0, multiplier: 0 };
 
-const matchConfig = { type: 'match', playerIds: ['anna', 'bartek'], startingScore: 301, legsToWin: 1, firstPlayerIndex: 0 } satisfies GameConfig;
+const matchConfig = {
+  type: 'match',
+  playerIds: ['anna', 'bartek'],
+  startingScore: 301,
+  legsToWin: 1,
+  firstPlayerIndex: 0,
+} satisfies GameConfig;
 const casualConfig = { type: 'casual', playerIds: ['anna', 'bartek'], startingScore: 301, firstPlayerIndex: 0 } satisfies GameConfig;
 const solo501Config = { type: 'practice', practiceMode: 'solo_501', playerId: 'anna' } satisfies GameConfig;
 const freeRunConfig = { type: 'practice', practiceMode: 'free_run', playerId: 'anna' } satisfies GameConfig;
@@ -228,7 +234,15 @@ describe('isGameFinished', () => {
 
   it('never ends checkout practice', () => {
     expect(isGameFinished(createGame(checkoutsConfig))).toBe(false);
-    expect(isGameFinished(replayGame(checkoutsConfig, [], Array.from({ length: 50 }, () => attempt(true))).state)).toBe(false);
+    expect(
+      isGameFinished(
+        replayGame(
+          checkoutsConfig,
+          [],
+          Array.from({ length: 50 }, () => attempt(true)),
+        ).state,
+      ),
+    ).toBe(false);
   });
 });
 

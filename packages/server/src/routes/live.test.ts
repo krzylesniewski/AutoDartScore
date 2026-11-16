@@ -1,7 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import { LiveMessage, RestMissResult } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { D, LEG_301, S, createGame, createPlayers, hitEvent, postThrow, restMiss, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
+import {
+  D,
+  LEG_301,
+  S,
+  createGame,
+  createPlayers,
+  hitEvent,
+  postThrow,
+  restMiss,
+  setup,
+  throwDarts,
+  undo,
+  type TestApp,
+} from '../test-helpers.js';
 import { MATCH_NOT_FOUND_CLOSE_CODE } from './live.js';
 
 // Typy ws nie są zależnością pakietu, więc opisujemy tylko to, czego używa test.
@@ -33,12 +46,16 @@ afterEach(async () => {
 async function subscribe(matchId: string): Promise<Subscriber> {
   const messages: unknown[] = [];
   const subscriber = { messages, closeCode: null as number | null };
-  const socket: TestSocket = await t.app.injectWS(`/matches/${matchId}/live`, {}, {
-    onInit(ws: TestSocket) {
-      ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
-      ws.on('close', (code) => (subscriber.closeCode = code));
+  const socket: TestSocket = await t.app.injectWS(
+    `/matches/${matchId}/live`,
+    {},
+    {
+      onInit(ws: TestSocket) {
+        ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+        ws.on('close', (code) => (subscriber.closeCode = code));
+      },
     },
-  });
+  );
   sockets.push(socket);
   return Object.assign(subscriber, { socket });
 }
@@ -71,7 +88,13 @@ describe('GET /matches/:id/live', () => {
     const response = await postThrow(t.app, id, hitEvent(id, D(5)));
     expect(response.statusCode).toBe(201);
     const messages = (await received(subscriber, 6)).slice(1);
-    expect(messages.map((message) => message.type)).toEqual(['throw_registered', 'turn_completed', 'leg_won', 'match_won', 'state_updated']);
+    expect(messages.map((message) => message.type)).toEqual([
+      'throw_registered',
+      'turn_completed',
+      'leg_won',
+      'match_won',
+      'state_updated',
+    ]);
     expect(messages.every((message) => message.matchId === id && message.eventSeq === 9)).toBe(true);
     expect(messages.at(-1)).toEqual({ type: 'state_updated', matchId: id, eventSeq: 9, state: response.json().state });
   });
@@ -118,7 +141,9 @@ describe('GET /matches/:id/live', () => {
     const messages = (await received(subscriber, 5)).slice(1);
     expect(messages.map((message) => message.type)).toEqual(['throw_registered', 'throw_registered', 'turn_completed', 'state_updated']);
     expect(messages.map((message) => message.eventSeq)).toEqual([2, 3, 3, 3]);
-    expect(messages.slice(0, 2)).toEqual(result.throws.map((record, index) => ({ type: 'throw_registered', matchId: id, eventSeq: 2 + index, throw: record })));
+    expect(messages.slice(0, 2)).toEqual(
+      result.throws.map((record, index) => ({ type: 'throw_registered', matchId: id, eventSeq: 2 + index, throw: record })),
+    );
     expect(messages[2]).toEqual({ ...result.events[0], matchId: id, eventSeq: 3 });
     expect(messages[3]).toEqual({ type: 'state_updated', matchId: id, eventSeq: 3, state: result.state });
   });

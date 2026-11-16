@@ -20,7 +20,9 @@ export function StatTile({ label, value, detail, icon }: StatTileProps) {
           </span>
         )}
         <span className="shrink-0">{value}</span>
-        {detail && <span className="min-w-0 truncate font-body text-[13px] font-medium text-(--color-text-muted) max-lg:sr-only">{detail}</span>}
+        {detail && (
+          <span className="min-w-0 truncate font-body text-[13px] font-medium text-(--color-text-muted) max-lg:sr-only">{detail}</span>
+        )}
       </dd>
     </dl>
   );

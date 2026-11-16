@@ -271,7 +271,8 @@ describe('useMatch Reszta Miss', () => {
   });
 
   it('fails on HTTP 500 without a partial turn and drops a queued undo', async () => {
-    respond = (call) => (call.url === UNDO_URL ? Promise.resolve(json(200, { undoneThrowId: 't1', state: { ...initial, eventSeq: 5 } })) : serverError());
+    respond = (call) =>
+      call.url === UNDO_URL ? Promise.resolve(json(200, { undoneThrowId: 't1', state: { ...initial, eventSeq: 5 } })) : serverError();
     const { result } = render();
     deliver(initial);
     act(() => {
@@ -366,7 +367,12 @@ describe('useMatch expectedSeq', () => {
 
   it.each([
     ['undo', UNDO_URL, (match: UseMatch) => match.sendUndo(), { expectedSeq: 4 }],
-    ['checkout attempt', `/api/matches/${MATCH_ID}/checkout-attempts`, (match: UseMatch) => match.sendCheckoutAttempt(true), { success: true, expectedSeq: 4 }],
+    [
+      'checkout attempt',
+      `/api/matches/${MATCH_ID}/checkout-attempts`,
+      (match: UseMatch) => match.sendCheckoutAttempt(true),
+      { success: true, expectedSeq: 4 },
+    ],
     ['checkout skip', `/api/matches/${MATCH_ID}/checkout-skips`, (match: UseMatch) => match.sendCheckoutSkip(), { expectedSeq: 4 }],
   ] as const)('accepts a stale_state reply to %s with one request and no error', async (_name, url, send, body) => {
     const newer = snapshot({ id: MATCH_ID, eventSeq: 9, currentPlayerId: 'p2' });
@@ -383,7 +389,13 @@ describe('useMatch expectedSeq', () => {
   });
 
   describe.each([
-    ['abandon', `/api/matches/${MATCH_ID}/abandon`, (match: UseMatch) => match.sendAbandon('p1', null), { playerId: 'p1' }, 'Nie udało się porzucić meczu'],
+    [
+      'abandon',
+      `/api/matches/${MATCH_ID}/abandon`,
+      (match: UseMatch) => match.sendAbandon('p1', null),
+      { playerId: 'p1' },
+      'Nie udało się porzucić meczu',
+    ],
     ['resume', `/api/matches/${MATCH_ID}/resume`, (match: UseMatch) => match.sendResume(), {}, 'Nie udało się wznowić meczu'],
     ['end practice', `/api/matches/${MATCH_ID}/end`, (match: UseMatch) => match.sendEndPractice(), {}, 'Nie udało się zakończyć treningu'],
   ] as const)('%s after stale_state', (_name, url, send, body, failure) => {

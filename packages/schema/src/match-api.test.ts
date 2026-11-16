@@ -112,7 +112,9 @@ describe('CreateMatchRequest', () => {
   });
 
   it('rejects an unknown checkout range', () => {
-    expect(CreateMatchRequest.safeParse({ type: 'practice', practiceMode: 'checkouts', playerIds: ['p1'], checkoutRange: '0-50' }).success).toBe(false);
+    expect(
+      CreateMatchRequest.safeParse({ type: 'practice', practiceMode: 'checkouts', playerIds: ['p1'], checkoutRange: '0-50' }).success,
+    ).toBe(false);
   });
 
   it.each([
@@ -306,7 +308,10 @@ describe('MatchSnapshot', () => {
   it('accepts a snapshot with closed turns of the leg', () => {
     const withTurns = {
       ...snapshot,
-      legTurns: [legTurn, { ...legTurn, playerId: 'p2', turnIndex: 1, darts: [{ segment: 0, multiplier: 0 }], points: 0, remainingAfter: 301 }],
+      legTurns: [
+        legTurn,
+        { ...legTurn, playerId: 'p2', turnIndex: 1, darts: [{ segment: 0, multiplier: 0 }], points: 0, remainingAfter: 301 },
+      ],
     };
     expect(MatchSnapshot.parse(withTurns)).toEqual(withTurns);
   });
@@ -324,7 +329,9 @@ describe('MatchSnapshot', () => {
       legsToWin: null,
       countsToStats: false,
       currentDarts: [],
-      players: [{ id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 3 }],
+      players: [
+        { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 3 },
+      ],
       freeRun: { dartsThrown: 3, totalPoints: 100, average: 100 },
     };
     expect(MatchSnapshot.parse(freeRun)).toEqual(freeRun);
@@ -343,7 +350,9 @@ describe('MatchSnapshot', () => {
       legStartedAt: null,
       turnIndex: 2,
       currentDarts: [],
-      players: [{ id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 0 }],
+      players: [
+        { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 0 },
+      ],
       checkouts: checkoutSession,
     };
     expect(MatchSnapshot.parse(checkouts)).toEqual(checkouts);
@@ -459,7 +468,24 @@ describe('AbandonMatchRequest', () => {
 
 describe('MatchListItem and MatchListQuery', () => {
   it('parses a list item', () => {
-    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements, endedAt } = snapshot;
+    const {
+      id,
+      type,
+      practiceMode,
+      startingScore,
+      legsToWin,
+      createdAt,
+      status,
+      abandonment,
+      currentPlayerId,
+      legIndex,
+      players,
+      freeRun,
+      checkouts,
+      winnerId,
+      placements,
+      endedAt,
+    } = snapshot;
     const item = {
       id,
       type,
@@ -496,7 +522,9 @@ describe('MatchListItem and MatchListQuery', () => {
       abandonment,
       currentPlayerId: 'p1',
       legIndex,
-      players: [{ id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 0 }],
+      players: [
+        { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: false, remaining: null, legsWon: null, place: null, dartsThrownInLeg: 0 },
+      ],
       freeRun: null,
       checkouts: checkoutSession,
       winnerId,
@@ -509,8 +537,43 @@ describe('MatchListItem and MatchListQuery', () => {
   });
 
   it('requires the result fields', () => {
-    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements, endedAt } = snapshot;
-    const item = { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment, currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements, endedAt, updatedAt: '2026-10-15T18:31:00.000Z' };
+    const {
+      id,
+      type,
+      practiceMode,
+      startingScore,
+      legsToWin,
+      createdAt,
+      status,
+      abandonment,
+      currentPlayerId,
+      legIndex,
+      players,
+      freeRun,
+      checkouts,
+      winnerId,
+      placements,
+      endedAt,
+    } = snapshot;
+    const item = {
+      id,
+      type,
+      practiceMode,
+      startingScore,
+      legsToWin,
+      createdAt,
+      status,
+      abandonment,
+      currentPlayerId,
+      legIndex,
+      players,
+      freeRun,
+      checkouts,
+      winnerId,
+      placements,
+      endedAt,
+      updatedAt: '2026-10-15T18:31:00.000Z',
+    };
     expect(MatchListItem.safeParse({ ...item, winnerId: undefined }).success).toBe(false);
     expect(MatchListItem.safeParse({ ...item, placements: undefined }).success).toBe(false);
     expect(MatchListItem.safeParse({ ...item, endedAt: undefined }).success).toBe(false);
@@ -523,7 +586,11 @@ describe('MatchListItem and MatchListQuery', () => {
   });
 
   it('filters by player and type together with the status', () => {
-    expect(MatchListQuery.parse({ status: 'unfinished', playerId: 'p1', type: 'casual' })).toEqual({ status: 'unfinished', playerId: 'p1', type: 'casual' });
+    expect(MatchListQuery.parse({ status: 'unfinished', playerId: 'p1', type: 'casual' })).toEqual({
+      status: 'unfinished',
+      playerId: 'p1',
+      type: 'casual',
+    });
     expect(MatchListQuery.safeParse({ type: 'bogus' }).success).toBe(false);
     expect(MatchListQuery.safeParse({ playerId: '' }).success).toBe(false);
   });
@@ -531,7 +598,17 @@ describe('MatchListItem and MatchListQuery', () => {
 
 describe('ThrowResult and UndoResult', () => {
   it('accept a throw with its events and an undo', () => {
-    const events = [{ type: 'turn_completed', playerId: 'p1', legIndex: 0, turnIndex: 0, darts: [{ segment: 20, multiplier: 3 }], total: 60, remaining: 241 }];
+    const events = [
+      {
+        type: 'turn_completed',
+        playerId: 'p1',
+        legIndex: 0,
+        turnIndex: 0,
+        darts: [{ segment: 20, multiplier: 3 }],
+        total: 60,
+        remaining: 241,
+      },
+    ];
     expect(ThrowResult.parse({ throw: throwRecord, events, state: snapshot })).toEqual({ throw: throwRecord, events, state: snapshot });
     expect(UndoResult.parse({ undoneThrowId: 't1', state: snapshot })).toEqual({ undoneThrowId: 't1', state: snapshot });
   });
@@ -583,7 +660,10 @@ describe('RestMissRequest and RestMissResult', () => {
 
 describe('ApiError', () => {
   it('accepts an error code with a message', () => {
-    expect(ApiError.parse({ error: 'not_found', message: 'Match m1 not found' })).toEqual({ error: 'not_found', message: 'Match m1 not found' });
+    expect(ApiError.parse({ error: 'not_found', message: 'Match m1 not found' })).toEqual({
+      error: 'not_found',
+      message: 'Match m1 not found',
+    });
   });
 
   it('rejects an empty error code', () => {

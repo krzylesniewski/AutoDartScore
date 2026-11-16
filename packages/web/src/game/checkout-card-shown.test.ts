@@ -12,11 +12,18 @@ describe('checkoutCardShown', () => {
   });
 
   it('hides the card in a finished game', () => {
-    expect(checkoutCardShown(snapshot({ finished: true, players: [player('p1', 'Anna', { remaining: 40 }), player('p2', 'Bartek')] }))).toBe(false);
+    expect(
+      checkoutCardShown(snapshot({ finished: true, players: [player('p1', 'Anna', { remaining: 40 }), player('p2', 'Bartek')] })),
+    ).toBe(false);
   });
 
   it('hides the card in Free run', () => {
-    const state = snapshot({ type: 'practice', practiceMode: 'free_run', startingScore: null, players: [player('p1', 'Anna', { remaining: null })] });
+    const state = snapshot({
+      type: 'practice',
+      practiceMode: 'free_run',
+      startingScore: null,
+      players: [player('p1', 'Anna', { remaining: null })],
+    });
     expect(checkoutCardShown(state)).toBe(false);
   });
 

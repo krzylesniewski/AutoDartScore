@@ -9,15 +9,27 @@ function json(status: number, body: unknown): Response {
 describe('409 replies', () => {
   it('rejects a stale_state body with StaleStateRequestError carrying the parsed state', async () => {
     const state = snapshot({ id: 'm1', eventSeq: 9 });
-    vi.stubGlobal('fetch', vi.fn(async () => json(409, { error: 'stale_state', message: 'Match state changed', state })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json(409, { error: 'stale_state', message: 'Match state changed', state })),
+    );
     const caught: unknown = await undo('m1', 7).catch((error: unknown) => error);
     expect(caught).toBeInstanceOf(StaleStateRequestError);
     expect(caught).toBeInstanceOf(ApiRequestError);
-    expect(caught).toMatchObject({ name: 'StaleStateRequestError', status: 409, code: 'stale_state', message: 'Match state changed', state });
+    expect(caught).toMatchObject({
+      name: 'StaleStateRequestError',
+      status: 409,
+      code: 'stale_state',
+      message: 'Match state changed',
+      state,
+    });
   });
 
   it('rejects a 409 with another code with a plain ApiRequestError', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => json(409, { error: 'nothing_to_undo', message: 'Match has no throw to undo' })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json(409, { error: 'nothing_to_undo', message: 'Match has no throw to undo' })),
+    );
     const caught: unknown = await undo('m1', 7).catch((error: unknown) => error);
     expect(caught).toBeInstanceOf(ApiRequestError);
     expect(caught).not.toBeInstanceOf(StaleStateRequestError);
@@ -27,7 +39,9 @@ describe('409 replies', () => {
 
 describe('undo request', () => {
   function stubUndo() {
-    const fetch = vi.fn<typeof globalThis.fetch>(async () => json(200, { undoneThrowId: 't1', state: snapshot({ id: 'm1', eventSeq: 8 }) }));
+    const fetch = vi.fn<typeof globalThis.fetch>(async () =>
+      json(200, { undoneThrowId: 't1', state: snapshot({ id: 'm1', eventSeq: 8 }) }),
+    );
     vi.stubGlobal('fetch', fetch);
     return fetch;
   }
@@ -69,7 +83,10 @@ describe('request time limit', () => {
 
   it('rejects a timed out request with an error that is not ApiRequestError', async () => {
     const timedOut = new DOMException('timeout', 'TimeoutError');
-    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(timedOut)));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(timedOut)),
+    );
     const caught: unknown = await getMatch('m1').catch((error: unknown) => error);
     expect(caught).toBe(timedOut);
     expect(caught).not.toBeInstanceOf(ApiRequestError);

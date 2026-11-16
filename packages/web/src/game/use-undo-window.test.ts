@@ -4,7 +4,13 @@ import { snapshot } from '../test/snapshots';
 import { useUndoWindow } from './use-undo-window';
 
 const UNTIL = '2026-10-21T20:05:00.000Z';
-const finished = snapshot({ finished: true, currentPlayerId: null, winnerId: 'p1', finishedAt: '2026-10-21T20:00:00.000Z', editableUntil: UNTIL });
+const finished = snapshot({
+  finished: true,
+  currentPlayerId: null,
+  winnerId: 'p1',
+  finishedAt: '2026-10-21T20:00:00.000Z',
+  editableUntil: UNTIL,
+});
 
 beforeEach(() => {
   vi.useFakeTimers();

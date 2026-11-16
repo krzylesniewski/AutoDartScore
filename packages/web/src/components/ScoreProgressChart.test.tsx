@@ -51,7 +51,9 @@ describe('ScoreProgressChart', () => {
 
   it('describes the last point of each line in the aria-label', () => {
     render(<ScoreProgressChart progress={progress} players={players} />);
-    expect(chart().getAttribute('aria-label')).toBe('Zejście z wyniku w legu 2: Anna 6 lotek do 0, Bartek 6 lotek do 161, Celina 0 lotek do 301');
+    expect(chart().getAttribute('aria-label')).toBe(
+      'Zejście z wyniku w legu 2: Anna 6 lotek do 0, Bartek 6 lotek do 161, Celina 0 lotek do 301',
+    );
   });
 
   it('declines lotka by the number of darts', () => {
@@ -72,7 +74,14 @@ describe('ScoreProgressChart', () => {
     // Linia gracza ma grubość 3, a punkty na niej 8.
     const lines = [...chart().querySelectorAll('path[stroke-width="3"]')];
     // Stały kolor awatara gracza to znaczenie linii, a w SVG widać go tylko w klasie.
-    expect(lines.map((line) => line.getAttribute('class')?.split(' ').find((name) => name.startsWith('stroke-')))).toEqual(['stroke-(--color-avatar-3)', 'stroke-(--color-avatar-9)']);
+    expect(
+      lines.map((line) =>
+        line
+          .getAttribute('class')
+          ?.split(' ')
+          .find((name) => name.startsWith('stroke-')),
+      ),
+    ).toEqual(['stroke-(--color-avatar-3)', 'stroke-(--color-avatar-9)']);
   });
 
   it('draws a grid line every turn and every 50 points inside the chart', () => {

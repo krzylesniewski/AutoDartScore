@@ -22,8 +22,18 @@ interface Group {
 // Serwer sortuje graczy, więc grupy tylko dzielą listę i zachowują jej kolejność.
 function groups(players: readonly OverallPlayer[]): readonly Group[] {
   return [
-    { id: 'overall-above', title: pl.overallAbove, icon: <ArrowUpIcon />, players: players.filter((player) => player.difference !== null && player.difference >= 0) },
-    { id: 'overall-below', title: pl.overallBelow, icon: <ArrowDownIcon />, players: players.filter((player) => player.difference !== null && player.difference < 0) },
+    {
+      id: 'overall-above',
+      title: pl.overallAbove,
+      icon: <ArrowUpIcon />,
+      players: players.filter((player) => player.difference !== null && player.difference >= 0),
+    },
+    {
+      id: 'overall-below',
+      title: pl.overallBelow,
+      icon: <ArrowDownIcon />,
+      players: players.filter((player) => player.difference !== null && player.difference < 0),
+    },
     { id: 'overall-no-leg', title: pl.overallNoLeg, icon: null, players: players.filter((player) => player.average === null) },
   ];
 }
@@ -80,7 +90,9 @@ function Row({ player }: { player: OverallPlayer }) {
         <span className="min-w-0 flex-1 truncate font-display text-[22px] font-bold">{player.name}</span>
         <span className="flex shrink-0 flex-wrap items-baseline gap-x-3.5 tabular-nums @max-sm:gap-x-3">
           <span className="font-display text-[30px] leading-none font-extrabold @max-sm:text-[26px]">{formatAverage(player.average)}</span>
-          {player.difference !== null && <span className="font-display text-xl leading-none font-semibold">{formatDifference(player.difference)}</span>}
+          {player.difference !== null && (
+            <span className="font-display text-xl leading-none font-semibold">{formatDifference(player.difference)}</span>
+          )}
           <span className="text-[15px] text-(--color-text-muted)">{pl.overallDartCount(player.darts)}</span>
         </span>
       </span>

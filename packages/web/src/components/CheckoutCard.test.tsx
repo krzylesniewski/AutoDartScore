@@ -71,7 +71,11 @@ describe('CheckoutCard', () => {
   });
 
   it('renders nothing in Free run', () => {
-    const state = snapshot({ startingScore: null, currentPlayerId: 'p1', players: [player('p1', 'Anna', { remaining: null, legsWon: 0 })] });
+    const state = snapshot({
+      startingScore: null,
+      currentPlayerId: 'p1',
+      players: [player('p1', 'Anna', { remaining: null, legsWon: 0 })],
+    });
     const { container } = renderCard(state);
     expect(container.innerHTML).toBe('');
   });

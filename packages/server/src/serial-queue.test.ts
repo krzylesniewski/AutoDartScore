@@ -7,15 +7,17 @@ describe('createSerialQueue', () => {
   it('runs tasks with the same key one after another, also after a failure', async () => {
     const queue = createSerialQueue();
     const order: string[] = [];
-    const task = (name: string, fail = false) => async () => {
-      order.push(`${name}:start`);
-      await tick();
-      order.push(`${name}:end`);
-      if (fail) {
-        throw new Error(name);
-      }
-      return name;
-    };
+    const task =
+      (name: string, fail = false) =>
+      async () => {
+        order.push(`${name}:start`);
+        await tick();
+        order.push(`${name}:end`);
+        if (fail) {
+          throw new Error(name);
+        }
+        return name;
+      };
     const results = await Promise.allSettled([queue('m1', task('a')), queue('m1', task('b', true)), queue('m1', task('c'))]);
     expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected', 'fulfilled']);
     expect(order).toEqual(['a:start', 'a:end', 'b:start', 'b:end', 'c:start', 'c:end']);

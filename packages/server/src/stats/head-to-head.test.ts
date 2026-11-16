@@ -37,7 +37,10 @@ describe('buildHeadToHead', () => {
   });
 
   it('counts matches and legs from both sides', () => {
-    const won = { winnerId: 'anna', events: [...leg301('anna', 'bartek', 0), ...leg301('bartek', 'anna', 1), ...leg301('anna', 'bartek', 2)] };
+    const won = {
+      winnerId: 'anna',
+      events: [...leg301('anna', 'bartek', 0), ...leg301('bartek', 'anna', 1), ...leg301('anna', 'bartek', 2)],
+    };
     const lost = { winnerId: 'bartek', events: [...leg301('bartek', 'anna', 0), ...leg301('bartek', 'anna', 1)] };
     expect(buildHeadToHead({ playerId: 'anna', opponentId: 'bartek', games: [won, lost] })).toMatchObject({
       matchesPlayed: 2,
@@ -68,7 +71,11 @@ describe('buildHeadToHead', () => {
   it('leaves the interrupted leg out of the averages but keeps the won legs', () => {
     const game = {
       winnerId: null,
-      events: [...leg301('anna', 'bartek', 0), turn('anna', 1, [S(1), S(1), S(1)], 3, 298), turn('bartek', 1, [T(20), T(20), T(20)], 180, 121)],
+      events: [
+        ...leg301('anna', 'bartek', 0),
+        turn('anna', 1, [S(1), S(1), S(1)], 3, 298),
+        turn('bartek', 1, [T(20), T(20), T(20)], 180, 121),
+      ],
     };
     expect(buildHeadToHead({ playerId: 'anna', opponentId: 'bartek', games: [game] })).toMatchObject({
       matchesPlayed: 1,

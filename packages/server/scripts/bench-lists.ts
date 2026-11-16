@@ -40,7 +40,11 @@ function prng(seed: number): () => number {
 
 const random = prng(20261115);
 const segment = () => 1 + Math.floor(random() * 20);
-const SETUP_DARTS: Dart[] = [...Array.from({ length: 20 }, (_, i): Dart => [i + 1, 1]), ...Array.from({ length: 20 }, (_, i): Dart => [i + 1, 3]), [25, 1]];
+const SETUP_DARTS: Dart[] = [
+  ...Array.from({ length: 20 }, (_, i): Dart => [i + 1, 1]),
+  ...Array.from({ length: 20 }, (_, i): Dart => [i + 1, 3]),
+  [25, 1],
+];
 
 // Prosty gracz: punktuje na T20, ustawia parzystą resztę do 40 i kończy na double.
 function aim(remaining: number): Dart {
@@ -84,7 +88,16 @@ async function post(app: FastifyInstance, url: string, payload?: object): Promis
 }
 
 async function throwDart(app: FastifyInstance, matchId: string, [s, m]: Dart): Promise<ThrowState> {
-  const hit = { eventId: randomUUID(), matchId, source: 'bench', sequence: 0, segment: s, multiplier: m, confidence: 1, detectedAt: new Date().toISOString() };
+  const hit = {
+    eventId: randomUUID(),
+    matchId,
+    source: 'bench',
+    sequence: 0,
+    segment: s,
+    multiplier: m,
+    confidence: 1,
+    detectedAt: new Date().toISOString(),
+  };
   const result = (await post(app, `/matches/${matchId}/throws`, hit)) as { state: ThrowState };
   throwCount += 1;
   return result.state;
@@ -112,7 +125,8 @@ async function seed(app: FastifyInstance): Promise<{ matches: number; playerId: 
   for (const name of ['Anna', 'Bartek', 'Celina', 'Darek', 'Ewa', 'Filip', 'Gosia', 'Henryk']) {
     players.push(((await post(app, '/players', { name })) as { id: string }).id);
   }
-  const pick = (offset: number, count: number) => Array.from({ length: count }, (_, i) => players[(offset + i * 3) % players.length] as string);
+  const pick = (offset: number, count: number) =>
+    Array.from({ length: count }, (_, i) => players[(offset + i * 3) % players.length] as string);
   let matches = 0;
 
   for (let i = 0; i < MATCHES_1V1; i++) {
@@ -138,7 +152,9 @@ async function seed(app: FastifyInstance): Promise<{ matches: number; playerId: 
   for (let i = 0; i < CHECKOUT_SESSIONS; i++) {
     const { id } = await createGame(app, { type: 'practice', practiceMode: 'checkouts', playerIds: pick(i, 1), checkoutRange: '2-50' });
     for (let attempt = 0; attempt < 30; attempt++) {
-      await (attempt % 7 === 6 ? post(app, `/matches/${id}/checkout-skips`) : post(app, `/matches/${id}/checkout-attempts`, { success: random() < 0.4 }));
+      await (attempt % 7 === 6
+        ? post(app, `/matches/${id}/checkout-skips`)
+        : post(app, `/matches/${id}/checkout-attempts`, { success: random() < 0.4 }));
     }
     matches += 1;
   }

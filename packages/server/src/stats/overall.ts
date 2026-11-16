@@ -30,7 +30,9 @@ export function buildOverall({ players, games }: RankingsInput): Omit<StatsOvera
       return [];
     }
     const completed = legs.get(player.id);
-    return [{ player, darts: own, legs: completed?.legs ?? 0, average: completed ? threeDartAverage(completed.points, completed.darts) : null }];
+    return [
+      { player, darts: own, legs: completed?.legs ?? 0, average: completed ? threeDartAverage(completed.points, completed.darts) : null },
+    ];
   });
 
   // Każdy gracz z ukończonym legiem waży tyle samo, także poniżej MIN_LEGS_FOR_AVERAGE.

@@ -1,6 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { LEG_301, MISS, S, T, createGame, createPlayer, listMatches, postThrow, hitEvent, setup, throwDarts, type TestApp } from '../test-helpers.js';
+import {
+  LEG_301,
+  MISS,
+  S,
+  T,
+  createGame,
+  createPlayer,
+  listMatches,
+  postThrow,
+  hitEvent,
+  setup,
+  throwDarts,
+  type TestApp,
+} from '../test-helpers.js';
 
 let t: TestApp;
 let anna: string;
@@ -17,7 +30,11 @@ afterEach(async () => {
 // Mecz 1v1 Anny i Bartka zapisany wprost w bazie, z podanymi rzutkami i wpisami logu.
 async function insertMatch(
   id: string,
-  { legsToWin = 1, throws = [], entries = [] }: { legsToWin?: number | null; throws?: string[]; entries?: { type: 'throw' | 'undo'; throwId: string | null }[] },
+  {
+    legsToWin = 1,
+    throws = [],
+    entries = [],
+  }: { legsToWin?: number | null; throws?: string[]; entries?: { type: 'throw' | 'undo'; throwId: string | null }[] },
 ): Promise<void> {
   const createdAt = new Date().toISOString();
   await t.db
@@ -63,7 +80,16 @@ async function insertMatch(
   for (const [index, { type, throwId }] of entries.entries()) {
     await t.db
       .insertInto('match_events')
-      .values({ match_id: id, seq: index + 1, type, throw_id: throwId, player_id: null, reason: null, success: null, created_at: createdAt })
+      .values({
+        match_id: id,
+        seq: index + 1,
+        type,
+        throw_id: throwId,
+        player_id: null,
+        reason: null,
+        success: null,
+        created_at: createdAt,
+      })
       .execute();
   }
 }
@@ -79,7 +105,13 @@ async function insertCorruptMatches(): Promise<void> {
       { type: 'undo', throwId: 'u1' },
     ],
   });
-  await insertMatch('throw-without-id', { throws: ['n1'], entries: [{ type: 'throw', throwId: 'n1' }, { type: 'throw', throwId: null }] });
+  await insertMatch('throw-without-id', {
+    throws: ['n1'],
+    entries: [
+      { type: 'throw', throwId: 'n1' },
+      { type: 'throw', throwId: null },
+    ],
+  });
   await insertMatch('no-legs-to-win', { legsToWin: null, throws: ['l1'], entries: [{ type: 'throw', throwId: 'l1' }] });
 }
 
@@ -89,7 +121,16 @@ async function get(url: string) {
 }
 
 function aggregates(): Promise<{ statusCode: number; body: unknown }[]> {
-  return Promise.all(['/matches', '/stats/rankings', '/stats/rankings?type=match', '/stats/overall', `/players/${anna}/stats`, `/players/${bartek}/stats`].map(get));
+  return Promise.all(
+    [
+      '/matches',
+      '/stats/rankings',
+      '/stats/rankings?type=match',
+      '/stats/overall',
+      `/players/${anna}/stats`,
+      `/players/${bartek}/stats`,
+    ].map(get),
+  );
 }
 
 describe('corrupt matches', () => {
@@ -104,7 +145,12 @@ describe('corrupt matches', () => {
     await insertCorruptMatches();
     expect(await aggregates()).toEqual(before);
     const list = await listMatches(t.app);
-    expect(list.json().map((item: { id: string }) => item.id).sort()).toEqual([finished.id, unfinished.id].sort());
+    expect(
+      list
+        .json()
+        .map((item: { id: string }) => item.id)
+        .sort(),
+    ).toEqual([finished.id, unfinished.id].sort());
   });
 
   it('still fails the single match and its summary', async () => {

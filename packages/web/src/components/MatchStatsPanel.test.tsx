@@ -16,19 +16,42 @@ describe('MatchStatsPanel', () => {
         state={state}
         summary={summary({
           players: [
-            summaryPlayer('p1', { dartsThrown: 6, average: 150.5, first9Average: 150.5, highestCheckout: 121, doubleAttempts: 1, doublesHit: 1, doublesPercent: 100, legsWon: 1 }),
+            summaryPlayer('p1', {
+              dartsThrown: 6,
+              average: 150.5,
+              first9Average: 150.5,
+              highestCheckout: 121,
+              doubleAttempts: 1,
+              doublesHit: 1,
+              doublesPercent: 100,
+              legsWon: 1,
+            }),
             summaryPlayer('p2', { dartsThrown: 3, average: 0, first9Average: 0 }),
           ],
         })}
       />,
     );
     const table = within(panel());
-    expect(table.getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Średnia', 'First 9', 'Max zamk.', '% doubli', 'Legi']);
+    expect(table.getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
+      'Średnia',
+      'First 9',
+      'Max zamk.',
+      '% doubli',
+      'Legi',
+    ]);
     const [anna, bartek] = table.getAllByRole('row').slice(1);
     expect(within(anna as HTMLElement).getByRole('rowheader').textContent).toBe('Anna');
-    expect(within(anna as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['150,50', '150,50', '121', '100,0% (1/1)', '1']);
+    expect(
+      within(anna as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['150,50', '150,50', '121', '100,0% (1/1)', '1']);
     expect(within(bartek as HTMLElement).getByRole('rowheader').textContent).toBe('Bartek');
-    expect(within(bartek as HTMLElement).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0,00', '0,00', '—', '—', '0']);
+    expect(
+      within(bartek as HTMLElement)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['0,00', '0,00', '—', '—', '0']);
   });
 
   it('shows dashes before the first summary arrives', () => {

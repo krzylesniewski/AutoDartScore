@@ -78,7 +78,14 @@ describe('buildLegTurns', () => {
   });
 
   it('gives no turns in checkout practice', () => {
-    const config: GameConfig = { type: 'practice', practiceMode: 'checkouts', playerId: 'anna', range: '2-50', seed: 1, rule: 'repeat_on_miss' };
+    const config: GameConfig = {
+      type: 'practice',
+      practiceMode: 'checkouts',
+      playerId: 'anna',
+      range: '2-50',
+      seed: 1,
+      rule: 'repeat_on_miss',
+    };
     const { state, events } = replayGame(config, [], [{ type: 'attempt', success: true }]);
     expect(buildLegTurns(state, events, [])).toEqual([]);
   });

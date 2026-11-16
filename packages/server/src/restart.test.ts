@@ -2,7 +2,20 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { S, T, abandon, checkoutAttempt, checkoutSkip, createGame, createPlayers, endPractice, getMatch, setup, throwDarts, undo } from './test-helpers.js';
+import {
+  S,
+  T,
+  abandon,
+  checkoutAttempt,
+  checkoutSkip,
+  createGame,
+  createPlayers,
+  endPractice,
+  getMatch,
+  setup,
+  throwDarts,
+  undo,
+} from './test-helpers.js';
 
 let dir: string;
 beforeEach(async () => {

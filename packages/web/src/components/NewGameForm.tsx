@@ -103,7 +103,9 @@ export function NewGameForm(props: NewGameFormProps) {
                   <Avatar name={player.name} avatar={player.avatar} color={player.color} size="tile" />
                   {/* Avatar ma zostać pierwszym, a imię ostatnim dzieckiem kafla. Znaczek stoi między nimi, a na koniec przenosi go order-last.
                       W wąskim kaflu (telefon, 3 kolumny na tablecie) znaczek w rogu zostawia miejsce na imię. */}
-                  {selected && <CheckBadge className="absolute top-1.5 right-1.5 order-last size-5.5 text-sm @2xs:static @2xs:size-7 @2xs:text-base" />}
+                  {selected && (
+                    <CheckBadge className="absolute top-1.5 right-1.5 order-last size-5.5 text-sm @2xs:static @2xs:size-7 @2xs:text-base" />
+                  )}
                   <span className="min-w-0 flex-1 truncate text-left font-display text-[22px] font-bold xl:text-2xl">{player.name}</span>
                 </button>
               );
@@ -143,7 +145,11 @@ export function NewGameForm(props: NewGameFormProps) {
         {setup.type === 'practice' && (
           <Segmented legend={pl.practiceMode} description={pl.practiceModeHint}>
             {PRACTICE_MODES.map((option) => (
-              <Segment key={option.value} selected={setup.practiceMode === option.value} onSelect={() => props.onPracticeModeChange(option.value)}>
+              <Segment
+                key={option.value}
+                selected={setup.practiceMode === option.value}
+                onSelect={() => props.onPracticeModeChange(option.value)}
+              >
                 {option.label}
               </Segment>
             ))}
@@ -187,14 +193,19 @@ function TypeTile({ name, description, icon, selected, onSelect }: TypeTileProps
       {selected && <CornerRings className="-top-11 -right-11 size-30 @xs:-top-15 @xs:-right-15 @xs:size-50" />}
       <span className="relative flex h-full flex-col justify-between p-2.5 @xs:flex-row @xs:items-center @xs:justify-start @xs:gap-4.5 @xs:px-5.5 @xs:py-4.5">
         <span className="flex items-start justify-between @xs:contents">
-          <span className="flex shrink-0 items-center justify-center text-[26px] @xs:size-15 @xs:rounded-full @xs:bg-(--color-surface-soft) @xs:text-[34px]">{icon}</span>
+          <span className="flex shrink-0 items-center justify-center text-[26px] @xs:size-15 @xs:rounded-full @xs:bg-(--color-surface-soft) @xs:text-[34px]">
+            {icon}
+          </span>
           {selected && <CheckBadge className="size-5.5 text-sm sm:size-7.5 sm:text-lg @xs:order-last @xs:self-start" />}
         </span>
         <span className="flex min-w-0 flex-col gap-0.5 @xs:flex-1 @xs:gap-1">
           <span id={`${id}-name`} className="font-display text-[22px] leading-none font-extrabold sm:text-[26px] @xs:text-[34px]">
             {name}
           </span>
-          <span id={`${id}-description`} className={`text-xs leading-[1.25] sm:text-[15px] ${selected ? 'text-(--color-text-sub)' : 'text-(--color-text-muted)'}`}>
+          <span
+            id={`${id}-description`}
+            className={`text-xs leading-[1.25] sm:text-[15px] ${selected ? 'text-(--color-text-sub)' : 'text-(--color-text-muted)'}`}
+          >
             {description}
           </span>
         </span>
@@ -206,7 +217,10 @@ function TypeTile({ name, description, icon, selected, onSelect }: TypeTileProps
 // Stan niesie aria-pressed, więc znaczek jest ukryty przed czytnikami ekranu.
 function CheckBadge({ className }: { className: string }) {
   return (
-    <span aria-hidden="true" className={`flex shrink-0 items-center justify-center rounded-full bg-(--color-accent) text-(--color-on-accent) ${className}`}>
+    <span
+      aria-hidden="true"
+      className={`flex shrink-0 items-center justify-center rounded-full bg-(--color-accent) text-(--color-on-accent) ${className}`}
+    >
       <CheckIcon />
     </span>
   );
@@ -230,7 +244,12 @@ function Segmented({ legend, description, children }: { legend: string; descript
 
 function Segment({ selected, onSelect, children }: { selected: boolean; onSelect(): void; children: ReactNode }) {
   return (
-    <button type="button" aria-pressed={selected} onClick={onSelect} className="h-12 flex-1 px-4 text-[22px] whitespace-nowrap lg:h-15 xl:h-13">
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      className="h-12 flex-1 px-4 text-[22px] whitespace-nowrap lg:h-15 xl:h-13"
+    >
       {children}
     </button>
   );

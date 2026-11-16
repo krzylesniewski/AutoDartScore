@@ -8,7 +8,16 @@ import { AchievementNotices } from './AchievementNotices';
 function notice(playerName: string, overrides: Partial<Achievement> = {}): AchievementNotice {
   return {
     playerName,
-    achievement: { type: 'achievement', matchId: 'm_1', eventSeq: 5, playerId: 'p1', kind: 'turn_record', value: 140, previous: 121, ...overrides },
+    achievement: {
+      type: 'achievement',
+      matchId: 'm_1',
+      eventSeq: 5,
+      playerId: 'p1',
+      kind: 'turn_record',
+      value: 140,
+      previous: 121,
+      ...overrides,
+    },
   };
 }
 
@@ -19,9 +28,14 @@ describe('AchievementNotices', () => {
   });
 
   it('lists each notice with a star, the player name and the text', () => {
-    render(<AchievementNotices notices={[notice('Anna'), notice('Bartek', { playerId: 'p2', kind: 'longest_leg', value: 42, previous: 39 })]} />);
+    render(
+      <AchievementNotices notices={[notice('Anna'), notice('Bartek', { playerId: 'p2', kind: 'longest_leg', value: 42, previous: 39 })]} />,
+    );
     const items = within(screen.getByRole('list', { name: pl.achievements })).getAllByRole('listitem');
-    expect(items.map((item) => item.textContent)).toEqual(['Anna Rekord tury: 140 (było 121)', 'Bartek Najdłuższy leg: 42 lotki (było 39)']);
+    expect(items.map((item) => item.textContent)).toEqual([
+      'Anna Rekord tury: 140 (było 121)',
+      'Bartek Najdłuższy leg: 42 lotki (było 39)',
+    ]);
     for (const item of items) {
       expect(item.querySelector('svg')).not.toBeNull();
     }

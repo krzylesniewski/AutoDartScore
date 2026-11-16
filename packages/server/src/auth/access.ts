@@ -18,7 +18,10 @@ function bearerToken(request: FastifyRequest): string | null {
   return match?.[1] ?? null;
 }
 
-export async function registerAccessControl(app: FastifyInstance, { auth, corsOrigins, now, webRoutes }: AccessControlOptions): Promise<void> {
+export async function registerAccessControl(
+  app: FastifyInstance,
+  { auth, corsOrigins, now, webRoutes }: AccessControlOptions,
+): Promise<void> {
   // CORS przed hakiem autoryzacji, żeby odpowiedź 401 też miała nagłówki CORS i front mógł odczytać status.
   if (corsOrigins !== null) {
     await app.register(cors, {

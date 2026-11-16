@@ -111,7 +111,10 @@ describe('lists and stats with the replay cache', () => {
     ok(await resume(t.app, paused.id));
     await throwDarts(t.app, paused.id, [S(2)]);
 
-    const urls = endpoints([anna, bartek, celina, darek], [finished.id, inProgress.id, casual.id, solo.id, freeRun.id, checkouts.id, paused.id]);
+    const urls = endpoints(
+      [anna, bartek, celina, darek],
+      [finished.id, inProgress.id, casual.id, solo.id, freeRun.id, checkouts.id, paused.id],
+    );
     await expectSameResponses(urls);
 
     // Każdy krok raz, po nim porównanie. Część kroków idzie przez aplikację bez pamięci podręcznej,

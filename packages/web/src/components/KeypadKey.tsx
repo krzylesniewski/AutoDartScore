@@ -6,7 +6,8 @@ const PRESSED_TONE: KeypadKeyTone = { fill: 'bg-(--color-surface-raised) text-(-
 const FLASH_BORDER = 'border-(--color-accent)';
 const feedback = 'touch-manipulation transition-[background-color,border-color,transform] duration-80';
 // Kolor tekstu klawisza z mniejszą kryjącością, więc odznaka jest czytelna także na kremowym wybranym mnożniku.
-export const SHORTCUT_BADGE = 'pointer-events-none absolute top-1 right-1.5 hidden font-body text-xs leading-none font-medium opacity-70 lg:block';
+export const SHORTCUT_BADGE =
+  'pointer-events-none absolute top-1 right-1.5 hidden font-body text-xs leading-none font-medium opacity-70 lg:block';
 
 export interface KeypadKeyTone {
   // Klasy tła i tekstu. Kolor ramki jest osobno, bo błysk podmienia tylko ramkę.

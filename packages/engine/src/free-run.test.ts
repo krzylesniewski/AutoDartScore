@@ -69,7 +69,10 @@ describe('session counter', () => {
   });
 
   it('has no bust, checkout or end', () => {
-    const { state, events } = replayFreeRun(config, Array.from({ length: 36 }, () => T(20)));
+    const { state, events } = replayFreeRun(
+      config,
+      Array.from({ length: 36 }, () => T(20)),
+    );
     expect(events).toEqual([]);
     expect(state.dartsThrown).toBe(36);
     expect(state.totalPoints).toBe(2160);

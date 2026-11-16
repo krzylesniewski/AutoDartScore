@@ -1,4 +1,11 @@
-import { AbandonMatchRequest, CheckoutAttemptRequest, CommandRequest, CreateMatchRequest, MatchListQuery, RestMissRequest } from '@autoscore/schema';
+import {
+  AbandonMatchRequest,
+  CheckoutAttemptRequest,
+  CommandRequest,
+  CreateMatchRequest,
+  MatchListQuery,
+  RestMissRequest,
+} from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import { invalidRequest } from '../errors.js';
 import type { MatchService } from '../match-service.js';

@@ -76,7 +76,19 @@ function ThrowingNow() {
 
 // Nagłówki kolumn stoją w osobnej tabeli nad przewijaną częścią, żeby nie znikały przy przewijaniu.
 // Czytnik ekranu dostaje je z niewidocznego thead właściwej tabeli, więc kopia jest ukryta.
-function VerticalTable({ colgroup, head, caption, labelledBy, children }: { colgroup: ReactNode; head: (scoped: boolean) => ReactNode; caption?: string; labelledBy?: string; children: ReactNode }) {
+function VerticalTable({
+  colgroup,
+  head,
+  caption,
+  labelledBy,
+  children,
+}: {
+  colgroup: ReactNode;
+  head: (scoped: boolean) => ReactNode;
+  caption?: string;
+  labelledBy?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="flex min-h-0 flex-col lg:flex-1">
       <table aria-hidden="true" className="w-full shrink-0 table-fixed border-collapse">
