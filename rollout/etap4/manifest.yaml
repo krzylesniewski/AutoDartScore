@@ -1,4 +1,4 @@
-# AutoScore Dart: Etap 4 (wzmocnienie po audycie) jako seria PR-ów Q1-Q17.
+# AutoScore Dart: Etap 4 (wzmocnienie po audycie) jako seria PR-ów Q1-Q18.
 # Źródło: CLAUDE.md, design/plan-etap4.md.
 # Opis pól: ~/.claude/skills/rollout/docs/manifest.html
 # Ten plik jest w repo; ~/.rollouts/autoscore-etap4/manifest.yaml to dowiązanie do niego.
@@ -247,11 +247,23 @@ prs:
     scope: ['packages/web/**', 'e2e/**', 'README.md', 'packages/*/README.md']
     briefTags: [web]
 
+  # Dodatek z feedbacku autora 2026-11-16 (plan: sekcja Q18).
+  - id: Q18
+    branch: feat/web-checkout-card-fill
+    title: 'feat(web): the checkout card fills the free height on large screens'
+    brief: briefs/Q18.md
+    deps: [Q16]
+    priority: 25
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
   - id: Q17
     branch: chore/quality-tooling
     title: 'chore: formatting, stricter lint, coverage thresholds and faster web tests in CI'
     brief: briefs/Q17.md
-    deps: [Q10, Q16]
+    deps: [Q10, Q16, Q18]
     priority: 20
     effort: { brief: high, implement: high, verify: high }
     changeset: none

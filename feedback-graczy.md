@@ -33,7 +33,7 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 - **Rodzaj / obszar:** utrudnienie / ekran gry
 - **Co powiedział:** „Na dużych ekranach »zakończenie« jest niepotrzebnie małe, bo jest miejsce nad nim. Pytanie, czy można zrobić je dynamicznie, tak żeby wykorzystywało całe wolne miejsce?”
 - **Kontekst:** monitor około 2560×1250, zabawa 4 graczy; zrzut w `feedback_img/` (lokalnie, poza repo)
-- **Status:** nowy
+- **Status:** zaplanowany (Q18, `design/plan-etap4.md`)
 - **Uwagi:** koło klawiatury ma górny limit 600 px (`clamp(…, 600px)` w `Keypad.tsx`), a karta zamknięcia stałe 80 px (`CheckoutCard.tsx`, rząd `auto` w siatce `GameScreen.tsx`), więc na wysokim ekranie między klawiaturą a kartą zostaje około 230 px pustego miejsca. Kierunek: od `lg` karta bierze całą wolną wysokość pod klawiaturą (rząd `1fr`, minimum 80 px), a rozmiar trasy rośnie z wysokością karty przez jednostki kontenera, z górnym limitem. Na ekranach, gdzie miejsca nie ma (1280×800, 1024×768), karta zostaje przy 80 px.
 
 ### 2026-11-15: filtr statystyk po czasie
