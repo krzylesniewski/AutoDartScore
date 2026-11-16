@@ -56,8 +56,14 @@ export function MatchSummaryPanel({ state, summary, error }: MatchSummaryPanelPr
         .map((player) => (
           <SaveGuest key={player.id} player={player} />
         ))}
-      {current ? <SummaryTable state={state} summary={current} /> : <p className="text-(--color-text-muted)">{error ? pl.summaryFailed : pl.loading}</p>}
-      {state.type === 'casual' && current?.lastLegProgress && <ScoreProgressChart progress={current.lastLegProgress} players={state.players} />}
+      {current ? (
+        <SummaryTable state={state} summary={current} />
+      ) : (
+        <p className="text-(--color-text-muted)">{error ? pl.summaryFailed : pl.loading}</p>
+      )}
+      {state.type === 'casual' && current?.lastLegProgress && (
+        <ScoreProgressChart progress={current.lastLegProgress} players={state.players} />
+      )}
       {current && current.legs.length > 0 && <LegList summary={current} name={name} showDuration={state.type !== 'practice'} />}
       <a href={NEW_GAME_HREF} className="sc-btn sc-btn--outline self-start">
         {pl.newGame}
@@ -122,7 +128,9 @@ function LegList({ summary, name, showDuration }: LegListProps) {
       <ol className="flex flex-col gap-2">
         {summary.legs.map((leg) => (
           <li key={leg.legIndex} className="flex flex-col">
-            <span className="text-xl">{pl.legSummary(leg.legIndex + 1, pl.legResult(name(leg.winnerId), leg.dartsThrown, leg.checkout))}</span>
+            <span className="text-xl">
+              {pl.legSummary(leg.legIndex + 1, pl.legResult(name(leg.winnerId), leg.dartsThrown, leg.checkout))}
+            </span>
             {showDuration && <LegDuration ms={leg.durationMs} />}
             <span className="text-(--color-text-muted)">
               {leg.averages.map((entry) => `${name(entry.playerId)} ${formatAverage(entry.average)}`).join(' · ')}

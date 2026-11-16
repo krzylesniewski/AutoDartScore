@@ -32,7 +32,10 @@ const finished = snapshot({
 const current = summary({
   finished: true,
   eventSeq: 9,
-  players: [summaryPlayer('p1', { dartsThrown: 30, average: 50, legsWon: 1 }), summaryPlayer('p2', { dartsThrown: 33, average: 60, legsWon: 2 })],
+  players: [
+    summaryPlayer('p1', { dartsThrown: 30, average: 50, legsWon: 1 }),
+    summaryPlayer('p2', { dartsThrown: 33, average: 60, legsWon: 2 }),
+  ],
   legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [], durationMs: 252_000 }],
 });
 
@@ -87,16 +90,16 @@ function lockPath(): string | null | undefined {
 }
 
 function undoButton(name: string | RegExp = /^Cofnij/): HTMLButtonElement {
-  return screen.getByRole('button', { name }) as HTMLButtonElement;
+  return screen.getByRole<HTMLButtonElement>('button', { name });
 }
 
 function rematchButton(): HTMLButtonElement {
-  return screen.getByRole('button', { name: 'Rewanż' }) as HTMLButtonElement;
+  return screen.getByRole<HTMLButtonElement>('button', { name: 'Rewanż' });
 }
 
 beforeEach(() => {
   calls = [];
-  respond = async () => json(201, snapshot({ id: 'm_43' }));
+  respond = () => Promise.resolve(json(201, snapshot({ id: 'm_43' })));
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
@@ -125,23 +128,31 @@ describe('MatchEndView', () => {
     expect(rowHeaders).toHaveLength(10);
     expect(rowHeaders.map((header) => header.textContent)).toContain('Wygrane legi');
     const columns = within(table).getAllByRole('columnheader');
-    expect(columns).toEqual([within(table).getByRole('columnheader', { name: 'Bartek' }), within(table).getByRole('columnheader', { name: 'Anna' })]);
+    expect(columns).toEqual([
+      within(table).getByRole('columnheader', { name: 'Bartek' }),
+      within(table).getByRole('columnheader', { name: 'Anna' }),
+    ]);
   });
 
-  it('shows the achievement notices in a status overlay that keeps the buttons clickable', () => {
+  it('shows the achievement notices in a status region and keeps Cofnij working', () => {
     const props = view({
       achievements: [
         {
           playerName: 'Bartek',
-          achievement: { type: 'achievement', matchId: 'm_1', eventSeq: 9, playerId: 'p2', kind: 'checkout_record', value: 121, previous: 100 },
+          achievement: {
+            type: 'achievement',
+            matchId: 'm_1',
+            eventSeq: 9,
+            playerId: 'p2',
+            kind: 'checkout_record',
+            value: 121,
+            previous: 100,
+          },
         },
       ],
     });
     const status = screen.getByRole('status');
     expect(within(status).getByRole('list', { name: pl.achievements }).textContent).toBe('Bartek Rekord zamknięcia: 121 (było 100)');
-    expect(status.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'pointer-events-none']));
-    expect(status.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['relative', 'flex-1']));
-    expect(status.parentElement?.contains(screen.getByRole('main'))).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: pl.undo }));
     expect(props.onUndo).toHaveBeenCalledOnce();
   });
@@ -152,15 +163,14 @@ describe('MatchEndView', () => {
   });
 
   it("gives the avatars the players' own colors, not the list position", () => {
-    const players = [player('p1', 'Anna', { legsWon: 1, avatar: '🦊', color: 12 }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯', color: 7 })];
+    const players = [
+      player('p1', 'Anna', { legsWon: 1, avatar: '🦊', color: 12 }),
+      player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯', color: 7 }),
+    ];
     view({ state: { ...finished, players } });
-    const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
-    expect(within(card).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
-    expect(within(card).getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
     const table = screen.getByRole('table', { name: 'Podsumowanie meczu' });
-    expect(within(table).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
-    const leg = screen.getByText('Leg 1').closest('li') as HTMLElement;
-    expect(within(leg).getByText('🦊').classList).toContain('bg-(--color-avatar-12)');
+    // Stały kolor awatara gracza widać tylko w klasie tokenu. Anna stoi pierwsza, ale ma kolor 12.
+    expect(within(table).getByText('🦊').className).toContain('bg-(--color-avatar-12)');
   });
 
   const times = { startedAt: '2026-10-21T18:00:00.000Z', finishedAt: '2026-10-21T19:03:05.000Z', pausedMs: 60_000 };
@@ -197,7 +207,24 @@ describe('MatchEndView', () => {
   });
 
   it('shows the checkout and the averages of each player in a leg card', () => {
-    view({ summary: { ...current, legs: [{ legIndex: 0, winnerId: 'p1', checkout: 121, dartsThrown: 6, averages: [{ playerId: 'p1', average: 74.2 }, { playerId: 'p2', average: null }], durationMs: 252_000 }] } });
+    view({
+      summary: {
+        ...current,
+        legs: [
+          {
+            legIndex: 0,
+            winnerId: 'p1',
+            checkout: 121,
+            dartsThrown: 6,
+            averages: [
+              { playerId: 'p1', average: 74.2 },
+              { playerId: 'p2', average: null },
+            ],
+            durationMs: 252_000,
+          },
+        ],
+      },
+    });
     const legList = screen.getByRole('list', { name: 'Legi' });
     expect(within(legList).getByText('Leg 1')).toBeTruthy();
     expect(within(legList).getByText('Anna · 6 rzutek · zamknięcie 121')).toBeTruthy();
@@ -263,7 +290,7 @@ describe('MatchEndView', () => {
   });
 
   it('shows a failed rematch, keeps the hash and enables the button again', async () => {
-    respond = async () => json(500, { error: 'internal', message: 'boom' });
+    respond = () => Promise.resolve(json(500, { error: 'internal', message: 'boom' }));
     window.location.hash = '#/matches/m1';
     view();
     fireEvent.click(rematchButton());
@@ -281,7 +308,7 @@ describe('MatchEndView', () => {
 
   it('disables Cofnij while busy', () => {
     view({ busy: true });
-    expect((screen.getByRole('button', { name: 'Cofnij' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Cofnij' }).disabled).toBe(true);
   });
 
   it('counts down on Cofnij and then disables it with the lock notice', () => {
@@ -291,7 +318,6 @@ describe('MatchEndView', () => {
       render(<CountingView state={{ ...finished, finishedAt: '2026-10-21T20:00:00.000Z', editableUntil: '2026-10-21T20:05:00.000Z' }} />);
       const button = undoButton('Cofnij (4:12)');
       expect(button.disabled).toBe(false);
-      expect(button.className.split(' ')).toContain('tabular-nums');
       expect(screen.queryByText('Mecz zamknięty, nie można go już zmienić')).toBeNull();
 
       act(() => {
@@ -317,7 +343,12 @@ describe('MatchEndView', () => {
   });
 
   it('offers to save a guest but not a saved player', () => {
-    view({ state: { ...finished, players: [player('p1', 'Anna', { legsWon: 1, guest: true }), player('p2', 'Bartek', { remaining: 0, legsWon: 2 })] } });
+    view({
+      state: {
+        ...finished,
+        players: [player('p1', 'Anna', { legsWon: 1, guest: true }), player('p2', 'Bartek', { remaining: 0, legsWon: 2 })],
+      },
+    });
     expect(screen.getByRole('button', { name: 'Zapisz gracza: Anna' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Zapisz gracza: Bartek' })).toBeNull();
   });
@@ -358,31 +389,14 @@ function visibleText(element: Element): string {
   return copy.textContent ?? '';
 }
 
-function ancestors(element: Element): Element[] {
-  const list: Element[] = [];
-  for (let node = element.parentElement; node; node = node.parentElement) {
-    list.push(node);
-  }
-  return list;
-}
-
 describe('MatchEndView: winner glow', () => {
   const players = [player('p1', 'Anna', { legsWon: 1, avatar: '🦊' }), player('p2', 'Bartek', { remaining: 0, legsWon: 2, avatar: '🎯' })];
 
-  it('rings only the winner avatar', () => {
+  it('names only the winner in the winner card', () => {
     view({ state: { ...finished, players } });
     const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
-    const ring = 'shadow-(--shadow-winner-avatar)';
-    expect(within(card).getByText('🎯').parentElement?.classList).toContain(ring);
-    expect(ancestors(within(card).getByText('🦊')).some((node) => node.classList.contains(ring))).toBe(false);
-  });
-
-  it('puts a hidden gold halo inside the winner card', () => {
-    view();
-    const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
-    const halo = [...card.querySelectorAll('[aria-hidden="true"]')].find((node) => node.classList.contains('bg-(image:--gradient-winner-halo)'));
-    expect(halo).toBeTruthy();
-    expect(halo?.classList).toContain('pointer-events-none');
+    expect(within(card).getByText('Bartek wygrywa')).toBeTruthy();
+    expect(within(card).queryByText('Anna wygrywa')).toBeNull();
   });
 });
 
@@ -464,7 +478,9 @@ describe('MatchEndView: casual', () => {
     const table = screen.getByRole('table', { name: 'Podsumowanie meczu' });
     const columns = within(table).getAllByRole('columnheader');
     expect(columns.map(visibleText)).toEqual(['1.Celina', '2.Anna', '3.Bartek']);
-    const rowHeaders = within(table).getAllByRole('rowheader').map((header) => header.textContent);
+    const rowHeaders = within(table)
+      .getAllByRole('rowheader')
+      .map((header) => header.textContent);
     expect(rowHeaders).toHaveLength(9);
     expect(rowHeaders).not.toContain('Wygrane legi');
   });

@@ -33,7 +33,9 @@ export function CasualRankingCard({ state, summary }: CasualRankingCardProps) {
             <TrophyIcon />
             {pl.place(first.place)}
           </p>
-          <p className="max-w-full font-display text-[length:clamp(2.25rem,5vw,3.5rem)] leading-tight font-black break-words">{first.player.name}</p>
+          <p className="max-w-full font-display text-[length:clamp(2.25rem,5vw,3.5rem)] leading-tight font-black break-words">
+            {first.player.name}
+          </p>
           {first.line && (
             <p className="text-[15px] text-(--color-text-sub)">
               {`${pl.placeDetail(first.line.dartsThrown, first.line.highestCheckout, first.player.remaining ?? 0)} · ${pl.averageShort(formatAverage(first.line.average))}`}
@@ -48,11 +50,17 @@ export function CasualRankingCard({ state, summary }: CasualRankingCardProps) {
               key={player.id}
               className="flex min-h-18 items-center gap-2 rounded-(--radius-card) bg-(--color-surface-softer) px-3 py-2 shadow-(--shadow-inset-line) sm:gap-3 sm:px-4.5"
             >
-              <span className="w-7 shrink-0 sm:w-9 font-display text-[30px] leading-none font-black text-(--color-text-sub)">{pl.placeNumber(place)}</span>
+              <span className="w-7 shrink-0 sm:w-9 font-display text-[30px] leading-none font-black text-(--color-text-sub)">
+                {pl.placeNumber(place)}
+              </span>
               <Avatar name={player.name} avatar={player.avatar} color={player.color} size="tile" />
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-display text-[27px] leading-tight font-bold">{player.name}</span>
-                {line && <span className="text-sm text-(--color-text-muted)">{pl.placeDetail(line.dartsThrown, line.highestCheckout, player.remaining ?? 0)}</span>}
+                {line && (
+                  <span className="text-sm text-(--color-text-muted)">
+                    {pl.placeDetail(line.dartsThrown, line.highestCheckout, player.remaining ?? 0)}
+                  </span>
+                )}
               </div>
               {line && (
                 <div className="flex shrink-0 flex-col items-end">

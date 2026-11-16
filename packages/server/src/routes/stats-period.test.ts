@@ -1,4 +1,13 @@
-import { ApiError, HeadToHead, PlayerForm, PlayerStats, StatsOverall, StatsRankings, type MatchType, type StatsFilter } from '@autoscore/schema';
+import {
+  ApiError,
+  HeadToHead,
+  PlayerForm,
+  PlayerStats,
+  StatsOverall,
+  StatsRankings,
+  type MatchType,
+  type StatsFilter,
+} from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { LEG_301, backdateMatch, createGame, createPlayers, setup, throwDarts, type TestApp } from '../test-helpers.js';
 
@@ -20,7 +29,10 @@ afterEach(async () => {
 
 // Anna wygrywa best of 1, więc gra liczy się w każdej z pięciu tras.
 async function playGame(ageMs: number, type: Extract<MatchType, 'match' | 'casual'> = 'match'): Promise<string> {
-  const payload = type === 'match' ? { type, playerIds: [anna, bartek], startingScore: 301, bestOf: 1 } : { type, playerIds: [anna, bartek], startingScore: 301 };
+  const payload =
+    type === 'match'
+      ? { type, playerIds: [anna, bartek], startingScore: 301, bestOf: 1 }
+      : { type, playerIds: [anna, bartek], startingScore: 301 };
   const { id } = await createGame(t.app, payload);
   await throwDarts(t.app, id, LEG_301);
   await backdateMatch(t.db, id, now - ageMs);
@@ -70,7 +82,13 @@ const routes: readonly Route[] = [
     path: () => `/players/${anna}/head-to-head/${bartek}`,
     included: (body) => HeadToHead.parse(body).matchesPlayed,
     empty: (body) => {
-      expect(HeadToHead.parse(body)).toMatchObject({ matchesPlayed: 0, matchesWon: 0, average: null, opponentAverage: null, lastPlayedAt: null });
+      expect(HeadToHead.parse(body)).toMatchObject({
+        matchesPlayed: 0,
+        matchesWon: 0,
+        average: null,
+        opponentAverage: null,
+        lastPlayedAt: null,
+      });
     },
   },
   {
@@ -86,7 +104,15 @@ const routes: readonly Route[] = [
     path: () => '/stats/rankings',
     included: (body) => StatsRankings.parse(body).games,
     empty: (body) => {
-      expect(StatsRankings.parse(body)).toMatchObject({ games: 0, legs: 0, players: [], bestLegAverage: [], highestCheckout: [], shortestLeg: [], highestTurn: [] });
+      expect(StatsRankings.parse(body)).toMatchObject({
+        games: 0,
+        legs: 0,
+        players: [],
+        bestLegAverage: [],
+        highestCheckout: [],
+        shortestLeg: [],
+        highestTurn: [],
+      });
     },
   },
   {
@@ -153,19 +179,22 @@ describe.each(routes)('$name with period', (route) => {
   });
 });
 
-describe.each(routes.filter((route) => route.name !== 'GET /players/:id/head-to-head/:opponentId' && route.name !== 'GET /stats/overall'))('$name with type and period', (route) => {
-  it('combines type and period', async () => {
-    await playGame(DAY_MS, 'casual');
-    await playGame(45 * DAY_MS, 'match');
-    const recentMatch = await getOk(`${route.path()}${query('30d', 'match')}`);
-    expect(recentMatch).toMatchObject({ filter: 'match', period: '30d' });
-    expect(route.included(recentMatch)).toBe(0);
-    expect(route.included(await getOk(`${route.path()}${query('30d', 'casual')}`))).toBe(1);
-    expect(route.included(await getOk(`${route.path()}${query('90d', 'match')}`))).toBe(1);
-    expect(route.included(await getOk(`${route.path()}${query('30d', 'all')}`))).toBe(1);
-    expect(route.included(await getOk(`${route.path()}${query('90d', 'all')}`))).toBe(2);
-  });
-});
+describe.each(routes.filter((route) => route.name !== 'GET /players/:id/head-to-head/:opponentId' && route.name !== 'GET /stats/overall'))(
+  '$name with type and period',
+  (route) => {
+    it('combines type and period', async () => {
+      await playGame(DAY_MS, 'casual');
+      await playGame(45 * DAY_MS, 'match');
+      const recentMatch = await getOk(`${route.path()}${query('30d', 'match')}`);
+      expect(recentMatch).toMatchObject({ filter: 'match', period: '30d' });
+      expect(route.included(recentMatch)).toBe(0);
+      expect(route.included(await getOk(`${route.path()}${query('30d', 'casual')}`))).toBe(1);
+      expect(route.included(await getOk(`${route.path()}${query('90d', 'match')}`))).toBe(1);
+      expect(route.included(await getOk(`${route.path()}${query('30d', 'all')}`))).toBe(1);
+      expect(route.included(await getOk(`${route.path()}${query('90d', 'all')}`))).toBe(2);
+    });
+  },
+);
 
 describe('GET /stats/rankings win rate and T20 hits with period', () => {
   async function lists(period: string) {
@@ -186,8 +215,8 @@ describe('GET /stats/rankings win rate and T20 hits with period', () => {
 describe('GET /players/:id/head-to-head/:opponentId with period', () => {
   it('takes lastPlayedAt only from games inside the period', async () => {
     await playGame(31 * DAY_MS);
-    expect((HeadToHead.parse(await getOk(`/players/${anna}/head-to-head/${bartek}?period=30d`))).lastPlayedAt).toBeNull();
-    expect((HeadToHead.parse(await getOk(`/players/${anna}/head-to-head/${bartek}?period=90d`))).lastPlayedAt).not.toBeNull();
+    expect(HeadToHead.parse(await getOk(`/players/${anna}/head-to-head/${bartek}?period=30d`)).lastPlayedAt).toBeNull();
+    expect(HeadToHead.parse(await getOk(`/players/${anna}/head-to-head/${bartek}?period=90d`)).lastPlayedAt).not.toBeNull();
   });
 });
 
@@ -196,6 +225,6 @@ describe('GET /players/:id/frequent-hits', () => {
     await playGame(200 * DAY_MS);
     const response = await getOk(`/players/${anna}/frequent-hits`);
     expect(response).not.toHaveProperty('period');
-    expect(response).toMatchObject({ hits: expect.arrayContaining([expect.objectContaining({ segment: 20, multiplier: 3 })]) });
+    expect(response).toMatchObject({ hits: expect.arrayContaining([expect.objectContaining({ segment: 20, multiplier: 3 })]) as unknown });
   });
 });

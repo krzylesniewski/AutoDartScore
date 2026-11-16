@@ -1,6 +1,22 @@
 import { MatchSnapshot, MatchSummary, ThrowResult, UndoResult } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { D, LEG_301, MISS, S, T, abandon, createGame, createPlayers, getMatch, resume, setup, throwDarts, undo, type Dart, type TestApp } from '../test-helpers.js';
+import {
+  D,
+  LEG_301,
+  MISS,
+  S,
+  T,
+  abandon,
+  createGame,
+  createPlayers,
+  getMatch,
+  resume,
+  setup,
+  throwDarts,
+  undo,
+  type Dart,
+  type TestApp,
+} from '../test-helpers.js';
 
 const START = '2026-10-21T18:00:00.000Z';
 
@@ -129,7 +145,13 @@ describe('round and game times', () => {
   it('leaves a pause before the first throw of a leg out of the leg and one before the game out of both', async () => {
     const { id } = await match301();
     await pause(id, 0, 50);
-    expect(await throwAt(60, id, LEG_301)).toMatchObject({ legIndex: 1, startedAt: time(60), legStartedAt: null, pausedMs: 0, legPausedMs: 0 });
+    expect(await throwAt(60, id, LEG_301)).toMatchObject({
+      legIndex: 1,
+      startedAt: time(60),
+      legStartedAt: null,
+      pausedMs: 0,
+      legPausedMs: 0,
+    });
 
     await pause(id, 100, 160);
     expect(await getMatch(t.app, id)).toMatchObject({ pausedMs: 60_000, legPausedMs: 0 });
@@ -158,7 +180,13 @@ describe('round and game times', () => {
     expect(await getMatch(t.app, id)).toMatchObject({ round: null, ...NO_TIMES });
     await throwAt(10, id, [S(20)]);
     await pause(id, 20, 50);
-    expect(await throwAt(60, id, [S(1), S(1), S(1)])).toMatchObject({ round: null, startedAt: time(10), legStartedAt: time(10), pausedMs: 30_000, legPausedMs: 30_000 });
+    expect(await throwAt(60, id, [S(1), S(1), S(1)])).toMatchObject({
+      round: null,
+      startedAt: time(10),
+      legStartedAt: time(10),
+      pausedMs: 30_000,
+      legPausedMs: 30_000,
+    });
   });
 
   it('returns the same state from a throw as the next GET', async () => {

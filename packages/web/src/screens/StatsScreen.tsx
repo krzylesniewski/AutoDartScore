@@ -1,6 +1,16 @@
-import type { MatchListItem, Player, PlayerForm, PlayerStats, StatsFilter, StatsOverall, StatsPeriod, StatsRankings } from '@autoscore/schema';
-import { Fragment, useEffect, useState, type DependencyList } from 'react';
+import type {
+  MatchListItem,
+  Player,
+  PlayerForm,
+  PlayerStats,
+  StatsFilter,
+  StatsOverall,
+  StatsPeriod,
+  StatsRankings,
+} from '@autoscore/schema';
+import { Fragment, useEffect, useEffectEvent, useState } from 'react';
 import { ApiRequestError, getOverall, getPlayerForm, getPlayerStats, getRankings, listMatches, listPlayers } from '../api/client';
+import { requestKey } from '../api/request-key';
 import { AppNav } from '../components/AppNav';
 import { Avatar } from '../components/Avatar';
 import { FormChart } from '../components/FormChart';
@@ -81,32 +91,43 @@ function statItems(stats: PlayerStats): { term: string; value: string; detail?: 
   ];
 }
 
-type Loaded<T> = { status: 'loading' } | { status: 'ready'; value: T } | { status: 'error'; message: string };
+type Settled<T> = { status: 'ready'; value: T } | { status: 'error'; message: string };
+type Loaded<T> = { status: 'loading' } | Settled<T>;
 
-// Pobiera od nowa przy zmianie deps, a nie load, bo load to nowa funkcja przy każdym renderze.
+// Pobiera od nowa przy zmianie key, a nie load, bo load to nowa funkcja przy każdym renderze.
 // Odpowiedź starego zapytania jest pomijana. keepPrevious zostawia poprzednią wartość do czasu nowej odpowiedzi.
-function useLoaded<T>(load: () => Promise<T>, errorMessage: string, deps: DependencyList, keepPrevious = false): Loaded<T> {
-  const [loaded, setLoaded] = useState<Loaded<T>>({ status: 'loading' });
+function useLoaded<T>(key: string, load: () => Promise<T>, errorMessage: string, keepPrevious = false): Loaded<T> {
+  const [settled, setSettled] = useState<{ key: string; result: Settled<T> } | null>(null);
+  const start = useEffectEvent(load);
+  const failure = useEffectEvent(() => errorMessage);
+
   useEffect(() => {
     let cancelled = false;
-    setLoaded((previous) => (keepPrevious && previous.status === 'ready' ? previous : { status: 'loading' }));
-    load().then(
+    const message = failure();
+    start().then(
       (value) => {
         if (!cancelled) {
-          setLoaded({ status: 'ready', value });
+          setSettled({ key, result: { status: 'ready', value } });
         }
       },
       () => {
         if (!cancelled) {
-          setLoaded({ status: 'error', message: errorMessage });
+          setSettled({ key, result: { status: 'error', message } });
         }
       },
     );
     return () => {
       cancelled = true;
     };
-  }, deps);
-  return loaded;
+  }, [key]);
+
+  if (settled === null) {
+    return { status: 'loading' };
+  }
+  if (settled.key === key || (keepPrevious && settled.result.status === 'ready')) {
+    return settled.result;
+  }
+  return { status: 'loading' };
 }
 
 // Okres jest tu, a nie w widokach, bo App renderuje ten ekran w tym samym miejscu drzewa dla rankingu i karty gracza.
@@ -122,7 +143,11 @@ export function StatsScreen({ playerId }: { playerId: string | null }) {
   return (
     <div className="flex h-full flex-col">
       <AppNav current="stats" />
-      {playerId === null ? <Ranking period={period} onPeriodChange={changePeriod} /> : <PlayerCard playerId={playerId} period={period} onPeriodChange={changePeriod} />}
+      {playerId === null ? (
+        <Ranking period={period} onPeriodChange={changePeriod} />
+      ) : (
+        <PlayerCard playerId={playerId} period={period} onPeriodChange={changePeriod} />
+      )}
     </div>
   );
 }
@@ -143,11 +168,22 @@ interface FilterButtonsProps<T extends string> {
 
 function FilterButtons<T extends string>({ options, filter, onChange, labelledBy, dividerBefore }: FilterButtonsProps<T>) {
   return (
-    <div role="group" aria-labelledby={labelledBy} className="sc-seg w-fit flex-wrap max-sm:w-full max-sm:flex-nowrap max-sm:overflow-x-auto">
+    <div
+      role="group"
+      aria-labelledby={labelledBy}
+      className="sc-seg w-fit flex-wrap max-sm:w-full max-sm:flex-nowrap max-sm:overflow-x-auto"
+    >
       {options.map((option) => (
         <Fragment key={option.value}>
-          {option.value === dividerBefore && <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-(--color-border)" />}
-          <button type="button" aria-pressed={filter === option.value} onClick={() => onChange(option.value)} className={segmentStyle(filter === option.value)}>
+          {option.value === dividerBefore && (
+            <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-(--color-border)" />
+          )}
+          <button
+            type="button"
+            aria-pressed={filter === option.value}
+            onClick={() => onChange(option.value)}
+            className={segmentStyle(filter === option.value)}
+          >
             {option.label}
           </button>
         </Fragment>
@@ -167,21 +203,21 @@ function loadView(view: RankingView, period: StatsPeriod): Promise<RankingData> 
 
 // Okres z odpowiedzi, a nie z przycisku, więc tekst zawsze pasuje do liczb na ekranie.
 function rankingSubtitle(data: RankingData): string {
-  return data.view === 'overall' ? pl.overallSubtitle(data.overall.period) : pl.rankingSubtitle(data.rankings.games, data.rankings.legs, data.rankings.period);
+  return data.view === 'overall'
+    ? pl.overallSubtitle(data.overall.period)
+    : pl.rankingSubtitle(data.rankings.games, data.rankings.legs, data.rankings.period);
 }
 
 function Ranking({ period, onPeriodChange }: PeriodProps) {
   const [view, setView] = useState<RankingView>('all');
-  const data = useLoaded<RankingData>(() => loadView(view, period), pl.statsFailed, [view, period]);
+  const data = useLoaded<RankingData>(requestKey(view, period), () => loadView(view, period), pl.statsFailed);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col gap-(--space-6) overflow-auto px-4 pt-4 pb-6 sm:px-8 lg:px-(--space-page) lg:pt-6 xl:overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-4 sm:gap-8">
         <div className="flex flex-col gap-2">
           <h1 className={title}>{pl.stats}</h1>
-          {data.status === 'ready' && (
-            <p className="text-[17px] text-(--color-text-sub)">{rankingSubtitle(data.value)}</p>
-          )}
+          {data.status === 'ready' && <p className="text-[17px] text-(--color-text-sub)">{rankingSubtitle(data.value)}</p>}
         </div>
         <div className={`${filterRow} max-sm:w-full`}>
           <section aria-labelledby="ranking-filter" className="flex flex-col gap-2 max-sm:w-full sm:items-end">
@@ -218,27 +254,29 @@ function PlayerCard({ playerId, period, onPeriodChange }: { playerId: string } &
   // Zmiana profilu zwiększa version, co odświeża chipy graczy, profil i historię z nowym imieniem.
   // Lista graczy zostaje na ekranie w trakcie odświeżania, więc profil i wybrany rywal nie znikają.
   const [version, setVersion] = useState(0);
-  const players = useLoaded<Player[]>(() => listPlayers({ archived: 'include' }), pl.loadPlayersFailed, [version], true);
+  const players = useLoaded<Player[]>(requestKey(version), () => listPlayers({ archived: 'include' }), pl.loadPlayersFailed, true);
   const [filter, setFilter] = useState<StatsFilter>('all');
-  const [stats, setStats] = useState<Loaded<PlayerStats>>({ status: 'loading' });
-  const form = useLoaded<PlayerForm>(() => getPlayerForm(playerId, filter, period), pl.formFailed, [playerId, filter, period]);
-  const history = useLoaded<MatchListItem[]>(() => listMatches({ playerId }), pl.loadMatchesFailed, [playerId, version]);
+  const statsKey = requestKey(playerId, filter, period);
+  const [settledStats, setSettledStats] = useState<{ key: string; result: Settled<PlayerStats> } | null>(null);
+  const stats: Loaded<PlayerStats> = settledStats?.key === statsKey ? settledStats.result : { status: 'loading' };
+  const form = useLoaded<PlayerForm>(requestKey(playerId, filter, period), () => getPlayerForm(playerId, filter, period), pl.formFailed);
+  const history = useLoaded<MatchListItem[]>(requestKey(playerId, version), () => listMatches({ playerId }), pl.loadMatchesFailed);
   const known = players.status === 'ready' ? players.value : [];
   const current = known.find((player) => player.id === playerId);
 
   useEffect(() => {
     let cancelled = false;
-    setStats({ status: 'loading' });
+    const key = requestKey(playerId, filter, period);
     getPlayerStats(playerId, filter, period).then(
       (value) => {
         if (!cancelled) {
-          setStats({ status: 'ready', value });
+          setSettledStats({ key, result: { status: 'ready', value } });
         }
       },
       (caught: unknown) => {
         if (!cancelled) {
           const missing = caught instanceof ApiRequestError && caught.status === 404;
-          setStats({ status: 'error', message: missing ? pl.playerNotFound : pl.statsFailed });
+          setSettledStats({ key, result: { status: 'error', message: missing ? pl.playerNotFound : pl.statsFailed } });
         }
       },
     );
@@ -251,8 +289,13 @@ function PlayerCard({ playerId, period, onPeriodChange }: { playerId: string } &
     <main className="flex min-h-0 flex-1 flex-col overflow-auto">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-4 sm:gap-6 sm:p-6 xl:max-w-none xl:px-(--space-page)">
         <div className="flex flex-wrap items-baseline justify-between gap-4 max-sm:flex-col max-sm:items-start max-sm:gap-2">
-          <a href={RANKING_HREF} className="inline-flex min-h-11 items-center gap-1 font-display text-xl font-bold text-(--color-text-sub) underline underline-offset-4 sm:order-last">
-            <span aria-hidden="true" className="sm:hidden">←</span>
+          <a
+            href={RANKING_HREF}
+            className="inline-flex min-h-11 items-center gap-1 font-display text-xl font-bold text-(--color-text-sub) underline underline-offset-4 sm:order-last"
+          >
+            <span aria-hidden="true" className="sm:hidden">
+              ←
+            </span>
             {pl.ranking}
           </a>
           <h1 className={title}>{pl.stats}</h1>
@@ -320,7 +363,14 @@ function PlayerCard({ playerId, period, onPeriodChange }: { playerId: string } &
           </div>
 
           <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
-            {current && <HeadToHeadPanel key={playerId} player={current} period={period} opponents={known.filter((player) => player.id !== playerId)} />}
+            {current && (
+              <HeadToHeadPanel
+                key={playerId}
+                player={current}
+                period={period}
+                opponents={known.filter((player) => player.id !== playerId)}
+              />
+            )}
 
             <section aria-labelledby="player-history" className="sc-panel sc-panel--flat gap-2.5">
               <h2 id="player-history" className={panelHeading}>
@@ -358,7 +408,12 @@ function StatsCard({ stats }: { stats: Loaded<PlayerStats> }) {
           <dt className="min-w-0 font-display text-sm font-bold tracking-(--tracking-label) text-(--color-text-muted) uppercase">{term}</dt>
           <dd className="font-display text-[32px] leading-none font-extrabold whitespace-nowrap tabular-nums max-sm:shrink-0 max-sm:text-right max-sm:text-2xl">
             {value}
-            {detail && <span className="text-lg font-semibold text-(--color-text-muted) max-sm:block max-sm:text-base max-sm:font-normal"> {detail}</span>}
+            {detail && (
+              <span className="text-lg font-semibold text-(--color-text-muted) max-sm:block max-sm:text-base max-sm:font-normal">
+                {' '}
+                {detail}
+              </span>
+            )}
           </dd>
         </div>
       ))}

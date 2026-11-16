@@ -2,9 +2,12 @@ name: CI
 
 on:
   push:
-    # feat/redesign: gałąź integracyjna etapu 3; bramka rolloutu wymaga zielonego CI na jej commitach.
-    branches: [main, feat/redesign]
+    # feat/redesign i feat/hardening: gałęzie integracyjne etapów 3 i 4; bramka rolloutu wymaga zielonego CI na ich commitach.
+    branches: [main, feat/redesign, feat/hardening]
   pull_request:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -49,6 +52,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm format:check
 
   build:
     name: build
@@ -63,7 +67,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @autoscore/web build
         env:
-          VITE_BASE: /AutoDartScore/
+          # Ta sama baza co w deploy/deploy.sh.
+          VITE_BASE: /
 
   smoke:
     name: smoke
@@ -80,6 +85,8 @@ jobs:
         env:
           HOST: 127.0.0.1
           PORT: 3100
+          # Quoted, because YAML 1.1 reads a bare off as the boolean false.
+          AUTOSCORE_AUTH: 'off'
         run: |
           set -euo pipefail
           dir=$(mktemp -d "$RUNNER_TEMP/smoke.XXXXXX")
@@ -105,6 +112,14 @@ jobs:
             code=$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$PORT/players" || true)
             if [ "$code" = "200" ]; then
               echo "GET /players returned 200 after $i s"
+              # grep -c exits 1 when nothing matches, which set -e would treat as a failure.
+              warnings=$(grep -cF 'Authentication is off (AUTOSCORE_AUTH=off)' "$log" || true)
+              if [ "$warnings" != "1" ]; then
+                cat "$log"
+                echo "Expected the auth-off warning once in the server log, found it $warnings times"
+                exit 1
+              fi
+              echo "Auth-off warning logged once"
               exit 0
             fi
             if ! kill -0 "$pid" 2>/dev/null; then
@@ -117,3 +132,48 @@ jobs:
           cat "$log"
           echo "Server did not answer GET /players with 200 within 30 s"
           exit 1
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @autoscore/e2e exec playwright install --with-deps --only-shell chromium
+      - run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-test-results
+          path: e2e/dist/test-results
+
+  deploy-scripts:
+    name: deploy-scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck --version
+      - run: sqlite3 --version
+      - run: shellcheck -x deploy/*.sh
+      - run: bash deploy/test-migrate-db.sh
+      - run: bash deploy/test-deploy.sh
+      - run: bash deploy/test-pull-backup.sh
+
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      # No cache: pnpm. The job skips pnpm install, so the pnpm store never exists
+      # and on a cache miss the setup-node post step fails trying to save it.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: pnpm audit --prod --audit-level high

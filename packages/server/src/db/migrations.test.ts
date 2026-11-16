@@ -1,7 +1,10 @@
 import { checkoutTarget } from '@autoscore/engine';
+import type { MatchSnapshot } from '@autoscore/schema';
+import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
 import { defaultPlayerColor } from '../store/player-color.js';
+import { LEG_301 } from '../test-helpers.js';
 import { migrateTo, migrateToLatest, openDatabase } from './index.js';
 
 describe('migrateToLatest', () => {
@@ -10,7 +13,14 @@ describe('migrateToLatest', () => {
     await migrateToLatest(db);
     await migrateToLatest(db);
     const tables = await db.introspection.getTables();
-    expect(tables.map((table) => table.name).sort()).toEqual(['match_events', 'match_players', 'matches', 'player_changes', 'players', 'throws']);
+    expect(tables.map((table) => table.name).sort()).toEqual([
+      'match_events',
+      'match_players',
+      'matches',
+      'player_changes',
+      'players',
+      'throws',
+    ]);
     await db.destroy();
   });
 
@@ -27,7 +37,16 @@ describe('migrateToLatest', () => {
       .execute();
     await db
       .insertInto('matches')
-      .values({ id: 'm1', type: 'match', practice_mode: null, starting_score: 301, legs_to_win: 2, first_player_index: 0, counts_to_stats: 1, created_at: createdAt })
+      .values({
+        id: 'm1',
+        type: 'match',
+        practice_mode: null,
+        starting_score: 301,
+        legs_to_win: 2,
+        first_player_index: 0,
+        counts_to_stats: 1,
+        created_at: createdAt,
+      })
       .execute();
     await db
       .insertInto('match_players')
@@ -61,12 +80,12 @@ describe('migrateToLatest', () => {
       { match_id: 'm1', seq: 3, type: 'undo', throw_id: 't2', player_id: null, reason: null, success: null, created_at: createdAt },
     ]);
 
-    const app = await buildApp({ db });
+    const app = await buildApp({ db, auth: null });
     try {
       const response = await app.inject({ method: 'GET', url: '/matches/m1' });
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({ eventSeq: 3, status: 'in_progress', currentDarts: [{ segment: 20, multiplier: 3 }] });
-      expect(response.json().players.map((player: { remaining: number }) => player.remaining)).toEqual([241, 301]);
+      expect(response.json<MatchSnapshot>().players.map((player) => player.remaining)).toEqual([241, 301]);
     } finally {
       await app.close();
       await db.destroy();
@@ -86,7 +105,7 @@ describe('migrateToLatest', () => {
       .execute();
 
     await migrateToLatest(db);
-    const app = await buildApp({ db });
+    const app = await buildApp({ db, auth: null });
     try {
       const response = await app.inject({ method: 'GET', url: '/players' });
       expect(response.statusCode).toBe(200);
@@ -114,8 +133,26 @@ describe('migrateToLatest', () => {
     await db
       .insertInto('matches')
       .values([
-        { id: 'm1', type: 'match', practice_mode: null, starting_score: 301, legs_to_win: 1, first_player_index: 0, counts_to_stats: 1, created_at: createdAt },
-        { id: 'f1', type: 'practice', practice_mode: 'free_run', starting_score: null, legs_to_win: null, first_player_index: null, counts_to_stats: 0, created_at: createdAt },
+        {
+          id: 'm1',
+          type: 'match',
+          practice_mode: null,
+          starting_score: 301,
+          legs_to_win: 1,
+          first_player_index: 0,
+          counts_to_stats: 1,
+          created_at: createdAt,
+        },
+        {
+          id: 'f1',
+          type: 'practice',
+          practice_mode: 'free_run',
+          starting_score: null,
+          legs_to_win: null,
+          first_player_index: null,
+          counts_to_stats: 0,
+          created_at: createdAt,
+        },
       ])
       .execute();
     await db
@@ -145,7 +182,11 @@ describe('migrateToLatest', () => {
       .execute();
 
     await migrateToLatest(db);
-    const matches = await db.selectFrom('matches').select(['id', 'checkout_range', 'checkout_seed', 'checkout_rule']).orderBy('id').execute();
+    const matches = await db
+      .selectFrom('matches')
+      .select(['id', 'checkout_range', 'checkout_seed', 'checkout_rule'])
+      .orderBy('id')
+      .execute();
     expect(matches).toEqual([
       { id: 'f1', checkout_range: null, checkout_seed: null, checkout_rule: null },
       { id: 'm1', checkout_range: null, checkout_seed: null, checkout_rule: null },
@@ -153,16 +194,27 @@ describe('migrateToLatest', () => {
     const events = await db.selectFrom('match_events').select('success').execute();
     expect(events).toEqual([{ success: null }, { success: null }, { success: null }]);
 
-    const app = await buildApp({ db, random: () => 0 });
+    const app = await buildApp({ db, auth: null, random: () => 0 });
     try {
       const match = await app.inject({ method: 'GET', url: '/matches/m1' });
       expect(match.statusCode).toBe(200);
-      expect(match.json()).toMatchObject({ eventSeq: 1, status: 'in_progress', currentDarts: [{ segment: 20, multiplier: 3 }], freeRun: null, checkouts: null });
-      expect(match.json().players.map((player: { remaining: number }) => player.remaining)).toEqual([241, 301]);
+      expect(match.json()).toMatchObject({
+        eventSeq: 1,
+        status: 'in_progress',
+        currentDarts: [{ segment: 20, multiplier: 3 }],
+        freeRun: null,
+        checkouts: null,
+      });
+      expect(match.json<MatchSnapshot>().players.map((player) => player.remaining)).toEqual([241, 301]);
 
       const freeRun = await app.inject({ method: 'GET', url: '/matches/f1' });
       expect(freeRun.statusCode).toBe(200);
-      expect(freeRun.json()).toMatchObject({ eventSeq: 2, practiceMode: 'free_run', freeRun: { dartsThrown: 2, totalPoints: 24 }, checkouts: null });
+      expect(freeRun.json()).toMatchObject({
+        eventSeq: 2,
+        practiceMode: 'free_run',
+        freeRun: { dartsThrown: 2, totalPoints: 24 },
+        checkouts: null,
+      });
 
       const created = await app.inject({
         method: 'POST',
@@ -171,9 +223,13 @@ describe('migrateToLatest', () => {
       });
       expect(created.statusCode).toBe(201);
       expect(created.json()).toMatchObject({ practiceMode: 'checkouts', checkouts: { range: '2-50', attempts: 0 } });
-      const attempt = await app.inject({ method: 'POST', url: `/matches/${created.json().id}/checkout-attempts`, payload: { success: true } });
+      const attempt = await app.inject({
+        method: 'POST',
+        url: `/matches/${created.json<MatchSnapshot>().id}/checkout-attempts`,
+        payload: { success: true },
+      });
       expect(attempt.statusCode).toBe(201);
-      expect(attempt.json().checkouts).toMatchObject({ attempts: 1, successes: 1 });
+      expect(attempt.json<MatchSnapshot>().checkouts).toMatchObject({ attempts: 1, successes: 1 });
     } finally {
       await app.close();
       await db.destroy();
@@ -187,7 +243,14 @@ describe('migrateToLatest', () => {
     const seed = 424_242;
     const target = (n: number) => checkoutTarget(seed, '51-100', n);
     await db.insertInto('players').values({ id: 'p1', name: 'Anna', avatar: null, color: 1, guest: 0, created_at: createdAt }).execute();
-    const practice = { type: 'practice', starting_score: null, legs_to_win: null, first_player_index: null, counts_to_stats: 0, created_at: createdAt };
+    const practice = {
+      type: 'practice',
+      starting_score: null,
+      legs_to_win: null,
+      first_player_index: null,
+      counts_to_stats: 0,
+      created_at: createdAt,
+    };
     await db
       .insertInto('matches')
       .values([
@@ -221,11 +284,11 @@ describe('migrateToLatest', () => {
       { id: 'f1', checkout_rule: null },
     ]);
 
-    const app = await buildApp({ db, random: () => 0 });
+    const app = await buildApp({ db, auth: null, random: () => 0 });
     try {
       const session = await app.inject({ method: 'GET', url: '/matches/c1' });
       expect(session.statusCode).toBe(200);
-      expect(session.json().checkouts).toEqual({
+      expect(session.json<MatchSnapshot>().checkouts).toEqual({
         range: '51-100',
         target: target(3),
         attempts: 3,
@@ -240,8 +303,8 @@ describe('migrateToLatest', () => {
 
       const failed = await app.inject({ method: 'POST', url: '/matches/c1/checkout-attempts', payload: { success: false } });
       expect(failed.statusCode).toBe(201);
-      expect(failed.json().checkouts).toMatchObject({ target: target(4), attempts: 4 });
-      expect(failed.json().checkouts.history.at(-1)).toEqual({ target: target(3), success: false });
+      expect(failed.json<MatchSnapshot>().checkouts).toMatchObject({ target: target(4), attempts: 4 });
+      expect(failed.json<MatchSnapshot>().checkouts?.history.at(-1)).toEqual({ target: target(3), success: false });
     } finally {
       await app.close();
       await db.destroy();
@@ -265,7 +328,7 @@ describe('migrateToLatest', () => {
       .execute();
 
     await migrateToLatest(db);
-    const app = await buildApp({ db });
+    const app = await buildApp({ db, auth: null });
     try {
       const response = await app.inject({ method: 'GET', url: '/players' });
       expect(response.statusCode).toBe(200);
@@ -277,6 +340,108 @@ describe('migrateToLatest', () => {
       for (const player of players) {
         expect(player.color).toBe(defaultPlayerColor(player.id));
       }
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('adds the list indexes under 0007_list_indexes and keeps the games written under 0006_checkout_rule', async () => {
+    const db = openDatabase(':memory:');
+    await migrateTo(db, '0006_checkout_rule');
+    const createdAt = '2026-11-15T18:30:00.000Z';
+    await db
+      .insertInto('players')
+      .values([
+        { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: 0, created_at: createdAt },
+        { id: 'p2', name: 'Bartek', avatar: null, color: 2, guest: 0, created_at: createdAt },
+      ])
+      .execute();
+    await db
+      .insertInto('matches')
+      .values({
+        id: 'm1',
+        type: 'match',
+        practice_mode: null,
+        starting_score: 301,
+        legs_to_win: 1,
+        first_player_index: 0,
+        counts_to_stats: 1,
+        checkout_range: null,
+        checkout_seed: null,
+        checkout_rule: null,
+        created_at: createdAt,
+      })
+      .execute();
+    await db
+      .insertInto('match_players')
+      .values([
+        { match_id: 'm1', player_id: 'p1', position: 0 },
+        { match_id: 'm1', player_id: 'p2', position: 1 },
+      ])
+      .execute();
+    const darts = LEG_301.map(([segment, multiplier], index) => ({
+      id: `t${index + 1}`,
+      match_id: 'm1',
+      event_id: `00000000-0000-4000-8000-00000000000${index + 1}`,
+      source: 'keypad',
+      sequence: index,
+      segment,
+      multiplier,
+      confidence: 1,
+      detected_at: createdAt,
+      received_at: createdAt,
+    }));
+    await db.insertInto('throws').values(darts).execute();
+    await db
+      .insertInto('match_events')
+      .values(
+        darts.map((dart, index) => ({
+          match_id: 'm1',
+          seq: index + 1,
+          type: 'throw' as const,
+          throw_id: dart.id,
+          player_id: null,
+          reason: null,
+          success: null,
+          created_at: createdAt,
+        })),
+      )
+      .execute();
+    const rows = async () => ({
+      matches: await db.selectFrom('matches').selectAll().execute(),
+      matchPlayers: await db.selectFrom('match_players').selectAll().orderBy('position').execute(),
+      throws: await db.selectFrom('throws').selectAll().orderBy('id').execute(),
+      events: await db.selectFrom('match_events').selectAll().orderBy('seq').execute(),
+    });
+    const indexes = async () =>
+      (
+        await sql<{ name: string }>`select name from sqlite_master where type = 'index' and name like '%_idx' order by name`.execute(db)
+      ).rows.map((row) => row.name);
+    const migrations = async () =>
+      (await sql<{ name: string }>`select name from kysely_migration order by name`.execute(db)).rows.map((row) => row.name);
+    const before = await rows();
+    expect(await indexes()).toEqual([]);
+
+    await migrateToLatest(db);
+    expect(await indexes()).toEqual(['match_players_player_id_idx', 'throws_match_id_idx']);
+    expect(await rows()).toEqual(before);
+    const applied = await migrations();
+    expect(applied.at(-1)).toBe('0007_list_indexes');
+
+    await migrateToLatest(db);
+    expect(await migrations()).toEqual(applied);
+    expect(await indexes()).toEqual(['match_players_player_id_idx', 'throws_match_id_idx']);
+    expect(await rows()).toEqual(before);
+
+    const app = await buildApp({ db, auth: null, random: () => 0 });
+    try {
+      const list = await app.inject({ method: 'GET', url: '/matches' });
+      expect(list.statusCode).toBe(200);
+      expect(list.json()).toMatchObject([{ id: 'm1', status: 'finished', winnerId: 'p1' }]);
+      const rankings = await app.inject({ method: 'GET', url: '/stats/rankings' });
+      expect(rankings.statusCode).toBe(200);
+      expect(rankings.json()).toMatchObject({ games: 1, legs: 1 });
     } finally {
       await app.close();
       await db.destroy();

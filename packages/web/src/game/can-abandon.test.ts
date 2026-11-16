@@ -14,7 +14,9 @@ describe('canAbandon', () => {
 
   it('never allows a practice game, neither Solo 501 nor Free run', () => {
     expect(canAbandon(snapshot({ type: 'practice', practiceMode: 'solo_501', players: [player('p1', 'Anna')] }))).toBe(false);
-    expect(canAbandon(snapshot({ type: 'practice', practiceMode: 'free_run', players: [player('p1', 'Anna', { remaining: null })] }))).toBe(false);
+    expect(canAbandon(snapshot({ type: 'practice', practiceMode: 'free_run', players: [player('p1', 'Anna', { remaining: null })] }))).toBe(
+      false,
+    );
   });
 
   it('never allows a game that is not in progress', () => {

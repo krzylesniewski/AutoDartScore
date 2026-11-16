@@ -56,9 +56,7 @@ export function AvatarEmojiPicker({ value, onChange }: AvatarEmojiPickerProps) {
       <div className="flex flex-wrap items-center gap-2.5">
         <label className="relative flex h-11 cursor-pointer">
           <input type="radio" name={group} value="" checked={current === ''} onChange={() => pick('')} className={radio} />
-          <span
-            className={`${tile} w-auto gap-1.5 px-4 font-display text-lg font-bold peer-checked:text-(--color-text-inverse)`}
-          >
+          <span className={`${tile} w-auto gap-1.5 px-4 font-display text-lg font-bold peer-checked:text-(--color-text-inverse)`}>
             {pl.avatarNone}
             <span className="font-body text-sm font-normal opacity-70">({pl.avatarNoneHint})</span>
           </span>
@@ -70,7 +68,15 @@ export function AvatarEmojiPicker({ value, onChange }: AvatarEmojiPickerProps) {
           <div className="flex flex-wrap gap-2.5">
             {emojis.map((emoji) => (
               <label key={emoji} className="relative flex size-11 cursor-pointer">
-                <input type="radio" name={group} value={emoji} checked={current === emoji} aria-label={emoji} onChange={() => pick(emoji)} className={radio} />
+                <input
+                  type="radio"
+                  name={group}
+                  value={emoji}
+                  checked={current === emoji}
+                  aria-label={emoji}
+                  onChange={() => pick(emoji)}
+                  className={radio}
+                />
                 <span aria-hidden="true" className={tile}>
                   {emoji}
                 </span>

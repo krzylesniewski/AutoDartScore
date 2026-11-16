@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const PlayerId = z.string().min(1);
+export type PlayerId = z.infer<typeof PlayerId>;
+
 // Stały kolor avatara: numer tokenu --color-avatar-N w motywie.
 export const PLAYER_COLOR_COUNT = 16;
 export const PlayerColor = z.int().min(1).max(PLAYER_COLOR_COUNT);
@@ -21,7 +24,7 @@ const AvatarEmoji = z.string().min(1).max(16).refine(isSingleEmoji, { message: '
 
 // Gość to zwykły gracz z flagą guest, więc silnik i tak dostaje różne identyfikatory graczy.
 export const Player = z.object({
-  id: z.string().min(1),
+  id: PlayerId,
   name: z.string().min(1),
   avatar: z.string().nullable(), // emoji
   color: PlayerColor,

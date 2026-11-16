@@ -1,10 +1,29 @@
-import { currentRound, freeRunAverage, isGameFinished, SOLO_501_STARTING_SCORE, type CheckoutsState, type GameState } from '@autoscore/engine';
-import type { Abandonment, CheckoutSession, DomainEvent, MatchSnapshot, MatchSnapshotPlayer, MatchStatus, Player, ThrowRecord } from '@autoscore/schema';
+import {
+  currentRound,
+  freeRunAverage,
+  isGameFinished,
+  SOLO_501_STARTING_SCORE,
+  type CheckoutsState,
+  type GameState,
+} from '@autoscore/engine';
+import type {
+  Abandonment,
+  CheckoutSession,
+  DomainEvent,
+  MatchSnapshot,
+  MatchSnapshotPlayer,
+  MatchStatus,
+  Player,
+  ThrowRecord,
+} from '@autoscore/schema';
 import { buildLegTurns } from './leg-turns.js';
 import type { GameTimes } from './replay.js';
 import type { StoredMatch } from './store/store.js';
 
-type Progress = Pick<MatchSnapshot, 'currentPlayerId' | 'legIndex' | 'turnIndex' | 'currentDarts' | 'winnerId' | 'placements' | 'freeRun' | 'checkouts'> & {
+type Progress = Pick<
+  MatchSnapshot,
+  'currentPlayerId' | 'legIndex' | 'turnIndex' | 'currentDarts' | 'winnerId' | 'placements' | 'freeRun' | 'checkouts'
+> & {
   readonly startingScore: number | null;
   readonly perPlayer: (player: Player, index: number) => Pick<MatchSnapshotPlayer, 'remaining' | 'legsWon' | 'place' | 'dartsThrownInLeg'>;
 };

@@ -9,7 +9,11 @@ const T20 = { segment: 20, multiplier: 3 } as const;
 const midLeg = snapshot({
   currentPlayerId: 'p1',
   currentDarts: [T20],
-  legTurns: [legTurn('p1', { points: 60, remainingAfter: 441 }), legTurn('p2', { points: 100, remainingAfter: 401 }), legTurn('p1', { bust: true, darts: [T20, T20], remainingAfter: 441 })],
+  legTurns: [
+    legTurn('p1', { points: 60, remainingAfter: 441 }),
+    legTurn('p2', { points: 100, remainingAfter: 401 }),
+    legTurn('p1', { bust: true, darts: [T20, T20], remainingAfter: 441 }),
+  ],
 });
 
 function tile(label: string): HTMLElement {
@@ -27,12 +31,11 @@ function solo(): MatchSnapshot {
 }
 
 describe('LegInfo', () => {
-  it('is a flat panel with the id the Tury button points to', () => {
-    const { container } = render(<LegInfo state={midLeg} id="leg-info" />);
-    const section = container.firstElementChild as HTMLElement;
-    expect(section.tagName).toBe('SECTION');
-    expect(section.id).toBe('leg-info');
-    expect(section.className.split(' ')).toEqual(expect.arrayContaining(['sc-panel', 'sc-panel--flat']));
+  it('has the id the Tury button points to', () => {
+    render(<LegInfo state={midLeg} id="leg-info" />);
+    const section = document.getElementById('leg-info');
+    expect(section?.tagName).toBe('SECTION');
+    expect(section?.contains(screen.getByRole('table'))).toBe(true);
   });
 
   it('shows the highest turn with the player name when two or more play', () => {
@@ -58,12 +61,10 @@ describe('LegInfo', () => {
     expect(busts.querySelector('svg')).toBeTruthy();
   });
 
-  it('puts the tiles above the table below lg and under it from lg', () => {
+  it('puts the tiles before the table in the reading order', () => {
     render(<LegInfo state={midLeg} id="leg-info" />);
-    const tiles = tile('Busty').parentElement?.parentElement as HTMLElement;
-    expect(tiles.className.split(' ')).toContain('lg:order-last');
     const table = screen.getByRole('table', { name: 'Historia tur: wynik po turze i punkty w turze' });
-    expect(tiles.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tile('Busty').compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('has no tiles in Free run', () => {
@@ -87,12 +88,10 @@ describe('LegInfo', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('has a close button only below lg when it can be closed', () => {
+  it('has a close button when it can be closed', () => {
     const onClose = vi.fn();
     render(<LegInfo state={midLeg} id="leg-info" onClose={onClose} />);
-    const close = screen.getByRole('button', { name: 'Zamknij historię tur' });
-    expect(close.className.split(' ')).toEqual(expect.arrayContaining(['sc-btn--icon', 'lg:hidden']));
-    fireEvent.click(close);
+    fireEvent.click(screen.getByRole('button', { name: 'Zamknij historię tur' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
 

@@ -10,8 +10,8 @@ import {
   type FreeRunState,
 } from './index.js';
 
-const S = (n: number): Hit => ({ segment: n, multiplier: 1 }) as Hit;
-const T = (n: number): Hit => ({ segment: n, multiplier: 3 }) as Hit;
+const S = (n: number): Hit => ({ segment: n, multiplier: 1 });
+const T = (n: number): Hit => ({ segment: n, multiplier: 3 });
 const MISS: Hit = { segment: 0, multiplier: 0 };
 
 const config: FreeRunConfig = { playerId: 'anna' };
@@ -69,7 +69,10 @@ describe('session counter', () => {
   });
 
   it('has no bust, checkout or end', () => {
-    const { state, events } = replayFreeRun(config, Array.from({ length: 36 }, () => T(20)));
+    const { state, events } = replayFreeRun(
+      config,
+      Array.from({ length: 36 }, () => T(20)),
+    );
     expect(events).toEqual([]);
     expect(state.dartsThrown).toBe(36);
     expect(state.totalPoints).toBe(2160);

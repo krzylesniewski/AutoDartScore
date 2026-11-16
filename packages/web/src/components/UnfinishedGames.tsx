@@ -64,7 +64,13 @@ export function UnfinishedGames({ games, now, busy, notice, onFinish, onAbandon,
                   </div>
                 </div>
                 <div className="flex justify-end gap-2.5">
-                  <button type="button" aria-label={pl.finishGame(row.title)} disabled={busy} onClick={() => onFinish(game)} className="sc-btn h-11">
+                  <button
+                    type="button"
+                    aria-label={pl.finishGame(row.title)}
+                    disabled={busy}
+                    onClick={() => onFinish(game)}
+                    className="sc-btn h-11"
+                  >
                     {pl.finish}
                   </button>
                   {canAbandon(game) && (

@@ -2,13 +2,22 @@ import type { LiveMessage } from '@autoscore/schema';
 
 export interface LiveSocket {
   readonly readyState: number;
+  readonly bufferedAmount: number;
   send(data: string): void;
+  terminate(): void;
 }
 
 const OPEN = 1;
+// Każde state_updated niesie pełny stan, a klient, który nie czyta, nie może trzymać pamięci serwera.
+export const LIVE_MAX_BUFFERED_BYTES = 1024 * 1024;
 
 export function sendTo(socket: LiveSocket, messages: readonly LiveMessage[]): void {
   if (socket.readyState !== OPEN) {
+    return;
+  }
+  // terminate, nie close, bo ramka zamknięcia czekałaby w kolejce za pełnym buforem.
+  if (socket.bufferedAmount > LIVE_MAX_BUFFERED_BYTES) {
+    socket.terminate();
     return;
   }
   for (const message of messages) {

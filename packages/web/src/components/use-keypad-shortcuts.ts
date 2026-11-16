@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { keypadShortcut } from '../game/keypad-shortcut';
 import { DIGIT_WAIT_MS, typeDigit, type PendingDigit } from '../game/shortcut-number';
+import { OPEN_DIALOG, isOtherControl, isTextField } from './shortcut-target';
 
 export interface KeypadShortcutOptions {
   enabled: boolean;
@@ -12,12 +13,6 @@ export interface KeypadShortcutOptions {
   onBull(): void;
   onUndo(): void;
   onEnterCheckout(): void;
-}
-
-const TEXT_FIELD = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
-
-function isTextField(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(TEXT_FIELD) !== null;
 }
 
 export function useKeypadShortcuts(options: KeypadShortcutOptions): void {
@@ -65,7 +60,10 @@ export function useKeypadShortcuts(options: KeypadShortcutOptions): void {
         return;
       }
       const shortcut = keypadShortcut(event);
-      if (!shortcut || isTextField(event.target) || document.querySelector('[role="dialog"]')) {
+      if (!shortcut || isTextField(event.target) || document.querySelector(OPEN_DIALOG)) {
+        return;
+      }
+      if ((event.key === ' ' || event.key === 'Enter') && isOtherControl(event.target)) {
         return;
       }
       // Także przy fokusie na klawiszu, żeby Spacja i Enter nie klikały go drugi raz, a Spacja nie przewijała strony.

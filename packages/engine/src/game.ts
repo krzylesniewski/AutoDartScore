@@ -1,4 +1,5 @@
 import type { Hit, MatchType, PracticeMode } from '@autoscore/schema';
+import type { ApplyResult } from './apply-result.js';
 import { applyCasualThrow, createCasualMatch, replayCasualMatch, type CasualMatchConfig, type CasualMatchState } from './casual-match.js';
 import {
   applyCheckoutAttempt,
@@ -12,14 +13,7 @@ import {
 import { EngineError } from './errors.js';
 import { applyFreeRunThrow, createFreeRun, replayFreeRun, type FreeRunConfig, type FreeRunState } from './free-run.js';
 import { applySolo501Throw, createSolo501, replaySolo501, type Solo501Config, type Solo501State } from './solo-501.js';
-import {
-  applyThrow,
-  createX01Match,
-  replayX01Match,
-  type ApplyResult,
-  type X01MatchConfig,
-  type X01MatchState,
-} from './x01-match.js';
+import { applyThrow, createX01Match, replayX01Match, type X01MatchConfig, type X01MatchState } from './x01-match.js';
 
 // Jedno wejście do silnika dla każdego typu gry. Tylko przekazuje wywołania do modułów trybów, zasady są tam.
 

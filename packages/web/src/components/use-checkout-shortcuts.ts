@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { checkoutShortcut } from '../game/checkout-shortcut';
+import { OPEN_DIALOG, isOtherControl, isTextField } from './shortcut-target';
 
 export interface CheckoutShortcutOptions {
   enabled: boolean;
@@ -9,12 +10,6 @@ export interface CheckoutShortcutOptions {
   onFailure(): void;
   onSkip(): void;
   onUndo(): void;
-}
-
-const TEXT_FIELD = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
-
-function isTextField(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(TEXT_FIELD) !== null;
 }
 
 // Klawiatura rzutek nie jest w tym trybie wyrenderowana, więc jej skróty nie dublują tych.
@@ -38,8 +33,11 @@ export function useCheckoutShortcuts(options: CheckoutShortcutOptions): void {
         (shortcut === 'skip' && !current.skipEnabled) ||
         (shortcut === 'undo' && !current.undoEnabled) ||
         isTextField(event.target) ||
-        document.querySelector('[role="dialog"]')
+        document.querySelector(OPEN_DIALOG)
       ) {
+        return;
+      }
+      if (event.key === 'Enter' && isOtherControl(event.target)) {
         return;
       }
       // Enter na przycisku z fokusem kliknąłby go drugi raz.

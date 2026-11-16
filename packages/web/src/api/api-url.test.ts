@@ -76,6 +76,8 @@ describe('liveSocketUrl', () => {
   });
 
   it('keeps a path prefix of an absolute base', () => {
-    expect(liveSocketUrl(resolveApiBase('https://api.example.com/v1/'), livePath, httpsPage)).toBe('wss://api.example.com/v1/matches/m1/live');
+    expect(liveSocketUrl(resolveApiBase('https://api.example.com/v1/'), livePath, httpsPage)).toBe(
+      'wss://api.example.com/v1/matches/m1/live',
+    );
   });
 });

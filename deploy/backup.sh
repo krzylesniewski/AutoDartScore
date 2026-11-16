@@ -21,15 +21,7 @@ fi
 
 mkdir -p "$backup_dir"
 file="$backup_dir/autoscore-$(utc_stamp).sqlite"
-# .backup copies a consistent state even while the server writes.
-sqlite3 "$db" ".backup '$file'"
-
-result=$(sqlite3 "$file" 'PRAGMA integrity_check;')
-if [ "$result" != "ok" ]; then
-  # A broken copy must not push a good one out of the rotation.
-  rm -f -- "$file"
-  echo "integrity check failed for the copy of $db:" >&2
-  echo "$result" >&2
+if ! backup_database "$db" "$file"; then
   exit 1
 fi
 echo "backed up $db to $file"

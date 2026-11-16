@@ -1,7 +1,8 @@
-import { Hit, type DomainEvent } from '@autoscore/schema';
+import type { Hit } from '@autoscore/schema';
+import type { ApplyResult } from './apply-result.js';
 import { EngineError } from './errors.js';
-import { hitPoints, isBust } from './points.js';
-import type { ApplyResult } from './x01-match.js';
+import { replaySteps } from './replay-steps.js';
+import { applyX01Dart } from './x01-turn.js';
 
 // Trening Solo 501: jeden gracz schodzi z 501 do zera na zasadach X01 (double-out, straight-in, bust).
 // Bez przeciwnika, więc koniec to leg_won bez match_won.
@@ -54,54 +55,34 @@ export function applySolo501Throw(state: Solo501State, input: Hit): ApplyResult<
   if (state.finished) {
     throw new EngineError('match_finished', 'The practice session is already finished');
   }
-  const parsed = Hit.safeParse(input);
-  if (!parsed.success) {
-    throw new EngineError('invalid_hit', `Invalid hit: ${JSON.stringify(input)}`);
-  }
-  const hit = parsed.data;
-
   const { playerId } = state.config;
-  const { turnIndex } = state;
-  const darts = [...state.currentDarts, hit];
+  const result = applyX01Dart(
+    {
+      playerId,
+      legIndex: LEG_INDEX,
+      turnIndex: state.turnIndex,
+      remaining: state.remaining,
+      turnStartRemaining: state.turnStartRemaining,
+      currentDarts: state.currentDarts,
+    },
+    input,
+  );
   const dartsThrown = state.dartsThrown + 1;
-  const after = state.remaining - hitPoints(hit);
 
-  if (isBust(after, hit)) {
-    return {
-      state: nextTurn(state, state.turnStartRemaining, dartsThrown),
-      events: [{ type: 'bust', playerId, legIndex: LEG_INDEX, turnIndex, darts, remaining: state.turnStartRemaining }],
-    };
+  switch (result.outcome) {
+    case 'open':
+      return { state: { ...state, remaining: result.remaining, currentDarts: result.darts, dartsThrown }, events: [] };
+    case 'turn_completed':
+    case 'bust':
+      return { state: nextTurn(state, result.remaining, dartsThrown), events: [result.event] };
+    case 'checkout':
+      return {
+        state: { ...state, remaining: 0, currentDarts: [], dartsThrown, finished: true },
+        events: [result.event, { type: 'leg_won', playerId, legIndex: LEG_INDEX, checkout: result.checkout, dartsThrown }],
+      };
   }
-
-  if (after === 0) {
-    return {
-      state: { ...state, remaining: 0, currentDarts: [], dartsThrown, finished: true },
-      events: [
-        { type: 'turn_completed', playerId, legIndex: LEG_INDEX, turnIndex, darts, total: state.turnStartRemaining, remaining: 0 },
-        { type: 'leg_won', playerId, legIndex: LEG_INDEX, checkout: state.turnStartRemaining, dartsThrown },
-      ],
-    };
-  }
-
-  if (darts.length === 3) {
-    return {
-      state: nextTurn(state, after, dartsThrown),
-      events: [
-        { type: 'turn_completed', playerId, legIndex: LEG_INDEX, turnIndex, darts, total: state.turnStartRemaining - after, remaining: after },
-      ],
-    };
-  }
-  return { state: { ...state, remaining: after, currentDarts: darts, dartsThrown }, events: [] };
 }
 
-// Stan treningu jako wynik odtworzenia wszystkich rzutek (zapis zdarzeniowy).
 export function replaySolo501(config: Solo501Config, hits: readonly Hit[]): ApplyResult<Solo501State> {
-  let state = createSolo501(config);
-  const events: DomainEvent[] = [];
-  for (const hit of hits) {
-    const result = applySolo501Throw(state, hit);
-    state = result.state;
-    events.push(...result.events);
-  }
-  return { state, events };
+  return replaySteps(createSolo501(config), hits, applySolo501Throw);
 }

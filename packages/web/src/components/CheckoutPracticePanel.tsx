@@ -21,9 +21,15 @@ const resultButton =
   'flex min-h-(--button-height) items-center justify-center gap-2 rounded-(--radius-card) border-(length:--border-width) px-3 py-2 text-center font-display text-[22px] leading-tight font-extrabold disabled:opacity-40 lg:min-h-28 lg:gap-3.5 lg:text-4xl';
 // Gradient i cień siedzą w tonie, bo wciśnięty klawisz podmienia całe wypełnienie.
 const failureTone: KeypadKeyTone = { fill: `${raisedFill} text-(--color-text) shadow-(--shadow-key)`, border: 'border-(--color-accent)' };
-const failurePressedTone: KeypadKeyTone = { fill: 'bg-(--color-surface-raised) text-(--color-text) shadow-(--shadow-key)', border: 'border-(--color-accent)' };
+const failurePressedTone: KeypadKeyTone = {
+  fill: 'bg-(--color-surface-raised) text-(--color-text) shadow-(--shadow-key)',
+  border: 'border-(--color-accent)',
+};
 // Wciśnięty zostaje kremowy, jak wybrany mnożnik na klawiaturze rzutek.
-const successTone: KeypadKeyTone = { fill: 'bg-(--color-text) text-(--color-text-inverse) shadow-(--shadow-selected)', border: 'border-(--color-text)' };
+const successTone: KeypadKeyTone = {
+  fill: 'bg-(--color-text) text-(--color-text-inverse) shadow-(--shadow-selected)',
+  border: 'border-(--color-text)',
+};
 // Jak klawisz „Reszta tury”: przezroczysta ramka zostaje w spoczynku, żeby błysk akcentu nie przesuwał treści.
 const secondaryButton =
   'flex min-h-12 items-center justify-center gap-2 rounded-(--radius-button) border-(length:--border-width) px-3 font-display text-lg leading-none font-semibold shadow-(--shadow-outline) disabled:opacity-40 sm:text-[22px] lg:min-h-16 lg:gap-2.5';
@@ -93,7 +99,7 @@ export function CheckoutActions({ resultsDisabled, skipDisabled, undoDisabled, b
   });
 
   return (
-    <div className="flex flex-col gap-3">
+    <div data-shortcut-keys="" className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         <KeypadKey
           ref={failureKey}
@@ -191,7 +197,9 @@ export function CheckoutRecentAttempts({ session }: { session: CheckoutSession }
 
 export function AttemptRow({ attempt, number, className }: { attempt: CheckoutAttempt; number: number; className: string }) {
   return (
-    <li className={`grid grid-cols-[3ch_4ch_1fr] items-center gap-3 border-t border-(--color-border) font-display tabular-nums ${className}`}>
+    <li
+      className={`grid grid-cols-[3ch_4ch_1fr] items-center gap-3 border-t border-(--color-border) font-display tabular-nums ${className}`}
+    >
       <span className="text-right text-lg font-semibold text-(--color-text-muted) lg:text-[19px]">{pl.checkoutAttemptNumber(number)}</span>
       <span className="text-right text-xl font-extrabold lg:text-[28px]">{attempt.target}</span>
       <AttemptResult success={attempt.success} />

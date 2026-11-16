@@ -7,7 +7,7 @@ import {
   type GameConfig,
   type GameState,
 } from '@autoscore/engine';
-import { StartingScore, type Abandonment, type MatchSnapshot, type ThrowRecord } from '@autoscore/schema';
+import { StartingScore, type Abandonment, type DomainEvent, type MatchSnapshot, type ThrowRecord } from '@autoscore/schema';
 import type { MatchLog, StoredMatch } from './store/store.js';
 
 // Rzutki, które nadal się liczą: każdy wpis undo zdejmuje ostatnią z nich. Porzucenie, wznowienie i koniec treningu nie zmieniają rzutek.
@@ -181,11 +181,49 @@ export function gameConfig(match: MatchSetup): GameConfig {
   }
 }
 
-// Stan gry zawsze z odtworzenia logu, bez osobnej pamięci podręcznej stanu.
-export function replayMatch(match: StoredMatch, throws: readonly ThrowRecord[], checkoutSteps: readonly CheckoutStep[] = []): ApplyResult<GameState> {
+// Stan gry zawsze z odtworzenia logu. Wynik odtworzenia może trzymać replay-cache.ts, ale tylko dla niezmienionego logu.
+export function replayMatch(
+  match: StoredMatch,
+  throws: readonly ThrowRecord[],
+  checkoutSteps: readonly CheckoutStep[] = [],
+): ApplyResult<GameState> {
   return replayGame(
     gameConfig(match),
     throws.map(({ segment, multiplier }) => ({ segment, multiplier })),
     checkoutSteps,
   );
+}
+
+// Wszystko, co wynika z jednego logu gry. Wartości z pamięci podręcznej są wspólne dla żądań, więc nic ich nie zmienia.
+export interface ReplayedMatch {
+  readonly log: MatchLog;
+  readonly seq: number;
+  readonly throws: readonly ThrowRecord[];
+  readonly checkoutSteps: readonly CheckoutStep[];
+  readonly game: GameState;
+  readonly events: readonly DomainEvent[];
+  readonly finishedAt: string | null;
+  readonly abandonment: Abandonment | null;
+  readonly endedAt: string | null;
+  readonly updatedAt: string;
+  readonly times: GameTimes;
+}
+
+export function replayLog(match: StoredMatch, log: MatchLog): ReplayedMatch {
+  const throws = effectiveThrows(log);
+  const checkoutSteps = effectiveCheckoutSteps(log);
+  const { state: game, events } = replayMatch(match, throws, checkoutSteps);
+  return {
+    log,
+    seq: lastSeq(log),
+    throws,
+    checkoutSteps,
+    game,
+    events,
+    finishedAt: finishedAt(game, throws),
+    abandonment: abandonment(log),
+    endedAt: practiceEndedAt(log),
+    updatedAt: lastActivityAt(log, match),
+    times: gameTimes(log, throws, game),
+  };
 }

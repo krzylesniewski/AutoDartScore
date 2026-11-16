@@ -24,11 +24,15 @@ export function SoundToggleCard({ enabled, disabled = false, name, onText, offTe
       disabled={disabled}
       onClick={() => onChange(!enabled)}
       className={`flex min-h-18 w-full items-center gap-4 rounded-(--radius-card) px-5 py-3 text-left text-(--color-text) disabled:opacity-40 lg:min-h-26 lg:gap-4.5 lg:px-6 ${
-        enabled ? 'bg-linear-to-b from-(--color-surface-raised) to-(--color-surface) shadow-(--shadow-card)' : 'bg-(--color-surface-softer) shadow-(--shadow-inset-line)'
+        enabled
+          ? 'bg-linear-to-b from-(--color-surface-raised) to-(--color-surface) shadow-(--shadow-card)'
+          : 'bg-(--color-surface-softer) shadow-(--shadow-inset-line)'
       }`}
     >
       <span className="flex size-13 shrink-0 items-center justify-center rounded-full bg-(--color-surface-soft) text-[26px]">{icon}</span>
-      <span className={`min-w-0 flex-1 font-display text-2xl leading-none lg:text-[30px] ${enabled ? 'font-extrabold' : 'font-bold'}`}>{name}</span>
+      <span className={`min-w-0 flex-1 font-display text-2xl leading-none lg:text-[30px] ${enabled ? 'font-extrabold' : 'font-bold'}`}>
+        {name}
+      </span>
       {enabled ? (
         <span aria-hidden="true" className={`${pillBase} bg-(--color-text) pr-3.5 pl-2.5 font-extrabold text-(--color-text-inverse)`}>
           <CheckIcon className="text-lg" />

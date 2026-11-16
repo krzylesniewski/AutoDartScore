@@ -32,7 +32,12 @@ describe('players', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const at = (minute: number) => vi.setSystemTime(new Date(Date.UTC(2026, 9, 18, 18, minute)));
     at(0);
-    const [anna, bartek, celina, darek] = [await createPlayer(t.app, 'Anna'), await createPlayer(t.app, 'Bartek'), await createPlayer(t.app, 'Celina'), await createPlayer(t.app, 'Darek')];
+    const [anna, bartek, celina, darek] = [
+      await createPlayer(t.app, 'Anna'),
+      await createPlayer(t.app, 'Bartek'),
+      await createPlayer(t.app, 'Celina'),
+      await createPlayer(t.app, 'Darek'),
+    ];
     at(1);
     const annaGame = await createGame(t.app, { type: 'practice', practiceMode: 'free_run', playerIds: [anna.id] });
     at(2);
@@ -58,7 +63,11 @@ describe('players', () => {
     expect(guest.color).toBe(defaultPlayerColor(guest.id));
     for (let read = 0; read < 2; read++) {
       const list = await t.app.inject({ method: 'GET', url: '/players' });
-      expect(Player.array().parse(list.json()).map((player) => player.color)).toEqual([defaultPlayerColor(anna.id)]);
+      expect(
+        Player.array()
+          .parse(list.json())
+          .map((player) => player.color),
+      ).toEqual([defaultPlayerColor(anna.id)]);
     }
     const game = await createGame(t.app, { type: 'casual', playerIds: [anna.id, guest.id], startingScore: 301 });
     expect(game.players.map((player) => player.color)).toEqual([defaultPlayerColor(anna.id), defaultPlayerColor(guest.id)]);
@@ -84,7 +93,7 @@ describe('players', () => {
       payload: '{"name": ',
     });
     expect(response.statusCode).toBe(400);
-    expect(ApiError.parse(response.json())).toEqual({ error: 'invalid_request', message: expect.any(String) });
+    expect(ApiError.parse(response.json())).toEqual({ error: 'invalid_request', message: expect.any(String) as string });
   });
 
   it('answers an unknown route with 404 and the ApiError shape', async () => {
@@ -127,5 +136,32 @@ describe('duplicate player names', () => {
     const anna = await createPlayer(t.app, 'Anna');
     expect((await patchPlayer(t.app, anna.id, { archived: true })).statusCode).toBe(200);
     await createPlayer(t.app, 'Anna');
+  });
+});
+
+describe('profile changes', () => {
+  it('shows only the latest of three changes in the players and the match list', async () => {
+    const anna = await createPlayer(t.app, 'Anna');
+    const bartek = await createPlayer(t.app, 'Bartek');
+    const game = await createGame(t.app, { type: 'match', playerIds: [anna.id, bartek.id], startingScore: 301, bestOf: 1 });
+    for (const change of [{ name: 'Ania' }, { avatar: '🎯', color: 5 }, { name: 'Anka', color: 11 }]) {
+      expect((await patchPlayer(t.app, anna.id, change)).statusCode).toBe(200);
+    }
+    const latest = { ...anna, name: 'Anka', avatar: '🎯', color: 11 };
+
+    const players = await t.app.inject({ method: 'GET', url: '/players' });
+    expect(players.json()).toContainEqual(latest);
+    expect(players.json()).toHaveLength(2);
+
+    const matches = await t.app.inject({ method: 'GET', url: '/matches' });
+    expect(matches.json()).toMatchObject([
+      {
+        id: game.id,
+        players: [
+          { id: anna.id, name: 'Anka', avatar: '🎯', color: 11 },
+          { id: bartek.id, name: 'Bartek' },
+        ],
+      },
+    ]);
   });
 });

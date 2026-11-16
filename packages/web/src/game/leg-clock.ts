@@ -1,4 +1,5 @@
 import type { MatchSnapshot } from '@autoscore/schema';
+import { pl } from '../i18n/pl';
 
 type LegTimes = Pick<MatchSnapshot, 'status' | 'abandonment' | 'endedAt' | 'finishedAt' | 'legStartedAt' | 'legPausedMs'>;
 
@@ -47,6 +48,6 @@ export function formatDuration(totalSeconds: number): string {
 
 export function spokenDuration(totalSeconds: number): string {
   const { hours, minutes, seconds } = parts(totalSeconds);
-  const text = `${minutes} min ${seconds} s`;
-  return hours > 0 ? `${hours} godz. ${text}` : text;
+  const text = pl.durationMinutesSeconds(minutes, seconds);
+  return hours > 0 ? pl.durationWithHours(hours, text) : text;
 }

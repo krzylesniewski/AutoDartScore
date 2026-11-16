@@ -6,8 +6,11 @@ Ten katalog uruchamia aplikację jako usługę systemd na małym serwerze z Ubun
 - `autoscore.env.example`: wzór pliku ze zmiennymi serwera.
 - `deploy.sh`: wdraża jeden commit z `main`, buduje front, robi kopię bazy, sprawdza `/health` i wycofuje zmianę, gdy coś pójdzie nie tak.
 - `backup.sh`: codzienna kopia bazy, zostaje 14 najnowszych.
-- `pull-backup.sh`: kopiuje najnowszą kopię z serwera na Maca.
+- `pull-backup.sh`: kopiuje najnowszą kopię z serwera na Maca, trzyma 30 najnowszych kopii lokalnie i kończy się błędem, gdy najnowsza kopia na serwerze ma więcej niż 48 h.
+- `pl.autoscore.pull-backup.plist`: wzór zadania `launchd`, które codziennie uruchamia `pull-backup.sh` na Macu (patrz [Kopie na Macu](#kopie-na-macu)).
+- `test-pull-backup.sh`: próba `pull-backup.sh` z atrapami `ssh` i `scp`, bez serwera.
 - `migrate-db.sh`: jednorazowe przeniesienie lokalnej bazy na serwer. `test-migrate-db.sh` sprawdza go na bazach tymczasowych.
+- `test-deploy.sh`: próba `deploy.sh` i rollbacku na tymczasowym klonie, bez serwera (patrz [Testy skryptów](#testy-skryptów)).
 
 W przykładach `<host>` to adres serwera, `<port>` to port SSH, a `<admin>` to root albo użytkownik z `sudo` bez hasła.
 
@@ -50,7 +53,7 @@ sudo install -m 640 -o root -g autoscore /home/autoscore/app/deploy/autoscore.en
 sudoedit /etc/autoscore/autoscore.env
 ```
 
-Wpisz hasło, sekret i adres aplikacji w `AUTOSCORE_PUBLIC_URL`. `AUTOSCORE_CORS_ORIGIN` zostaw pustą, bo front i API działają pod jednym adresem. Znaczenie zmiennych `AUTOSCORE_*` opisuje [README serwera](../packages/server/README.md), a `PORT`, `HOST` i `DATABASE_PATH` [README w katalogu głównym](../README.md).
+Wpisz hasło, sekret i adres aplikacji w `AUTOSCORE_PUBLIC_URL`. `AUTOSCORE_CORS_ORIGIN` zostaw pustą, bo front i API działają pod jednym adresem. Serwer nie wstaje bez hasła, z hasłem przykładowym z pliku wzoru ani z `AUTOSCORE_AUTH=off` razem z hasłem. `AUTOSCORE_AUTH` zostaw na serwerze nieustawioną. Za reverse proxy hostingu ustaw `AUTOSCORE_TRUST_PROXY=on`, jak we wzorze. Bez tego wszystkie logowania mają jeden adres proxy i działa tylko limit wspólny dla wszystkich klientów. Znaczenie zmiennych `AUTOSCORE_*` opisuje [README serwera](../packages/server/README.md), a `PORT`, `HOST` i `DATABASE_PATH` [README w katalogu głównym](../README.md).
 
 Instalacja usługi i pierwszy start:
 
@@ -88,6 +91,59 @@ Kopie trafiają do `/home/autoscore/backups/daily`. Każda przechodzi `PRAGMA in
 
 ```sh
 deploy/pull-backup.sh --ssh <użytkownik>@<host> --port <port> --local-dir <katalog-na-kopie>
+```
+
+Codzienne pobieranie na Maca opisuje sekcja [Kopie na Macu](#kopie-na-macu).
+
+## Kopie na Macu
+
+`pull-backup.sh` pobiera najnowszą kopię z serwera, sprawdza ją przez `PRAGMA integrity_check` i dopiero wtedy zapisuje pod docelową nazwą. Po każdej nowej, poprawnej kopii zostawia lokalnie najnowsze kopie, domyślnie 30. Liczbę zmienisz opcją `--keep <n>` albo zmienną `AUTOSCORE_LOCAL_BACKUP_KEEP`. Na koniec sprawdza wiek najnowszej kopii na serwerze. Gdy ma więcej niż 48 h, cron na serwerze najpewniej przestał działać i skrypt kończy się kodem 3, także gdy ten plik był już pobrany wcześniej.
+
+| Kod | Znaczenie |
+|---|---|
+| 0 | Kopia pobrana albo już była lokalnie, najnowsza kopia na serwerze ma najwyżej 48 h. |
+| 1 | Złe opcje (także `--keep`, które nie jest dodatnią liczbą całkowitą), błąd `ssh` albo `scp`, brak kopii na serwerze albo nieoczekiwana nazwa pliku. |
+| 2 | Pobrany plik nie przeszedł `PRAGMA integrity_check` albo nie jest bazą. Nic nie zostaje zapisane ani usunięte. |
+| 3 | Najnowsza kopia na serwerze ma więcej niż 48 h. Nowa, poprawna kopia i tak zostaje zapisana. |
+
+Zadanie działa bez człowieka, więc `ssh` i `scp` działają w trybie `BatchMode`. Klucz SSH musi działać bez pytania o hasło, a serwer musi już być w `known_hosts`. Do `known_hosts` trafi po jednym ręcznym połączeniu. Klucz wdrożeniowy tu nie zadziała. Wystarczy zwykłe konto bez roota w grupie `autoscore`, bo skrypt tylko czyta kopie.
+
+Instalacja:
+
+1. Skopiuj wzór do `~/Library/LaunchAgents/`:
+
+   ```sh
+   cp deploy/pl.autoscore.pull-backup.plist ~/Library/LaunchAgents/
+   ```
+
+2. W skopiowanym pliku zamień znaczniki na wartości. `launchd` nie rozwija `~` ani zmiennych, więc ścieżki muszą być bezwzględne.
+   - `__REPO_DIR__`: katalog repo.
+   - `__LOG_FILE__`: plik logu, na przykład w `~/Library/Logs/` zapisany pełną ścieżką.
+   - `__SSH_TARGET__`: `<użytkownik>@<host>`.
+   - `__SSH_PORT__`: `<port>`.
+   - `__LOCAL_DIR__`: katalog na kopie.
+
+3. Załaduj zadanie:
+
+   ```sh
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/pl.autoscore.pull-backup.plist
+   ```
+
+Zadanie rusza codziennie o 9:00 czasu Maca. Kopia na serwerze powstaje o 3:15 czasu serwera. Gdy Mac śpi o 9:00, `launchd` uruchamia zadanie raz po wybudzeniu. Gdy Mac jest wtedy wyłączony, ten dzień przepada. Limit 48 h przepuszcza jeden pominięty dzień.
+
+Sprawdzenie, czy działa:
+
+```sh
+launchctl kickstart -k gui/$(id -u)/pl.autoscore.pull-backup
+launchctl print gui/$(id -u)/pl.autoscore.pull-backup
+```
+
+W wyniku `launchctl print` szukaj `last exit code`, a szczegóły znajdziesz w pliku logu. Każde uruchomienie zaczyna się w nim linią `pull-backup <czas UTC>`.
+
+Usunięcie:
+
+```sh
+launchctl bootout gui/$(id -u)/pl.autoscore.pull-backup
 ```
 
 ## Klucz wdrożeniowy
@@ -192,9 +248,19 @@ Kopie sprzed wdrożeń leżą w `/home/autoscore/backups/deploy` z krótkim SHA 
 sudo -u autoscore /home/autoscore/app/deploy/deploy.sh <sha>
 ```
 
-`<sha>` to pełny SHA commitu z `origin/main`. Skrypt odrzuca brudny katalog z kodem i drugi równoległy deploy. Potem przełącza kod, instaluje zależności, buduje front (gdy `AUTOSCORE_WEB_DIR` jest ustawiona), zatrzymuje usługę, kopiuje bazę do `backups/deploy` (zostaje 14 najnowszych), uruchamia usługę i czeka do 30 s na `/health`. Błąd na którymkolwiek z tych kroków, także nieudany build frontu, przywraca poprzedni commit, a gdy kopia powstała, także bazę. Rollback buduje front poprzedniego commitu, a nieudany build w rollbacku kończy się kodem 3. Bazę po nieudanym wdrożeniu skrypt odkłada jako `<baza>.failed-<czas UTC>`. Log trafia do `/home/autoscore/logs/deploy.log`.
+`<sha>` to pełny SHA commitu z `origin/main`. Skrypt odrzuca brudny katalog z kodem i drugi równoległy deploy. Potem przełącza kod, instaluje zależności i, gdy `AUTOSCORE_WEB_DIR` jest ustawiona, buduje front do `packages/web/dist.new`. Przez cały ten czas działa stara wersja. Nieudany checkout, instalacja albo build kończy wdrożenie przed zatrzymaniem usługi: skrypt przywraca poprzedni commit i zależności, a stara wersja działa dalej. Potem skrypt zatrzymuje usługę i kopiuje bazę do `backups/deploy` (zostaje 14 najnowszych). Kopia przechodzi `PRAGMA integrity_check`, a uszkodzona jest usuwana i przerywa wdrożenie. Następnie skrypt podmienia front: dotychczasowy `dist` zostaje jako `dist.prev`, a `dist.new` staje się `dist`. Na koniec uruchamia usługę i czeka do 30 s na `/health`.
 
-Rollback to wdrożenie starszego SHA z `main`. Gdy nowszy commit dodał migrację, starszy kod nie wystartuje na nowszej bazie i `deploy.sh` wróci do nowszego commitu. Wtedy najpierw zatrzymaj usługę i przywróć kopię z `backups/deploy` sprzed wdrożenia nowszego commitu (jak w sekcji wyżej), a potem wdróż starszy SHA. Rzutki zapisane od tamtego wdrożenia zostają tylko w odłożonym pliku.
+Błąd po zatrzymaniu usługi przywraca poprzedni commit, a gdy kopia powstała, także bazę. Rollback przywraca front z `dist.prev` bez budowania. Buduje go tylko wtedy, gdy przed wdrożeniem nie było `dist`. Bazę po nieudanym wdrożeniu skrypt odkłada jako `<baza>.failed-<czas UTC>`. Log trafia do `/home/autoscore/logs/deploy.log`.
+
+Wdrożenie, które przynosi ten sposób budowania frontu, wykonuje jeszcze stary `deploy.sh` i buduje front prosto do `dist`. Nowy przebieg działa od kolejnego wdrożenia.
+
+Rollback do starszej wersji to wdrożenie starszego SHA z `main`. Gdy nowszy commit dodał migrację, starszy kod nie wystartuje na nowszej bazie i `deploy.sh` wróci do nowszego commitu. Wtedy:
+
+1. Zatrzymaj usługę: `sudo systemctl stop autoscore`.
+2. Przywróć kopię z `backups/deploy` zrobioną przed wdrożeniem nowszego commitu (jak w [Przywracanie z kopii](#przywracanie-z-kopii), bez startu usługi).
+3. Uruchom `deploy.sh <starszy sha>`. Skrypt uruchomi usługę na starszym kodzie.
+
+Rzutki zapisane od tamtego wdrożenia zostają tylko w odłożonym pliku.
 
 ## Przełączenie działającego serwera na front z serwera
 
@@ -212,7 +278,19 @@ Wdrożenie, które przynosi tę zmianę, wykonuje jeszcze stary `deploy.sh`. Skr
 |---|---|
 | 0 | Wdrożone, `/health` odpowiada 200. |
 | 1 | Odrzucone albo błąd przed jakąkolwiek zmianą: zły SHA, commit spoza `origin/main`, brudny katalog, trwający deploy, brak albo zły `AUTOSCORE_PUBLIC_URL` przy ustawionej `AUTOSCORE_WEB_DIR`. |
-| 2 | Wdrożenie nie wyszło, rollback się udał. |
+| 2 | Wdrożenie nie wyszło, rollback się udał. Także nieudany build przed zatrzymaniem usługi, stara wersja działa dalej. |
 | 3 | Rollback też nie wyszedł. Usługa może nie działać. |
 
 Przy kodach 2 i 3 skrypt wypisuje ostatnie 50 linii `journalctl -u autoscore`.
+
+## Testy skryptów
+
+Job `deploy-scripts` w CI uruchamia `shellcheck -x deploy/*.sh`, `bash deploy/test-migrate-db.sh`, `bash deploy/test-deploy.sh` i `bash deploy/test-pull-backup.sh`. Lokalnie, z katalogu głównego repo:
+
+```sh
+bash deploy/test-deploy.sh
+```
+
+Test potrzebuje tylko `git` i `sqlite3`. Uruchamia `deploy.sh` na tymczasowym klonie z atrapami `systemctl`, `sudo`, `curl` i `pnpm`, więc nie dotyka usługi ani sieci. Sprawdza udane wdrożenie, nieudany build, nieudany start, uszkodzoną bazę i nieudany rollback.
+
+`bash deploy/test-pull-backup.sh` potrzebuje tylko `sqlite3` i `python3`. Udaje serwer lokalnym katalogiem z atrapami `ssh` i `scp`. Sprawdza kody wyjścia i pliki lokalne przy świeżej, starej, uszkodzonej i niebędącej bazą kopii, przycinanie przez `--keep`, błąd `ssh` oraz wzór `launchd`.

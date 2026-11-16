@@ -1,0 +1,272 @@
+# AutoScore Dart: Etap 4 (wzmocnienie po audycie) jako seria PR-ów Q1-Q18.
+# Źródło: CLAUDE.md, design/plan-etap4.md.
+# Opis pól: ~/.claude/skills/rollout/docs/manifest.html
+# Ten plik jest w repo; ~/.rollouts/autoscore-etap4/manifest.yaml to dowiązanie do niego.
+# Stan rolloutu (ledger, logi, inbox, briefy) zostaje w ~/.rollouts/autoscore-etap4/.
+rollout: autoscore-etap4
+model: opus
+claudeBin: ~/.nvm/versions/node/v24.22.2/bin/claude
+
+repo:
+  path: ~/Documents/00_Nauka/AutoScoreDart
+  github: krzylesniewski/AutoDartScore
+  # Gałąź integracyjna etapu 4 (decyzja 2026-11-15): do main wchodzi PR-em na koniec.
+  base: feat/hardening
+  public: true
+  pathPrepend: [~/.nvm/versions/node/v24.22.0/bin]
+  install: pnpm install --frozen-lockfile
+  requiredChecks: ['test', 'typecheck', 'lint', 'build', 'smoke'] # joby z .github/workflows/ci.yml
+  maintainers: [KrzysztofLesniewski]
+  merge: { method: squash, admin: false }
+  # Plan i decyzje trzyma człowiek; agenci ich nie zmieniają.
+  forbid:
+    - auto-score-dart-pomysly.md
+    - CLAUDE.md
+    - 'rollout/**'
+    - design/plan-etap4.md
+    - 'design/scena/**'
+    - 'design/mockups/**'
+  alwaysInScope:
+    - pnpm-lock.yaml
+  denylist: [/Users/]
+  verify:
+    common:
+      - pnpm install --frozen-lockfile
+      - pnpm test
+      - pnpm typecheck
+      - pnpm lint
+
+briefing:
+  sources:
+    - title: CLAUDE.md (zasady, stack, reguły X01, front, konwencje; wiążące)
+      path: ~/Documents/00_Nauka/AutoScoreDart/CLAUDE.md
+      kind: markdown
+    - title: Etap 4, plan PR-ów Q1-Q17 po audycie (wiążący)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-etap4.md
+      kind: markdown
+    # Tylko dla PR-ów z briefTags: [web].
+    - title: RWD ekranów, wspólne zasady układu (wiążące dla zmian we froncie)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/rwd.md
+      kind: markdown
+      tag: web
+    - title: Design system „Scena”, zasady użycia tokenów i komponentów (wiążące dla wyglądu)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/scena/README.md
+      kind: markdown
+      tag: web
+    # Tylko dla PR-ów z briefTags: [deploy].
+    - title: Wdrożenie na serwer, skrypty i przebieg
+      path: ~/Documents/00_Nauka/AutoScoreDart/deploy/README.md
+      kind: markdown
+      tag: deploy
+
+policy:
+  concurrency: 4
+  # Decyzja autora 2026-11-15: PR-y scalane automatycznie do feat/hardening.
+  merge: auto
+  # Agent odpowiada na pytania z briefu tylko tym, co rozstrzyga plan; reszta trafia do autora.
+  delegate: {}
+
+# Małe kroki: plik spoza zakresu PR-a wraca do implementera przed weryfikacją.
+gates:
+  preVerify:
+    scope: true
+
+prs:
+  # P0: bezpieczeństwo produkcji
+  - id: Q1
+    branch: fix/ws-limits
+    title: 'fix(server): payload, connection and liveness limits on the WebSocket channel'
+    brief: briefs/Q1.md
+    priority: 90
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'README.md']
+
+  - id: Q2
+    branch: fix/auth-fail-closed
+    title: 'fix(server): refuse to start without a password unless auth is switched off explicitly'
+    brief: briefs/Q2.md
+    priority: 90
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
+    scope: ['packages/server/**', '.github/workflows/**', 'deploy/**', 'package.json', 'packages/*/package.json', 'README.md', 'packages/*/README.md']
+    briefTags: [deploy]
+
+  - id: Q3
+    branch: fix/auth-tokens-limiter
+    title: 'fix(server): tokens revoked by a password change, login limit per client'
+    brief: briefs/Q3.md
+    deps: [Q2]
+    priority: 85
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'packages/schema/**', 'deploy/**', 'README.md', 'packages/*/README.md']
+    briefTags: [deploy]
+
+  # P1: błędy widoczne dla graczy
+  - id: Q4
+    branch: fix/web-command-queue
+    title: 'fix(web): a failed throw stops the queue, requests time out, lock by error code'
+    brief: briefs/Q4.md
+    priority: 80
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [web]
+
+  - id: Q5
+    branch: fix/web-shortcuts-focus
+    title: 'fix(web): keypad shortcuts leave Space and Enter to other controls'
+    brief: briefs/Q5.md
+    priority: 80
+    effort: { brief: medium, implement: medium, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [web]
+
+  - id: Q6
+    branch: perf/server-lists-stats
+    title: 'perf(server): indexes, replay cache and batched loads for lists and stats'
+    brief: briefs/Q6.md
+    priority: 75
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'README.md']
+
+  - id: Q7
+    branch: fix/idempotent-commands
+    title: 'fix: undo guarded by expectedSeq and rest-miss as one server command'
+    brief: briefs/Q7.md
+    deps: [Q6]
+    priority: 75
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
+
+  - id: Q8
+    branch: fix/web-expected-seq
+    title: 'fix(web): send expectedSeq and use the server rest-miss command'
+    brief: briefs/Q8.md
+    deps: [Q4, Q7]
+    priority: 70
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [web]
+
+  - id: Q9
+    branch: fix/deploy-swap-and-ci
+    title: 'fix(deploy): build the front aside and swap it, check deploy scripts in CI'
+    brief: briefs/Q9.md
+    deps: [Q2]
+    priority: 70
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
+    scope: ['deploy/**', '.github/workflows/**', 'README.md']
+    briefTags: [deploy]
+
+  - id: Q10
+    branch: feat/deploy-offsite-backup
+    title: 'feat(deploy): scheduled off-server backup pull with integrity and age checks'
+    brief: briefs/Q10.md
+    deps: [Q9]
+    priority: 50
+    effort: { brief: medium, implement: medium, verify: high }
+    changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
+    scope: ['deploy/**', '.github/workflows/**']
+    briefTags: [deploy]
+
+  # P2: jakość i tempo zmian
+  - id: Q11
+    branch: test/e2e-production-config
+    title: 'test: end-to-end run on the production configuration with layout checks'
+    brief: briefs/Q11.md
+    deps: [Q3, Q8, Q9]
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
+    scope: ['e2e/**', 'packages/web/**', 'packages/server/**', '.github/workflows/**', 'package.json', 'packages/*/package.json', 'pnpm-workspace.yaml', '.gitignore', 'README.md', 'packages/*/README.md']
+    briefTags: [web]
+
+  - id: Q12
+    branch: fix/web-dialog-notice-errors
+    title: 'fix(web): shared modal dialog, announced notices and Polish API errors'
+    brief: briefs/Q12.md
+    deps: [Q8]
+    priority: 55
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**']
+    briefTags: [web]
+
+  - id: Q13
+    branch: chore/deps-audit
+    title: 'chore: dependency updates, Dependabot and an audit step in CI'
+    brief: briefs/Q13.md
+    deps: [Q11]
+    priority: 45
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
+    scope: ['package.json', 'packages/*/package.json', '.github/**', 'README.md']
+
+  - id: Q14
+    branch: refactor/turn-core-contract-types
+    title: 'refactor: one X01 turn core in the engine and contract types in schema'
+    brief: briefs/Q14.md
+    deps: [Q7]
+    priority: 40
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/engine/**', 'packages/schema/**', 'packages/server/**', 'packages/web/**', 'packages/audio/**', 'packages/*/README.md']
+
+  - id: Q15
+    branch: test/web-behaviour-not-classes
+    title: 'test(web): assert behaviour instead of Tailwind classes'
+    brief: briefs/Q15.md
+    deps: [Q11, Q12, Q14]
+    priority: 35
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  # P3: porządki
+  - id: Q16
+    branch: chore/docs-dead-code-bundle
+    title: 'chore: docs in line with the code, dead code out, smaller bundle'
+    brief: briefs/Q16.md
+    deps: [Q13, Q14, Q15]
+    priority: 30
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**', 'README.md', 'packages/*/README.md']
+    briefTags: [web]
+
+  # Dodatek z feedbacku autora 2026-11-16 (plan: sekcja Q18).
+  - id: Q18
+    branch: feat/web-checkout-card-fill
+    title: 'feat(web): the checkout card fills the free height on large screens'
+    brief: briefs/Q18.md
+    deps: [Q16]
+    priority: 25
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  - id: Q17
+    branch: chore/quality-tooling
+    title: 'chore: formatting, stricter lint, coverage thresholds and faster web tests in CI'
+    brief: briefs/Q17.md
+    deps: [Q10, Q16, Q18]
+    priority: 20
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    allowWorkflows: true # PR zmienia .github/workflows
+    # Jednorazowe formatowanie dotyka całego repo; forbid dalej chroni plan, CLAUDE.md i design/scena.
+    scope: ['**']

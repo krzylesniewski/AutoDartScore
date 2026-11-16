@@ -1,0 +1,1859 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`replayGame golden snapshots > 1v1 full match 1`] = `
+{
+  "events": [
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "bartek",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "anna",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "bartek",
+      "remaining": 121,
+      "turnIndex": 2,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 25,
+        },
+        {
+          "multiplier": 0,
+          "segment": 0,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "anna",
+      "remaining": 36,
+      "total": 85,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 19,
+        },
+        {
+          "multiplier": 1,
+          "segment": 5,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "bartek",
+      "remaining": 121,
+      "turnIndex": 4,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 2,
+          "segment": 18,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "anna",
+      "remaining": 0,
+      "total": 36,
+      "turnIndex": 5,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 36,
+      "dartsThrown": 7,
+      "legIndex": 0,
+      "playerId": "anna",
+      "type": "leg_won",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "anna",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "bartek",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 19,
+        },
+        {
+          "multiplier": 1,
+          "segment": 4,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "anna",
+      "remaining": 121,
+      "turnIndex": 2,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 11,
+        },
+        {
+          "multiplier": 2,
+          "segment": 25,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "bartek",
+      "remaining": 0,
+      "total": 121,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 121,
+      "dartsThrown": 6,
+      "legIndex": 1,
+      "playerId": "bartek",
+      "type": "leg_won",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "bartek",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "anna",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "bartek",
+      "remaining": 118,
+      "total": 3,
+      "turnIndex": 2,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "anna",
+      "remaining": 80,
+      "total": 41,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "bartek",
+      "remaining": 115,
+      "total": 3,
+      "turnIndex": 4,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 2,
+          "segment": 10,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "anna",
+      "remaining": 0,
+      "total": 80,
+      "turnIndex": 5,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 80,
+      "dartsThrown": 8,
+      "legIndex": 2,
+      "playerId": "anna",
+      "type": "leg_won",
+    },
+    {
+      "legsWon": {
+        "anna": 2,
+        "bartek": 1,
+      },
+      "playerId": "anna",
+      "type": "match_won",
+    },
+  ],
+  "state": {
+    "state": {
+      "config": {
+        "firstPlayerIndex": 1,
+        "legsToWin": 2,
+        "playerIds": [
+          "anna",
+          "bartek",
+        ],
+        "startingScore": 301,
+        "type": "match",
+      },
+      "currentDarts": [],
+      "currentPlayerIndex": 0,
+      "dartsThrownInLeg": [
+        8,
+        9,
+      ],
+      "legIndex": 2,
+      "legStarterIndex": 1,
+      "legsWon": [
+        2,
+        1,
+      ],
+      "remaining": [
+        0,
+        115,
+      ],
+      "turnIndex": 5,
+      "turnStartRemaining": 80,
+      "turnsInLeg": [
+        2,
+        3,
+      ],
+      "winnerIndex": 0,
+    },
+    "type": "match",
+  },
+}
+`;
+
+exports[`replayGame golden snapshots > 1v1 stopped with one dart open 1`] = `
+{
+  "events": [
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "bartek",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "anna",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "bartek",
+      "remaining": 121,
+      "turnIndex": 2,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 25,
+        },
+        {
+          "multiplier": 0,
+          "segment": 0,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "anna",
+      "remaining": 36,
+      "total": 85,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 19,
+        },
+        {
+          "multiplier": 1,
+          "segment": 5,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "bartek",
+      "remaining": 121,
+      "turnIndex": 4,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 2,
+          "segment": 18,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "anna",
+      "remaining": 0,
+      "total": 36,
+      "turnIndex": 5,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 36,
+      "dartsThrown": 7,
+      "legIndex": 0,
+      "playerId": "anna",
+      "type": "leg_won",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "anna",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "bartek",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 19,
+        },
+        {
+          "multiplier": 1,
+          "segment": 4,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "anna",
+      "remaining": 121,
+      "turnIndex": 2,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 11,
+        },
+        {
+          "multiplier": 2,
+          "segment": 25,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "bartek",
+      "remaining": 0,
+      "total": 121,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 121,
+      "dartsThrown": 6,
+      "legIndex": 1,
+      "playerId": "bartek",
+      "type": "leg_won",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "bartek",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "anna",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+  ],
+  "state": {
+    "state": {
+      "config": {
+        "firstPlayerIndex": 1,
+        "legsToWin": 2,
+        "playerIds": [
+          "anna",
+          "bartek",
+        ],
+        "startingScore": 301,
+        "type": "match",
+      },
+      "currentDarts": [
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+      ],
+      "currentPlayerIndex": 1,
+      "dartsThrownInLeg": [
+        3,
+        4,
+      ],
+      "legIndex": 2,
+      "legStarterIndex": 1,
+      "legsWon": [
+        1,
+        1,
+      ],
+      "remaining": [
+        121,
+        120,
+      ],
+      "turnIndex": 2,
+      "turnStartRemaining": 121,
+      "turnsInLeg": [
+        1,
+        1,
+      ],
+      "winnerIndex": null,
+    },
+    "type": "match",
+  },
+}
+`;
+
+exports[`replayGame golden snapshots > 1v1 stopped with two darts open 1`] = `
+{
+  "events": [
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "bartek",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "anna",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "bartek",
+      "remaining": 121,
+      "turnIndex": 2,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 25,
+        },
+        {
+          "multiplier": 0,
+          "segment": 0,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "anna",
+      "remaining": 36,
+      "total": 85,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 19,
+        },
+        {
+          "multiplier": 1,
+          "segment": 5,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "bartek",
+      "remaining": 121,
+      "turnIndex": 4,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 2,
+          "segment": 18,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "anna",
+      "remaining": 0,
+      "total": 36,
+      "turnIndex": 5,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 36,
+      "dartsThrown": 7,
+      "legIndex": 0,
+      "playerId": "anna",
+      "type": "leg_won",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "anna",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "bartek",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 19,
+        },
+        {
+          "multiplier": 1,
+          "segment": 4,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "anna",
+      "remaining": 121,
+      "turnIndex": 2,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 11,
+        },
+        {
+          "multiplier": 2,
+          "segment": 25,
+        },
+      ],
+      "legIndex": 1,
+      "playerId": "bartek",
+      "remaining": 0,
+      "total": 121,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 121,
+      "dartsThrown": 6,
+      "legIndex": 1,
+      "playerId": "bartek",
+      "type": "leg_won",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "bartek",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "anna",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+      ],
+      "legIndex": 2,
+      "playerId": "bartek",
+      "remaining": 118,
+      "total": 3,
+      "turnIndex": 2,
+      "type": "turn_completed",
+    },
+  ],
+  "state": {
+    "state": {
+      "config": {
+        "firstPlayerIndex": 1,
+        "legsToWin": 2,
+        "playerIds": [
+          "anna",
+          "bartek",
+        ],
+        "startingScore": 301,
+        "type": "match",
+      },
+      "currentDarts": [
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+      ],
+      "currentPlayerIndex": 0,
+      "dartsThrownInLeg": [
+        5,
+        6,
+      ],
+      "legIndex": 2,
+      "legStarterIndex": 1,
+      "legsWon": [
+        1,
+        1,
+      ],
+      "remaining": [
+        100,
+        118,
+      ],
+      "turnIndex": 3,
+      "turnStartRemaining": 121,
+      "turnsInLeg": [
+        1,
+        2,
+      ],
+      "winnerIndex": null,
+    },
+    "type": "match",
+  },
+}
+`;
+
+exports[`replayGame golden snapshots > casual with 3 players stopped mid-turn after one finished 1`] = `
+{
+  "events": [
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "ola",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "piotr",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "rafal",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 2,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 11,
+        },
+        {
+          "multiplier": 2,
+          "segment": 25,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "ola",
+      "remaining": 0,
+      "total": 121,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 121,
+      "dartsThrown": 6,
+      "legIndex": 0,
+      "place": 1,
+      "playerId": "ola",
+      "type": "player_finished",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "piotr",
+      "remaining": 61,
+      "total": 60,
+      "turnIndex": 4,
+      "type": "turn_completed",
+    },
+  ],
+  "state": {
+    "state": {
+      "config": {
+        "firstPlayerIndex": 0,
+        "playerIds": [
+          "ola",
+          "piotr",
+          "rafal",
+        ],
+        "startingScore": 301,
+        "type": "casual",
+      },
+      "currentDarts": [
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+      ],
+      "currentPlayerIndex": 2,
+      "dartsThrownInLeg": [
+        6,
+        6,
+        5,
+      ],
+      "finished": false,
+      "placements": [
+        {
+          "place": 1,
+          "playerId": "ola",
+        },
+      ],
+      "remaining": [
+        0,
+        61,
+        119,
+      ],
+      "turnIndex": 5,
+      "turnStartRemaining": 121,
+      "turnsInLeg": [
+        2,
+        2,
+        1,
+      ],
+    },
+    "type": "casual",
+  },
+}
+`;
+
+exports[`replayGame golden snapshots > casual with 4 players to the end 1`] = `
+{
+  "events": [
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "rafal",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "sara",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "ola",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 2,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "piotr",
+      "remaining": 121,
+      "total": 180,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 11,
+        },
+        {
+          "multiplier": 2,
+          "segment": 25,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "rafal",
+      "remaining": 0,
+      "total": 121,
+      "turnIndex": 4,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 121,
+      "dartsThrown": 6,
+      "legIndex": 0,
+      "place": 1,
+      "playerId": "rafal",
+      "type": "player_finished",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "sara",
+      "remaining": 121,
+      "turnIndex": 5,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 19,
+        },
+        {
+          "multiplier": 2,
+          "segment": 2,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "ola",
+      "remaining": 0,
+      "total": 121,
+      "turnIndex": 6,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 121,
+      "dartsThrown": 6,
+      "legIndex": 0,
+      "place": 2,
+      "playerId": "ola",
+      "type": "player_finished",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 1,
+        },
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "piotr",
+      "remaining": 40,
+      "total": 81,
+      "turnIndex": 7,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "sara",
+      "remaining": 121,
+      "turnIndex": 8,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+        {
+          "multiplier": 2,
+          "segment": 10,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "piotr",
+      "remaining": 0,
+      "total": 40,
+      "turnIndex": 9,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 40,
+      "dartsThrown": 8,
+      "legIndex": 0,
+      "place": 3,
+      "playerId": "piotr",
+      "type": "player_finished",
+    },
+    {
+      "placements": [
+        {
+          "place": 1,
+          "playerId": "rafal",
+        },
+        {
+          "place": 2,
+          "playerId": "ola",
+        },
+        {
+          "place": 3,
+          "playerId": "piotr",
+        },
+        {
+          "place": 4,
+          "playerId": "sara",
+        },
+      ],
+      "type": "casual_finished",
+    },
+  ],
+  "state": {
+    "state": {
+      "config": {
+        "firstPlayerIndex": 2,
+        "playerIds": [
+          "ola",
+          "piotr",
+          "rafal",
+          "sara",
+        ],
+        "startingScore": 301,
+        "type": "casual",
+      },
+      "currentDarts": [],
+      "currentPlayerIndex": 1,
+      "dartsThrownInLeg": [
+        6,
+        8,
+        6,
+        8,
+      ],
+      "finished": true,
+      "placements": [
+        {
+          "place": 1,
+          "playerId": "rafal",
+        },
+        {
+          "place": 2,
+          "playerId": "ola",
+        },
+        {
+          "place": 3,
+          "playerId": "piotr",
+        },
+        {
+          "place": 4,
+          "playerId": "sara",
+        },
+      ],
+      "remaining": [
+        0,
+        0,
+        0,
+        121,
+      ],
+      "turnIndex": 9,
+      "turnStartRemaining": 40,
+      "turnsInLeg": [
+        2,
+        2,
+        2,
+        3,
+      ],
+    },
+    "type": "casual",
+  },
+}
+`;
+
+exports[`replayGame golden snapshots > checkouts new_each_attempt 1`] = `
+{
+  "events": [],
+  "state": {
+    "practiceMode": "checkouts",
+    "state": {
+      "attempts": [
+        {
+          "success": false,
+          "target": 69,
+        },
+        {
+          "success": false,
+          "target": 99,
+        },
+        {
+          "success": true,
+          "target": 82,
+        },
+        {
+          "success": true,
+          "target": 63,
+        },
+        {
+          "success": false,
+          "target": 57,
+        },
+        {
+          "success": false,
+          "target": 85,
+        },
+        {
+          "success": true,
+          "target": 91,
+        },
+      ],
+      "config": {
+        "playerId": "sam",
+        "practiceMode": "checkouts",
+        "range": "51-100",
+        "rule": "new_each_attempt",
+        "seed": 987654321,
+        "type": "practice",
+      },
+      "draws": 10,
+      "skips": 3,
+      "target": 99,
+    },
+    "type": "practice",
+  },
+}
+`;
+
+exports[`replayGame golden snapshots > checkouts repeat_on_miss 1`] = `
+{
+  "events": [],
+  "state": {
+    "practiceMode": "checkouts",
+    "state": {
+      "attempts": [
+        {
+          "success": false,
+          "target": 49,
+        },
+        {
+          "success": false,
+          "target": 49,
+        },
+        {
+          "success": true,
+          "target": 49,
+        },
+        {
+          "success": true,
+          "target": 47,
+        },
+        {
+          "success": false,
+          "target": 38,
+        },
+        {
+          "success": false,
+          "target": 37,
+        },
+        {
+          "success": true,
+          "target": 37,
+        },
+      ],
+      "config": {
+        "playerId": "sam",
+        "practiceMode": "checkouts",
+        "range": "2-50",
+        "rule": "repeat_on_miss",
+        "seed": 12345,
+        "type": "practice",
+      },
+      "draws": 6,
+      "skips": 3,
+      "target": 20,
+    },
+    "type": "practice",
+  },
+}
+`;
+
+exports[`replayGame golden snapshots > free run 1`] = `
+{
+  "events": [],
+  "state": {
+    "practiceMode": "free_run",
+    "state": {
+      "config": {
+        "playerId": "sam",
+        "practiceMode": "free_run",
+        "type": "practice",
+      },
+      "currentDarts": [
+        {
+          "multiplier": 3,
+          "segment": 19,
+        },
+      ],
+      "dartsThrown": 7,
+      "totalPoints": 229,
+      "turnIndex": 2,
+    },
+    "type": "practice",
+  },
+}
+`;
+
+exports[`replayGame golden snapshots > solo 501 stopped mid-turn 1`] = `
+{
+  "events": [
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "sam",
+      "remaining": 321,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+  ],
+  "state": {
+    "practiceMode": "solo_501",
+    "state": {
+      "config": {
+        "playerId": "sam",
+        "practiceMode": "solo_501",
+        "type": "practice",
+      },
+      "currentDarts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 0,
+          "segment": 0,
+        },
+      ],
+      "dartsThrown": 5,
+      "finished": false,
+      "remaining": 261,
+      "turnIndex": 1,
+      "turnStartRemaining": 321,
+    },
+    "type": "practice",
+  },
+}
+`;
+
+exports[`replayGame golden snapshots > solo 501 to the checkout 1`] = `
+{
+  "events": [
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "sam",
+      "remaining": 321,
+      "total": 180,
+      "turnIndex": 0,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "sam",
+      "remaining": 141,
+      "total": 180,
+      "turnIndex": 1,
+      "type": "turn_completed",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 1,
+          "segment": 20,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "sam",
+      "remaining": 141,
+      "turnIndex": 2,
+      "type": "bust",
+    },
+    {
+      "darts": [
+        {
+          "multiplier": 3,
+          "segment": 20,
+        },
+        {
+          "multiplier": 3,
+          "segment": 19,
+        },
+        {
+          "multiplier": 2,
+          "segment": 12,
+        },
+      ],
+      "legIndex": 0,
+      "playerId": "sam",
+      "remaining": 0,
+      "total": 141,
+      "turnIndex": 3,
+      "type": "turn_completed",
+    },
+    {
+      "checkout": 141,
+      "dartsThrown": 12,
+      "legIndex": 0,
+      "playerId": "sam",
+      "type": "leg_won",
+    },
+  ],
+  "state": {
+    "practiceMode": "solo_501",
+    "state": {
+      "config": {
+        "playerId": "sam",
+        "practiceMode": "solo_501",
+        "type": "practice",
+      },
+      "currentDarts": [],
+      "dartsThrown": 12,
+      "finished": true,
+      "remaining": 0,
+      "turnIndex": 3,
+      "turnStartRemaining": 141,
+    },
+    "type": "practice",
+  },
+}
+`;

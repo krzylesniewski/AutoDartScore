@@ -1,7 +1,9 @@
-import { Hit, type DomainEvent } from '@autoscore/schema';
+import { DARTS_PER_TURN, type Hit } from '@autoscore/schema';
+import type { ApplyResult } from './apply-result.js';
 import { EngineError } from './errors.js';
+import { parseHit } from './hit-input.js';
 import { hitPoints } from './points.js';
-import type { ApplyResult } from './x01-match.js';
+import { replaySteps } from './replay-steps.js';
 
 // Trening Free run: swobodne rzucanie bez zasad i bez końca. Silnik tylko notuje rzutki: ich liczbę, sumę punktów i podejścia.
 // Nie emituje zdarzeń domenowych, więc nie wyzwala odczytu wyniku.
@@ -26,14 +28,9 @@ export function createFreeRun(config: FreeRunConfig): FreeRunState {
 }
 
 export function applyFreeRunThrow(state: FreeRunState, input: Hit): ApplyResult<FreeRunState> {
-  const parsed = Hit.safeParse(input);
-  if (!parsed.success) {
-    throw new EngineError('invalid_hit', `Invalid hit: ${JSON.stringify(input)}`);
-  }
-  const hit = parsed.data;
-
+  const hit = parseHit(input);
   const darts = [...state.currentDarts, hit];
-  const visitEnded = darts.length === 3;
+  const visitEnded = darts.length === DARTS_PER_TURN;
   return {
     state: {
       ...state,
@@ -46,16 +43,8 @@ export function applyFreeRunThrow(state: FreeRunState, input: Hit): ApplyResult<
   };
 }
 
-// Stan sesji jako wynik odtworzenia wszystkich rzutek (zapis zdarzeniowy).
 export function replayFreeRun(config: FreeRunConfig, hits: readonly Hit[]): ApplyResult<FreeRunState> {
-  let state = createFreeRun(config);
-  const events: DomainEvent[] = [];
-  for (const hit of hits) {
-    const result = applyFreeRunThrow(state, hit);
-    state = result.state;
-    events.push(...result.events);
-  }
-  return { state, events };
+  return replaySteps(createFreeRun(config), hits, applyFreeRunThrow);
 }
 
 // Średnia na 3 rzutki, bez zaokrąglania.

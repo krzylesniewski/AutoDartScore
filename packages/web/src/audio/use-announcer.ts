@@ -77,10 +77,13 @@ export function useAnnouncer(): UseAnnouncer {
   const effectsRef = useRef(effectsEnabled);
   const audio = useRef<AudioOutput | null>(null);
 
-  if (!audio.current) {
+  // Wyjście audio powstaje przy montowaniu, a nie w renderze, bo announcer czyta refy przełączników. Komunikaty z WebSocketa
+  // przychodzą dopiero po montowaniu.
+  // Nagrania zdarzeń ładujemy niezależnie od przełączników, bo głos można włączyć w trakcie gry.
+  useEffect(() => {
     const speech = createRecordedSpeaker(createWebSpeechSpeaker());
     const player = createWebAudioEffectPlayer();
-    // Przełączniki sprawdzamy w chwili wywołania, więc announcer powstaje raz. Wyłączone efekty zwracają 0, żeby głos nie czekał.
+    // Przełączniki sprawdzamy w chwili wywołania. Wyłączone efekty zwracają 0, żeby głos nie czekał.
     // Komentarze do zera zmienia się tylko w Ustawieniach, więc czytamy je z localStorage przy każdym komunikacie.
     const announcer = createAnnouncer(
       {
@@ -105,15 +108,11 @@ export function useAnnouncer(): UseAnnouncer {
       { zeroComments: readZeroCommentsEnabled },
     );
     audio.current = { announcer, speech, player };
-  }
-
-  // Nagrania zdarzeń ładujemy niezależnie od przełączników, bo głos można włączyć w trakcie gry.
-  // close() pozwala na późniejsze play(), więc podwójne montowanie w StrictMode nie psuje efektów.
-  useEffect(() => {
-    audio.current?.speech.preload();
+    speech.preload();
     return () => {
-      audio.current?.announcer.stop();
-      audio.current?.player.close();
+      announcer.stop();
+      player.close();
+      audio.current = null;
     };
   }, []);
 
@@ -124,25 +123,31 @@ export function useAnnouncer(): UseAnnouncer {
     }
   }, []);
 
-  const setVoiceEnabled = useCallback((next: boolean) => {
-    writeVoiceEnabled(next);
-    voiceRef.current = next;
-    if (!next) {
-      audio.current?.speech.cancel();
-      stopWhenSilent();
-    }
-    setVoiceState(next);
-  }, [stopWhenSilent]);
+  const setVoiceEnabled = useCallback(
+    (next: boolean) => {
+      writeVoiceEnabled(next);
+      voiceRef.current = next;
+      if (!next) {
+        audio.current?.speech.cancel();
+        stopWhenSilent();
+      }
+      setVoiceState(next);
+    },
+    [stopWhenSilent],
+  );
 
-  const setEffectsEnabled = useCallback((next: boolean) => {
-    writeEffectsEnabled(next);
-    effectsRef.current = next;
-    if (!next) {
-      audio.current?.player.stop();
-      stopWhenSilent();
-    }
-    setEffectsState(next);
-  }, [stopWhenSilent]);
+  const setEffectsEnabled = useCallback(
+    (next: boolean) => {
+      writeEffectsEnabled(next);
+      effectsRef.current = next;
+      if (!next) {
+        audio.current?.player.stop();
+        stopWhenSilent();
+      }
+      setEffectsState(next);
+    },
+    [stopWhenSilent],
+  );
 
   const onLiveMessage = useCallback((message: LiveMessage) => {
     if (voiceRef.current || effectsRef.current) {

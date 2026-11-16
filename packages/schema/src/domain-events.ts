@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { Hit } from './hit.js';
-import { Placement } from './match.js';
+import { DARTS_PER_TURN, Placement } from './match.js';
+import { PlayerId } from './player.js';
 
 // Zdarzenia domenowe silnika gry. Te same zdarzenia odbierają WebSocket i warstwa audio.
 const base = {
-  playerId: z.string().min(1),
+  playerId: PlayerId,
   legIndex: z.int().min(0),
 };
 
@@ -12,7 +13,7 @@ export const TurnCompleted = z.object({
   type: z.literal('turn_completed'),
   ...base,
   turnIndex: z.int().min(0),
-  darts: z.array(Hit).min(1).max(3),
+  darts: z.array(Hit).min(1).max(DARTS_PER_TURN),
   total: z.int().min(0).max(180),
   remaining: z.int().min(0),
 });
@@ -22,7 +23,7 @@ export const Bust = z.object({
   type: z.literal('bust'),
   ...base,
   turnIndex: z.int().min(0),
-  darts: z.array(Hit).min(1).max(3),
+  darts: z.array(Hit).min(1).max(DARTS_PER_TURN),
   remaining: z.int().min(2), // wynik sprzed tury, do którego gracz wraca
 });
 export type Bust = z.infer<typeof Bust>;
@@ -37,7 +38,7 @@ export type LegWon = z.infer<typeof LegWon>;
 
 export const MatchWon = z.object({
   type: z.literal('match_won'),
-  playerId: z.string().min(1),
+  playerId: PlayerId,
   legsWon: z.record(z.string(), z.int().min(0)),
 });
 export type MatchWon = z.infer<typeof MatchWon>;

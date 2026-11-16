@@ -123,7 +123,14 @@ describe('buildRankings', () => {
   it('lists every player in a tile with fewer than 5 players', () => {
     const rankings = buildRankings({
       players: [anna, bartek, celina, darek],
-      games: [game([], { anna: { highestCheckout: 100 }, bartek: { highestCheckout: 80 }, celina: { highestCheckout: 60 }, darek: { highestCheckout: 40 } })],
+      games: [
+        game([], {
+          anna: { highestCheckout: 100 },
+          bartek: { highestCheckout: 80 },
+          celina: { highestCheckout: 60 },
+          darek: { highestCheckout: 40 },
+        }),
+      ],
     });
     expect(rankings.highestCheckout.map((entry) => entry.name)).toEqual(['Anna', 'Bartek', 'Celina', 'Darek']);
   });
@@ -181,7 +188,11 @@ describe('buildRankings', () => {
   it('ignores the highest turn of casual and practice games', () => {
     const rankings = buildRankings({
       players: [anna, bartek],
-      games: [game([], { anna: { highestTurn: 60 } }), game([], { anna: { highestTurn: 180 } }, 'casual'), game([], { bartek: { highestTurn: 180 } }, 'practice')],
+      games: [
+        game([], { anna: { highestTurn: 60 } }),
+        game([], { anna: { highestTurn: 180 } }, 'casual'),
+        game([], { bartek: { highestTurn: 180 } }, 'practice'),
+      ],
     });
     expect(rankings.highestTurn).toEqual([{ playerId: 'anna', name: 'Anna', avatar: null, color: 1, position: 1, value: 60 }]);
   });
@@ -197,7 +208,12 @@ describe('buildRankings', () => {
   it('counts a guest game and its legs without listing the guest', () => {
     const rankings = buildRankings({
       players: [anna],
-      games: [game([...threeLegs('anna', 40), ...threeLegs('guest', 99)], { anna: { highestCheckout: 40 }, guest: { highestCheckout: 170, highestTurn: 180, bestLegDarts: 9 } })],
+      games: [
+        game([...threeLegs('anna', 40), ...threeLegs('guest', 99)], {
+          anna: { highestCheckout: 40 },
+          guest: { highestCheckout: 170, highestTurn: 180, bestLegDarts: 9 },
+        }),
+      ],
     });
     expect(rankings.games).toBe(1);
     expect(rankings.legs).toBe(3);
@@ -227,7 +243,9 @@ describe('buildRankings', () => {
       result(['bartek', 'celina'], 'bartek'),
       result(['bartek', 'celina'], 'celina'),
     ];
-    expect(buildRankings({ players: [anna, bartek, celina], games }).winRate.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
+    expect(
+      buildRankings({ players: [anna, bartek, celina], games }).winRate.map((entry) => [entry.name, entry.position, entry.value]),
+    ).toEqual([
       ['Anna', 1, 50],
       ['Bartek', 1, 50],
       ['Celina', 1, 50],
@@ -235,7 +253,11 @@ describe('buildRankings', () => {
   });
 
   it('counts 1st place in a casual game as a win', () => {
-    const games = [result(['anna', 'bartek', 'celina'], 'anna', 'casual'), result(['anna', 'bartek'], 'anna'), result(['anna', 'bartek'], 'bartek')];
+    const games = [
+      result(['anna', 'bartek', 'celina'], 'anna', 'casual'),
+      result(['anna', 'bartek'], 'anna'),
+      result(['anna', 'bartek'], 'bartek'),
+    ];
     expect(buildRankings({ players: [anna, bartek, celina], games }).winRate.map((entry) => [entry.name, entry.value])).toEqual([
       ['Anna', 66.7],
       ['Bartek', 33.3],
@@ -243,7 +265,11 @@ describe('buildRankings', () => {
   });
 
   it('does not count an unfinished game as played', () => {
-    const games = [result(['anna', 'bartek'], 'anna'), result(['anna', 'bartek'], 'anna'), result(['anna', 'bartek'], null, 'match', false)];
+    const games = [
+      result(['anna', 'bartek'], 'anna'),
+      result(['anna', 'bartek'], 'anna'),
+      result(['anna', 'bartek'], null, 'match', false),
+    ];
     expect(buildRankings({ players: [anna, bartek], games }).winRate).toEqual([]);
   });
 
@@ -255,7 +281,10 @@ describe('buildRankings', () => {
   it('lists T20 hits descending and leaves out players with 0', () => {
     const rankings = buildRankings({
       players: [anna, bartek, celina],
-      games: [game([], { anna: { t20Hits: 4 }, bartek: { t20Hits: 0 }, celina: { t20Hits: 2 } }), game([], { celina: { t20Hits: 5 } }, 'practice')],
+      games: [
+        game([], { anna: { t20Hits: 4 }, bartek: { t20Hits: 0 }, celina: { t20Hits: 2 } }),
+        game([], { celina: { t20Hits: 5 } }, 'practice'),
+      ],
     });
     expect(rankings.t20Hits.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
       ['Celina', 1, 7],
@@ -264,6 +293,10 @@ describe('buildRankings', () => {
   });
 
   it('does not count a game without a completed leg', () => {
-    expect(buildRankings({ players: [anna], games: [game([], { anna: { highestTurn: 180 } })] })).toMatchObject({ games: 0, legs: 0, players: [] });
+    expect(buildRankings({ players: [anna], games: [game([], { anna: { highestTurn: 180 } })] })).toMatchObject({
+      games: 0,
+      legs: 0,
+      players: [],
+    });
   });
 });

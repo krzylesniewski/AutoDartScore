@@ -1,4 +1,4 @@
-import { ApiError, FrequentHitsResponse } from '@autoscore/schema';
+import { ApiError, FrequentHitsResponse, type Player } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TOKEN_TTL_MS, createToken } from '../auth/credentials.js';
 import { D, LEG_301, MISS, S, T, createGame, createPlayer, createPlayers, setup, throwDarts, undo, type TestApp } from '../test-helpers.js';
@@ -99,10 +99,10 @@ describe('GET /players/:id/frequent-hits with a password', () => {
   });
 
   it('answers 401 without a token and 200 with one', async () => {
-    const authorization = `Bearer ${createToken(tokenSecret, now + TOKEN_TTL_MS)}`;
+    const authorization = `Bearer ${createToken({ password: 'tajne hasło', tokenSecret }, now + TOKEN_TTL_MS)}`;
     const created = await secured.app.inject({ method: 'POST', url: '/players', payload: { name: 'Anna' }, headers: { authorization } });
     expect(created.statusCode).toBe(201);
-    const url = `/players/${created.json().id}/frequent-hits`;
+    const url = `/players/${created.json<Player>().id}/frequent-hits`;
 
     const withoutToken = await secured.app.inject({ method: 'GET', url });
     expect(withoutToken.statusCode).toBe(401);

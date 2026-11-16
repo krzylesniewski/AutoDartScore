@@ -41,7 +41,11 @@ function lineCount(low: number, high: number, step: number): number {
 }
 
 function gridRange(min: number, max: number): { low: number; high: number; step: number } {
-  const step = GRID_STEPS.find((candidate) => lineCount(Math.floor(min / candidate) * candidate, Math.ceil(max / candidate) * candidate, candidate) <= MAX_GRID_LINES) ?? 50;
+  const step =
+    GRID_STEPS.find(
+      (candidate) =>
+        lineCount(Math.floor(min / candidate) * candidate, Math.ceil(max / candidate) * candidate, candidate) <= MAX_GRID_LINES,
+    ) ?? 50;
   let low = Math.floor(min / step) * step;
   let high = Math.ceil(max / step) * step;
   while (lineCount(low, high, step) < MIN_GRID_LINES) {

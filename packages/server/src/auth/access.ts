@@ -18,7 +18,10 @@ function bearerToken(request: FastifyRequest): string | null {
   return match?.[1] ?? null;
 }
 
-export async function registerAccessControl(app: FastifyInstance, { auth, corsOrigins, now, webRoutes }: AccessControlOptions): Promise<void> {
+export async function registerAccessControl(
+  app: FastifyInstance,
+  { auth, corsOrigins, now, webRoutes }: AccessControlOptions,
+): Promise<void> {
   // CORS przed hakiem autoryzacji, żeby odpowiedź 401 też miała nagłówki CORS i front mógł odczytać status.
   if (corsOrigins !== null) {
     await app.register(cors, {
@@ -29,26 +32,37 @@ export async function registerAccessControl(app: FastifyInstance, { auth, corsOr
     });
   }
 
-  app.addHook('onRequest', async (request) => {
+  // Hak w formie z callbackiem: bez async Fastify czeka na done, więc każda ścieżka musi je wywołać.
+  app.addHook('onRequest', (request, _reply, done) => {
+    const error = accessError(request);
+    if (error === null) {
+      done();
+    } else {
+      done(error);
+    }
+  });
+
+  function accessError(request: FastifyRequest): HttpError | null {
     // WebSocket uwierzytelnia się pierwszą wiadomością, bo przeglądarka nie ustawi nagłówka Authorization.
     if (request.ws) {
       const origin = request.headers.origin;
       if (corsOrigins !== null && origin !== undefined && !corsOrigins.includes(origin)) {
-        throw new HttpError(403, 'forbidden_origin', `Origin ${origin} is not allowed`);
+        return new HttpError(403, 'forbidden_origin', `Origin ${origin} is not allowed`);
       }
-      return;
+      return null;
     }
     const route = request.routeOptions.url ?? '';
     if (auth === null || request.method === 'OPTIONS' || PUBLIC_ROUTES.has(route)) {
-      return;
+      return null;
     }
     // Przeglądarka pobiera front bez tokenu, bo ekran logowania jest jego częścią. Decyduje dopasowana trasa, nie surowy adres.
     if ((request.method === 'GET' || request.method === 'HEAD') && webRoutes.has(route)) {
-      return;
+      return null;
     }
     const token = bearerToken(request);
-    if (token === null || !verifyToken(auth.tokenSecret, token, now())) {
-      throw unauthorized();
+    if (token === null || !verifyToken(auth, token, now())) {
+      return unauthorized();
     }
-  });
+    return null;
+  }
 }

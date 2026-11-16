@@ -23,27 +23,28 @@ function choiceStyle(selected: boolean): string {
   return `${choice} ${selected ? 'bg-(--color-text) font-extrabold text-(--color-text-inverse) shadow-(--shadow-selected)' : 'bg-transparent font-bold text-(--color-text)'}`;
 }
 
-type Games = { status: 'loading' } | { status: 'ready'; games: MatchListItem[] } | { status: 'error' };
+type Settled = { status: 'ready'; games: MatchListItem[] } | { status: 'error' };
+type Games = { status: 'loading' } | Settled;
 
 export function HistoryScreen() {
   const [type, setType] = useState<MatchType | null>(null);
-  const [games, setGames] = useState<Games>({ status: 'loading' });
+  const [settled, setSettled] = useState<{ type: MatchType | null; games: Settled } | null>(null);
+  const games: Games = settled !== null && settled.type === type ? settled.games : { status: 'loading' };
   const [abandoning, setAbandoning] = useState<MatchListItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setGames({ status: 'loading' });
     listMatches(type ? { type } : {}).then(
       (value) => {
         if (!cancelled) {
-          setGames({ status: 'ready', games: value });
+          setSettled({ type, games: { status: 'ready', games: value } });
         }
       },
       () => {
         if (!cancelled) {
-          setGames({ status: 'error' });
+          setSettled({ type, games: { status: 'error' } });
         }
       },
     );
@@ -59,8 +60,17 @@ export function HistoryScreen() {
     try {
       const state = await abandonMatch(game.id, playerId, reason);
       // Wiersz zmienia się na miejscu, bez ponownego pobrania listy: lista nie miga i zostaje przewinięta tam, gdzie była.
-      const updated: MatchListItem = { ...game, status: state.status, abandonment: state.abandonment, updatedAt: state.abandonment?.at ?? game.updatedAt };
-      setGames((current) => (current.status === 'ready' ? { status: 'ready', games: current.games.map((item) => (item.id === game.id ? updated : item)) } : current));
+      const updated: MatchListItem = {
+        ...game,
+        status: state.status,
+        abandonment: state.abandonment,
+        updatedAt: state.abandonment?.at ?? game.updatedAt,
+      };
+      setSettled((current) =>
+        current !== null && current.games.status === 'ready'
+          ? { ...current, games: { status: 'ready', games: current.games.games.map((item) => (item.id === game.id ? updated : item)) } }
+          : current,
+      );
     } catch {
       setNotice(pl.abandonFailed);
     } finally {
@@ -83,23 +93,29 @@ export function HistoryScreen() {
             <h2 id="history-filter" className={`${label} sm:mr-1.5`}>
               {pl.gameType}
             </h2>
-            <div role="group" aria-labelledby="history-filter" className="sc-seg w-fit flex-wrap max-sm:w-full max-sm:flex-nowrap max-sm:overflow-x-auto">
+            <div
+              role="group"
+              aria-labelledby="history-filter"
+              className="sc-seg w-fit flex-wrap max-sm:w-full max-sm:flex-nowrap max-sm:overflow-x-auto"
+            >
               {FILTERS.map((option) => (
-                <button key={option.label} type="button" aria-pressed={type === option.value} onClick={() => {
+                <button
+                  key={option.label}
+                  type="button"
+                  aria-pressed={type === option.value}
+                  onClick={() => {
                     setType(option.value);
                     setNotice(null);
-                  }} className={choiceStyle(type === option.value)}>
+                  }}
+                  className={choiceStyle(type === option.value)}
+                >
                   {option.label}
                 </button>
               ))}
             </div>
           </section>
         </div>
-        {notice && (
-          <div role="alert">
-            <Notice text={notice} />
-          </div>
-        )}
+        {notice && <Notice text={notice} />}
         {games.status === 'loading' && <p className="text-(--color-text-muted)">{pl.loading}</p>}
         {games.status === 'error' && (
           <p className="flex items-center gap-2 font-display text-xl text-(--color-text)">
@@ -111,7 +127,13 @@ export function HistoryScreen() {
           <MatchHistoryList games={games.games} now={new Date()} busy={busy} onAbandon={setAbandoning} groupByDay />
         )}
       </main>
-      {abandoning && <AbandonDialog state={abandoning} onCancel={closeAbandon} onConfirm={(playerId, reason) => void abandon(abandoning, playerId, reason)} />}
+      {abandoning && (
+        <AbandonDialog
+          state={abandoning}
+          onCancel={closeAbandon}
+          onConfirm={(playerId, reason) => void abandon(abandoning, playerId, reason)}
+        />
+      )}
     </div>
   );
 }

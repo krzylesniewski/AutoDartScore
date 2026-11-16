@@ -1,6 +1,7 @@
 import type { HeadToHead, Player, StatsPeriod } from '@autoscore/schema';
 import { useEffect, useState } from 'react';
 import { getHeadToHead } from '../api/client';
+import { requestKey } from '../api/request-key';
 import { formatAverage } from '../game/format-stat';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
@@ -19,28 +20,31 @@ function chipStyle(selected: boolean): string {
   return `${chip} ${selected ? 'bg-(--color-text) font-extrabold text-(--color-text-inverse) shadow-(--shadow-selected)' : 'bg-(--color-surface-soft) font-bold text-(--color-text) shadow-(--shadow-inset-line)'}`;
 }
 
-type Result = { status: 'idle' } | { status: 'loading' } | { status: 'ready'; value: HeadToHead } | { status: 'error' };
+type Settled = { status: 'ready'; value: HeadToHead } | { status: 'error' };
+type Result = { status: 'idle' } | { status: 'loading' } | Settled;
 
 export function HeadToHeadPanel({ player, opponents, period }: HeadToHeadPanelProps) {
   const [opponentId, setOpponentId] = useState<string | null>(null);
-  const [result, setResult] = useState<Result>({ status: 'idle' });
+  const [settled, setSettled] = useState<{ key: string; result: Settled } | null>(null);
   const opponent = opponents.find((candidate) => candidate.id === opponentId);
+  const key = opponentId === null ? null : requestKey(player.id, opponentId, period);
+  const result: Result = key === null ? { status: 'idle' } : settled?.key === key ? settled.result : { status: 'loading' };
 
   useEffect(() => {
     if (opponentId === null) {
       return;
     }
     let cancelled = false;
-    setResult({ status: 'loading' });
+    const key = requestKey(player.id, opponentId, period);
     getHeadToHead(player.id, opponentId, period).then(
       (value) => {
         if (!cancelled) {
-          setResult({ status: 'ready', value });
+          setSettled({ key, result: { status: 'ready', value } });
         }
       },
       () => {
         if (!cancelled) {
-          setResult({ status: 'error' });
+          setSettled({ key, result: { status: 'error' } });
         }
       },
     );
@@ -63,7 +67,13 @@ export function HeadToHeadPanel({ player, opponents, period }: HeadToHeadPanelPr
           ) : (
             <div role="group" aria-label={pl.opponent} className="flex min-w-0 flex-wrap gap-2">
               {opponents.map((candidate) => (
-                <button key={candidate.id} type="button" aria-pressed={candidate.id === opponentId} onClick={() => setOpponentId(candidate.id)} className={chipStyle(candidate.id === opponentId)}>
+                <button
+                  key={candidate.id}
+                  type="button"
+                  aria-pressed={candidate.id === opponentId}
+                  onClick={() => setOpponentId(candidate.id)}
+                  className={chipStyle(candidate.id === opponentId)}
+                >
                   <Avatar name={candidate.name} avatar={candidate.avatar} color={candidate.color} />
                   <span className="min-w-0 truncate">{candidate.name}</span>
                 </button>
@@ -79,8 +89,12 @@ export function HeadToHeadPanel({ player, opponents, period }: HeadToHeadPanelPr
             {pl.headToHeadFailed}
           </p>
         )}
-        {result.status === 'ready' && result.value.matchesPlayed === 0 && <p className="font-display text-2xl text-(--color-text-muted)">{pl.headToHeadEmpty}</p>}
-        {result.status === 'ready' && result.value.matchesPlayed > 0 && <Results value={result.value} playerName={player.name} opponentName={opponent?.name ?? ''} />}
+        {result.status === 'ready' && result.value.matchesPlayed === 0 && (
+          <p className="font-display text-2xl text-(--color-text-muted)">{pl.headToHeadEmpty}</p>
+        )}
+        {result.status === 'ready' && result.value.matchesPlayed > 0 && (
+          <Results value={result.value} playerName={player.name} opponentName={opponent?.name ?? ''} />
+        )}
       </div>
     </section>
   );

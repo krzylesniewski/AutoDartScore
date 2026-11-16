@@ -98,11 +98,15 @@ describe('LiveMessage', () => {
   });
 
   it('rejects an achievement of an unknown kind', () => {
-    expect(LiveMessage.safeParse({ type: 'achievement', ...meta, playerId: 'p1', kind: 'best_average', value: 60, previous: 50 }).success).toBe(false);
+    expect(
+      LiveMessage.safeParse({ type: 'achievement', ...meta, playerId: 'p1', kind: 'best_average', value: 60, previous: 50 }).success,
+    ).toBe(false);
   });
 
   it('rejects an achievement with a negative value', () => {
-    expect(LiveMessage.safeParse({ type: 'achievement', ...meta, playerId: 'p1', kind: 'turn_record', value: -1, previous: 0 }).success).toBe(false);
+    expect(
+      LiveMessage.safeParse({ type: 'achievement', ...meta, playerId: 'p1', kind: 'turn_record', value: -1, previous: 0 }).success,
+    ).toBe(false);
   });
 
   it('rejects an achievement without previous', () => {

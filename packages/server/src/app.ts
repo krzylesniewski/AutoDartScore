@@ -8,9 +8,10 @@ import type { Database } from './db/database.js';
 import { toApiError } from './errors.js';
 import { createLiveHub } from './live-hub.js';
 import { createMatchService } from './match-service.js';
+import { createReplayCache, REPLAY_CACHE_MAX_MATCHES } from './replay-cache.js';
 import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
-import { liveRoutes } from './routes/live.js';
+import { LIVE_MAX_PAYLOAD_BYTES, LIVE_MAX_PENDING_CONNECTIONS, liveRoutes } from './routes/live.js';
 import { matchRoutes } from './routes/matches.js';
 import { playerRoutes } from './routes/players.js';
 import { statsRoutes } from './routes/stats.js';
@@ -23,17 +24,20 @@ export interface AppOptions {
   readonly db: Kysely<Database>;
   readonly random?: () => number; // losowanie, kto zaczyna, i ziarna celów treningu checkoutów. Domyślnie Math.random
   readonly logger?: boolean;
-  readonly auth?: AuthConfig | null;
+  readonly trustProxy?: boolean; // adres klienta z X-Forwarded-For, tylko za reverse proxy. Domyślnie false
+  readonly auth: AuthConfig | null;
   readonly corsOrigins?: readonly string[] | null;
   readonly now?: () => number; // zegar dla tokenów, limitu logowań, blokady zakończonej gry i okresu statystyk. Domyślnie Date.now
   readonly liveAuthTimeoutMs?: number;
+  readonly liveMaxPendingConnections?: number;
   readonly livePingIntervalMs?: number;
   readonly webDir?: string | null; // katalog zbudowanego frontu. null wyłącza serwowanie plików
   readonly matchLockMinutes?: number; // ile minut po ostatniej rzutce da się cofać w zakończonej grze. Domyślnie 5
+  readonly replayCacheSize?: number; // najwięcej gier w pamięci podręcznej odtworzeń. 0 ją wyłącza. Domyślnie REPLAY_CACHE_MAX_MATCHES
 }
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({ logger: options.logger ?? false, trustProxy: options.trustProxy ?? false });
   const webDir = options.webDir ?? null;
   const webRoutes = new Set<string>();
   const apiSegments = new Set<string>();
@@ -43,8 +47,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       apiSegments.add(firstSegment(route.url));
     });
   }
-  await app.register(websocket);
-  const auth = options.auth ?? null;
+  await app.register(websocket, { options: { maxPayload: LIVE_MAX_PAYLOAD_BYTES } });
+  const auth = options.auth;
   const now = options.now ?? Date.now;
   await registerAccessControl(app, { auth, corsOrigins: options.corsOrigins ?? null, now, webRoutes });
 
@@ -60,6 +64,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   );
 
   const store = createStore(options.db);
+  const cache = createReplayCache({ store, log: app.log, maxEntries: options.replayCacheSize ?? REPLAY_CACHE_MAX_MATCHES });
   const service = createMatchService({
     store,
     hub: createLiveHub(),
@@ -67,6 +72,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     random: options.random ?? Math.random,
     now,
     matchLockMs: (options.matchLockMinutes ?? 5) * 60_000,
+    cache,
   });
   healthRoutes(app);
   if (auth !== null) {
@@ -74,8 +80,14 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   }
   playerRoutes(app, store);
   await matchRoutes(app, service);
-  liveRoutes(app, service, { auth, now, authTimeoutMs: options.liveAuthTimeoutMs ?? 5000, pingIntervalMs: options.livePingIntervalMs ?? 30_000 });
-  statsRoutes(app, createStatsService({ store, now }));
+  liveRoutes(app, service, {
+    auth,
+    now,
+    authTimeoutMs: options.liveAuthTimeoutMs ?? 5000,
+    pingIntervalMs: options.livePingIntervalMs ?? 30_000,
+    maxPendingConnections: options.liveMaxPendingConnections ?? LIVE_MAX_PENDING_CONNECTIONS,
+  });
+  statsRoutes(app, createStatsService({ store, cache, now }));
   if (webDir !== null) {
     await webAppRoutes(app, { webDir, webRoutes, apiSegments });
   }

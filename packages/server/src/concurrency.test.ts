@@ -1,3 +1,4 @@
+import type { ThrowResult } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { T, countRows, createGame, createPlayers, hitEvent, logEntries, postThrow, setup, type TestApp } from './test-helpers.js';
 
@@ -15,10 +16,10 @@ describe('concurrent commands for one match', () => {
     const { id } = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], startingScore: 301 });
     const responses = await Promise.all([T(20), T(19), T(18)].map((dart) => postThrow(t.app, id, hitEvent(id, dart))));
     expect(responses.map((response) => response.statusCode)).toEqual([201, 201, 201]);
-    expect(responses.map((response) => response.json().state.eventSeq).sort()).toEqual([1, 2, 3]);
+    expect(responses.map((response) => response.json<ThrowResult>().state.eventSeq).sort()).toEqual([1, 2, 3]);
     expect((await logEntries(t.db, id)).map((entry) => entry.seq)).toEqual([1, 2, 3]);
 
-    const events = responses.flatMap((response) => response.json().events);
+    const events = responses.flatMap((response) => response.json<ThrowResult>().events);
     expect(events).toEqual([expect.objectContaining({ type: 'turn_completed', playerId: anna, total: 171, remaining: 130 })]);
   });
 

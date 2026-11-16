@@ -1,5 +1,5 @@
 import type { MatchSnapshot } from '@autoscore/schema';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { casual, checkoutHistory, checkoutPractice, checkoutSession, player, snapshot } from '../test/snapshots';
 import { MatchHeader } from './MatchHeader';
@@ -16,7 +16,15 @@ describe('MatchHeader', () => {
   });
 
   it('shows Zabawa and no Best of in a casual game', () => {
-    render(<MatchHeader state={casual(['Anna', 'Bartek', 'Celina'])} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+    render(
+      <MatchHeader
+        state={casual(['Anna', 'Bartek', 'Celina'])}
+        voiceEnabled={false}
+        onVoiceChange={vi.fn()}
+        effectsEnabled={true}
+        onEffectsChange={vi.fn()}
+      />,
+    );
     expect(screen.getByText('Zabawa')).toBeTruthy();
     expect(screen.getByText('501')).toBeTruthy();
     expect(screen.queryByText(/Best of/)).toBeNull();
@@ -49,13 +57,30 @@ describe('MatchHeader', () => {
   it('offers Zakończ trening in checkout practice only after the first attempt', () => {
     const onEndPractice = vi.fn();
     const { unmount } = render(
-      <MatchHeader state={checkoutPractice()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={onEndPractice} />,
+      <MatchHeader
+        state={checkoutPractice()}
+        voiceEnabled={false}
+        onVoiceChange={vi.fn()}
+        effectsEnabled={true}
+        onEffectsChange={vi.fn()}
+        onEndPractice={onEndPractice}
+      />,
     );
     expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
     unmount();
 
     const tried = checkoutPractice(checkoutSession(checkoutHistory([false])));
-    render(<MatchHeader state={tried} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} onEndPractice={onEndPractice} />);
+    render(
+      <MatchHeader
+        state={tried}
+        voiceEnabled={false}
+        onVoiceChange={vi.fn()}
+        effectsEnabled={true}
+        onEffectsChange={vi.fn()}
+        onAbandon={vi.fn()}
+        onEndPractice={onEndPractice}
+      />,
+    );
     expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Zakończ trening' }));
     expect(onEndPractice).toHaveBeenCalled();
@@ -71,7 +96,15 @@ describe('MatchHeader', () => {
 
   it('turns the effects off from the header', () => {
     const onEffectsChange = vi.fn();
-    render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={onEffectsChange} />);
+    render(
+      <MatchHeader
+        state={snapshot()}
+        voiceEnabled={false}
+        onVoiceChange={vi.fn()}
+        effectsEnabled={true}
+        onEffectsChange={onEffectsChange}
+      />,
+    );
     const toggle = screen.getByRole('button', { name: 'Efekty dźwiękowe' });
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
     toggle.click();
@@ -84,13 +117,31 @@ describe('MatchHeader', () => {
   });
 
   it('offers Porzuć mecz in a 1v1 from the start, before the first leg is completed', () => {
-    render(<MatchHeader state={snapshot({ legIndex: 0 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
+    render(
+      <MatchHeader
+        state={snapshot({ legIndex: 0 })}
+        voiceEnabled={false}
+        onVoiceChange={vi.fn()}
+        effectsEnabled={true}
+        onEffectsChange={vi.fn()}
+        onAbandon={vi.fn()}
+      />,
+    );
     expect(screen.getByRole('button', { name: 'Porzuć mecz' })).toBeTruthy();
   });
 
   it('offers Porzuć mecz in a game in progress with a completed leg', () => {
     const onAbandon = vi.fn();
-    render(<MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={onAbandon} />);
+    render(
+      <MatchHeader
+        state={snapshot({ legIndex: 1 })}
+        voiceEnabled={false}
+        onVoiceChange={vi.fn()}
+        effectsEnabled={true}
+        onEffectsChange={vi.fn()}
+        onAbandon={onAbandon}
+      />,
+    );
     screen.getByRole('button', { name: 'Porzuć mecz' }).click();
     expect(onAbandon).toHaveBeenCalled();
     expect(screen.queryByText('Porzucony')).toBeNull();
@@ -100,7 +151,16 @@ describe('MatchHeader', () => {
   it('shows the Porzucony badge and Wznów mecz in an abandoned game', () => {
     const onResume = vi.fn();
     const state = snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T19:00:00.000Z' } });
-    render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onResume={onResume} />);
+    render(
+      <MatchHeader
+        state={state}
+        voiceEnabled={false}
+        onVoiceChange={vi.fn()}
+        effectsEnabled={true}
+        onEffectsChange={vi.fn()}
+        onResume={onResume}
+      />,
+    );
     expect(screen.getByText('Porzucony')).toBeTruthy();
     screen.getByRole('button', { name: 'Wznów mecz' }).click();
     expect(onResume).toHaveBeenCalled();
@@ -108,7 +168,15 @@ describe('MatchHeader', () => {
   });
 
   it('shows neither in a finished game', () => {
-    render(<MatchHeader state={snapshot({ finished: true })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+    render(
+      <MatchHeader
+        state={snapshot({ finished: true })}
+        voiceEnabled={false}
+        onVoiceChange={vi.fn()}
+        effectsEnabled={true}
+        onEffectsChange={vi.fn()}
+      />,
+    );
     expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wznów mecz' })).toBeNull();
     expect(screen.queryByText('Porzucony')).toBeNull();
@@ -126,36 +194,101 @@ describe('MatchHeader', () => {
 
     it('offers Zakończ trening after the first dart', () => {
       const onEndPractice = vi.fn();
-      render(<MatchHeader state={freeRun(1)} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={onEndPractice} />);
+      render(
+        <MatchHeader
+          state={freeRun(1)}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onEndPractice={onEndPractice}
+        />,
+      );
       screen.getByRole('button', { name: 'Zakończ trening' }).click();
       expect(onEndPractice).toHaveBeenCalled();
       expect(screen.queryByText('Zakończony')).toBeNull();
     });
 
     it('offers only Zakończ trening in a Free run and in a Solo 501', () => {
-      const { unmount } = render(<MatchHeader state={freeRun(1)} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} onEndPractice={vi.fn()} />);
+      const { unmount } = render(
+        <MatchHeader
+          state={freeRun(1)}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onAbandon={vi.fn()}
+          onEndPractice={vi.fn()}
+        />,
+      );
       expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
       unmount();
 
-      const solo = snapshot({ type: 'practice', practiceMode: 'solo_501', legsToWin: null, players: [player('p1', 'Anna', { dartsThrownInLeg: 3 })] });
-      render(<MatchHeader state={solo} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} onEndPractice={vi.fn()} />);
+      const solo = snapshot({
+        type: 'practice',
+        practiceMode: 'solo_501',
+        legsToWin: null,
+        players: [player('p1', 'Anna', { dartsThrownInLeg: 3 })],
+      });
+      render(
+        <MatchHeader
+          state={solo}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onAbandon={vi.fn()}
+          onEndPractice={vi.fn()}
+        />,
+      );
       expect(screen.queryByRole('button', { name: 'Porzuć mecz' })).toBeNull();
       expect(screen.getByRole('button', { name: 'Zakończ trening' })).toBeTruthy();
     });
 
     it('hides Zakończ trening with 0 darts and in a 1v1', () => {
-      const { unmount } = render(<MatchHeader state={freeRun(0)} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={vi.fn()} />);
+      const { unmount } = render(
+        <MatchHeader
+          state={freeRun(0)}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onEndPractice={vi.fn()}
+        />,
+      );
       expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
       unmount();
 
-      const match = snapshot({ legIndex: 1, players: [player('p1', 'Anna', { legsWon: 1, dartsThrownInLeg: 3 }), player('p2', 'Bartek', { legsWon: 0, dartsThrownInLeg: 3 })] });
-      render(<MatchHeader state={match} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={vi.fn()} />);
+      const match = snapshot({
+        legIndex: 1,
+        players: [player('p1', 'Anna', { legsWon: 1, dartsThrownInLeg: 3 }), player('p2', 'Bartek', { legsWon: 0, dartsThrownInLeg: 3 })],
+      });
+      render(
+        <MatchHeader
+          state={match}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onEndPractice={vi.fn()}
+        />,
+      );
       expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
     });
 
     it('shows the Zakończony chip with an icon and no resume in an ended session', () => {
       const state = { ...freeRun(4), status: 'ended' as const, endedAt: '2026-10-15T19:00:00.000Z' };
-      render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={vi.fn()} onResume={vi.fn()} />);
+      render(
+        <MatchHeader
+          state={state}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onEndPractice={vi.fn()}
+          onResume={vi.fn()}
+        />,
+      );
       const chip = screen.getByText('Zakończony');
       expect(chip.querySelector('svg')).not.toBeNull();
       expect(screen.queryByRole('button', { name: 'Zakończ trening' })).toBeNull();
@@ -177,45 +310,69 @@ describe('MatchHeader', () => {
     }
 
     it('opens and closes the panel with the toggle', () => {
-      render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
-      expect(toggle().classList.contains('lg:hidden')).toBe(false);
+      render(
+        <MatchHeader
+          state={snapshot({ legIndex: 1 })}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onAbandon={vi.fn()}
+        />,
+      );
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
-      expect(panel().classList.contains('hidden')).toBe(true);
-      expect(panel().classList.contains('lg:contents')).toBe(true);
+      expect(within(panel()).getByRole('button', { name: 'Porzuć mecz' })).toBeTruthy();
+      expect(within(panel()).getByRole('button', { name: 'Głos' })).toBeTruthy();
       expect(panel().contains(screen.getByText('Best of 3'))).toBe(false);
 
       fireEvent.click(toggle());
       expect(toggle().getAttribute('aria-expanded')).toBe('true');
-      expect(panel().classList.contains('hidden')).toBe(false);
 
       fireEvent.click(toggle());
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
-      expect(panel().classList.contains('hidden')).toBe(true);
-    });
-
-    it('lifts the bar above the keypad dock only while the menu is open', () => {
-      render(<MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />);
-      const header = screen.getByRole('banner');
-      expect(header.classList.contains('z-10')).toBe(true);
-      fireEvent.click(toggle());
-      expect(header.classList.contains('z-30')).toBe(true);
-      expect(header.classList.contains('z-10')).toBe(false);
-      fireEvent.click(screen.getByRole('button', { name: 'Porzuć mecz' }));
-      expect(header.classList.contains('z-10')).toBe(true);
     });
 
     it('closes on Escape and returns the focus to the toggle', () => {
-      render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+      render(
+        <MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />,
+      );
       fireEvent.click(toggle());
       fireEvent.keyDown(document, { key: 'Escape' });
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
-      expect(panel().classList.contains('hidden')).toBe(true);
       expect(document.activeElement).toBe(toggle());
+    });
+
+    it('closes on a pointer down outside the menu and stays open on one inside it', () => {
+      render(
+        <MatchHeader
+          state={snapshot({ legIndex: 1 })}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onAbandon={vi.fn()}
+        />,
+      );
+      fireEvent.click(toggle());
+      fireEvent.pointerDown(screen.getByRole('button', { name: 'Porzuć mecz' }));
+      expect(toggle().getAttribute('aria-expanded')).toBe('true');
+
+      fireEvent.pointerDown(document.body);
+      expect(toggle().getAttribute('aria-expanded')).toBe('false');
     });
 
     it('calls onAbandon from the menu and closes it', () => {
       const onAbandon = vi.fn();
-      render(<MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={onAbandon} />);
+      render(
+        <MatchHeader
+          state={snapshot({ legIndex: 1 })}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onAbandon={onAbandon}
+        />,
+      );
       fireEvent.click(toggle());
       fireEvent.click(screen.getByRole('button', { name: 'Porzuć mecz' }));
       expect(onAbandon).toHaveBeenCalled();
@@ -224,7 +381,15 @@ describe('MatchHeader', () => {
 
     it('stays open after the voice toggle', () => {
       const onVoiceChange = vi.fn();
-      render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={onVoiceChange} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+      render(
+        <MatchHeader
+          state={snapshot()}
+          voiceEnabled={false}
+          onVoiceChange={onVoiceChange}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+        />,
+      );
       fireEvent.click(toggle());
       fireEvent.click(screen.getByRole('button', { name: 'Głos' }));
       expect(onVoiceChange).toHaveBeenCalledWith(true);
@@ -234,12 +399,24 @@ describe('MatchHeader', () => {
     it('keeps the status chip in the bar, orders it before the actions and renders each action once', () => {
       const onResume = vi.fn();
       const state = snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T19:00:00.000Z' } });
-      render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onResume={onResume} />);
-      expect(panel().contains(screen.getByText('Porzucony'))).toBe(false);
+      render(
+        <MatchHeader
+          state={state}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onResume={onResume}
+        />,
+      );
       const header = screen.getByRole('banner');
-      expect(screen.getByText('Porzucony').parentElement).toBe(header);
-      expect(screen.getByRole('timer').parentElement).toBe(header);
-      expect(screen.getByRole('button', { name: 'Wznów mecz' }).parentElement).toBe(panel());
+      const chip = screen.getByText('Porzucony');
+      expect(header.contains(chip)).toBe(true);
+      expect(panel().contains(chip)).toBe(false);
+      expect(header.contains(screen.getByRole('timer'))).toBe(true);
+      expect(panel().contains(screen.getByRole('timer'))).toBe(false);
+      expect(chip.compareDocumentPosition(panel()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(within(panel()).getByRole('button', { name: 'Wznów mecz' })).toBeTruthy();
       for (const name of ['Wznów mecz', 'Głos', 'Efekty dźwiękowe', 'Menu gry']) {
         expect(screen.getAllByRole('button', { name })).toHaveLength(1);
       }
@@ -251,7 +428,14 @@ describe('MatchHeader', () => {
 
     it('renders Porzuć mecz and Zakończ trening once', () => {
       const { unmount } = render(
-        <MatchHeader state={snapshot({ legIndex: 1 })} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onAbandon={vi.fn()} />,
+        <MatchHeader
+          state={snapshot({ legIndex: 1 })}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onAbandon={vi.fn()}
+        />,
       );
       expect(screen.getAllByRole('button', { name: 'Porzuć mecz' })).toHaveLength(1);
       unmount();
@@ -264,7 +448,16 @@ describe('MatchHeader', () => {
         legsToWin: null,
         players: [player('p1', 'Anna', { remaining: null, dartsThrownInLeg: 1 })],
       });
-      render(<MatchHeader state={freeRun} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} onEndPractice={onEndPractice} />);
+      render(
+        <MatchHeader
+          state={freeRun}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onEndPractice={onEndPractice}
+        />,
+      );
       expect(screen.getAllByRole('button', { name: 'Zakończ trening' })).toHaveLength(1);
       fireEvent.click(toggle());
       fireEvent.click(screen.getByRole('button', { name: 'Zakończ trening' }));
@@ -287,7 +480,9 @@ describe('MatchHeader', () => {
       });
 
     function renderHeader(state: MatchSnapshot) {
-      return render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+      return render(
+        <MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />,
+      );
     }
 
     function tick(ms: number): void {
@@ -354,7 +549,14 @@ describe('MatchHeader', () => {
 
     it('stands still at the end of an ended practice', () => {
       startClock();
-      renderHeader(freeRun({ status: 'ended', endedAt: '2026-10-21T18:02:03.000Z', startedAt: '2026-10-21T18:00:00.000Z', legStartedAt: '2026-10-21T18:00:00.000Z' }));
+      renderHeader(
+        freeRun({
+          status: 'ended',
+          endedAt: '2026-10-21T18:02:03.000Z',
+          startedAt: '2026-10-21T18:00:00.000Z',
+          legStartedAt: '2026-10-21T18:00:00.000Z',
+        }),
+      );
       expect(screen.getByRole('timer', { name: 'Czas sesji 2 min 3 s' })).toBeTruthy();
       expect(vi.getTimerCount()).toBe(0);
     });
@@ -374,7 +576,15 @@ describe('MatchHeader', () => {
     });
 
     it('shows neither round nor clock after the game ends', () => {
-      renderHeader(snapshot({ finished: true, round: null, startedAt: '2026-10-21T18:00:00.000Z', legStartedAt: '2026-10-21T18:00:00.000Z', finishedAt: NOW }));
+      renderHeader(
+        snapshot({
+          finished: true,
+          round: null,
+          startedAt: '2026-10-21T18:00:00.000Z',
+          legStartedAt: '2026-10-21T18:00:00.000Z',
+          finishedAt: NOW,
+        }),
+      );
       expect(screen.queryByText(/^Kolejka/)).toBeNull();
       expect(screen.queryByRole('timer')).toBeNull();
     });
@@ -383,17 +593,20 @@ describe('MatchHeader', () => {
       renderHeader(snapshot({ round: 7 }));
       const toggle = screen.getByRole('button', { name: 'Menu gry' });
       const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
-      expect(panel?.classList.contains('hidden')).toBe(true);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(panel?.contains(screen.getByText('Kolejka 7'))).toBe(false);
       expect(panel?.contains(screen.getByRole('timer'))).toBe(false);
     });
   });
 
   describe('bar', () => {
-    const abandoned = () => snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T19:00:00.000Z' } });
+    const abandoned = () =>
+      snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-15T19:00:00.000Z' } });
 
     function renderHeader(state: MatchSnapshot) {
-      return render(<MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />);
+      return render(
+        <MatchHeader state={state} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} />,
+      );
     }
 
     it('lists the 1v1 settings without separators in the text and keeps leg and round outside the list', () => {
@@ -403,26 +616,42 @@ describe('MatchHeader', () => {
       expect(list.textContent).not.toContain('·');
       expect(list.contains(screen.getByText('Leg 1'))).toBe(false);
       expect(list.contains(screen.getByText('Kolejka 4'))).toBe(false);
-      expect(screen.getByRole('timer').classList.contains('sc-clock')).toBe(true);
-      expect(screen.getByRole('button', { name: 'Głos' }).classList.contains('sc-btn--icon')).toBe(true);
     });
 
     it.each([
-      ['a 1v1 in progress', snapshot(), false],
-      ['an abandoned 1v1', abandoned(), true],
-      ['a finished 1v1', snapshot({ finished: true }), true],
-    ])('hides the menu toggle from lg only without menu actions in %s', (_name, state, hidden) => {
-      renderHeader(state);
+      ['a 1v1 in progress', snapshot(), true],
+      ['an abandoned 1v1', abandoned(), false],
+      ['a finished 1v1', snapshot({ finished: true }), false],
+    ])('shows the menu toggle as an icon and offers Porzuć mecz only in %s', (_name, state, offered) => {
+      render(
+        <MatchHeader
+          state={state}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          onAbandon={vi.fn()}
+        />,
+      );
       const toggle = screen.getByRole('button', { name: 'Menu gry' });
-      expect(toggle.classList.contains('lg:hidden')).toBe(hidden);
-      expect(toggle.classList.contains('sc-btn--icon')).toBe(true);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(toggle.querySelector('svg')).not.toBeNull();
+      expect(screen.queryByRole('button', { name: 'Porzuć mecz' }) !== null).toBe(offered);
     });
   });
 
   describe('Tury', () => {
     function renderHeader(turns?: { open: boolean; controls: string; onToggle(): void }) {
-      return render(<MatchHeader state={snapshot()} voiceEnabled={false} onVoiceChange={vi.fn()} effectsEnabled={true} onEffectsChange={vi.fn()} turns={turns} />);
+      return render(
+        <MatchHeader
+          state={snapshot()}
+          voiceEnabled={false}
+          onVoiceChange={vi.fn()}
+          effectsEnabled={true}
+          onEffectsChange={vi.fn()}
+          turns={turns}
+        />,
+      );
     }
 
     it('has no Tury button without the turns prop', () => {
@@ -430,23 +659,22 @@ describe('MatchHeader', () => {
       expect(screen.queryByRole('button', { name: 'Tury' })).toBeNull();
     });
 
-    it('shows the Tury button below lg, before the menu, pointing to the panel', () => {
+    it('shows the Tury button before the menu, pointing to the panel', () => {
       const onToggle = vi.fn();
       renderHeader({ open: false, controls: 'leg-info', onToggle });
       const button = screen.getByRole('button', { name: 'Tury' });
-      expect(button.className.split(' ')).toEqual(expect.arrayContaining(['lg:hidden', 'h-11']));
       expect(button.getAttribute('aria-expanded')).toBe('false');
       expect(button.getAttribute('aria-controls')).toBe('leg-info');
-      expect(button.nextElementSibling).toBe(screen.getByRole('button', { name: 'Menu gry' }));
+      expect(
+        button.compareDocumentPosition(screen.getByRole('button', { name: 'Menu gry' })) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       fireEvent.click(button);
       expect(onToggle).toHaveBeenCalledOnce();
     });
 
     it('marks the open panel on the button', () => {
       renderHeader({ open: true, controls: 'leg-info', onToggle: vi.fn() });
-      const button = screen.getByRole('button', { name: 'Tury' });
-      expect(button.getAttribute('aria-expanded')).toBe('true');
-      expect(button.className.split(' ')).toContain('bg-(--color-text)');
+      expect(screen.getByRole('button', { name: 'Tury' }).getAttribute('aria-expanded')).toBe('true');
     });
   });
 });

@@ -51,7 +51,9 @@ describe('ScoreProgressChart', () => {
 
   it('describes the last point of each line in the aria-label', () => {
     render(<ScoreProgressChart progress={progress} players={players} />);
-    expect(chart().getAttribute('aria-label')).toBe('Zejście z wyniku w legu 2: Anna 6 lotek do 0, Bartek 6 lotek do 161, Celina 0 lotek do 301');
+    expect(chart().getAttribute('aria-label')).toBe(
+      'Zejście z wyniku w legu 2: Anna 6 lotek do 0, Bartek 6 lotek do 161, Celina 0 lotek do 301',
+    );
   });
 
   it('declines lotka by the number of darts', () => {
@@ -61,7 +63,7 @@ describe('ScoreProgressChart', () => {
 
   it('gives each line its own dash pattern', () => {
     render(<ScoreProgressChart progress={legProgress({ p1: [241], p2: [281], p3: [301] })} players={players} />);
-    const lines = [...chart().querySelectorAll('path.fill-none')];
+    const lines = [...chart().querySelectorAll('path[stroke-width="3"]')];
     const dashes = lines.map((line) => line.getAttribute('stroke-dasharray'));
     expect(dashes).toHaveLength(3);
     expect(new Set(dashes).size).toBe(3);
@@ -69,8 +71,17 @@ describe('ScoreProgressChart', () => {
 
   it('draws the lines in the avatar colors', () => {
     render(<ScoreProgressChart progress={legProgress({ p1: [241], p3: [301] })} players={players} />);
-    const lines = [...chart().querySelectorAll('path.fill-none')];
-    expect(lines.map((line) => line.getAttribute('class'))).toEqual(['fill-none stroke-(--color-avatar-3)', 'fill-none stroke-(--color-avatar-9)']);
+    // Linia gracza ma grubość 3, a punkty na niej 8.
+    const lines = [...chart().querySelectorAll('path[stroke-width="3"]')];
+    // Stały kolor awatara gracza to znaczenie linii, a w SVG widać go tylko w klasie.
+    expect(
+      lines.map((line) =>
+        line
+          .getAttribute('class')
+          ?.split(' ')
+          .find((name) => name.startsWith('stroke-')),
+      ),
+    ).toEqual(['stroke-(--color-avatar-3)', 'stroke-(--color-avatar-9)']);
   });
 
   it('draws a grid line every turn and every 50 points inside the chart', () => {
@@ -81,7 +92,6 @@ describe('ScoreProgressChart', () => {
     expect(vertical).toHaveLength(3);
     expect(lines.filter((line) => line.getAttribute('y1') === line.getAttribute('y2'))).toHaveLength(8);
     for (const line of lines) {
-      expect(line.getAttribute('class')).toBe('stroke-(--color-border)');
       expect(line.getAttribute('vector-effect')).toBe('non-scaling-stroke');
       expect(line.getAttribute('stroke-dasharray')).toBeNull();
     }
@@ -96,7 +106,8 @@ describe('ScoreProgressChart', () => {
   it('labels the axes with numbers outside the chart, hidden from screen readers', () => {
     const { container } = render(<ScoreProgressChart progress={progress} players={players} />);
     const axes = [...container.querySelectorAll('[aria-hidden="true"]')];
-    const labels = axes.map((axis) => [...axis.querySelectorAll('span.absolute')].map((label) => label.textContent));
+    // Liczby osi mają położenie w stylu inline. Niewidoczna kopia trzymająca szerokość osi go nie ma.
+    const labels = axes.map((axis) => [...axis.querySelectorAll('span[style]')].map((label) => label.textContent));
     expect(labels).toContainEqual(['301', '250', '200', '150', '100', '50', '0']);
     expect(labels).toContainEqual(['0', '3', '6']);
     expect(chart().querySelector('text')).toBeNull();

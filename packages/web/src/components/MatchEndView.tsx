@@ -13,6 +13,7 @@ import { EffectsToggle } from './EffectsToggle';
 import { GameTime } from './GameTime';
 import { CheckIcon, LockIcon, PlusIcon, TrophyIcon, UndoIcon, WarningIcon } from './icons';
 import { LegDuration } from './LegDuration';
+import { Notice } from './Notice';
 import { SaveGuest, SUMMARY_ROWS } from './MatchSummaryPanel';
 import { ScoreProgressChart } from './ScoreProgressChart';
 import { VoiceToggle } from './VoiceToggle';
@@ -60,9 +61,7 @@ export function MatchEndView({
   const current = summary && summary.eventSeq >= state.eventSeq ? summary : null;
   const isCasual = state.type === 'casual';
   const pending = <p className="font-display text-xl text-(--color-text-muted)">{summaryError ? pl.summaryFailed : pl.loading}</p>;
-  const guests = state.players
-    .filter((player) => player.guest)
-    .map((player) => <SaveGuest key={player.id} player={player} />);
+  const guests = state.players.filter((player) => player.guest).map((player) => <SaveGuest key={player.id} player={player} />);
   const chart = current?.lastLegProgress && <ScoreProgressChart progress={current.lastLegProgress} players={state.players} />;
 
   return (
@@ -72,7 +71,9 @@ export function MatchEndView({
           {pl.close}
         </a>
         <h1 className="font-display text-[26px] leading-tight font-extrabold">{pl.matchEndTitle}</h1>
-        {isCasual && <span className="font-display text-[19px] text-(--color-text-sub)">{[pl.typeCasual, setupLine(state)].join(' · ')}</span>}
+        {isCasual && (
+          <span className="font-display text-[19px] text-(--color-text-sub)">{[pl.typeCasual, setupLine(state)].join(' · ')}</span>
+        )}
         <div className="ml-auto flex flex-wrap gap-2">
           <VoiceToggle enabled={voiceEnabled} onChange={onVoiceChange} />
           <EffectsToggle enabled={effectsEnabled} onChange={onEffectsChange} />
@@ -84,9 +85,11 @@ export function MatchEndView({
         >
           {(connectionLost || error || undoLocked) && (
             <div className="flex flex-col gap-3 lg:col-span-2">
-              {connectionLost && <Notice text={pl.connectionLost} />}
-              {error && <Notice text={error} />}
-              {undoLocked && <Notice text={pl.matchLocked} icon={<LockIcon className="text-(--color-accent)" />} />}
+              {connectionLost && <Notice text={pl.connectionLost} appearance="soft" />}
+              {error && <Notice text={error} appearance="soft" />}
+              {undoLocked && (
+                <Notice text={pl.matchLocked} tone="status" appearance="soft" icon={<LockIcon className="text-(--color-accent)" />} />
+              )}
             </div>
           )}
           {isCasual ? (
@@ -97,7 +100,15 @@ export function MatchEndView({
               </div>
               <div className="flex min-w-0 flex-col gap-4">
                 {chart}
-                {current ? <StatsPanel summary={current} columns={casualPlaces(state, current)} rows={SUMMARY_ROWS.filter((row) => !row.matchOnly)} /> : pending}
+                {current ? (
+                  <StatsPanel
+                    summary={current}
+                    columns={casualPlaces(state, current)}
+                    rows={SUMMARY_ROWS.filter((row) => !row.matchOnly)}
+                  />
+                ) : (
+                  pending
+                )}
               </div>
             </>
           ) : (
@@ -151,7 +162,9 @@ function setupLine(state: MatchSnapshot): string {
 }
 
 function WinnerHalo() {
-  return <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-full max-h-96 bg-(image:--gradient-winner-halo)" />;
+  return (
+    <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-full max-h-96 bg-(image:--gradient-winner-halo)" />
+  );
 }
 
 interface WinnerCardProps {
@@ -167,7 +180,9 @@ function WinnerCard({ state, winner, loser }: WinnerCardProps) {
       <div className="relative flex max-w-full flex-col items-center gap-3">
         <TrophyIcon className="text-5xl text-(--color-gold)" />
         <p className={`${labelBase} text-(length:--text-label) text-(--color-text-sub)`}>{pl.matchFinished}</p>
-        <p className="max-w-full font-display text-[length:clamp(2.25rem,5vw,3.25rem)] leading-tight font-black break-words">{pl.playerWins(winner?.name ?? '')}</p>
+        <p className="max-w-full font-display text-[length:clamp(2.25rem,5vw,3.25rem)] leading-tight font-black break-words">
+          {pl.playerWins(winner?.name ?? '')}
+        </p>
         <div className="flex items-center gap-4 lg:gap-7">
           {winner && (
             <span className="inline-flex rounded-full shadow-(--shadow-winner-avatar)">
@@ -195,7 +210,10 @@ function LegCards({ state, summary }: { state: MatchSnapshot; summary: MatchSumm
         const legWinner = state.players.find((player) => player.id === leg.winnerId);
         const name = legWinner?.name ?? '';
         return (
-          <li key={leg.legIndex} className="sc-panel min-w-0 gap-0.5 rounded-(--radius-card) px-4.5 py-3 shadow-(--shadow-card) lg:flex-1 lg:basis-52">
+          <li
+            key={leg.legIndex}
+            className="sc-panel min-w-0 gap-0.5 rounded-(--radius-card) px-4.5 py-3 shadow-(--shadow-card) lg:flex-1 lg:basis-52"
+          >
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <Avatar name={name} avatar={legWinner?.avatar ?? null} color={legWinner?.color ?? 1} size="small" />
               <span className={`${labelBase} text-[13px] text-(--color-text-sub)`}>{pl.legNumber(leg.legIndex + 1)}</span>
@@ -203,11 +221,16 @@ function LegCards({ state, summary }: { state: MatchSnapshot; summary: MatchSumm
                 <LegDuration ms={leg.durationMs} />
               </span>
             </div>
-            <span className="mt-1.5 text-[15px] break-words text-(--color-text-sub)">{pl.legResult(name, leg.dartsThrown, leg.checkout)}</span>
+            <span className="mt-1.5 text-[15px] break-words text-(--color-text-sub)">
+              {pl.legResult(name, leg.dartsThrown, leg.checkout)}
+            </span>
             {leg.averages.length > 0 && (
               <span className="text-sm break-words text-(--color-text-muted)">
                 {leg.averages
-                  .map((entry) => `${state.players.find((player) => player.id === entry.playerId)?.name ?? ''} ${formatAverage(entry.average)}`)
+                  .map(
+                    (entry) =>
+                      `${state.players.find((player) => player.id === entry.playerId)?.name ?? ''} ${formatAverage(entry.average)}`,
+                  )
                   .join(' · ')}
               </span>
             )}
@@ -250,7 +273,9 @@ function StatsPanel({ summary, columns, rows }: StatsPanelProps) {
                   {/* W zabawie imię może zejść pod avatar, żeby cztery kolumny mieściły się w panelu bez przewijania. */}
                   <span className={`flex items-center gap-x-2 gap-y-1 ${place === null ? '' : 'flex-wrap'}`}>
                     {place !== null && (
-                      <span className={`font-black ${place === 1 ? 'text-(--color-gold)' : 'text-(--color-text-muted)'}`}>{pl.placeNumber(place)}</span>
+                      <span className={`font-black ${place === 1 ? 'text-(--color-gold)' : 'text-(--color-text-muted)'}`}>
+                        {pl.placeNumber(place)}
+                      </span>
                     )}
                     <Avatar name={player.name} avatar={player.avatar} color={player.color} size="small" />
                     <span className="min-w-0 break-words">{player.name}</span>
@@ -322,7 +347,12 @@ function ActionBar({ state, busy, undoLocked, undoCountdown, onUndo }: ActionBar
             {pl.saveAndExit}
           </a>
         )}
-        <button type="button" onClick={onUndo} disabled={busy || undoLocked} className="sc-btn sc-btn--outline flex-1 tabular-nums lg:flex-none">
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={busy || undoLocked}
+          className="sc-btn sc-btn--outline flex-1 tabular-nums lg:flex-none"
+        >
           <UndoIcon />
           {undoCountdown === null ? pl.undo : pl.undoWithTime(undoCountdown)}
         </button>
@@ -360,14 +390,5 @@ function ActionBar({ state, busy, undoLocked, undoCountdown, onUndo }: ActionBar
         </div>
       </div>
     </div>
-  );
-}
-
-function Notice({ text, icon = <WarningIcon className="text-(--color-accent)" /> }: { text: string; icon?: ReactNode }) {
-  return (
-    <p className="flex items-center gap-2 rounded-(--radius-card) bg-(--color-surface-soft) px-4 py-2 font-display text-xl text-(--color-text)">
-      {icon}
-      {text}
-    </p>
   );
 }

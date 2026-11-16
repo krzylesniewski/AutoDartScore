@@ -4,17 +4,17 @@ import type { Hit } from '@autoscore/schema';
 type Scoring = Hit & { points: number };
 
 function dart(segment: Hit['segment'], multiplier: Hit['multiplier']): Scoring {
-  const hit = { segment, multiplier } as Hit;
+  const hit = { segment, multiplier };
   return { ...hit, points: hitPoints(hit) };
 }
 
-const SEGMENTS_DESC = Array.from({ length: 20 }, (_, index) => (20 - index) as Hit['segment']);
+const SEGMENTS_DESC = Array.from({ length: 20 }, (_, index) => 20 - index);
 
 // Reguły trasy (design/plan-p43-p44.md, sekcja P44), pierwsza rozstrzygająca wygrywa:
 // najmniej rzutek, kończący double w kolejności z FINISHING, przygotowanie 1-20 to singiel,
 // powyżej 20 trebla, 25, Bull albo double, a w trasie na 3 rzutki najpierw najwyższa trebla.
 const FINISHING: readonly Scoring[] = [
-  ...[20, 16, 18, 12, 10, 8, 14, 6, 4, 2, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1].map((segment) => dart(segment as Hit['segment'], 2)),
+  ...[20, 16, 18, 12, 10, 8, 14, 6, 4, 2, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1].map((segment) => dart(segment, 2)),
   dart(25, 2),
 ];
 
@@ -33,7 +33,7 @@ function route(remaining: number, setupDarts: number): Scoring[] | null {
 
 function setupDart(points: number): Scoring | null {
   if (points >= 1 && points <= 20) {
-    return dart(points as Hit['segment'], 1);
+    return dart(points, 1);
   }
   if (points === 25) {
     return dart(25, 1);
@@ -42,10 +42,10 @@ function setupDart(points: number): Scoring | null {
     return dart(25, 2);
   }
   if (points > 20 && points <= 60 && points % 3 === 0) {
-    return dart((points / 3) as Hit['segment'], 3);
+    return dart(points / 3, 3);
   }
   if (points > 20 && points <= 40 && points % 2 === 0) {
-    return dart((points / 2) as Hit['segment'], 2);
+    return dart(points / 2, 2);
   }
   return null;
 }
@@ -79,7 +79,7 @@ export function suggestCheckout(remaining: number, dartsLeft: 1 | 2 | 3): Hit[] 
   for (let darts = 1; darts <= dartsLeft; darts++) {
     const found = route(remaining, darts - 1);
     if (found) {
-      return found.map(({ segment, multiplier }) => ({ segment, multiplier }) as Hit);
+      return found.map(({ segment, multiplier }) => ({ segment, multiplier }));
     }
   }
   return null;

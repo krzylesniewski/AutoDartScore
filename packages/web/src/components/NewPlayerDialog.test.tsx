@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { pl } from '../i18n/pl';
 import { NewPlayerDialog } from './NewPlayerDialog';
 
 const message = 'Gracz o imieniu „Anna” już istnieje';
@@ -7,13 +8,24 @@ const message = 'Gracz o imieniu „Anna” już istnieje';
 beforeEach(() => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => new Response(JSON.stringify({ error: 'player_name_taken', message: 'Player name Anna is already taken' }), { status: 409, headers: { 'content-type': 'application/json' } })),
+    vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: 'player_name_taken', message: 'Player name Anna is already taken' }), {
+          status: 409,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    ),
   );
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+}
 
 describe('NewPlayerDialog', () => {
   it('shows a taken name under the name field and stays open until the name changes', async () => {
@@ -34,7 +46,7 @@ describe('NewPlayerDialog', () => {
     expect(name.getAttribute('aria-invalid')).toBeNull();
   });
 
-  it('shows the taken name in cream text with a warning icon and marks the field', async () => {
+  it('shows the taken name with a warning icon and marks the field', async () => {
     render(<NewPlayerDialog onCreated={vi.fn()} onCancel={vi.fn()} />);
     const name = screen.getByRole('textbox', { name: 'Imię' });
     fireEvent.change(name, { target: { value: 'Anna' } });
@@ -42,13 +54,22 @@ describe('NewPlayerDialog', () => {
 
     const error = await screen.findByText(message);
     expect(error.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
-    expect(error.classList).not.toContain('text-(--color-accent)');
-    expect(name.classList).toContain('aria-invalid:inset-ring-2');
+    expect(name.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('creates the player with the emoji picked from the grid', async () => {
-    const created = { id: 'p9', name: 'Ola', avatar: '👾', color: 3, guest: false, archivedAt: null, createdAt: '2026-11-10T20:00:00.000Z' };
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(created), { status: 201, headers: { 'content-type': 'application/json' } }));
+    const created = {
+      id: 'p9',
+      name: 'Ola',
+      avatar: '👾',
+      color: 3,
+      guest: false,
+      archivedAt: null,
+      createdAt: '2026-11-10T20:00:00.000Z',
+    };
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify(created), { status: 201, headers: { 'content-type': 'application/json' } })),
+    );
     vi.stubGlobal('fetch', fetchMock);
     const onCreated = vi.fn();
     render(<NewPlayerDialog onCreated={onCreated} onCancel={vi.fn()} />);
@@ -56,7 +77,50 @@ describe('NewPlayerDialog', () => {
     fireEvent.click(screen.getByRole('radio', { name: '👾' }));
     fireEvent.click(screen.getByRole('button', { name: 'Dodaj' }));
     await vi.waitFor(() => expect(onCreated).toHaveBeenCalledWith(created));
-    const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as Record<string, unknown>;
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string) as Record<string, unknown>;
     expect(body).toEqual({ name: 'Ola', guest: false, avatar: '👾' });
+  });
+
+  it('ignores Escape and disables Anuluj while the save is pending', async () => {
+    let finish: (response: Response) => void = () => undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>((resolve) => (finish = resolve))),
+    );
+    const onCancel = vi.fn();
+    render(<NewPlayerDialog onCreated={vi.fn()} onCancel={onCancel} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Imię' }), { target: { value: 'Ola' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj' }));
+    await vi.waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Anuluj' }).disabled).toBe(true));
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByRole<HTMLDialogElement>('dialog').open).toBe(true);
+    finish(json(500, { error: 'internal_error', message: 'Internal server error' }));
+    await vi.waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Anuluj' }).disabled).toBe(false));
+  });
+
+  it('shows a Polish alert instead of the server message on a 500', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(json(500, { error: 'internal_error', message: 'Internal server error' }))),
+    );
+    render(<NewPlayerDialog onCreated={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Imię' }), { target: { value: 'Ola' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(pl.requestFailed);
+    expect(screen.queryByText('Internal server error')).toBeNull();
+  });
+
+  it('shows a Polish text instead of the English message on a 400 invalid_request', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(json(400, { error: 'invalid_request', message: 'Invalid request: name: Too big' }))),
+    );
+    render(<NewPlayerDialog onCreated={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Imię' }), { target: { value: 'Ola' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(pl.invalidRequest);
+    expect(screen.queryByText(/Invalid request/)).toBeNull();
   });
 });

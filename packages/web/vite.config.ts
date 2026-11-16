@@ -3,8 +3,19 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
+// Testy .ts, które potrzebują jsdom: używają localStorage albo renderHook. Pozostałe .ts działają w node, bez kosztu jsdom.
+const DOM_TESTS = [
+  'src/api/session.test.ts',
+  'src/api/use-match.test.ts',
+  'src/components/shortcut-target.test.ts',
+  'src/game/keypad-layout.test.ts',
+  'src/game/stats-period.test.ts',
+  'src/game/use-now.test.ts',
+  'src/game/use-undo-window.test.ts',
+];
+
 export default defineConfig({
-  // GitHub Pages serwuje aplikację pod ścieżką repozytorium. Wartość musi zaczynać się i kończyć na /.
+  // Build może działać pod podścieżką serwera. Wartość musi zaczynać się i kończyć na /.
   base: process.env.VITE_BASE || '/',
   plugins: [
     react(),
@@ -27,7 +38,25 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/test-setup.ts'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          include: ['src/**/*.test.ts'],
+          exclude: DOM_TESTS,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'dom',
+          environment: 'jsdom',
+          setupFiles: ['./src/test-setup.ts'],
+          include: ['src/**/*.test.tsx', ...DOM_TESTS],
+        },
+      },
+    ],
   },
 });

@@ -14,7 +14,10 @@ export interface HistoryRow {
   readonly date: string;
 }
 
-type Game = Pick<MatchListItem, 'type' | 'practiceMode' | 'startingScore' | 'status' | 'players' | 'winnerId' | 'placements' | 'freeRun' | 'checkouts' | 'updatedAt'>;
+type Game = Pick<
+  MatchListItem,
+  'type' | 'practiceMode' | 'startingScore' | 'status' | 'players' | 'winnerId' | 'placements' | 'freeRun' | 'checkouts' | 'updatedAt'
+>;
 
 function typeLabel(game: Game): string {
   const startingScore = game.startingScore ?? 0;
@@ -36,8 +39,12 @@ function name(game: Game, playerId: string | null): string {
 
 // Najpierw gracze z miejscem, w kolejności miejsc, potem grający dalej w kolejności rzutów.
 function casualResult(game: Game): string {
-  const placed = [...game.placements].sort((a, b) => a.place - b.place).map((placement) => pl.placedPlayer(placement.place, name(game, placement.playerId)));
-  const playing = game.players.filter((player) => !game.placements.some((placement) => placement.playerId === player.id)).map((player) => player.name);
+  const placed = [...game.placements]
+    .sort((a, b) => a.place - b.place)
+    .map((placement) => pl.placedPlayer(placement.place, name(game, placement.playerId)));
+  const playing = game.players
+    .filter((player) => !game.placements.some((placement) => placement.playerId === player.id))
+    .map((player) => player.name);
   return [...placed, ...playing].join(' · ');
 }
 
@@ -65,7 +72,8 @@ function statusLabel(game: Game): string {
       if (game.type === 'practice') {
         return pl.statusFinished;
       }
-      const winnerId = game.type === 'match' ? game.winnerId : (game.placements.find((placement) => placement.place === 1)?.playerId ?? null);
+      const winnerId =
+        game.type === 'match' ? game.winnerId : (game.placements.find((placement) => placement.place === 1)?.playerId ?? null);
       return winnerId === null ? pl.statusFinished : pl.winnerBadge(name(game, winnerId));
     }
     case 'in_progress':
@@ -79,5 +87,11 @@ function statusLabel(game: Game): string {
 
 // Teksty wiersza historii gier.
 export function historyRow(game: Game, now: Date): HistoryRow {
-  return { type: typeLabel(game), result: result(game), status: game.status, statusLabel: statusLabel(game), date: formatActivity(game.updatedAt, now) };
+  return {
+    type: typeLabel(game),
+    result: result(game),
+    status: game.status,
+    statusLabel: statusLabel(game),
+    date: formatActivity(game.updatedAt, now),
+  };
 }

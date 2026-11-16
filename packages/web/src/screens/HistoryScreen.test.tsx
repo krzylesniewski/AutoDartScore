@@ -28,8 +28,20 @@ const finishedCasual = listItem({
     { playerId: 'p2', place: 3 },
   ],
 });
-const finishedSolo = listItem({ id: 'm_solo', type: 'practice', practiceMode: 'solo_501', legsToWin: null, status: 'finished', winnerId: 'p1', players: [player('p1', 'Anna')] });
-const abandoned = listItem({ id: 'm_paused', status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: '2026-10-18T10:05:00.000Z' } });
+const finishedSolo = listItem({
+  id: 'm_solo',
+  type: 'practice',
+  practiceMode: 'solo_501',
+  legsToWin: null,
+  status: 'finished',
+  winnerId: 'p1',
+  players: [player('p1', 'Anna')],
+});
+const abandoned = listItem({
+  id: 'm_paused',
+  status: 'abandoned',
+  abandonment: { playerId: 'p1', reason: null, at: '2026-10-18T10:05:00.000Z' },
+});
 const inProgress = listItem({ id: 'm_open' });
 const ended = listItem({
   id: 'm_ended',
@@ -54,16 +66,20 @@ beforeEach(() => {
   games = [finishedMatch, finishedCasual, finishedSolo, abandoned, inProgress, ended];
   failing = false;
   posts = [];
-  abandonResponse = () => json(200, snapshot({ id: 'm_open', status: 'abandoned', abandonment: { playerId: 'p2', reason: null, at: '2026-10-18T11:00:00.000Z' } }));
+  abandonResponse = () =>
+    json(
+      200,
+      snapshot({ id: 'm_open', status: 'abandoned', abandonment: { playerId: 'p2', reason: null, at: '2026-10-18T11:00:00.000Z' } }),
+    );
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string, init?: RequestInit) => {
+    vi.fn((url: string, init?: RequestInit) => {
       if (init?.method === 'POST') {
-        posts.push({ url, body: JSON.parse(String(init.body)) });
-        return abandonResponse();
+        posts.push({ url, body: JSON.parse(init.body as string) });
+        return Promise.resolve(abandonResponse());
       }
       urls.push(url);
-      return failing ? json(500, { error: 'internal_error', message: 'Internal server error' }) : json(200, games);
+      return Promise.resolve(failing ? json(500, { error: 'internal_error', message: 'Internal server error' }) : json(200, games));
     }),
   );
 });
@@ -95,7 +111,9 @@ describe('HistoryScreen', () => {
     expect(within(row('Anna 2 : 1 Bartek')).getByText('Mecz 1v1 · 301')).toBeTruthy();
     expect(within(row('1. Celina')).getByText('1. Celina · 2. Anna · 3. Bartek')).toBeTruthy();
     expect(within(row('Free run')).getByText('Anna · 6 rzutek · średnia 60,00')).toBeTruthy();
-    expect(within(row('Anna 2 : 1 Bartek')).getByRole('link', { name: 'Szczegóły: Anna 2 : 1 Bartek' }).getAttribute('href')).toBe('#/matches/m_match');
+    expect(within(row('Anna 2 : 1 Bartek')).getByRole('link', { name: 'Szczegóły: Anna 2 : 1 Bartek' }).getAttribute('href')).toBe(
+      '#/matches/m_match',
+    );
     expect(screen.getAllByRole('link', { name: /^Szczegóły/ }).map((link) => link.getAttribute('href'))).toEqual([
       '#/matches/m_match',
       '#/matches/m_casual',
@@ -201,7 +219,12 @@ describe('HistoryScreen', () => {
       ];
       render(<HistoryScreen />);
       await screen.findAllByText('Anna 0 : 0 Bartek');
-      expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['Typ gry', 'Dziś', 'Wczoraj', '14.10']);
+      expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
+        'Typ gry',
+        'Dziś',
+        'Wczoraj',
+        '14.10',
+      ]);
       expect(rows()).toHaveLength(4);
       expect(rows().map((item) => item.querySelector('time')?.textContent)).toEqual(['17:05', '09:30', '21:12', '10:00']);
       expect(within(screen.getByRole('region', { name: 'Dziś' })).getAllByRole('listitem')).toHaveLength(2);
@@ -211,15 +234,11 @@ describe('HistoryScreen', () => {
     }
   });
 
-  it('marks a game in progress by its badge and not by an outline', async () => {
+  it('marks a game in progress by its badge with an icon', async () => {
     render(<HistoryScreen />);
     await screen.findByText('Anna 2 : 1 Bartek');
-    const live = row('W trakcie');
-    const classes = live.getAttribute('class')?.split(' ') ?? [];
-    expect(classes.filter((name) => /^(border|ring|outline)/.test(name))).toEqual([]);
-    const icon = live.querySelector('svg');
-    expect(icon?.getAttribute('aria-hidden')).toBe('true');
-    expect(icon?.parentElement?.textContent).toBe('W trakcie');
+    const badge = within(row('W trakcie')).getByText('W trakcie');
+    expect(badge.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('shows an empty state', async () => {

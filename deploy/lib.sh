@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Helpers for deploy.sh and backup.sh. Sourced, so it sets no shell options.
+# Helpers for deploy.sh, backup.sh and pull-backup.sh. Sourced, so it sets no
+# shell options.
 
 # Prints the value of KEY from a systemd env file, or nothing when KEY is
 # missing. The file is never sourced, because the password may contain shell
@@ -40,4 +41,24 @@ prune_backups() {
     rm -f -- "${files[i]}"
     echo "removed old backup ${files[i]}"
   done
+}
+
+# Copies DB to FILE and checks the copy. .backup copies a consistent state
+# even while the server writes. A broken copy is deleted, so it never pushes a
+# good one out of the rotation and is never restored.
+backup_database() {
+  local db="$1" file="$2" result
+  if ! result=$(sqlite3 "$db" ".backup '$file'" 2>&1); then
+    rm -f -- "$file"
+    echo "backup of $db failed:" >&2
+    echo "$result" >&2
+    return 1
+  fi
+  result=$(sqlite3 "$file" 'PRAGMA integrity_check;' 2>&1) || true
+  if [ "$result" != "ok" ]; then
+    rm -f -- "$file"
+    echo "integrity check failed for the copy of $db:" >&2
+    echo "$result" >&2
+    return 1
+  fi
 }

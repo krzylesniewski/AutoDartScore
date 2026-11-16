@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { HitEvent, MatchSnapshot, Player } from '@autoscore/schema';
+import type { HitEvent, MatchSnapshot, Player, ThrowResult } from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { expect } from 'vitest';
@@ -27,7 +27,7 @@ export async function setup(options: Partial<Omit<AppOptions, 'db'>> & { path?: 
   const { path, ...appOptions } = options;
   const db = openDatabase(path ?? ':memory:');
   await migrateToLatest(db);
-  const app = await buildApp({ random: () => 0, ...appOptions, db });
+  const app = await buildApp({ random: () => 0, auth: null, ...appOptions, db });
   await app.ready(); // injectWS, w przeciwieństwie do inject, nie uruchamia aplikacji
   return {
     app,
@@ -79,37 +79,42 @@ export function postThrow(app: FastifyInstance, matchId: string, payload: object
 }
 
 export async function throwDarts(app: FastifyInstance, matchId: string, darts: readonly Dart[]) {
-  const results = [];
+  const results: ThrowResult[] = [];
   for (const dart of darts) {
     const response = await postThrow(app, matchId, hitEvent(matchId, dart));
     expect(response.statusCode).toBe(201);
-    results.push(response.json());
+    results.push(response.json<ThrowResult>());
   }
   return results;
 }
 
-export function undo(app: FastifyInstance, matchId: string) {
-  return app.inject({ method: 'POST', url: `/matches/${matchId}/undo` });
+// Bez payload żądanie idzie bez body, jak dotąd.
+export function undo(app: FastifyInstance, matchId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/undo`, ...(payload && { payload }) });
 }
 
 export function checkoutAttempt(app: FastifyInstance, matchId: string, success: boolean) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-attempts`, payload: { success } });
 }
 
-export function checkoutSkip(app: FastifyInstance, matchId: string) {
-  return app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-skips` });
+export function checkoutSkip(app: FastifyInstance, matchId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/checkout-skips`, ...(payload && { payload }) });
 }
 
 export function abandon(app: FastifyInstance, matchId: string, payload: object) {
   return app.inject({ method: 'POST', url: `/matches/${matchId}/abandon`, payload });
 }
 
-export function resume(app: FastifyInstance, matchId: string) {
-  return app.inject({ method: 'POST', url: `/matches/${matchId}/resume` });
+export function resume(app: FastifyInstance, matchId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/resume`, ...(payload && { payload }) });
 }
 
-export function endPractice(app: FastifyInstance, matchId: string) {
-  return app.inject({ method: 'POST', url: `/matches/${matchId}/end` });
+export function endPractice(app: FastifyInstance, matchId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/end`, ...(payload && { payload }) });
+}
+
+export function restMiss(app: FastifyInstance, matchId: string, payload: object) {
+  return app.inject({ method: 'POST', url: `/matches/${matchId}/rest-miss`, payload });
 }
 
 export function patchPlayer(app: FastifyInstance, playerId: string, payload: object) {
@@ -127,17 +132,29 @@ export async function getMatch(app: FastifyInstance, matchId: string): Promise<M
 }
 
 export async function countRows(db: Kysely<Database>, table: 'players' | 'throws' | 'match_events' | 'player_changes'): Promise<number> {
-  const row = await db.selectFrom(table).select((eb) => eb.fn.countAll<number>().as('count')).executeTakeFirstOrThrow();
+  const row = await db
+    .selectFrom(table)
+    .select((eb) => eb.fn.countAll<number>().as('count'))
+    .executeTakeFirstOrThrow();
   return Number(row.count);
 }
 
 // Store zapisuje created_at z zegara ściennego, więc starszą grę da się zrobić tylko po zapisie.
 export async function backdateMatch(db: Kysely<Database>, matchId: string, createdAt: number): Promise<void> {
-  await db.updateTable('matches').set({ created_at: new Date(createdAt).toISOString() }).where('id', '=', matchId).execute();
+  await db
+    .updateTable('matches')
+    .set({ created_at: new Date(createdAt).toISOString() })
+    .where('id', '=', matchId)
+    .execute();
 }
 
 export async function logEntries(db: Kysely<Database>, matchId: string) {
-  return db.selectFrom('match_events').select(['seq', 'type', 'throw_id', 'player_id', 'reason']).where('match_id', '=', matchId).orderBy('seq').execute();
+  return db
+    .selectFrom('match_events')
+    .select(['seq', 'type', 'throw_id', 'player_id', 'reason'])
+    .where('match_id', '=', matchId)
+    .orderBy('seq')
+    .execute();
 }
 
 export function remaining(state: MatchSnapshot): (number | null)[] {

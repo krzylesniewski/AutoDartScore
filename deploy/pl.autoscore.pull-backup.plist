@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template for ~/Library/LaunchAgents. launchd expands neither ~ nor
+     variables, so replace every __PLACEHOLDER__ with an absolute value. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>pl.autoscore.pull-backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__REPO_DIR__/deploy/pull-backup.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>AUTOSCORE_SSH</key>
+    <string>__SSH_TARGET__</string>
+    <key>AUTOSCORE_SSH_PORT</key>
+    <string>__SSH_PORT__</string>
+    <key>AUTOSCORE_LOCAL_BACKUP_DIR</key>
+    <string>__LOCAL_DIR__</string>
+    <key>AUTOSCORE_LOCAL_BACKUP_KEEP</key>
+    <string>30</string>
+    <key>PATH</key>
+    <string>/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>9</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>__LOG_FILE__</string>
+  <key>StandardErrorPath</key>
+  <string>__LOG_FILE__</string>
+</dict>
+</plist>

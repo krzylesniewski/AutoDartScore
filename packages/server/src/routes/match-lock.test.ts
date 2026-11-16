@@ -3,7 +3,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ApiError, MatchSnapshot, ThrowResult, UndoResult } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { D, LEG_301, S, T, countRows, createGame, createPlayers, getMatch, setup, throwDarts, undo, type Dart, type TestApp } from '../test-helpers.js';
+import {
+  D,
+  LEG_301,
+  S,
+  T,
+  countRows,
+  createGame,
+  createPlayers,
+  getMatch,
+  setup,
+  throwDarts,
+  undo,
+  type Dart,
+  type TestApp,
+} from '../test-helpers.js';
 
 const FINISH = '2026-10-21T20:00:00.000Z';
 

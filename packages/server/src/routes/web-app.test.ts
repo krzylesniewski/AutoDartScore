@@ -48,7 +48,7 @@ async function withFront(): Promise<TestApp> {
 }
 
 function bearer(): { authorization: string } {
-  return { authorization: `Bearer ${createToken(tokenSecret, now + 1000)}` };
+  return { authorization: `Bearer ${createToken({ password, tokenSecret }, now + 1000)}` };
 }
 
 function errorCode(response: { json(): unknown }): string {
@@ -156,7 +156,7 @@ describe('startup check', () => {
     const db = openDatabase(':memory:');
     try {
       await migrateToLatest(db);
-      await expect(buildApp({ db, webDir: dir })).rejects.toThrow(`Missing index.html in AUTOSCORE_WEB_DIR: ${dir}`);
+      await expect(buildApp({ db, auth: null, webDir: dir })).rejects.toThrow(`Missing index.html in AUTOSCORE_WEB_DIR: ${dir}`);
     } finally {
       await db.destroy();
     }

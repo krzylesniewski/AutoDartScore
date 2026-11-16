@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { createLiveHub, type LiveSocket } from './live-hub.js';
+import { describe, expect, it, vi, type Mock } from 'vitest';
+import { LIVE_MAX_BUFFERED_BYTES, createLiveHub, sendTo, type LiveSocket } from './live-hub.js';
 
-function socket(readyState = 1): LiveSocket & { sent: string[] } {
+function socket(readyState = 1, bufferedAmount = 0): LiveSocket & { sent: string[]; terminate: Mock<() => void> } {
   const sent: string[] = [];
-  return { readyState, sent, send: (data) => void sent.push(data) };
+  return { readyState, bufferedAmount, sent, send: (data) => void sent.push(data), terminate: vi.fn<() => void>() };
 }
 
 describe('createLiveHub', () => {
@@ -30,5 +30,25 @@ describe('createLiveHub', () => {
     unsubscribe();
     hub.publish('m1', [message]);
     expect(subscriber.sent).toEqual([]);
+  });
+
+  it('terminates a subscriber with more than LIVE_MAX_BUFFERED_BYTES unsent', () => {
+    const hub = createLiveHub();
+    const slow = socket(1, LIVE_MAX_BUFFERED_BYTES + 1);
+    hub.subscribe('m1', slow);
+    hub.publish('m1', [message]);
+    sendTo(slow, [message]);
+    expect(slow.sent).toEqual([]);
+    expect(slow.terminate).toHaveBeenCalled();
+  });
+
+  it('keeps sending to a subscriber at exactly LIVE_MAX_BUFFERED_BYTES unsent', () => {
+    const hub = createLiveHub();
+    const busy = socket(1, LIVE_MAX_BUFFERED_BYTES);
+    hub.subscribe('m1', busy);
+    hub.publish('m1', [message]);
+    sendTo(busy, [message]);
+    expect(busy.sent).toEqual([JSON.stringify(message), JSON.stringify(message)]);
+    expect(busy.terminate).not.toHaveBeenCalled();
   });
 });

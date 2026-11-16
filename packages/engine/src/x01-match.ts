@@ -1,12 +1,11 @@
-import { Hit, type DomainEvent } from '@autoscore/schema';
+import { BestOf, STARTING_SCORES, type DomainEvent, type Hit, type StartingScore } from '@autoscore/schema';
+import type { ApplyResult } from './apply-result.js';
 import { EngineError } from './errors.js';
-import { hitPoints, isBust } from './points.js';
+import { replaySteps } from './replay-steps.js';
+import { applyX01Dart } from './x01-turn.js';
 
 // X01, mecz 1v1: double-out, straight-in, best of N legów.
 // Czysta logika: bez I/O i bez losowości. Kto zaczyna pierwszy leg (losowanie) decyduje wywołujący.
-
-export const STARTING_SCORES = [301, 501, 701] as const;
-export type StartingScore = (typeof STARTING_SCORES)[number];
 
 export interface X01MatchConfig {
   readonly playerIds: readonly [string, string];
@@ -30,10 +29,8 @@ export interface X01MatchState {
   readonly winnerIndex: 0 | 1 | null;
 }
 
-export interface ApplyResult<S = X01MatchState> {
-  readonly state: S;
-  readonly events: readonly DomainEvent[];
-}
+// Serwer zapisuje legsToWin jako (bestOf + 1) / 2, więc inne wartości nie pochodzą z żadnego meczu.
+const LEGS_TO_WIN: readonly number[] = BestOf.options.map((option) => (option.value + 1) / 2);
 
 export function createX01Match(config: X01MatchConfig): X01MatchState {
   const [a, b] = config.playerIds;
@@ -43,18 +40,17 @@ export function createX01Match(config: X01MatchConfig): X01MatchState {
   if (!STARTING_SCORES.includes(config.startingScore)) {
     throw new EngineError('invalid_config', `Starting score must be one of ${STARTING_SCORES.join(', ')}`);
   }
-  if (!Number.isInteger(config.legsToWin) || config.legsToWin < 1) {
-    throw new EngineError('invalid_config', 'legsToWin must be a positive integer');
+  if (!LEGS_TO_WIN.includes(config.legsToWin)) {
+    throw new EngineError('invalid_config', `legsToWin must be one of ${LEGS_TO_WIN.join(', ')}`);
+  }
+  // Typ tego nie gwarantuje przy danych spoza TypeScriptu, a zły indeks dawałby wynik NaN bez błędu.
+  if (config.firstPlayerIndex !== 0 && config.firstPlayerIndex !== 1) {
+    throw new EngineError('invalid_config', 'firstPlayerIndex must be 0 or 1');
   }
   return startLeg(config, 0, config.firstPlayerIndex, [0, 0]);
 }
 
-function startLeg(
-  config: X01MatchConfig,
-  legIndex: number,
-  starter: 0 | 1,
-  legsWon: readonly [number, number],
-): X01MatchState {
+function startLeg(config: X01MatchConfig, legIndex: number, starter: 0 | 1, legsWon: readonly [number, number]): X01MatchState {
   return {
     config,
     legIndex,
@@ -95,79 +91,72 @@ function nextTurn(state: X01MatchState, remaining: readonly [number, number], da
   };
 }
 
-export function applyThrow(state: X01MatchState, input: Hit): ApplyResult {
+export function applyThrow(state: X01MatchState, input: Hit): ApplyResult<X01MatchState> {
   if (state.winnerIndex !== null) {
     throw new EngineError('match_finished', 'The match is already finished');
   }
-  const parsed = Hit.safeParse(input);
-  if (!parsed.success) {
-    throw new EngineError('invalid_hit', `Invalid hit: ${JSON.stringify(input)}`);
-  }
-  const hit = parsed.data;
-
   const { config, legIndex, turnIndex } = state;
   const player = state.currentPlayerIndex;
   const playerId = config.playerIds[player];
-  const darts = [...state.currentDarts, hit];
+  const result = applyX01Dart(
+    {
+      playerId,
+      legIndex,
+      turnIndex,
+      remaining: state.remaining[player],
+      turnStartRemaining: state.turnStartRemaining,
+      currentDarts: state.currentDarts,
+    },
+    input,
+  );
   const dartsThrown = withIndex(state.dartsThrownInLeg, player, state.dartsThrownInLeg[player] + 1);
-  const after = state.remaining[player] - hitPoints(hit);
 
-  if (isBust(after, hit)) {
-    const remaining = withIndex(state.remaining, player, state.turnStartRemaining);
-    return {
-      state: nextTurn(state, remaining, dartsThrown),
-      events: [{ type: 'bust', playerId, legIndex, turnIndex, darts, remaining: state.turnStartRemaining }],
-    };
-  }
-
-  if (after === 0) {
-    const events: DomainEvent[] = [
-      { type: 'turn_completed', playerId, legIndex, turnIndex, darts, total: state.turnStartRemaining, remaining: 0 },
-      { type: 'leg_won', playerId, legIndex, checkout: state.turnStartRemaining, dartsThrown: dartsThrown[player] },
-    ];
-    const legsWon = withIndex(state.legsWon, player, state.legsWon[player] + 1);
-    if (legsWon[player] >= config.legsToWin) {
-      events.push({
-        type: 'match_won',
-        playerId,
-        legsWon: { [config.playerIds[0]]: legsWon[0], [config.playerIds[1]]: legsWon[1] },
-      });
+  switch (result.outcome) {
+    case 'open':
       return {
         state: {
           ...state,
-          remaining: withIndex(state.remaining, player, 0),
-          currentDarts: [],
+          remaining: withIndex(state.remaining, player, result.remaining),
+          currentDarts: result.darts,
           dartsThrownInLeg: dartsThrown,
-          legsWon,
-          winnerIndex: player,
         },
-        events,
+        events: [],
       };
+    case 'turn_completed':
+    case 'bust':
+      return { state: nextTurn(state, withIndex(state.remaining, player, result.remaining), dartsThrown), events: [result.event] };
+    case 'checkout': {
+      const events: DomainEvent[] = [
+        result.event,
+        { type: 'leg_won', playerId, legIndex, checkout: result.checkout, dartsThrown: dartsThrown[player] },
+      ];
+      const legsWon = withIndex(state.legsWon, player, state.legsWon[player] + 1);
+      if (legsWon[player] >= config.legsToWin) {
+        events.push({
+          type: 'match_won',
+          playerId,
+          legsWon: { [config.playerIds[0]]: legsWon[0], [config.playerIds[1]]: legsWon[1] },
+        });
+        return {
+          state: {
+            ...state,
+            remaining: withIndex(state.remaining, player, 0),
+            currentDarts: [],
+            dartsThrownInLeg: dartsThrown,
+            legsWon,
+            winnerIndex: player,
+          },
+          events,
+        };
+      }
+      // Kolejne legi rozpoczynają gracze na przemian.
+      return { state: startLeg(config, legIndex + 1, other(state.legStarterIndex), legsWon), events };
     }
-    // Kolejne legi rozpoczynają gracze na przemian.
-    return { state: startLeg(config, legIndex + 1, other(state.legStarterIndex), legsWon), events };
   }
-
-  const remaining = withIndex(state.remaining, player, after);
-  if (darts.length === 3) {
-    return {
-      state: nextTurn(state, remaining, dartsThrown),
-      events: [{ type: 'turn_completed', playerId, legIndex, turnIndex, darts, total: state.turnStartRemaining - after, remaining: after }],
-    };
-  }
-  return { state: { ...state, remaining, currentDarts: darts, dartsThrownInLeg: dartsThrown }, events: [] };
 }
 
-// Stan meczu jako wynik odtworzenia wszystkich rzutek (zapis zdarzeniowy).
-export function replayX01Match(config: X01MatchConfig, hits: readonly Hit[]): ApplyResult {
-  let state = createX01Match(config);
-  const events: DomainEvent[] = [];
-  for (const hit of hits) {
-    const result = applyThrow(state, hit);
-    state = result.state;
-    events.push(...result.events);
-  }
-  return { state, events };
+export function replayX01Match(config: X01MatchConfig, hits: readonly Hit[]): ApplyResult<X01MatchState> {
+  return replaySteps(createX01Match(config), hits, applyThrow);
 }
 
 export function currentPlayerId(state: X01MatchState): string {

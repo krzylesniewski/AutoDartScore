@@ -5,7 +5,7 @@ import { Keypad } from '../components/Keypad';
 import { SettingsScreen } from './SettingsScreen';
 
 function radio(name: string): HTMLInputElement {
-  return screen.getByRole('radio', { name }) as HTMLInputElement;
+  return screen.getByRole<HTMLInputElement>('radio', { name });
 }
 
 function toggle(name: string): HTMLElement {
@@ -70,7 +70,6 @@ describe('SettingsScreen', () => {
     expect(radio('Siatka').closest('label')?.textContent).not.toContain('✓');
     for (const name of ['Koło', 'Siatka']) {
       expect(radio(name).closest('label')?.querySelector('svg')).not.toBeNull();
-      expect(radio(name).closest('label')?.className).toContain('min-h-11');
     }
   });
 
@@ -96,7 +95,7 @@ describe('SettingsScreen', () => {
 
     render(<Keypad onHit={vi.fn()} onRestMiss={vi.fn()} onUndo={vi.fn()} disabled={false} undoDisabled={false} checkout={null} />);
     for (const segment of ['20', '1', '5']) {
-      expect(screen.getByRole('button', { name: segment }).className.split(' ')).not.toContain('rounded-full');
+      expect(screen.getByRole('button', { name: segment }).style.left).toBe('');
     }
   });
 

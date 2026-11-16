@@ -4,7 +4,15 @@ import { Migrator, type Migration, type MigrationProvider } from 'kysely/migrati
 // Kształt starej tabeli match_events, z której kopiujemy wiersze. Typ Database opisuje już tabelę po migracji.
 interface LifecycleMigrationTables {
   match_events: { match_id: string; seq: number; type: string; throw_id: string | null; created_at: string };
-  match_events_next: { match_id: string; seq: number; type: string; throw_id: string | null; player_id: string | null; reason: string | null; created_at: string };
+  match_events_next: {
+    match_id: string;
+    seq: number;
+    type: string;
+    throw_id: string | null;
+    player_id: string | null;
+    reason: string | null;
+    created_at: string;
+  };
 }
 
 interface CheckoutRuleMigrationTables {
@@ -32,6 +40,11 @@ async function rebuildMatchEvents(db: Kysely<LifecycleMigrationTables>): Promise
     .execute();
   await db.schema.dropTable('match_events').execute();
   await db.schema.alterTable('match_events_next').renameTo('match_events').execute();
+}
+
+async function createListIndexes(db: Kysely<unknown>): Promise<void> {
+  await db.schema.createIndex('throws_match_id_idx').on('throws').column('match_id').execute();
+  await db.schema.createIndex('match_players_player_id_idx').on('match_players').column('player_id').execute();
 }
 
 // Tylko typy text, integer i real oraz brak funkcji JSON, żeby migracje działały też na PostgreSQL.
@@ -143,22 +156,33 @@ const migrations: Record<string, Migration> = {
       await typed.updateTable('matches').set({ checkout_rule: 'new_each_attempt' }).where('practice_mode', '=', 'checkouts').execute();
     },
   },
+  // match_events nie potrzebuje indeksu, bo wyszukiwanie po match_id obsługuje już klucz główny (match_id, seq).
+  '0007_list_indexes': {
+    async up(db: Kysely<unknown>) {
+      // Jak w 0002_match_lifecycle: SQLite nie dostaje transakcji od migratora, PostgreSQL już ją przekazuje.
+      if (db.isTransaction) {
+        await createListIndexes(db);
+        return;
+      }
+      await db.transaction().execute(createListIndexes);
+    },
+  },
 };
 
 const provider: MigrationProvider = {
-  getMigrations: async () => migrations,
+  getMigrations: () => Promise.resolve(migrations),
 };
 
 export async function migrateToLatest<DB>(db: Kysely<DB>): Promise<void> {
   const { error } = await new Migrator({ db, provider }).migrateToLatest();
   if (error) {
-    throw error;
+    throw error instanceof Error ? error : new Error('Migration failed', { cause: error });
   }
 }
 
 export async function migrateTo<DB>(db: Kysely<DB>, target: string): Promise<void> {
   const { error } = await new Migrator({ db, provider }).migrateTo(target);
   if (error) {
-    throw error;
+    throw error instanceof Error ? error : new Error('Migration failed', { cause: error });
   }
 }

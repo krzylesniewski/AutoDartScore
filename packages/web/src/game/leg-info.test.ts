@@ -61,7 +61,11 @@ describe('legStats', () => {
 
   it('keeps the earliest turn on a tie for the highest', () => {
     const state = snapshot({
-      legTurns: [legTurn('p1', { points: 60, remainingAfter: 441 }), legTurn('p2', { points: 100, remainingAfter: 401 }), legTurn('p1', { points: 100, remainingAfter: 341 })],
+      legTurns: [
+        legTurn('p1', { points: 60, remainingAfter: 441 }),
+        legTurn('p2', { points: 100, remainingAfter: 401 }),
+        legTurn('p1', { points: 100, remainingAfter: 341 }),
+      ],
     });
     expect(legStats(state).highest).toEqual({ points: 100, playerId: 'p2' });
   });
@@ -70,7 +74,10 @@ describe('legStats', () => {
     const state = casual(['Anna', 'Bartek', 'Celina'], {
       currentPlayerId: 'p2',
       players: [player('p1', 'Anna', { place: 1, remaining: 0 }), player('p2', 'Bartek'), player('p3', 'Celina')],
-      legTurns: [legTurn('p1', { points: 121, remainingAfter: 0, darts: [T20, S20, { segment: 16, multiplier: 2 }] }), legTurn('p2', { points: 26, remainingAfter: 475 })],
+      legTurns: [
+        legTurn('p1', { points: 121, remainingAfter: 0, darts: [T20, S20, { segment: 16, multiplier: 2 }] }),
+        legTurn('p2', { points: 26, remainingAfter: 475 }),
+      ],
     });
     expect(legStats(state)).toEqual({ highest: { points: 121, playerId: 'p1' }, darts: 6, busts: 0 });
   });
@@ -82,7 +89,10 @@ describe('legStats', () => {
       startingScore: null,
       legsToWin: null,
       players: [player('p1', 'Anna', { remaining: null })],
-      legTurns: [legTurn('p1', { points: 85, remainingAfter: null, turnIndex: 0 }), legTurn('p1', { points: 26, remainingAfter: null, turnIndex: 1 })],
+      legTurns: [
+        legTurn('p1', { points: 85, remainingAfter: null, turnIndex: 0 }),
+        legTurn('p1', { points: 26, remainingAfter: null, turnIndex: 1 }),
+      ],
       currentDarts: [S20],
     });
     expect(legStats(state)).toEqual({ highest: { points: 85, playerId: 'p1' }, darts: 7, busts: 0 });

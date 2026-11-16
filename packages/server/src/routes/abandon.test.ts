@@ -1,4 +1,4 @@
-import { ApiError, LiveMessage, MatchSnapshot, UndoResult } from '@autoscore/schema';
+import { ApiError, LiveMessage, MatchSnapshot, UndoResult, type MatchSummary } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   D,
@@ -69,7 +69,13 @@ describe('POST /matches/:id/abandon', () => {
       abandonment: { playerId: anna, reason: 'koniec prądu' },
     });
     expect(Date.parse(state.abandonment?.at ?? '')).not.toBeNaN();
-    expect((await logEntries(t.db, id)).at(-1)).toEqual({ seq: 3, type: 'match_abandoned', throw_id: null, player_id: anna, reason: 'koniec prądu' });
+    expect((await logEntries(t.db, id)).at(-1)).toEqual({
+      seq: 3,
+      type: 'match_abandoned',
+      throw_id: null,
+      player_id: anna,
+      reason: 'koniec prądu',
+    });
     expect(await countRows(t.db, 'throws')).toBe(throwsBefore);
     expect(await getMatch(t.app, id)).toEqual(state);
   });
@@ -170,7 +176,7 @@ describe('POST /matches/:id/resume', () => {
 
     // Trzecia rzutka zamyka tę samą turę Bartka.
     const [next] = await throwDarts(t.app, id, [S(3)]);
-    expect(next.events).toMatchObject([
+    expect(next!.events).toMatchObject([
       {
         type: 'turn_completed',
         playerId: bartek,
@@ -182,8 +188,8 @@ describe('POST /matches/:id/resume', () => {
         total: 6,
       },
     ]);
-    expect(next.state).toMatchObject({ currentPlayerId: anna, currentDarts: [] });
-    expect(remaining(next.state)).toEqual([121, 295]);
+    expect(next!.state).toMatchObject({ currentPlayerId: anna, currentDarts: [] });
+    expect(remaining(next!.state)).toEqual([121, 295]);
   });
 
   it('lets undo remove a throw made before the abandon', async () => {
@@ -195,7 +201,7 @@ describe('POST /matches/:id/resume', () => {
     const response = await undo(t.app, id);
     expect(response.statusCode).toBe(200);
     const result = UndoResult.parse(response.json());
-    expect(result.undoneThrowId).toBe(second.throw.id);
+    expect(result.undoneThrowId).toBe(second!.throw.id);
     expect(result.state).toMatchObject({ status: 'in_progress', eventSeq: 5, currentDarts: [{ segment: 20, multiplier: 3 }] });
     expect(remaining(result.state)).toEqual([241, 301]);
   });
@@ -248,7 +254,7 @@ describe('POST /matches/:id/resume', () => {
     const resumed = await resumeOk(id);
     expect(resumed).toMatchObject({ status: 'in_progress', freeRun: { dartsThrown: 2, totalPoints: 65 } });
     const [next] = await throwDarts(t.app, id, [S(1)]);
-    expect(next.state.freeRun).toMatchObject({ dartsThrown: 3, totalPoints: 66 });
+    expect(next!.state.freeRun).toMatchObject({ dartsThrown: 3, totalPoints: 66 });
   });
 });
 
@@ -259,7 +265,7 @@ describe('match summary', () => {
     const summary = async () => {
       const response = await t.app.inject({ method: 'GET', url: `/matches/${id}/summary` });
       expect(response.statusCode).toBe(200);
-      return { ...response.json(), eventSeq: undefined };
+      return { ...response.json<MatchSummary>(), eventSeq: undefined };
     };
     const before = await summary();
     await abandonOk(id, { playerId: anna });
@@ -279,11 +285,15 @@ describe('live updates', () => {
   it('broadcasts only state_updated on abandon and resume', async () => {
     const { id } = await match301();
     const messages: unknown[] = [];
-    const socket: TestSocket = await t.app.injectWS(`/matches/${id}/live`, {}, {
-      onInit(ws: TestSocket) {
-        ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+    const socket: TestSocket = await t.app.injectWS(
+      `/matches/${id}/live`,
+      {},
+      {
+        onInit(ws: TestSocket) {
+          ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+        },
       },
-    });
+    );
     try {
       await vi.waitFor(() => expect(messages).toHaveLength(1));
       await abandonOk(id, { playerId: anna });
@@ -292,7 +302,11 @@ describe('live updates', () => {
 
       const parsed = messages.map((message) => LiveMessage.parse(message));
       expect(parsed.map((message) => message.type)).toEqual(['state_updated', 'state_updated', 'state_updated']);
-      expect(parsed.map((message) => (message.type === 'state_updated' ? message.state.status : null))).toEqual(['in_progress', 'abandoned', 'in_progress']);
+      expect(parsed.map((message) => (message.type === 'state_updated' ? message.state.status : null))).toEqual([
+        'in_progress',
+        'abandoned',
+        'in_progress',
+      ]);
       expect(parsed.map((message) => message.eventSeq)).toEqual([0, 1, 2]);
     } finally {
       socket.terminate();

@@ -12,7 +12,7 @@ import { ProgressBar } from './ProgressBar';
 
 const MAX_PLAYERS = 4;
 
-// Klasy jednego układu. Poniżej lg (i zawsze w rozmiarze compact) obowiązuje układ telefonu,
+// Klasy jednego układu. Poniżej lg obowiązuje układ telefonu,
 // od lg dochodzą klasy z prefiksem lg: z układu przestronnego (1v1, trening) albo zwartego (zabawa).
 interface LayoutClasses {
   // Wysokości wierszy z odstępem pod wierszem (pb). Obrót kolejki przesuwa wiersze o sumę wysokości wierszy nad nimi.
@@ -77,13 +77,6 @@ const PHONE: LayoutClasses = {
   placedName: 'text-xl',
 };
 
-// Rozmiar compact (widok TV) zostaje bez zbitych punktów, więc ma dawną kartę rzucającego.
-const COMPACT: LayoutClasses = {
-  ...PHONE,
-  heights: '[--row-current:88px] [--row-waiting:60px] [--row-placed:60px] [--row-slot:58px]',
-  currentCard: 'grid-cols-[auto_minmax(0,1fr)_auto_auto] grid-rows-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3.5 py-2.5',
-};
-
 const LG_SHARED = {
   currentCard: 'lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:gap-x-3.5 lg:gap-y-0',
   currentRings: 'lg:-top-[70px] lg:-right-[70px] lg:size-[260px]',
@@ -140,56 +133,49 @@ interface AvatarSizes {
   placed: AvatarSize;
 }
 
+// Układ telefonu z klasami od lg dla typu gry.
 interface Layout {
   phone: LayoutClasses;
-  lg: LayoutClasses | null;
+  lg: LayoutClasses;
   avatars: AvatarSizes;
-  // Zbite punkty i ostatnia tura czekających, tylko w rozmiarze large.
-  legInfo: boolean;
 }
 
-type Size = 'large' | 'compact';
-
-function layoutFor(size: Size, type: MatchSnapshot['type']): Layout {
-  if (size === 'compact') {
-    return { phone: COMPACT, lg: null, avatars: { current: 'compactCurrent', waiting: 'compactWaiting', placed: 'compactWaiting' }, legInfo: false };
-  }
+function layoutFor(type: MatchSnapshot['type']): Layout {
   if (type === 'casual') {
-    return { phone: PHONE, lg: DENSE, avatars: { current: 'current', waiting: 'waitingDense', placed: 'placed' }, legInfo: true };
+    return { phone: PHONE, lg: DENSE, avatars: { current: 'current', waiting: 'waitingDense', placed: 'placed' } };
   }
-  return { phone: PHONE, lg: ROOMY, avatars: { current: 'current', waiting: 'waiting', placed: 'placed' }, legInfo: true };
+  return { phone: PHONE, lg: ROOMY, avatars: { current: 'current', waiting: 'waiting', placed: 'placed' } };
 }
 
 function classes(layout: Layout, key: Exclude<keyof LayoutClasses, 'waitingRings'>): string {
-  return layout.lg ? `${layout.phone[key]} ${layout.lg[key]}` : layout.phone[key];
+  return `${layout.phone[key]} ${layout.lg[key]}`;
 }
 
 const label = 'font-display text-(length:--text-label) font-semibold uppercase tracking-(--tracking-label) text-(--color-text-muted)';
 
 export interface ScoreboardProps {
   state: MatchSnapshot;
-  size: Size;
-  rotate?: boolean;
 }
 
-export function Scoreboard({ state, size, rotate = true }: ScoreboardProps) {
-  const layout = layoutFor(size, state.type);
-  const players = scoreboardOrder(state, rotate);
-  const freeSlots = state.type === 'casual' && size === 'large' ? MAX_PLAYERS - state.players.length : 0;
+export function Scoreboard({ state }: ScoreboardProps) {
+  const layout = layoutFor(state.type);
+  const players = scoreboardOrder(state);
+  const freeSlots = state.type === 'casual' ? MAX_PLAYERS - state.players.length : 0;
   const nextId = nextPlayerId(state);
-  const kinds: ScoreboardRowKind[] = [...players.map((player) => rowKind(state, player)), ...Array.from({ length: freeSlots }, () => 'slot' as const)];
+  const kinds: ScoreboardRowKind[] = [
+    ...players.map((player) => rowKind(state, player)),
+    ...Array.from({ length: freeSlots }, () => 'slot' as const),
+  ];
   const { offsets, height } = scoreboardRowOffsets(kinds);
   const gapFor = (kind: ScoreboardRowKind) => classes(layout, kind === 'current' ? 'gapCurrent' : 'gap');
   const rowClass = 'absolute inset-x-0 top-0 transition-transform duration-300 ease-out motion-reduce:transition-none';
 
   return (
     <section aria-label={pl.scoreboard} className="@container flex flex-col gap-2">
-      {size === 'large' && (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-          <span className={label}>{pl.throwQueue}</span>
-          {rotate && <span className="text-(--color-text-muted)">{pl.throwerOnTop}</span>}
-        </div>
-      )}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+        <span className={label}>{pl.throwQueue}</span>
+        <span className="text-(--color-text-muted)">{pl.throwerOnTop}</span>
+      </div>
       {state.type === 'match' && state.legsToWin !== null && (
         <p className={label}>
           {pl.legs} {pl.legsTarget(state.legsToWin)}
@@ -217,16 +203,12 @@ export function Scoreboard({ state, size, rotate = true }: ScoreboardProps) {
             className={`${rowClass} ${ROW_HEIGHT.slot} ${gapFor('slot')}`}
             style={{ transform: `translateY(${offsets[players.length + slot]})` }}
           >
-            <button
-              type="button"
-              disabled
-              className="flex h-full w-full items-center justify-center gap-2 rounded-(--radius-card) border-2 border-dashed border-(--color-border) bg-(--color-surface-softer) font-display text-(length:--text-button) font-semibold text-(--color-text-muted)"
-            >
+            <div className="flex h-full w-full items-center justify-center gap-2 rounded-(--radius-card) border-2 border-dashed border-(--color-border) bg-(--color-surface-softer) font-display text-(length:--text-button) font-semibold text-(--color-text-muted)">
               <PlusIcon />
               <span>
                 <span>{pl.addPlayerSlot}</span> <span>{state.players.length + slot + 1}</span>
               </span>
-            </button>
+            </div>
           </li>
         ))}
       </ol>
@@ -298,14 +280,25 @@ function CurrentCard({ player, state, layout }: RowProps) {
           {state.checkouts ? throwingNowShort : throwingNow(state.currentDarts.length + 1)}
         </span>
       </span>
-      {legs && <LegDots won={legs.won} target={legs.target} className="col-start-3 row-start-1 gap-1.5" dotClass={classes(layout, 'currentDots')} />}
+      {legs && (
+        <LegDots
+          won={legs.won}
+          target={legs.target}
+          className="col-start-3 row-start-1 gap-1.5"
+          dotClass={classes(layout, 'currentDots')}
+        />
+      )}
       <div className={classes(layout, 'currentValue')}>
         {state.freeRun ? (
           <SessionCounter items={freeRunItems(state.freeRun)} layout={layout} />
         ) : state.checkouts ? (
           <SessionCounter items={checkoutItems(state.checkouts)} layout={layout} />
         ) : (
-          <span className={`sc-player__value block font-display leading-[0.82] font-extrabold tabular-nums ${classes(layout, 'currentScore')}`}>{player.remaining}</span>
+          <span
+            className={`sc-player__value block font-display leading-[0.82] font-extrabold tabular-nums ${classes(layout, 'currentScore')}`}
+          >
+            {player.remaining}
+          </span>
         )}
       </div>
       {progress && (
@@ -313,7 +306,7 @@ function CurrentCard({ player, state, layout }: RowProps) {
           <ProgressBar startingScore={progress.startingScore} remaining={progress.remaining} current />
         </div>
       )}
-      {layout.legInfo && <KnockedOff state={state} player={player} className={classes(layout, 'knockedOff')} />}
+      <KnockedOff state={state} player={player} className={classes(layout, 'knockedOff')} />
     </div>
   );
 }
@@ -359,8 +352,8 @@ function LastTurn({ turn }: { turn: LegTurn }) {
 function WaitingRow({ player, state, layout, next }: RowProps & { next: boolean }) {
   const progress = progressOf(state, player);
   const legs = legDotsOf(state, player);
-  const rings = layout.lg?.waitingRings;
-  const last = layout.legInfo && state.startingScore !== null ? lastTurnOf(state.legTurns, player.id) : null;
+  const rings = layout.lg.waitingRings;
+  const last = state.startingScore !== null ? lastTurnOf(state.legTurns, player.id) : null;
   return (
     <div
       className={`sc-player--waiting relative isolate grid h-full grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(0,1fr)_auto] items-center overflow-hidden rounded-(--radius-card) text-(--color-text) ${classes(layout, 'waitingCard')}`}
@@ -373,7 +366,9 @@ function WaitingRow({ player, state, layout, next }: RowProps & { next: boolean 
           {legs && <LegDots won={legs.won} target={legs.target} className="gap-[5px]" dotClass={classes(layout, 'waitingDots')} />}
         </span>
         {(next || last) && (
-          <span className={`flex min-w-0 items-baseline gap-1.5 leading-tight whitespace-nowrap text-(--color-text-muted) ${classes(layout, 'waitingNext')}`}>
+          <span
+            className={`flex min-w-0 items-baseline gap-1.5 leading-tight whitespace-nowrap text-(--color-text-muted) ${classes(layout, 'waitingNext')}`}
+          >
             {next && <span className="truncate">{pl.nextInQueue}</span>}
             {next && last && <span aria-hidden="true">·</span>}
             {last && <LastTurn turn={last} />}
@@ -385,7 +380,9 @@ function WaitingRow({ player, state, layout, next }: RowProps & { next: boolean 
       ) : state.checkouts ? (
         <SessionCounter items={checkoutItems(state.checkouts)} layout={layout} />
       ) : (
-        <span className={`font-display font-bold tabular-nums text-(--color-text-sub) ${classes(layout, 'waitingScore')}`}>{player.remaining}</span>
+        <span className={`font-display font-bold tabular-nums text-(--color-text-sub) ${classes(layout, 'waitingScore')}`}>
+          {player.remaining}
+        </span>
       )}
       {progress && (
         <div className="col-span-full row-start-2">
@@ -399,9 +396,13 @@ function WaitingRow({ player, state, layout, next }: RowProps & { next: boolean 
 function PlacedRow({ player, layout }: { player: MatchSnapshotPlayer; layout: Layout }) {
   const place = player.place ?? 0;
   return (
-    <div className={`sc-player--waiting flex h-full items-center overflow-hidden rounded-(--radius-card) text-(--color-text) ${classes(layout, 'placedCard')}`}>
+    <div
+      className={`sc-player--waiting flex h-full items-center overflow-hidden rounded-(--radius-card) text-(--color-text) ${classes(layout, 'placedCard')}`}
+    >
       <Avatar name={player.name} avatar={player.avatar} color={player.color} size={layout.avatars.placed} />
-      <span className={`min-w-0 flex-1 truncate font-display leading-none font-semibold ${classes(layout, 'placedName')}`}>{player.name}</span>
+      <span className={`min-w-0 flex-1 truncate font-display leading-none font-semibold ${classes(layout, 'placedName')}`}>
+        {player.name}
+      </span>
       <span className="flex shrink-0 items-center gap-2 rounded-(--radius-pill) bg-(--color-surface-soft) px-3.5 py-[7px] font-display text-[17px] leading-none font-bold whitespace-nowrap">
         <PlaceIcon className={place === 1 ? 'text-(--color-gold)' : 'text-(--color-text)'} />
         {pl.place(place)}
@@ -450,9 +451,13 @@ function SessionCounter({ items, layout }: { items: CounterItems; layout: Layout
         const primary = index === items.length - 1;
         return (
           <div key={term} className={`flex flex-col ${classes(layout, primary ? 'counterPrimary' : 'counterItem')}`}>
-            <dt className={`leading-tight uppercase tracking-(--tracking-label) text-(--color-text-muted) ${classes(layout, 'counterTerm')}`}>{term}</dt>
+            <dt
+              className={`leading-tight uppercase tracking-(--tracking-label) text-(--color-text-muted) ${classes(layout, 'counterTerm')}`}
+            >
+              {term}
+            </dt>
             <dd
-              className={`leading-none font-bold tabular-nums ${primary && layout.lg ? 'sc-player__value ' : ''}${classes(layout, primary ? 'counterPrimaryValue' : 'counterValue')}`}
+              className={`leading-none font-bold tabular-nums ${primary ? 'sc-player__value ' : ''}${classes(layout, primary ? 'counterPrimaryValue' : 'counterValue')}`}
             >
               {value}
             </dd>

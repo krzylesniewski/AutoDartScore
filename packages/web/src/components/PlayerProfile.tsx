@@ -74,7 +74,9 @@ export function PlayerProfile({ player, onChanged }: PlayerProfileProps) {
           onCancel={() => setDialog(null)}
         />
       )}
-      {dialog === 'archive' && <ArchivePlayerDialog name={player.name} onConfirm={() => void setArchived(true)} onCancel={() => setDialog(null)} />}
+      {dialog === 'archive' && (
+        <ArchivePlayerDialog name={player.name} onConfirm={() => void setArchived(true)} onCancel={() => setDialog(null)} />
+      )}
     </section>
   );
 }

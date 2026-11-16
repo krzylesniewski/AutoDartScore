@@ -1,4 +1,4 @@
-import { LiveMessage } from '@autoscore/schema';
+import { LiveMessage, type MatchSnapshot, type Player } from '@autoscore/schema';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createToken } from '../auth/credentials.js';
 import { S, createGame, createPlayers, hitEvent, setup, type TestApp } from '../test-helpers.js';
@@ -8,8 +8,9 @@ import { MATCH_NOT_FOUND_CLOSE_CODE, UNAUTHORIZED_CLOSE_CODE } from './live.js';
 interface TestSocket {
   on(event: 'message', listener: (data: Buffer) => void): void;
   on(event: 'close', listener: (code: number) => void): void;
-  on(event: 'ping', listener: () => void): void;
+  on(event: 'ping', listener: (data: Buffer) => void): void;
   send(data: string): void;
+  pong(data: Buffer): void;
   terminate(): void;
 }
 
@@ -22,7 +23,7 @@ interface Client {
 
 const auth = { password: 'tajne', tokenSecret: 's'.repeat(32) };
 const now = Date.parse('2026-10-20T18:00:00.000Z');
-const token = createToken(auth.tokenSecret, now + 60_000);
+const token = createToken(auth, now + 60_000);
 const front = 'https://front.example';
 
 let t: TestApp | null = null;
@@ -46,22 +47,32 @@ async function createMatch(app: TestApp['app']): Promise<string> {
   for (const name of ['Anna', 'Bartek']) {
     const response = await app.inject({ method: 'POST', url: '/players', headers, payload: { name } });
     expect(response.statusCode).toBe(201);
-    ids.push(response.json().id);
+    ids.push(response.json<Player>().id);
   }
-  const response = await app.inject({ method: 'POST', url: '/matches', headers, payload: { type: 'match', playerIds: ids, startingScore: 301 } });
+  const response = await app.inject({
+    method: 'POST',
+    url: '/matches',
+    headers,
+    payload: { type: 'match', playerIds: ids, startingScore: 301 },
+  });
   expect(response.statusCode).toBe(201);
-  return response.json().id;
+  return response.json<MatchSnapshot>().id;
 }
 
 async function connect(app: TestApp['app'], path: string, headers: Record<string, string> = {}): Promise<Client> {
   const client = { messages: [] as unknown[], pings: 0, closeCode: null as number | null };
-  const socket: TestSocket = await app.injectWS(path, { headers }, {
-    onInit(ws: TestSocket) {
-      ws.on('message', (data) => client.messages.push(JSON.parse(data.toString())));
-      ws.on('ping', () => client.pings++);
-      ws.on('close', (code) => (client.closeCode = code));
+  const socket: TestSocket = await app.injectWS(
+    path,
+    { headers },
+    {
+      onInit(ws: TestSocket) {
+        ws.on('message', (data) => client.messages.push(JSON.parse(data.toString())));
+        ws.on('ping', (data) => ws.pong(data));
+        ws.on('ping', () => client.pings++);
+        ws.on('close', (code) => (client.closeCode = code));
+      },
     },
-  });
+  );
   sockets.push(socket);
   return Object.assign(client, { socket });
 }
@@ -87,7 +98,11 @@ describe('live WebSocket with a password', () => {
     ['invalid JSON', 'not json'],
     ['a non-auth message', JSON.stringify({ type: 'subscribe', token })],
     ['a bad token', JSON.stringify({ type: 'auth', token: `${token}x` })],
-    ['an expired token', JSON.stringify({ type: 'auth', token: createToken(auth.tokenSecret, now) })],
+    ['an expired token', JSON.stringify({ type: 'auth', token: createToken(auth, now) })],
+    [
+      'a token signed for another password',
+      JSON.stringify({ type: 'auth', token: createToken({ ...auth, password: 'stare' }, now + 60_000) }),
+    ],
   ])('closes with 4401 after %s', async (_name, message) => {
     const { app } = await start({ auth });
     const client = await connect(app, `/matches/${await createMatch(app)}/live`);

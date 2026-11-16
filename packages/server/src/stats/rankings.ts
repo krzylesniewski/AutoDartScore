@@ -1,4 +1,12 @@
-import { MIN_GAMES_FOR_WIN_RATE, MIN_LEGS_FOR_AVERAGE, type MatchType, type Player, type RankedPlayer, type RankingEntry, type StatsRankings } from '@autoscore/schema';
+import {
+  MIN_GAMES_FOR_WIN_RATE,
+  MIN_LEGS_FOR_AVERAGE,
+  type MatchType,
+  type Player,
+  type RankedPlayer,
+  type RankingEntry,
+  type StatsRankings,
+} from '@autoscore/schema';
 import type { PlayerLeg } from './completed-legs.js';
 import { EMPTY_TOTALS, mergeTotals, threeDartAverage, winRatePercent, type GameTally, type PlayerTotals } from './tally.js';
 
@@ -44,7 +52,14 @@ function positioned<T extends Candidate>(candidates: readonly T[], order: 'asc' 
 function top(candidates: readonly Candidate[], order: 'asc' | 'desc'): RankingEntry[] {
   return positioned(candidates, order)
     .filter((entry) => entry.position <= TOP)
-    .map(({ player, value, position }) => ({ playerId: player.id, name: player.name, avatar: player.avatar, color: player.color, position, value }));
+    .map(({ player, value, position }) => ({
+      playerId: player.id,
+      name: player.name,
+      avatar: player.avatar,
+      color: player.color,
+      position,
+      value,
+    }));
 }
 
 export function buildRankings({ players, games }: RankingsInput): Omit<StatsRankings, 'filter' | 'period'> {
@@ -118,8 +133,14 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
       qualified.map((entry) => ({ player: entry.player, value: entry.bestLeg })),
       'desc',
     ),
-    highestCheckout: top(fromTotals((own) => own.highestCheckout), 'desc'),
-    shortestLeg: top(fromTotals((own) => own.bestLegDarts), 'asc'),
+    highestCheckout: top(
+      fromTotals((own) => own.highestCheckout),
+      'desc',
+    ),
+    shortestLeg: top(
+      fromTotals((own) => own.bestLegDarts),
+      'asc',
+    ),
     highestTurn: top(
       players.flatMap((player) => {
         const value = highestTurns.get(player.id);
@@ -135,6 +156,9 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
       }),
       'desc',
     ),
-    t20Hits: top(fromTotals((own) => (own.t20Hits > 0 ? own.t20Hits : null)), 'desc'),
+    t20Hits: top(
+      fromTotals((own) => (own.t20Hits > 0 ? own.t20Hits : null)),
+      'desc',
+    ),
   };
 }

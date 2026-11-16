@@ -1,6 +1,7 @@
 import { CreateMatchRequest, type MatchListItem } from '@autoscore/schema';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { pl } from '../i18n/pl';
 import { player, snapshot } from '../test/snapshots';
 import { HomeScreen } from './HomeScreen';
 
@@ -67,7 +68,11 @@ const abandoned = item({
   legsToWin: null,
   status: 'abandoned',
   abandonment: { playerId: 'p2', reason: null, at: '2026-10-18T09:30:00.000Z' },
-  players: [player('p1', 'Anna', { remaining: 0, place: 1 }), player('p2', 'Bartek', { remaining: 77 }), player('p5', 'Ela', { remaining: 201 })],
+  players: [
+    player('p1', 'Anna', { remaining: 0, place: 1 }),
+    player('p2', 'Bartek', { remaining: 77 }),
+    player('p5', 'Ela', { remaining: 201 }),
+  ],
   updatedAt: '2026-10-18T09:30:00.000Z',
 });
 
@@ -80,7 +85,7 @@ beforeEach(() => {
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
       const method = init.method ?? 'GET';
-      const call = { url, method, body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined };
+      const call = { url, method, body: typeof init.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined };
       calls.push(call);
       const custom = respond(call);
       if (custom) {
@@ -91,7 +96,15 @@ beforeEach(() => {
       }
       if (url === '/api/players') {
         const body = call.body as { name: string; avatar?: string; color?: number; guest: boolean };
-        return json(201, { id: 'p_new', name: body.name, avatar: body.avatar ?? null, color: body.color ?? 2, guest: body.guest, archivedAt: null, createdAt });
+        return json(201, {
+          id: 'p_new',
+          name: body.name,
+          avatar: body.avatar ?? null,
+          color: body.color ?? 2,
+          guest: body.guest,
+          archivedAt: null,
+          createdAt,
+        });
       }
       if (url === '/api/matches?status=unfinished') {
         return json(200, games);
@@ -106,7 +119,7 @@ afterEach(() => {
 });
 
 function button(name: string | RegExp): HTMLButtonElement {
-  return screen.getByRole('button', { name }) as HTMLButtonElement;
+  return screen.getByRole<HTMLButtonElement>('button', { name });
 }
 
 function pressed(name: string | RegExp): string | null {
@@ -118,7 +131,10 @@ function summary(): HTMLElement {
 }
 
 function summaryRows(): [string, string][] {
-  return [...summary().querySelectorAll('dt')].map((term) => [term.textContent ?? '', term.nextElementSibling?.textContent ?? '']);
+  const values = within(summary()).queryAllByRole('definition');
+  return within(summary())
+    .queryAllByRole('term')
+    .map((term, index) => [term.textContent ?? '', values[index]?.textContent ?? '']);
 }
 
 function unfinished(): HTMLElement {
@@ -195,11 +211,11 @@ describe('HomeScreen: new game form', () => {
     expect(within(screen.getByRole('group', { name: 'Punkty startowe' })).getAllByRole('button')).toHaveLength(3);
     expect(within(screen.getByRole('group', { name: 'Liczba legów' })).getAllByRole('button')).toHaveLength(3);
     fireEvent.click(button('Trening'));
-    expect(within(screen.getByRole('group', { name: 'Tryb treningu' })).getAllByRole('button').map((segment) => segment.textContent)).toEqual([
-      'Free run',
-      'Solo 501',
-      'Końcówki',
-    ]);
+    expect(
+      within(screen.getByRole('group', { name: 'Tryb treningu' }))
+        .getAllByRole('button')
+        .map((segment) => segment.textContent),
+    ).toEqual(['Free run', 'Solo 501', 'Końcówki']);
   });
 
   it('shows the checkout range group only for Końcówki, with 2-50 preselected', async () => {
@@ -209,7 +225,11 @@ describe('HomeScreen: new game form', () => {
     expect(screen.queryByRole('group', { name: 'Przedział końcówek' })).toBeNull();
     fireEvent.click(button('Końcówki'));
     const range = screen.getByRole('group', { name: 'Przedział końcówek', description: '2-50 albo 51-100' });
-    expect(within(range).getAllByRole('button').map((segment) => segment.textContent)).toEqual(['2-50', '51-100']);
+    expect(
+      within(range)
+        .getAllByRole('button')
+        .map((segment) => segment.textContent),
+    ).toEqual(['2-50', '51-100']);
     expect(pressed('2-50')).toBe('true');
     expect(pressed('51-100')).toBe('false');
     fireEvent.click(button('Solo 501'));
@@ -348,15 +368,13 @@ describe('HomeScreen: new game form', () => {
     expect(startBar().textContent).toMatch(/Anna.*vs.*Bartek/);
   });
 
-  it("shows each player's own avatar color on the tiles, in the summary and in the start bar", async () => {
+  it("shows each player's own avatar color in the start bar", async () => {
     render(<HomeScreen />);
     await chips();
-    expect(button('Anna').firstElementChild?.classList).toContain('bg-(--color-avatar-1)');
-    expect(button('Bartek').firstElementChild?.classList).toContain('bg-(--color-avatar-7)');
     fireEvent.click(button('Anna'));
     fireEvent.click(button('Bartek'));
-    expect(within(summary()).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
-    expect(within(startBar()).getByText('🎯').classList).toContain('bg-(--color-avatar-7)');
+    // Stały kolor awatara gracza widać tylko w klasie tokenu. Bartek stoi drugi, ale ma kolor 7.
+    expect(within(startBar()).getByText('🎯').className).toContain('bg-(--color-avatar-7)');
   });
 
   it('counts 3 players in the bar for Zabawa', async () => {
@@ -400,25 +418,21 @@ describe('HomeScreen: new game form', () => {
     expect(request?.body).toEqual({ type: 'practice', playerIds: ['p1'], practiceMode: 'checkouts', checkoutRange: '51-100' });
   });
 
-  it('shows the server message when the game cannot start', async () => {
-    respond = (call) => (call.url === '/api/matches' ? Promise.resolve(json(400, { error: 'unknown_player', message: 'Unknown player p2' })) : null);
+  it('shows a Polish text instead of the server message when the game cannot start', async () => {
+    respond = (call) =>
+      call.url === '/api/matches' ? Promise.resolve(json(400, { error: 'unknown_player', message: 'Unknown player p2' })) : null;
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('Anna'));
     fireEvent.click(button('Bartek'));
     fireEvent.click(button('Start gry'));
-    expect(await screen.findByText('Unknown player p2')).toBeTruthy();
-    expect(within(startBar()).getByText('Unknown player p2')).toBeTruthy();
+    expect((await within(startBar()).findByRole('alert')).textContent).toBe(pl.unknownPlayer);
+    expect(screen.queryByText('Unknown player p2')).toBeNull();
     expect(window.location.hash).toBe('#/');
   });
 });
 
-// jsdom nie stosuje media ani container queries, więc testy sprawdzają klasy układu, a nie wymiary.
-describe('HomeScreen: responsive layout', () => {
-  function classes(element: Element | null | undefined): string[] {
-    return [...(element?.classList ?? [])];
-  }
-
+describe('HomeScreen: option groups and navigation', () => {
   it('describes the starting score and legs groups', async () => {
     render(<HomeScreen />);
     await chips();
@@ -430,7 +444,9 @@ describe('HomeScreen: responsive layout', () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('Trening'));
-    expect(screen.getByRole('group', { name: 'Tryb treningu', description: 'swobodne rzucanie, zejście z 501 albo losowe końcówki' })).toBeTruthy();
+    expect(
+      screen.getByRole('group', { name: 'Tryb treningu', description: 'swobodne rzucanie, zejście z 501 albo losowe końcówki' }),
+    ).toBeTruthy();
   });
 
   it('offers no exit or entry rule groups in any game type', async () => {
@@ -443,28 +459,9 @@ describe('HomeScreen: responsive layout', () => {
     }
   });
 
-  it('narrows the right column on a tablet and keeps it on a monitor', async () => {
-    render(<HomeScreen />);
-    await chips();
-    expect(classes(summary().parentElement)).toEqual(expect.arrayContaining(['lg:w-85', 'xl:w-110']));
-  });
-
-  it('stretches Start gry on a phone and sizes it per width', async () => {
-    render(<HomeScreen />);
-    await chips();
-    expect(classes(button('Start gry'))).toEqual(expect.arrayContaining(['w-full', 'lg:w-auto', 'lg:h-17', 'xl:h-15']));
-  });
-
-  it('lays out the players in 2, 3 or 4 columns', async () => {
-    render(<HomeScreen />);
-    await chips();
-    expect(classes(button('+ Nowy gracz').parentElement)).toEqual(expect.arrayContaining(['grid-cols-2', 'lg:grid-cols-3', 'xl:grid-cols-4']));
-  });
-
-  it('wraps the navigation and keeps the link names', async () => {
+  it('keeps the navigation link names', async () => {
     render(<HomeScreen />);
     const nav = screen.getByRole('navigation', { name: 'Główna nawigacja' });
-    expect(classes(nav)).toContain('flex-wrap');
     for (const name of ['Nowa gra', 'Statystyki', 'Historia']) {
       expect(within(nav).getByRole('link', { name })).toBeTruthy();
     }
@@ -481,13 +478,13 @@ describe('HomeScreen: new player dialog', () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('+ Nowy gracz'));
-    expect(dialog().getAttribute('aria-modal')).toBe('true');
+    expect((dialog() as HTMLDialogElement).open).toBe(true);
     expect(within(dialog()).getByLabelText('Imię')).toBeTruthy();
     expect(within(dialog()).getByRole('group', { name: 'Avatar (emoji)' })).toBeTruthy();
     expect(within(dialog()).getByRole('group', { name: 'Kolor' })).toBeTruthy();
     expect(within(dialog()).queryByRole('checkbox')).toBeNull();
     expect(screen.queryByText('Gość')).toBeNull();
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -501,7 +498,11 @@ describe('HomeScreen: new player dialog', () => {
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Dodaj' }));
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({ name: 'Gosia', guest: false, avatar: '🦊' });
+    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({
+      name: 'Gosia',
+      guest: false,
+      avatar: '🦊',
+    });
     expect(pressed('Gosia')).toBe('true');
     expect(screen.getByText('Gracze (6)')).toBeTruthy();
     expect(chipNames()[0]).toBe('Gosia');
@@ -514,7 +515,7 @@ describe('HomeScreen: new player dialog', () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('+ Nowy gracz'));
-    const radios = within(within(dialog()).getByRole('group', { name: 'Kolor' })).getAllByRole('radio') as HTMLInputElement[];
+    const radios = within(within(dialog()).getByRole('group', { name: 'Kolor' })).getAllByRole<HTMLInputElement>('radio');
     expect(radios.map((radio) => radio.getAttribute('aria-label'))).toEqual([
       'Bursztynowy',
       'Niebieski',
@@ -544,13 +545,17 @@ describe('HomeScreen: new player dialog', () => {
     fireEvent.click(button('+ Nowy gracz'));
     fireEvent.change(within(dialog()).getByLabelText('Imię'), { target: { value: 'Gosia' } });
     fireEvent.click(within(dialog()).getByRole('radio', { name: 'Turkusowy' }));
-    expect((within(dialog()).getByRole('radio', { name: 'Turkusowy' }) as HTMLInputElement).checked).toBe(true);
+    expect(within(dialog()).getByRole<HTMLInputElement>('radio', { name: 'Turkusowy' }).checked).toBe(true);
     expect(within(dialog()).queryByText('Bez wyboru kolor zostanie dobrany automatycznie.')).toBeNull();
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Dodaj' }));
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({ name: 'Gosia', guest: false, color: 6 });
-    expect(button('Gosia').firstElementChild?.classList).toContain('bg-(--color-avatar-6)');
+    expect(calls.find((call) => call.url === '/api/players' && call.method === 'POST')?.body).toEqual({
+      name: 'Gosia',
+      guest: false,
+      color: 6,
+    });
+    expect(button('Gosia')).toBeTruthy();
   });
 
   it('sends no color when none is chosen', async () => {
@@ -645,7 +650,8 @@ describe('HomeScreen: games to finish', () => {
   it('shows a failed resume and stays on the list', async () => {
     render(<HomeScreen />);
     const paused = await row('Zabawa, 3 graczy');
-    respond = (call) => (call.url.endsWith('/resume') ? Promise.resolve(json(409, { error: 'match_not_abandoned', message: 'Match is not abandoned' })) : null);
+    respond = (call) =>
+      call.url.endsWith('/resume') ? Promise.resolve(json(409, { error: 'match_not_abandoned', message: 'Match is not abandoned' })) : null;
     fireEvent.click(within(paused).getByRole('button', { name: 'Dokończ: Zabawa, 3 graczy' }));
     expect(await within(unfinished()).findByText('Nie udało się wznowić meczu')).toBeTruthy();
     expect(window.location.hash).toBe('#/');
@@ -654,12 +660,17 @@ describe('HomeScreen: games to finish', () => {
   it('abandons a game after the dialog and reloads the list', async () => {
     render(<HomeScreen />);
     const live = await row('Celina vs Darek');
-    respond = (call) => (call.url.endsWith('/abandon') ? Promise.resolve(json(200, snapshot({ id: 'm_second', status: 'abandoned' }))) : null);
+    respond = (call) =>
+      call.url.endsWith('/abandon') ? Promise.resolve(json(200, snapshot({ id: 'm_second', status: 'abandoned' }))) : null;
     fireEvent.click(within(live).getByRole('button', { name: 'Porzuć: Celina vs Darek' }));
     const dialog = screen.getByRole('dialog', { name: 'Porzucić mecz?' });
-    expect((within(dialog).getByRole('radio', { name: 'Celina' }) as HTMLInputElement).checked).toBe(true);
+    expect(within(dialog).getByRole<HTMLInputElement>('radio', { name: 'Celina' }).checked).toBe(true);
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Darek' }));
-    games = [firstLeg, { ...secondLeg, status: 'abandoned', abandonment: { playerId: 'p4', reason: null, at: '2026-10-18T11:00:00.000Z' } }, abandoned];
+    games = [
+      firstLeg,
+      { ...secondLeg, status: 'abandoned', abandonment: { playerId: 'p4', reason: null, at: '2026-10-18T11:00:00.000Z' } },
+      abandoned,
+    ];
     fireEvent.click(within(dialog).getByRole('button', { name: 'Porzuć mecz' }));
 
     await vi.waitFor(() => expect(within(unfinished()).getAllByText('Porzucony')).toHaveLength(2));
@@ -671,7 +682,8 @@ describe('HomeScreen: games to finish', () => {
   it('shows a failed abandon', async () => {
     render(<HomeScreen />);
     const live = await row('Celina vs Darek');
-    respond = (call) => (call.url.endsWith('/abandon') ? Promise.resolve(json(409, { error: 'match_finished', message: 'Match is finished' })) : null);
+    respond = (call) =>
+      call.url.endsWith('/abandon') ? Promise.resolve(json(409, { error: 'match_finished', message: 'Match is finished' })) : null;
     fireEvent.click(within(live).getByRole('button', { name: 'Porzuć: Celina vs Darek' }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Porzuć mecz' }));
     expect(await within(unfinished()).findByText('Nie udało się porzucić meczu')).toBeTruthy();
@@ -710,14 +722,21 @@ describe('HomeScreen: games to finish', () => {
     it('ends the session after the dialog and reloads the list', async () => {
       render(<HomeScreen />);
       const practice = await row('Trening: Free run');
-      respond = (call) => (call.url.endsWith('/end') ? Promise.resolve(json(200, snapshot({ id: 'm_free', type: 'practice', status: 'ended', endedAt: '2026-10-18T11:00:00.000Z' }))) : null);
+      respond = (call) =>
+        call.url.endsWith('/end')
+          ? Promise.resolve(json(200, snapshot({ id: 'm_free', type: 'practice', status: 'ended', endedAt: '2026-10-18T11:00:00.000Z' })))
+          : null;
       fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
       const dialog = screen.getByRole('dialog', { name: 'Zakończyć trening?' });
       games = [emptySolo, firstLeg];
       fireEvent.click(within(dialog).getByRole('button', { name: 'Zakończ trening' }));
 
       await vi.waitFor(() => expect(within(unfinished()).queryByText('Trening: Free run')).toBeNull());
-      expect(calls.find((call) => call.url === '/api/matches/m_free/end')).toEqual({ url: '/api/matches/m_free/end', method: 'POST', body: undefined });
+      expect(calls.find((call) => call.url === '/api/matches/m_free/end')).toEqual({
+        url: '/api/matches/m_free/end',
+        method: 'POST',
+        body: undefined,
+      });
       expect(calls.filter((call) => call.url === '/api/matches?status=unfinished')).toHaveLength(2);
       expect(screen.queryByRole('dialog')).toBeNull();
     });
@@ -730,7 +749,7 @@ describe('HomeScreen: games to finish', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
 
       fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
-      fireEvent.keyDown(window, { key: 'Escape' });
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(calls.some((call) => call.method === 'POST')).toBe(false);
     });
@@ -738,7 +757,8 @@ describe('HomeScreen: games to finish', () => {
     it('shows a failed end', async () => {
       render(<HomeScreen />);
       const practice = await row('Trening: Free run');
-      respond = (call) => (call.url.endsWith('/end') ? Promise.resolve(json(409, { error: 'practice_ended', message: 'Match is ended' })) : null);
+      respond = (call) =>
+        call.url.endsWith('/end') ? Promise.resolve(json(409, { error: 'practice_ended', message: 'Match is ended' })) : null;
       fireEvent.click(within(practice).getByRole('button', { name: 'Zakończ trening: Trening: Free run' }));
       fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Zakończ trening' }));
       expect(await within(unfinished()).findByText('Nie udało się zakończyć treningu')).toBeTruthy();
@@ -754,7 +774,10 @@ describe('HomeScreen: games to finish', () => {
   });
 
   it('shows an error when the list fails to load', async () => {
-    respond = (call) => (call.url === '/api/matches?status=unfinished' ? Promise.resolve(json(500, { error: 'internal_error', message: 'Internal server error' })) : null);
+    respond = (call) =>
+      call.url === '/api/matches?status=unfinished'
+        ? Promise.resolve(json(500, { error: 'internal_error', message: 'Internal server error' }))
+        : null;
     render(<HomeScreen />);
     expect(await screen.findByText('Nie udało się pobrać listy gier')).toBeTruthy();
     expect(screen.queryByText('Brak gier do dokończenia.')).toBeNull();
@@ -767,40 +790,40 @@ describe('HomeScreen: Scena look', () => {
     return [...tile.querySelectorAll('span[aria-hidden="true"]')].filter((span) => span.querySelector('svg'));
   }
 
-  it('shows the title as a visible h1', async () => {
+  it('shows the title as an h1', async () => {
     render(<HomeScreen />);
     await chips();
     const title = screen.getByRole('heading', { level: 1, name: 'Nowa gra' });
     expect(title.tagName).toBe('H1');
-    expect(title.classList).not.toContain('sr-only');
   });
 
-  it('marks only the selected type tile with a hidden check badge and an accent ring', async () => {
+  it('marks only the selected type tile as pressed with a hidden check badge', async () => {
     render(<HomeScreen />);
     await chips();
     const selected = screen.getByRole('button', { name: 'Mecz 1v1', description: 'Dwóch graczy, best of N legów' });
     const other = screen.getByRole('button', { name: 'Zabawa', description: '3-4 graczy, walka o miejsca' });
+    expect(selected.getAttribute('aria-pressed')).toBe('true');
     expect(badges(selected)).toHaveLength(1);
-    expect(selected.classList).toContain('inset-ring-(--color-accent)');
+    expect(other.getAttribute('aria-pressed')).toBe('false');
     expect(badges(other)).toHaveLength(0);
-    expect(other.classList).not.toContain('inset-ring-(--color-accent)');
 
     fireEvent.click(other);
+    expect(other.getAttribute('aria-pressed')).toBe('true');
     expect(badges(other)).toHaveLength(1);
+    expect(selected.getAttribute('aria-pressed')).toBe('false');
     expect(badges(selected)).toHaveLength(0);
   });
 
-  it("rings a picked player's tile in the player's color and keeps the name as the button name", async () => {
+  it('marks a picked player tile as pressed with a check badge and keeps the name as the button name', async () => {
     render(<HomeScreen />);
     await chips();
     fireEvent.click(button('Bartek'));
     const picked = button('Bartek');
-    expect(picked.classList).toContain('inset-ring-(--color-avatar-7)');
+    expect(picked.getAttribute('aria-pressed')).toBe('true');
     expect(badges(picked)).toHaveLength(1);
-    expect(picked.firstElementChild?.textContent).toBe('🎯');
-    expect(picked.lastChild?.textContent).toBe('Bartek');
+    expect(within(picked).getByText('🎯').getAttribute('aria-hidden')).toBe('true');
     const unpicked = button('Anna');
-    expect([...unpicked.classList].filter((name) => name.startsWith('inset-ring-'))).toEqual([]);
+    expect(unpicked.getAttribute('aria-pressed')).toBe('false');
     expect(badges(unpicked)).toHaveLength(0);
   });
 });

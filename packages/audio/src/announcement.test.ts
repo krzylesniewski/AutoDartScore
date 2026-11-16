@@ -1,4 +1,14 @@
-import type { AchievementKind, Bust, CasualFinished, DomainEvent, Hit, LegWon, MatchWon, PlayerFinished, TurnCompleted } from '@autoscore/schema';
+import type {
+  AchievementKind,
+  Bust,
+  CasualFinished,
+  DomainEvent,
+  Hit,
+  LegWon,
+  MatchWon,
+  PlayerFinished,
+  TurnCompleted,
+} from '@autoscore/schema';
 import { describe, expect, it, vi } from 'vitest';
 import { ACHIEVEMENT_CLIPS, announcementFor, EVENT_CLIPS, spokenNumber, type AnnouncementOptions } from './index.js';
 
@@ -18,7 +28,14 @@ const turn = (total: number, darts: Hit[] = [T20, T20, T20]): TurnCompleted => (
 const legWon: LegWon = { type: 'leg_won', playerId: 'anna', legIndex: 0, checkout: 40, dartsThrown: 15 };
 const matchWon: MatchWon = { type: 'match_won', playerId: 'anna', legsWon: { anna: 2, bartek: 1 } };
 const bust: Bust = { type: 'bust', playerId: 'anna', legIndex: 0, turnIndex: 4, darts: [T20], remaining: 40 };
-const finished = (place: number): PlayerFinished => ({ type: 'player_finished', playerId: 'anna', legIndex: 0, place, checkout: 40, dartsThrown: 15 });
+const finished = (place: number): PlayerFinished => ({
+  type: 'player_finished',
+  playerId: 'anna',
+  legIndex: 0,
+  place,
+  checkout: 40,
+  dartsThrown: 15,
+});
 const casualFinished: CasualFinished = {
   type: 'casual_finished',
   placements: [
@@ -43,7 +60,10 @@ describe('announcementFor', () => {
   });
 
   it('plays a winner clip for the first casual place', () => {
-    expect(announcementFor([turn(40, [D20]), finished(1)], [], first)).toEqual({ kind: 'winner', parts: [{ text: 'Zwycięzca', clip: 'events/winner_1.mp3' }] });
+    expect(announcementFor([turn(40, [D20]), finished(1)], [], first)).toEqual({
+      kind: 'winner',
+      parts: [{ text: 'Zwycięzca', clip: 'events/winner_1.mp3' }],
+    });
   });
 
   it.each([
@@ -88,11 +108,17 @@ describe('announcementFor', () => {
   });
 
   it.each([true, false])('adds no zero comment to a bust with zeroComments %s', (zeroComments) => {
-    expect(announcementFor([bust], [], first, { zeroComments })).toEqual({ kind: 'bust', parts: [{ text: 'Bust', clip: 'events/bust_1.mp3' }] });
+    expect(announcementFor([bust], [], first, { zeroComments })).toEqual({
+      kind: 'bust',
+      parts: [{ text: 'Bust', clip: 'events/bust_1.mp3' }],
+    });
   });
 
   it('plays the 180 clip', () => {
-    expect(announcementFor([turn(180)], [], first)).toEqual({ kind: 'score', parts: [{ text: 'sto osiemdziesiąt', clip: 'scores/180.mp3' }] });
+    expect(announcementFor([turn(180)], [], first)).toEqual({
+      kind: 'score',
+      parts: [{ text: 'sto osiemdziesiąt', clip: 'scores/180.mp3' }],
+    });
   });
 
   it.each([163, 166, 169, 172, 173, 175, 176, 178, 179])('has no clip for the unreachable total %i and reads it', (total) => {

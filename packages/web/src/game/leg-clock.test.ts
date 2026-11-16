@@ -17,7 +17,12 @@ describe('legElapsedMs', () => {
   });
 
   it('stops at the abandonment', () => {
-    const state = snapshot({ status: 'abandoned', abandonment: { playerId: 'p1', reason: null, at: iso(60) }, legStartedAt: START, legPausedMs: 10_000 });
+    const state = snapshot({
+      status: 'abandoned',
+      abandonment: { playerId: 'p1', reason: null, at: iso(60) },
+      legStartedAt: START,
+      legPausedMs: 10_000,
+    });
     expect(legElapsedMs(state, at(500))).toBe(50_000);
   });
 

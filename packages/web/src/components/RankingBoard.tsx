@@ -89,7 +89,11 @@ export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
                 <ol className="relative flex flex-col gap-0.5">
                   {tile.entries.map((entry) => (
                     <li key={entry.playerId}>
-                      <TileRow entry={entry} value={tile.format(entry.value)} bar={recordBarPercent(entry.value, best, tile.lowerIsBetter ?? false)} />
+                      <TileRow
+                        entry={entry}
+                        value={tile.format(entry.value)}
+                        bar={recordBarPercent(entry.value, best, tile.lowerIsBetter ?? false)}
+                      />
                     </li>
                   ))}
                 </ol>
@@ -106,14 +110,21 @@ export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
 // Legi przechodzą pod imię w wąskiej karcie.
 function RestRow({ player }: { player: RankedPlayer }) {
   return (
-    <a href={statsHref(player.playerId)} className="flex min-h-14 items-center gap-3.5 border-t border-(--color-border) px-1 text-(--color-text) @max-xs:gap-2.5">
-      <span className="w-8 shrink-0 font-display text-2xl font-extrabold text-(--color-text-muted) tabular-nums">{player.position === null ? '' : `${player.position}.`}</span>
+    <a
+      href={statsHref(player.playerId)}
+      className="flex min-h-14 items-center gap-3.5 border-t border-(--color-border) px-1 text-(--color-text) @max-xs:gap-2.5"
+    >
+      <span className="w-8 shrink-0 font-display text-2xl font-extrabold text-(--color-text-muted) tabular-nums">
+        {player.position === null ? '' : `${player.position}.`}
+      </span>
       <Avatar name={player.name} avatar={player.avatar} color={player.color} size="medium" />
       <span className="flex min-w-0 flex-1 items-center gap-3.5 @max-sm:flex-col @max-sm:items-stretch @max-sm:gap-0 @max-sm:leading-tight">
         <span className="min-w-0 flex-1 truncate font-display text-[22px] font-bold">{player.name}</span>
         <span className="shrink-0 text-sm text-(--color-text-muted)">{pl.legsCount(player.legs)}</span>
       </span>
-      <span className="shrink-0 font-display text-[30px] leading-none font-extrabold tabular-nums @max-xs:text-[26px]">{formatAverage(player.average)}</span>
+      <span className="shrink-0 font-display text-[30px] leading-none font-extrabold tabular-nums @max-xs:text-[26px]">
+        {formatAverage(player.average)}
+      </span>
     </a>
   );
 }
@@ -136,7 +147,9 @@ function TileRow({ entry, value, bar }: TileRowProps) {
         style={{ width: `${bar}%` }}
       />
       <span className="relative flex min-w-0 flex-1 items-center gap-3 @max-xs:gap-2.5">
-        <span className={`w-7 shrink-0 font-display text-[21px] font-extrabold tabular-nums ${leader ? 'text-(--color-gold)' : 'text-(--color-text-muted)'}`}>{`${entry.position}.`}</span>
+        <span
+          className={`w-7 shrink-0 font-display text-[21px] font-extrabold tabular-nums ${leader ? 'text-(--color-gold)' : 'text-(--color-text-muted)'}`}
+        >{`${entry.position}.`}</span>
         <Avatar name={entry.name} avatar={entry.avatar} color={entry.color} />
         <span className="min-w-0 flex-1 truncate font-display text-[21px] font-bold">{entry.name}</span>
         <span

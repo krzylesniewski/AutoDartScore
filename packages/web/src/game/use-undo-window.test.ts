@@ -4,7 +4,13 @@ import { snapshot } from '../test/snapshots';
 import { useUndoWindow } from './use-undo-window';
 
 const UNTIL = '2026-10-21T20:05:00.000Z';
-const finished = snapshot({ finished: true, currentPlayerId: null, winnerId: 'p1', finishedAt: '2026-10-21T20:00:00.000Z', editableUntil: UNTIL });
+const finished = snapshot({
+  finished: true,
+  currentPlayerId: null,
+  winnerId: 'p1',
+  finishedAt: '2026-10-21T20:00:00.000Z',
+  editableUntil: UNTIL,
+});
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -33,6 +39,24 @@ describe('useUndoWindow', () => {
     const { result } = renderHook(() => useUndoWindow(snapshot()));
     expect(result.current).toEqual({ locked: false, secondsLeft: null });
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('counts from the current time when the game finishes long after mount', () => {
+    const { result, rerender } = renderHook(({ state }) => useUndoWindow(state), { initialProps: { state: snapshot() } });
+    act(() => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+    const now = Date.now();
+    rerender({
+      state: snapshot({
+        finished: true,
+        currentPlayerId: null,
+        winnerId: 'p1',
+        finishedAt: new Date(now).toISOString(),
+        editableUntil: new Date(now + 5 * 60_000).toISOString(),
+      }),
+    });
+    expect(result.current).toEqual({ locked: false, secondsLeft: 300 });
   });
 
   it('clears the interval on unmount', () => {
