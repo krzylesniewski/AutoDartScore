@@ -1,26 +1,42 @@
 # AUTO Score
 
-AUTO Score automatycznie liczy wynik w darcie. Dziś trafienia wpisuje się ręcznie na klawiaturze w aplikacji (symulator trafień). Później źródłem trafień będzie kamera USB. Wyjście to wynik na żywo, głosowy odczyt wyniku i efekty dźwiękowe. Projekt działa lokalnie: serwer, baza i front stoją na jednym komputerze w sieci domowej, bez internetu.
+AUTO Score automatycznie liczy wynik w darcie. Dziś trafienia wpisuje się ręcznie na klawiaturze w aplikacji (symulator trafień). Później źródłem trafień będzie kamera USB. Wyjście to wynik na żywo, głosowy odczyt wyniku i efekty dźwiękowe. Projekt działa lokalnie: serwer, baza i front stoją na jednym komputerze w sieci domowej, bez internetu. Da się go też wdrożyć na serwer za wspólnym hasłem, zobacz [deploy/README.md](deploy/README.md).
 
 ## Stan projektu
 
-Działa na `main`:
+Działa dziś:
 
-- typy gier: mecz 1v1 (X01), zabawa dla 2-4 graczy z rankingiem miejsc, trening (Free run, Solo 501 i „Końcówki”: losowe końcówki z przedziału 2-50 albo 51-100, z podpowiedzią trasy i przyciskami „Udało się”, „Nie udało się” i „Nowa końcówka”. Po pudle końcówka zostaje do ponownej próby),
-- kreator nowej gry: typ gry, lista graczy, dodawanie gracza (imię, avatar emoji, kolor, gość), punkty startowe, liczba legów w meczu 1v1, tryb treningu i przedział końcówek,
-- ekran gry: pasek wyników, trzy sloty rzutek, suma tury, podpowiedź zamknięcia, klawiatura (1-20, 25, Miss, S/D/T) i przycisk „Cofnij”,
-- stan na żywo przez WebSocket, z ponownym połączeniem po zerwaniu,
-- głosowy odczyt wyniku tury, komunikaty „Bust” i „Zwycięzca” oraz efekty dźwiękowe, każde z przełącznikiem na ekranie gry.
+- Typy gier: mecz 1v1 (X01, best of 1, 3 lub 5), zabawa dla 2-4 graczy z rankingiem miejsc i trening. Trening ma trzy tryby:
+  - Free run: swobodne rzucanie z licznikiem sesji, bez statystyk,
+  - Solo 501: zejście z 501 do zera na zasadach X01,
+  - „Końcówki”: losowe końcówki z przedziału 2-50 albo 51-100, z podpowiedzią trasy i przyciskami „Udało się”, „Nie udało się” i „Nowa końcówka”. Po pudle końcówka zostaje do ponownej próby.
+- Formularz nowej gry na ekranie startowym: typ gry, gracze, dodawanie gracza (imię, avatar emoji, kolor, gość), punkty startowe, liczba legów, tryb treningu i przedział końcówek. Obok lista gier do dokończenia.
+- Ekran gry: pasek wyników z kolejką rzutów, trzy sloty rzutek, suma tury, karta zamknięcia, klawiatura (1-20, 25, Bull, Miss, „Reszta Miss”, S/D/T) ze skrótami klawiszowymi, „Cofnij”, panel lega z historią tur i przełączniki głosu i efektów.
+- Stan na żywo przez WebSocket, z ponownym połączeniem po zerwaniu.
+- Głosowy odczyt wyniku tury, komunikaty „Bust” i „Zwycięzca”, komunikaty osiągnięć i efekty dźwiękowe.
+- Statystyki: ranking graczy z kafelkami rekordów, karta gracza z profilem, wykres formy, bilans 1v1 (head-to-head) i widok „Overall” ze wszystkimi grami liczonymi do statystyk razem. Ranking i karta gracza mają filtr typu gier, a wszystkie te widoki filtr okresu.
+- Historia wszystkich gier z filtrem typu.
+- Porzucanie i wznawianie gry.
+- Ustawienia urządzenia: układ klawiatury (koło albo siatka), głos, efekty i komentarze do tury za 0.
+- Podsumowanie po końcu gry. Mecz 1v1 ma karty legów z czasem, wykres zejścia z wyniku w ostatnim legu oraz przyciski „Rewanż” i „Nowy mecz”. Zabawa ma tabelę miejsc i ten sam wykres.
+- Opcjonalne logowanie wspólnym hasłem, gdy serwer ma ustawione `AUTOSCORE_PASSWORD`.
 
 Jeszcze nie ma:
 
-- Statystyk i ekranu podsumowania lega lub meczu.
-- Historii meczów oraz przerywania i wznawiania gry.
-- Działających przycisków „Nowa runda” i „Do weryfikacji”. Nie ma ich na ekranie gry, dopóki nie dostaną działania.
-- Obsługi `confidence`. Serwer zapisuje to pole, ale go nie używa (nie ma jeszcze statusu `pending`).
-- Kamery. Detekcja przyjdzie w etapie 2.
+- Kamery i pakietu `vision`.
+- Statusu `pending` i weryfikacji rzutek. Serwer zapisuje `confidence`, ale go nie używa.
+- Przycisków „Nowa runda” i „Do weryfikacji”. Nie ma ich na ekranie gry, dopóki nie dostaną działania.
+- Widoku TV.
 
-Etap 1 (Mac bez kamery) nie jest jeszcze skończony.
+Plan ma 7 etapów:
+
+1. Mac bez kamery: silnik, API, front z symulatorem, statystyki, audio.
+2. Mac i jedna kamera USB.
+3. Redesign wyglądu „Scena”.
+4. Wzmocnienie po audycie kodu.
+5. Dwie kamery USB.
+6. Mini PC.
+7. Wersja online.
 
 ## Wymagania
 
@@ -202,9 +218,10 @@ packages/
   engine/   silnik gry: czysta logika X01, zabawy i treningu
   schema/   kontrakt: schematy Zod i typy wspólne dla wszystkich pakietów
   server/   API REST i WebSocket, log zdarzeń w SQLite
-  web/      front React (ekran gry, kreator, klawiatura)
+  web/      front React (ekran startowy, ekran gry z klawiaturą, statystyki, historia, ustawienia)
   audio/    głos i efekty dźwiękowe z wiadomości na żywo
 e2e/        testy end-to-end (Playwright) na konfiguracji produkcyjnej
+deploy/     skrypty wdrożenia i kopie zapasowe (opis w deploy/README.md)
 design/     tokeny motywu i makiety
 spikes/     eksperymenty z kamerą, poza buildem i lintem
 rollout/    manifest planu PR-ów
@@ -224,9 +241,18 @@ pnpm e2e         # testy end-to-end w Chromium (opis w e2e/README.md)
 pnpm --filter @autoscore/engine test   # testy jednego pakietu
 ```
 
-CI uruchamia te same trzy checki: `test`, `typecheck` i `lint`.
-CI uruchamia też job `e2e`, czyli `pnpm e2e` na zbudowanym froncie i serwerze z hasłem.
-CI uruchamia też job `audit` (`pnpm audit --prod --audit-level high`, nie przechodzi przy podatnościach wysokich i krytycznych w zależnościach produkcyjnych), a Dependabot co tydzień proponuje aktualizacje npm i GitHub Actions.
+CI (`.github/workflows/ci.yml`) ma 8 jobów:
+
+- `test`: `pnpm test`,
+- `typecheck`: `pnpm typecheck`,
+- `lint`: `pnpm lint`,
+- `build`: build frontu z `VITE_BASE=/`, jak przy wdrożeniu,
+- `smoke`: start serwera bez hasła na pustej bazie i `GET /players` z odpowiedzią 200,
+- `e2e`: `pnpm e2e` na zbudowanym froncie i serwerze z hasłem,
+- `deploy-scripts`: shellcheck i testy skryptów z `deploy/`,
+- `audit`: `pnpm audit --prod --audit-level high`, nie przechodzi przy podatnościach wysokich i krytycznych w zależnościach produkcyjnych.
+
+Dependabot co tydzień proponuje aktualizacje npm i GitHub Actions.
 
 ## Zasady gry (X01) w skrócie
 
@@ -243,24 +269,10 @@ Pełne zasady są w [CLAUDE.md](CLAUDE.md).
 
 ## Motyw i makiety
 
-[design/theme.css](design/theme.css) to jedyne źródło kolorów, fontów, rozmiarów i promieni (motyw A, ciemny klasyczny). Front importuje go w `packages/web/src/theme.css`. Kolor nie może sam nieść znaczenia: bust, wygrana i weryfikacja mają mieć też ikonę i tekst.
+Motyw „Scena” to światło nad tarczą w ciemnej sali: ciepła czerń, kremowy tekst, czerwień tarczy jako jedyny akcent oraz fonty Barlow Condensed i Barlow. [design/theme.css](design/theme.css) to jedyne źródło kolorów, fontów, rozmiarów, promieni i cieni. Front importuje go w `packages/web/src/theme.css`. Kolor nie może sam nieść znaczenia: bust, wygrana i weryfikacja mają mieć też ikonę i tekst.
 
-Makiety są w [design/mockups](design/mockups). Liczby i gracze na nich są przykładowe. Makiety ekranu gry nie mają klawiatury ręcznego wpisu, dodanej w tym samym stylu.
-
-**Ekran gry:** [2 graczy](design/mockups/theme-a-2-players.png), [4 graczy](design/mockups/theme-a-4-players.png).
-
-![Ekran gry, 2 graczy](design/mockups/theme-a-2-players.png)
-
-**Ekran startowy (Home, „Nowa gra”):** [makieta](design/mockups/theme-a-new-game.png) ([HTML](design/mockups/theme-a-new-game.html)), [wariant z 10 graczami](design/mockups/theme-a-new-game-10-players.png) ([HTML](design/mockups/theme-a-new-game-10-players.html)).
-
-![Ekran startowy](design/mockups/theme-a-new-game.png)
-
-**Statystyki:** [makieta](design/mockups/theme-a-stats.png) ([HTML](design/mockups/theme-a-stats.html)).
-
-![Ekran statystyk](design/mockups/theme-a-stats.png)
-
-Makiety ekranu startowego i statystyk powstały przed decyzjami z planu. Obowiązuje opis w [auto-score-dart-pomysly.md](auto-score-dart-pomysly.md), sekcja „Ekran startowy i statystyki: punkty do implementacji” wraz z „Decyzjami” (np. statystyki to lista graczy według średniej i 4 kafelki top 3).
+Zasady użycia motywu są w [design/scena/README.md](design/scena/README.md), wartości tokenów w [design/scena/tokens.json](design/scena/tokens.json), a makiety ekranów w [design/mockups/scena/](design/mockups/scena/). Liczby i gracze na makietach są przykładowe. Pliki `design/mockups/theme-a-*` to już tylko historyczne makiety dawnego motywu.
 
 ## Jak rozwijamy projekt
 
-Projekt rośnie małymi PR-ami, po jednym kroku w każdym. PR trafia do `main` dopiero przy zielonych `test`, `typecheck` i `lint`. Plan i decyzje są w [auto-score-dart-pomysly.md](auto-score-dart-pomysly.md), a zasady dla osób i agentów rozwijających kod w [CLAUDE.md](CLAUDE.md).
+Projekt rośnie małymi PR-ami, po jednym kroku w każdym. PR trafia do `main` dopiero wtedy, gdy przechodzi wszystkie 8 jobów CI. Plan i decyzje są w [auto-score-dart-pomysly.md](auto-score-dart-pomysly.md), a zasady dla osób i agentów rozwijających kod w [CLAUDE.md](CLAUDE.md).

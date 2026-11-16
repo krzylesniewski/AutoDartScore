@@ -1,8 +1,31 @@
 # @autoscore/server
 
-Serwer API: REST i WebSocket na Fastify. Jest jedynym źródłem prawdy o stanie gry. Zapisuje każdą rzutkę, każdą próbę i każde pominięcie checkoutu, każde cofnięcie, każde porzucenie i wznowienie gry oraz zakończenie treningu jako wpis w logu zdarzeń w SQLite. Stan gry nie jest zapisywany. Serwer odtwarza go z rzutek, prób i pominięć, które nadal się liczą, przez silnik z `@autoscore/engine`. Trening checkoutów ma w wierszu gry zakres i ziarno losowania celów, które serwer losuje raz przy utworzeniu, oraz zasadę losowania w kolumnie `checkout_rule`. Nowe sesje mają `repeat_on_miss` (po nieudanej próbie cel zostaje). Migracja `0006_checkout_rule` daje sesjom zapisanym wcześniej `new_each_attempt` (nowy cel po każdej próbie), więc odtwarzają się jak dotąd. Inne gry mają `null`. Ziarno i zasada nie wychodzą poza serwer. Wpisy w logu treningu checkoutów: `checkout_attempt` (z `success`), `checkout_attempt_undone`, `checkout_skipped` (`POST /matches/:id/checkout-skips`) i `checkout_skip_undone`. Cofnięcie zdejmuje ostatni krok, próbę albo pominięcie, a wpis cofnięcia, który nie pasuje do ostatniego kroku, to uszkodzony log. Status porzucenia wynika z wpisów porzucenia i wznowienia, a status `ended` z wpisu zakończenia treningu. Komendy jednej gry wykonują się po kolei, a różne gry nie blokują się nawzajem.
+Serwer API: REST i WebSocket na Fastify. Jest jedynym źródłem prawdy o stanie gry.
 
-Profil gracza też nie jest nadpisywany. Wiersz w `players` zostaje taki, jak przy utworzeniu gracza, a każda zmiana imienia, avatara, koloru, archiwizacji albo zapisu gościa dopisuje do `player_changes` pełny profil z kolejnym `seq`. Każdy odczyt gracza bierze wiersz z najwyższym `seq`, więc gry, historia i ranking pokazują aktualne imię. Gracz bez wybranego koloru dostaje kolor 1-16 wyliczony z `id` (`defaultPlayerColor`), więc zawsze ten sam. Dwóch zapisanych, niezarchiwizowanych graczy nie może mieć tego samego imienia, bez względu na wielkość liter i nadmiarowe spacje. Dawne duplikaty zostają w danych, a serwer odrzuca z 409 `player_name_taken` tylko utworzenie albo zmianę, która tworzy nowy duplikat.
+Serwer zapisuje jako wpis w logu zdarzeń w SQLite:
+
+- każdą rzutkę,
+- każdą próbę i każde pominięcie checkoutu,
+- każde cofnięcie,
+- każde porzucenie i wznowienie gry,
+- zakończenie treningu.
+
+Stan gry nie jest zapisywany. Serwer odtwarza go z rzutek, prób i pominięć, które nadal się liczą, przez silnik z `@autoscore/engine`. Status porzucenia wynika z wpisów porzucenia i wznowienia, a status `ended` z wpisu zakończenia treningu. Komendy jednej gry wykonują się po kolei, a różne gry nie blokują się nawzajem.
+
+Trening checkoutów:
+
+- Wiersz gry ma zakres i ziarno losowania celów, które serwer losuje raz przy utworzeniu, oraz zasadę losowania w kolumnie `checkout_rule`.
+- Nowe sesje mają `repeat_on_miss` (po nieudanej próbie cel zostaje). Migracja `0006_checkout_rule` daje sesjom zapisanym wcześniej `new_each_attempt` (nowy cel po każdej próbie), więc odtwarzają się jak dotąd. Inne gry mają `null`.
+- Ziarno i zasada nie wychodzą poza serwer.
+- Wpisy w logu: `checkout_attempt` (z `success`), `checkout_attempt_undone`, `checkout_skipped` (`POST /matches/:id/checkout-skips`) i `checkout_skip_undone`.
+- Cofnięcie zdejmuje ostatni krok, próbę albo pominięcie. Wpis cofnięcia, który nie pasuje do ostatniego kroku, to uszkodzony log.
+
+Profil gracza też nie jest nadpisywany:
+
+- Wiersz w `players` zostaje taki, jak przy utworzeniu gracza. Każda zmiana imienia, avatara, koloru, archiwizacji albo zapisu gościa dopisuje do `player_changes` pełny profil z kolejnym `seq`.
+- Każdy odczyt gracza bierze wiersz z najwyższym `seq`, więc gry, historia i ranking pokazują aktualne imię.
+- Gracz bez wybranego koloru dostaje kolor 1-16 wyliczony z `id` (`defaultPlayerColor`), więc zawsze ten sam.
+- Dwóch zapisanych, niezarchiwizowanych graczy nie może mieć tego samego imienia, bez względu na wielkość liter i nadmiarowe spacje. Dawne duplikaty zostają w danych, a serwer odrzuca z 409 `player_name_taken` tylko utworzenie albo zmianę, która tworzy nowy duplikat.
 
 Baza to SQLite przez wbudowany moduł `node:sqlite` i Kysely, bez natywnych bindingów. Migracje używają tylko typów text, integer i real i nie używają funkcji JSON, żeby dało się przejść na PostgreSQL.
 
@@ -84,7 +107,14 @@ Stan gry podaje `finishedAt` (czas przyjęcia rzutki kończącej grę) i `editab
 
 Stan gry podaje też `round` (kolejka rzucającego w bieżącym legu, liczona od 1, `null` po końcu gry, w Free run i w treningu checkoutów), `startedAt` i `legStartedAt` (czas przyjęcia pierwszej liczonej rzutki gry i bieżącego lega, `null` przed nią i zawsze w treningu checkoutów, który nie ma rzutek) oraz `pausedMs` i `legPausedMs` (suma zamkniętych przerw od porzucenia do wznowienia, liczona od `startedAt` i od `legStartedAt`). Wszystkie czasy pochodzą z logu, więc cofnięcie rzutki przesuwa je razem ze stanem. Otwarte porzucenie nie wchodzi do sumy przerw.
 
-Pole `legTurns` to zamknięte tury bieżącego lega w kolejności rzutów. Każdy wpis ma gracza (`playerId`), numer tury (`turnIndex`), rzutki (`darts`), zdobyte punkty (`points`), wynik po turze (`remainingAfter`) i znacznik `bust`. Otwarta tura nie trafia na listę, jej rzutki są w `currentDarts`. Bust ma `points: 0` i `remainingAfter` równe wynikowi sprzed tury. Nowy leg zaczyna się z pustą listą, a po rzutce kończącej mecz zostają tury ostatniego lega. W Free run turą jest każde pełne podejście po 3 rzutki, a `remainingAfter` jest `null`. W treningu checkoutów lista jest zawsze pusta. Cofnięcie rzutki przelicza listę z logu razem z resztą stanu.
+Pole `legTurns` to zamknięte tury bieżącego lega w kolejności rzutów. Każdy wpis ma gracza (`playerId`), numer tury (`turnIndex`), rzutki (`darts`), zdobyte punkty (`points`), wynik po turze (`remainingAfter`) i znacznik `bust`.
+
+- Otwarta tura nie trafia na listę, jej rzutki są w `currentDarts`.
+- Bust ma `points: 0` i `remainingAfter` równe wynikowi sprzed tury.
+- Nowy leg zaczyna się z pustą listą, a po rzutce kończącej mecz zostają tury ostatniego lega.
+- W Free run turą jest każde pełne podejście po 3 rzutki, a `remainingAfter` jest `null`.
+- W treningu checkoutów lista jest zawsze pusta.
+- Cofnięcie rzutki przelicza listę z logu razem z resztą stanu.
 
 ## Powtórzone komendy
 
@@ -109,13 +139,31 @@ Uszkodzona gra (log, którego nie da się odtworzyć, albo brak wymaganego pola 
 - `src/config.ts`: `loadConfig`, czyli odczyt zmiennych środowiskowych.
 - `src/errors.ts`: mapowanie błędów na `ApiError` (dla `stale_state` na `StaleStateError` z bieżącym stanem) i kody HTTP.
 - `src/auth/`: `credentials.ts` (tokeny HMAC i porównanie hasła), `login-limiter.ts` (limit nieudanych logowań), `access.ts` (CORS i sprawdzanie tokenu przed trasami).
-- `src/routes/`: `health.ts` (`GET /health`), `web-app.ts` (pliki frontu z `AUTOSCORE_WEB_DIR`), `auth.ts` (`POST /auth/login`), `players.ts` (utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu), `matches.ts` (gry, lista gier z filtrami `status`, `playerId` i `type`, rzutki, reszta tury jako Miss (`rest-miss`), próby i pominięcia checkoutu, cofnięcie, porzucenie, wznowienie i zakończenie treningu. Cofnięcie, wznowienie, zakończenie i pominięcie checkoutu czytają z body tylko `expectedSeq`, a pusty albo niepoprawny JSON i wartość, która nie jest obiektem, traktują jak brak body), `live.ts` (WebSocket z wiadomością `auth` i pingiem), `stats.ts` (statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, `GET /players/:id/frequent-hits`, podsumowanie meczu, ranking graczy i `GET /stats/overall`). Statystyki gracza, bilans, forma, ranking i `GET /stats/overall` przyjmują `?period=30d`, `90d` albo `all` (domyślnie `all`).
+- `src/routes/`:
+  - `health.ts`: `GET /health`.
+  - `web-app.ts`: pliki frontu z `AUTOSCORE_WEB_DIR`.
+  - `auth.ts`: `POST /auth/login`.
+  - `players.ts`: utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu.
+  - `matches.ts`: gry, lista gier z filtrami `status`, `playerId` i `type`, rzutki, reszta tury jako Miss (`rest-miss`), próby i pominięcia checkoutu, cofnięcie, porzucenie, wznowienie i zakończenie treningu. Cofnięcie, wznowienie, zakończenie i pominięcie checkoutu czytają z body tylko `expectedSeq`, a pusty albo niepoprawny JSON i wartość, która nie jest obiektem, traktują jak brak body.
+  - `live.ts`: WebSocket z wiadomością `auth` i pingiem.
+  - `stats.ts`: statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, `GET /players/:id/frequent-hits`, podsumowanie meczu, ranking graczy i `GET /stats/overall`. Statystyki gracza, bilans, forma, ranking i `GET /stats/overall` przyjmują `?period=30d`, `90d` albo `all` (domyślnie `all`).
 - `src/match-service.ts`: komendy gry (utworzenie, rzutka, reszta tury jako Miss, próba i pominięcie checkoutu, cofnięcie, porzucenie, wznowienie, zakończenie treningu, lista, subskrypcja) i sprawdzenie `expectedSeq` opisane w „Powtórzone komendy”.
 - `src/replay.ts`: wybór rzutek oraz prób i pominięć checkoutu, które się liczą, stan porzucenia, czas zakończenia treningu i odtworzenie stanu w silniku. `replayLog` daje z wczytanego logu cały wynik odtworzenia (`ReplayedMatch`).
 - `src/replay-cache.ts`: pamięć podręczna odtworzeń dla list i statystyk (`createReplayCache`, `REPLAY_CACHE_MAX_MATCHES`), opisana wyżej w „Lista gier i statystyki”.
 - `src/snapshot.ts`: budowa `MatchSnapshot` ze stanu silnika.
 - `src/leg-turns.ts`: `buildLegTurns`, czyli zamknięte tury bieżącego lega (`legTurns`) ze zdarzeń odtworzenia, a w Free run z pełnych podejść po 3 rzutki.
-- `src/stats-service.ts` i `src/stats/`: statystyki liczone z odtworzenia logu. W `src/stats/` są `tally.ts` (sumy gracza w grze, także trafienia T20), `completed-legs.ts` (punkty i rzutki w ukończonych legach), `rankings.ts` (ranking graczy, rekordy oraz listy procentu wygranych i trafień T20), `overall.ts` (łączna liczba lotek, średnia ze średnich graczy, gracze powyżej i poniżej niej), `head-to-head.ts` (bilans dwóch graczy z ukończonych meczów 1v1), `form.ts` (średnia z każdej z ostatnich gier), `frequent-hits.ts` (do 6 najczęstszych trafień gracza bez Miss, według liczby, potem punktów, potem segmentu), `leg-progress.ts` (pozostały wynik po każdej rzutce ostatniego lega z zamkniętych tur, do podsumowania gry), `leg-durations.ts` (czas każdego wygranego lega z rzutek, które się liczą, bez przerw przyciętych do lega), `achievements.ts` (rekordy gracza i wykrywanie osiągnięć) i `period.ts` (`periodStart`, czyli najstarsze `createdAt` gry w okresie statystyk liczone od zegara serwera z `AppOptions.now`). Gry spoza okresu odrzuca już zapytanie w `store.ts`, więc nie są odtwarzane. Średnia na 3 rzutki na karcie gracza, w rankingu, w bilansie i na wykresie formy liczy tylko ukończone legi.
+- `src/stats-service.ts` i `src/stats/`: statystyki liczone z odtworzenia logu. Gry spoza okresu odrzuca już zapytanie w `store.ts`, więc nie są odtwarzane. Średnia na 3 rzutki na karcie gracza, w rankingu, w bilansie i na wykresie formy liczy tylko ukończone legi. W `src/stats/` są:
+  - `tally.ts`: sumy gracza w grze, także trafienia T20.
+  - `completed-legs.ts`: punkty i rzutki w ukończonych legach.
+  - `rankings.ts`: ranking graczy, rekordy oraz listy procentu wygranych i trafień T20.
+  - `overall.ts`: łączna liczba lotek, średnia ze średnich graczy, gracze powyżej i poniżej niej.
+  - `head-to-head.ts`: bilans dwóch graczy z ukończonych meczów 1v1.
+  - `form.ts`: średnia z każdej z ostatnich gier.
+  - `frequent-hits.ts`: do 6 najczęstszych trafień gracza bez Miss, według liczby, potem punktów, potem segmentu.
+  - `leg-progress.ts`: pozostały wynik po każdej rzutce ostatniego lega z zamkniętych tur, do podsumowania gry.
+  - `leg-durations.ts`: czas każdego wygranego lega z rzutek, które się liczą, bez przerw przyciętych do lega.
+  - `achievements.ts`: rekordy gracza i wykrywanie osiągnięć.
+  - `period.ts`: `periodStart`, czyli najstarsze `createdAt` gry w okresie statystyk liczone od zegara serwera z `AppOptions.now`.
 - `src/achievement-reference.ts`: rekordy gracza z ukończonych meczów 1v1 do wykrywania osiągnięć. Osiągnięcia (`achievement` na WebSocket) dotyczą tylko meczów 1v1 i zapisanych profili, od drugiego ukończonego meczu 1v1 gracza. Liczymy je z logu, z pamięcią podręczną w procesie, i niczego nie zapisujemy.
 - `src/live-hub.ts`: rozsyłanie wiadomości do subskrybentów jednej gry.
 - `src/serial-queue.ts`: kolejka komend per gra.
