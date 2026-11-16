@@ -43,6 +43,13 @@ export async function createMatchByApi(request: APIRequestContext, token: string
   return (await response.json()) as MatchSnapshot;
 }
 
+export async function createCasualByApi(request: APIRequestContext, token: string, playerIds: readonly string[]): Promise<MatchSnapshot> {
+  const body: CreateMatchRequest = { type: 'casual', playerIds: [...playerIds], startingScore: 301 };
+  const response = await request.post('/matches', { headers: authorization(token), data: body });
+  await expect(response).toBeOK();
+  return (await response.json()) as MatchSnapshot;
+}
+
 export async function createPracticeByApi(
   request: APIRequestContext,
   token: string,

@@ -64,7 +64,7 @@ Ekran ma:
 - Nagłówek pokazuje „Kolejka N”, czyli kolejkę rzucającego w bieżącym legu. Free run nie ma kolejki.
 - Obok stoi zegar lega liczony od pierwszej rzutki lega, bez przerw między porzuceniem a wznowieniem. W Free run to zegar sesji.
 - „Cofnij” stoi w klawiaturze. Po końcu Solo 501, gdy klawiatury już nie ma, stoi osobno pod slotami rzutek.
-- Od lg karta zamknięcia stoi na dole prawej kolumny, pod klawiaturą. Poniżej lg stoi pod slotami, nad klawiaturą.
+- Od lg karta zamknięcia stoi na dole prawej kolumny i wypełnia całą wolną wysokość pod klawiaturą, co najmniej 80 px. Trasa i etykieta rosną razem z kartą, a klawiatura nie zmienia przez to rozmiaru ani miejsca. Poniżej lg karta stoi pod slotami, nad klawiaturą.
 
 #### Pasek wyników i panel lega
 
