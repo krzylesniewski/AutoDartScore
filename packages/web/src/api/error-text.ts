@@ -6,6 +6,8 @@ const TEXT_BY_CODE: Readonly<Record<string, string>> = {
   invalid_request: pl.invalidRequest,
   invalid_config: pl.invalidRequest,
   unknown_player: pl.unknownPlayer,
+  archived_player: pl.archivedPlayer,
+  tournament_active: pl.tournamentActive,
 };
 
 export function apiErrorText(caught: unknown): string {

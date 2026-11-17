@@ -25,7 +25,7 @@ VITE_BASE=/autoscore/ VITE_API_URL=https://api.example.com pnpm --filter @autosc
 
 ## Ekrany
 
-Routing przez hash w `src/App.tsx`, z sześcioma trasami opisanymi niżej.
+Routing przez hash w `src/App.tsx`, z dziewięcioma trasami opisanymi niżej.
 
 Każdy inny adres przekierowuje na `#/`.
 
@@ -33,12 +33,23 @@ Każdy inny adres przekierowuje na `#/`.
 
 Po lewej formularz nowej gry:
 
-- Najpierw typ: „Mecz 1v1”, „Zabawa” albo „Trening”.
+- Najpierw typ: „Mecz 1v1”, „Zabawa”, „Trening” albo „Turniej”.
 - Potem gracze, od ostatnio aktywnego, z przyciskiem „+ Nowy gracz”. Nowy gracz ma imię, avatar emoji i jeden z 16 kolorów. Bez wyboru kolor jest dobrany automatycznie.
 - Emoji wybiera się z siatki 3 grup po 10: „Film i gry”, „Sport”, „Postaci”. Można też wpisać jedno własne w polu „Inne emoji”, a „Bez emoji” zostawia inicjał.
 - Opcje zależne od typu: punkty startowe, liczba legów albo tryb treningu (Free run, Solo 501, Końcówki). Przy „Końcówkach” dochodzi przedział „2-50” albo „51-100” (domyślnie 2-50).
+- Turniej ma własny wybór graczy, osobny od pozostałych typów, więc przełączanie kafli go nie zmienia. „Mecz 1v1”, „Zabawa” i „Trening” dzielą jeden wybór, a zmiana typu przycina go do limitu nowego typu.
 
-Po prawej podsumowanie wybranych ustawień i lista gier do dokończenia (w trakcie i porzuconych, od najnowszej):
+„Turniej” ma własne pola:
+
+- „Nazwa turnieju”, domyślnie „Turniej DD.MM.YYYY” z dzisiejszą datą, do 60 znaków. Pusta nazwa blokuje start.
+- „Format”: „Liga”, „Puchar” albo „Grupa + play-off” (domyślnie). Liga i grupa mają od 3 do 10 graczy, puchar od 3 do 16. Zmiana formatu przycina wybór do nowego limitu.
+- „Zasady”: punkty startowe 301, 501 (domyślnie) albo 701, a w „Grupa + play-off” także „Do play-off” 2, 4 (domyślnie) albo 8 z podpowiedzią par.
+- „Mecze dodatkowe” (poza ligą): „Mecz o 3. miejsce” w pucharze i w grupie, „Pocieszenie” tylko w grupie. Przełącznik, którego format nie rozegra (na przykład puchar 3 graczy), jest nieaktywny i pokazuje powód.
+- „Długość meczów”: liczba wygranych legów od 1 do 9 dla każdej fazy, która się odbędzie, z przyciskami „−” i „+”.
+
+Po prawej, zamiast podsumowania, panel „Plan turnieju” z liczbą meczów w każdej fazie i sumą „Razem meczów”. Liczy je silnik (`computeTournament` z `@autoscore/engine`), więc wolne losy i mecze, których format nie rozegra, nie wchodzą do sumy. Przy błędnych ustawieniach panel pokazuje pierwszy powód. Pod planem jest przełącznik „Publiczny link z kodem QR” (domyślnie włączony) i przycisk „Rozpocznij turniej”: od lg na dole panelu, poniżej lg w pasku pod ekranem. Start wysyła `POST /tournaments` i otwiera `#/tournaments/:id`. Gdy trwa już inny turniej, obok błędu jest link „Przejdź do turnieju”.
+
+Po prawej (przy pozostałych typach) podsumowanie wybranych ustawień, a przy każdym typie lista gier do dokończenia (w trakcie i porzuconych, od najnowszej):
 
 - Każdy wiersz ma przycisk „Dokończ”.
 - „Porzuć” pojawia się po co najmniej jednym ukończonym legu.
@@ -162,9 +173,21 @@ Przycisk „Overall” za „Trening” pokazuje wszystkie gry z wybranego okres
 
 Historia wszystkich gier, od ostatnio aktywnej, z filtrem typu (trening obejmuje też Free run). Każdy wiersz ma datę, typ, graczy z wynikiem, status z ikoną i tekstem oraz link „Szczegóły” do `#/matches/:id`.
 
+### `#/tournaments`: turnieje
+
+Wpis „Turniej” w nawigacji. Gdy trwa turniej, adres zmienia się na `#/tournaments/:id` przez `location.replace`, więc „Wstecz” nie wraca na listę. Bez trwającego turnieju lista zakończonych, od najnowszego: nazwa, format, data i zwycięzca, każdy z linkiem do turnieju. Link „Nowy turniej” jest zawsze.
+
+### `#/tournaments/new`: nowy turniej
+
+Ekran startowy z wybranym typem „Turniej”. W nawigacji zaznaczona jest „Nowa gra”.
+
+### `#/tournaments/:id`: turniej
+
+Na razie zaślepka: nazwa, format z punktami startowymi i lista meczów w kolejności gry. Wiersz ma numer meczu, obie strony („Wolny los” albo „Do ustalenia”, gdy gracza jeszcze nie ma), wynik w legach i status. Nieznany turniej pokazuje „Nie znaleziono turnieju.” z linkiem do `#/tournaments`.
+
 ## Pierwsze ładowanie
 
-Kod ekranów statystyk, historii i ustawień wczytuje się dopiero po wejściu na nie (`React.lazy` w `src/App.tsx`). W trakcie `LazyScreen` pokazuje „Ładowanie…”, a gdy kod się nie wczyta, na przykład po wdrożeniu nowej wersji przy otwartej karcie, „Nie udało się wczytać ekranu.” z przyciskiem „Odśwież stronę”. Fonty Barlow i Barlow Condensed idą tylko w podzbiorach `latin` i `latin-ext`, w którym są polskie litery.
+Kod ekranów statystyk, historii, ustawień i turniejów (`#/tournaments` i `#/tournaments/:id`) wczytuje się dopiero po wejściu na nie (`React.lazy` w `src/App.tsx`). W trakcie `LazyScreen` pokazuje „Ładowanie…”, a gdy kod się nie wczyta, na przykład po wdrożeniu nowej wersji przy otwartej karcie, „Nie udało się wczytać ekranu.” z przyciskiem „Odśwież stronę”. Fonty Barlow i Barlow Condensed idą tylko w podzbiorach `latin` i `latin-ext`, w którym są polskie litery.
 
 ## Okna i komunikaty
 

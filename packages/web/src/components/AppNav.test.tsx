@@ -46,10 +46,27 @@ describe('AppNav', () => {
     }
   });
 
+  it('links to the tournaments as the second item', () => {
+    render(<AppNav current="stats" />);
+    const links = within(screen.getByRole('navigation')).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual(['Nowa gra', 'Turniej', 'Statystyki', 'Historia', 'Ustawienia']);
+    const tournament = screen.getByRole('link', { name: 'Turniej' });
+    expect(tournament.getAttribute('href')).toBe('#/tournaments');
+    expect(tournament.hasAttribute('aria-current')).toBe(false);
+  });
+
+  it('marks the tournament link as the current page', () => {
+    render(<AppNav current="tournament" />);
+    expect(screen.getByRole('link', { name: 'Turniej' }).getAttribute('aria-current')).toBe('page');
+    for (const name of ['Nowa gra', 'Statystyki', 'Historia', 'Ustawienia']) {
+      expect(screen.getByRole('link', { name }).hasAttribute('aria-current')).toBe(false);
+    }
+  });
+
   it('marks only the current page', () => {
     render(<AppNav current="stats" />);
     expect(screen.getByRole('link', { name: 'Statystyki' }).getAttribute('aria-current')).toBe('page');
-    for (const name of ['Nowa gra', 'Historia', 'Ustawienia']) {
+    for (const name of ['Nowa gra', 'Turniej', 'Historia', 'Ustawienia']) {
       expect(screen.getByRole('link', { name }).hasAttribute('aria-current')).toBe(false);
     }
   });

@@ -1,6 +1,7 @@
 import type {
   CheckoutAttempt,
   CheckoutSession,
+  Fixture,
   LegProgress,
   LegTurn,
   MatchListItem,
@@ -10,6 +11,9 @@ import type {
   MatchSummaryPlayer,
   Player,
   PlayerStatLine,
+  TournamentListItem,
+  TournamentPlayer,
+  TournamentView,
 } from '@autoscore/schema';
 
 // Domyślnie tura za 60 z 501. Bust bez podanych punktów i wyniku dostaje 0 punktów i wynik startowy, jak w schemacie.
@@ -194,4 +198,69 @@ export function listItem(overrides: Partial<MatchListItem> = {}): MatchListItem 
 
 export function profile(id: string, name: string, overrides: Partial<Player> = {}): Player {
   return { id, name, avatar: null, color: 1, guest: false, archivedAt: null, createdAt: '2026-10-15T18:30:00.000Z', ...overrides };
+}
+
+export function tournamentPlayer(id: string, name: string): TournamentPlayer {
+  return { id, name, avatar: null, color: 1, guest: false };
+}
+
+// Mecz ligi gotowy do gry między p1 i p2.
+export function fixture(overrides: Partial<Fixture> = {}): Fixture {
+  return {
+    id: 'g-1',
+    number: 1,
+    phase: 'group',
+    round: 1,
+    bracketRound: null,
+    board: 1,
+    legsToWin: 3,
+    slots: [
+      { kind: 'player', playerId: 'p1', seed: null },
+      { kind: 'player', playerId: 'p2', seed: null },
+    ],
+    status: 'ready',
+    matchId: null,
+    result: null,
+    averages: null,
+    ...overrides,
+  };
+}
+
+// Liga trzech graczy w trakcie, bez rozegranych meczów. Tabela i mecze nie muszą wynikać z silnika.
+export function tournamentView(overrides: Partial<TournamentView> = {}): TournamentView {
+  const players = [tournamentPlayer('p1', 'Anna'), tournamentPlayer('p2', 'Bartek'), tournamentPlayer('p3', 'Celina')];
+  return {
+    id: 't1',
+    name: 'Liga czwartkowa',
+    format: 'league',
+    config: {
+      name: 'Liga czwartkowa',
+      format: 'league',
+      playerIds: players.map((entry) => entry.id),
+      startingScore: 501,
+      thirdPlaceMatch: false,
+      consolation: false,
+      legsToWin: { group: 3, r16: 3, qf: 3, sf: 3, final: 4, thirdPlace: 2, consolation: 2 },
+      sharing: true,
+    },
+    status: 'in_progress',
+    createdAt: '2026-11-12T18:00:00.000Z',
+    finishedAt: null,
+    players,
+    fixtures: [fixture()],
+    standings: [],
+    nextFixtureId: 'g-1',
+    liveFixtureId: null,
+    placements: [],
+    sharing: true,
+    canRedraw: true,
+    eventSeq: 1,
+    archivedAt: null,
+    ...overrides,
+  };
+}
+
+export function tournamentListItem(overrides: Partial<TournamentListItem> = {}): TournamentListItem {
+  const { id, name, format, status, createdAt, finishedAt, archivedAt, players, placements } = tournamentView();
+  return { id, name, format, status, createdAt, finishedAt, archivedAt, players, placements, ...overrides };
 }

@@ -9,10 +9,19 @@ describe('apiErrorText', () => {
     ['a 400 invalid_request', new ApiRequestError(400, 'invalid_request', 'Invalid request: name: Too big'), pl.invalidRequest],
     ['an invalid_config', new ApiRequestError(400, 'invalid_config', 'Invalid config'), pl.invalidRequest],
     ['an unknown_player', new ApiRequestError(400, 'unknown_player', 'Unknown player p2'), pl.unknownPlayer],
+    ['an archived_player', new ApiRequestError(400, 'archived_player', 'Player p2 is archived'), pl.archivedPlayer],
+    ['a 409 tournament_active', new ApiRequestError(409, 'tournament_active', 'Another tournament is in progress'), pl.tournamentActive],
     ['an unknown code', new ApiRequestError(418, 'teapot', 'I am a teapot'), pl.requestFailed],
     ['an unparsed body', new ApiRequestError(502, 'http_error', 'HTTP 502'), pl.requestFailed],
     ['a network TypeError', new TypeError('Failed to fetch'), pl.requestFailed],
   ])('maps %s to Polish text', (_name, caught, text) => {
     expect(apiErrorText(caught)).toBe(text);
+  });
+
+  it('uses the Polish texts for the tournament codes', () => {
+    expect(apiErrorText(new ApiRequestError(409, 'tournament_active', 'x'))).toBe(
+      'Trwa już inny turniej. Dokończ go, zanim zaczniesz nowy.',
+    );
+    expect(apiErrorText(new ApiRequestError(400, 'archived_player', 'x'))).toMatch(/zarchiwizowany/);
   });
 });

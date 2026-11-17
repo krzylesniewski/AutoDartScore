@@ -15,6 +15,8 @@ import {
   StatsOverall,
   StatsRankings,
   ThrowResult,
+  TournamentListItem,
+  TournamentView,
   UndoResult,
 } from '@autoscore/schema';
 import type {
@@ -23,6 +25,7 @@ import type {
   CommandRequest,
   CreateMatchRequest,
   CreatePlayerRequest,
+  CreateTournamentRequest,
   HitEvent,
   ListPlayersQuery,
   LoginRequest,
@@ -30,6 +33,7 @@ import type {
   RestMissRequest,
   StatsFilter,
   StatsPeriod,
+  TournamentListQuery,
   UpdatePlayerRequest,
 } from '@autoscore/schema';
 import { resolveApiBase } from './api-url';
@@ -155,6 +159,18 @@ export function listMatches(query: MatchListQuery = {}): Promise<MatchListItem[]
 
 export function getMatch(id: string): Promise<MatchSnapshot> {
   return request(`/matches/${encodeURIComponent(id)}`, MatchSnapshot);
+}
+
+export function createTournament(body: CreateTournamentRequest): Promise<TournamentView> {
+  return request('/tournaments', TournamentView, postJson(body));
+}
+
+export function listTournaments(query: TournamentListQuery = {}): Promise<TournamentListItem[]> {
+  return request(withQuery('/tournaments', query), TournamentListItem.array());
+}
+
+export function getTournament(id: string): Promise<TournamentView> {
+  return request(`/tournaments/${encodeURIComponent(id)}`, TournamentView);
 }
 
 export function postThrow(matchId: string, hit: HitEvent): Promise<ThrowResult> {

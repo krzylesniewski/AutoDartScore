@@ -6,7 +6,9 @@ Zestaw obejmuje:
 
 - `game.spec.ts`: 401 bez tokenu, logowanie, dwóch nowych graczy, mecz 1v1 301 wpisany klawiszami na ekranie i skrótami, Cofnij, zamknięcie lega na D14, ekran końca meczu i statystyki zwycięzcy. Drugie okno śledzi grę na żywo przez WebSocket.
 - `layout.spec.ts`: układ, którego testy jednostkowe w jsdom nie widzą. Przy 375×812, 768×1024, 1280×800 i 1920×1080:
-  - Brak poziomego przewijania na ekranach nowej gry, statystyk, karty gracza, historii, ustawień, końca meczu, treningu końcówek oraz przebiegu Solo 501 i Free run.
+  - Brak poziomego przewijania na ekranach nowej gry, kreatora turnieju, listy turniejów, statystyk, karty gracza, historii, ustawień, końca meczu, treningu końcówek oraz przebiegu Solo 501 i Free run.
+  - W kreatorze turnieju (`#/tournaments/new`) przycisk „Rozpocznij turniej” mieści się w oknie, a „Start gry” go nie zastępuje. Na `#/tournaments` widać link „Nowy turniej”. Testy tylko otwierają te strony i nie tworzą turnieju, bo trwający turniej we wspólnej bazie przekierowałby `#/tournaments` w innych testach.
+  - Pięć linków głównej nawigacji stoi w jednym wierszu (ta sama górna krawędź), każdy ma co najmniej 44 px wysokości i mieści się w oknie.
   - Ustawienia otwierają się z nawigacji, a statusy kamery i głosu w pasku są tam czytelne, nie tylko dla czytnika ekranu. Tak samo tytuł „Nowa gra”. Karty układu klawiatury w ustawieniach mają co najmniej 44 px wysokości.
   - „Rewanż” i „Nowy mecz” na końcu meczu oraz „Udało się” i „Nie udało się” w treningu końcówek mieszczą się w oknie i da się je kliknąć. Nakładki ze statusem na końcu meczu i w grze przepuszczają kliknięcia.
   - Klawiatura mieści się w oknie i nie przesuwa się. W kole sprawdzają to rzutka, zmiana rzucającego, trasa zamknięcia, bust i komunikat o zerwanym połączeniu, a w siatce rzutka. W obu układach także przejście tury między graczem z najczęstszymi trafieniami a graczem bez nich.
