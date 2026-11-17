@@ -148,6 +148,40 @@ for (const viewport of VIEWPORTS) {
       await expectNoHorizontalScroll(page);
     });
 
+    // Tylko otwiera kreator. Utworzony turniej przekierowałby #/tournaments w innych testach tej samej bazy.
+    test('tournament wizard keeps Rozpocznij turniej in view without horizontal scroll', async ({ page }) => {
+      await page.goto('/#/tournaments/new');
+      await expect(page.getByRole('button', { name: 'Turniej', exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('button', { name: players[0].name, exact: true })).toBeVisible();
+      await fontsReady(page);
+      await expectBoxInViewport(page, page.getByRole('button', { name: 'Rozpocznij turniej' }));
+      await expect(page.getByRole('button', { name: 'Start gry' })).toHaveCount(0);
+      await expectNoHorizontalScroll(page);
+    });
+
+    test('tournaments screen shows Nowy turniej without horizontal scroll', async ({ page }) => {
+      await page.goto('/#/tournaments');
+      await expect(page.getByRole('heading', { level: 1, name: 'Turnieje' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Nowy turniej' })).toBeVisible();
+      await expect(page.getByText('Ładowanie…')).toBeHidden();
+      await expectNoHorizontalScroll(page);
+    });
+
+    test('main navigation keeps its five links in one row, each at least 44 px tall', async ({ page }) => {
+      await page.goto('/#/');
+      const links = page.getByRole('navigation', { name: 'Główna nawigacja' }).getByRole('link');
+      await expect(links).toHaveText(['Nowa gra', 'Turniej', 'Statystyki', 'Historia', 'Ustawienia']);
+      await fontsReady(page);
+      const boxes = await Promise.all((await links.all()).map((link) => boxOf(link)));
+      const top = boxes[0]?.y ?? 0;
+      for (const box of boxes) {
+        expect(Math.abs(box.y - top)).toBeLessThanOrEqual(1);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        await expectInViewport(box, page);
+      }
+      await expectNoHorizontalScroll(page);
+    });
+
     test('new player dialog keeps its 44 px color swatches inside the dialog', async ({ page }) => {
       await page.goto('/#/');
       await page.getByRole('button', { name: '+ Nowy gracz' }).click();

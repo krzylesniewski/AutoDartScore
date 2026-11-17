@@ -1,6 +1,16 @@
+import { CreateTournamentRequest } from '@autoscore/schema';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { snapshot } from '../test/snapshots';
-import { ApiRequestError, REQUEST_TIMEOUT_MS, StaleStateRequestError, getMatch, undo } from './client';
+import { snapshot, tournamentListItem, tournamentView } from '../test/snapshots';
+import {
+  ApiRequestError,
+  REQUEST_TIMEOUT_MS,
+  StaleStateRequestError,
+  createTournament,
+  getMatch,
+  getTournament,
+  listTournaments,
+  undo,
+} from './client';
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -67,6 +77,53 @@ describe('undo request', () => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+describe('tournament requests', () => {
+  function stub(body: unknown, status = 200) {
+    const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(json(status, body)));
+    vi.stubGlobal('fetch', fetch);
+    return fetch;
+  }
+
+  it('creates a tournament with a JSON POST', async () => {
+    const view = tournamentView({ id: 't9' });
+    const fetch = stub(view, 201);
+    const body = CreateTournamentRequest.parse({ name: 'Puchar', format: 'cup', playerIds: ['p1', 'p2', 'p3'] });
+    expect(await createTournament(body)).toEqual(view);
+    expect(fetch.mock.calls[0]?.[0]).toBe('/api/tournaments');
+    const init = fetch.mock.calls[0]?.[1];
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(init?.body as string)).toEqual(body);
+  });
+
+  it('lists tournaments with and without a query', async () => {
+    const fetch = stub([tournamentListItem({ status: 'finished', finishedAt: '2026-11-12T21:00:00.000Z' })]);
+    const items = await listTournaments();
+    expect(items.map((item) => item.id)).toEqual(['t1']);
+    await listTournaments({ status: 'finished', archived: 'include' });
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual(['/api/tournaments', '/api/tournaments?status=finished&archived=include']);
+  });
+
+  it('gets one tournament by the encoded id', async () => {
+    const fetch = stub(tournamentView({ id: 't 1' }));
+    expect((await getTournament('t 1')).id).toBe('t 1');
+    expect(fetch.mock.calls[0]?.[0]).toBe('/api/tournaments/t%201');
+  });
+
+  it('rejects an unknown tournament with a 404 ApiRequestError', async () => {
+    stub({ error: 'not_found', message: 'Tournament not found' }, 404);
+    const caught: unknown = await getTournament('t0').catch((error: unknown) => error);
+    expect(caught).toBeInstanceOf(ApiRequestError);
+    expect(caught).toMatchObject({ status: 404, code: 'not_found' });
+  });
+
+  it('rejects a second tournament with tournament_active', async () => {
+    stub({ error: 'tournament_active', message: 'Another tournament is in progress' }, 409);
+    const body = CreateTournamentRequest.parse({ name: 'Puchar', format: 'cup', playerIds: ['p1', 'p2', 'p3'] });
+    const caught: unknown = await createTournament(body).catch((error: unknown) => error);
+    expect(caught).toMatchObject({ status: 409, code: 'tournament_active' });
+  });
 });
 
 describe('request time limit', () => {

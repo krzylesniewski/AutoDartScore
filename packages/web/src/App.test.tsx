@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { act, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
-import { statLine } from './test/snapshots';
+import { statLine, tournamentView } from './test/snapshots';
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -29,8 +29,11 @@ beforeEach(() => {
           ]),
         );
       }
-      if (url === '/api/matches?status=unfinished' || url === '/api/matches') {
+      if (url === '/api/matches?status=unfinished' || url === '/api/matches' || url === '/api/tournaments') {
         return Promise.resolve(json(200, []));
+      }
+      if (url === '/api/tournaments/t%201') {
+        return Promise.resolve(json(200, tournamentView({ id: 't 1', name: 'Liga klubowa' })));
       }
       if (url.startsWith('/api/stats/rankings')) {
         return Promise.resolve(
@@ -111,6 +114,51 @@ describe('App', () => {
     render(<App />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Statystyki' })).toBeTruthy();
     await vi.waitFor(() => expect(urls).toContain('/api/stats/rankings?type=all&period=all'));
+    expect(stageLight()).toBe('list');
+  });
+
+  it('opens the tournaments on #/tournaments', async () => {
+    window.location.hash = '#/tournaments';
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Turnieje' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Turniej' }).getAttribute('aria-current')).toBe('page');
+    expect(await screen.findByText('Brak zakończonych turniejów.')).toBeTruthy();
+    expect(urls).toContain('/api/tournaments');
+    expect(stageLight()).toBe('list');
+  });
+
+  it('opens the wizard with Turniej selected on #/tournaments/new', async () => {
+    window.location.hash = '#/tournaments/new';
+    render(<App />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Nowa gra' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Turniej' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Rozpocznij turniej' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Start gry' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Nowa gra' }).getAttribute('aria-current')).toBe('page');
+    expect(await screen.findByText('Brak gier do dokończenia.')).toBeTruthy();
+    expect(urls.some((url) => url.startsWith('/api/tournaments/'))).toBe(false);
+    expect(stageLight()).toBe('game');
+  });
+
+  it('starts a fresh wizard when moving between #/ and #/tournaments/new', async () => {
+    window.location.hash = '#/tournaments/new';
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'Turniej' }).getAttribute('aria-pressed')).toBe('true');
+    act(() => {
+      window.location.hash = '#/';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(screen.getByRole('button', { name: 'Mecz 1v1' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Start gry' })).toBeTruthy();
+    expect(await screen.findByText('Brak gier do dokończenia.')).toBeTruthy();
+  });
+
+  it('opens the tournament in #/tournaments/:id', async () => {
+    window.location.hash = `#/tournaments/${encodeURIComponent('t 1')}`;
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Liga klubowa' })).toBeTruthy();
+    expect(urls).toContain('/api/tournaments/t%201');
+    expect(screen.getByRole('link', { name: 'Turniej' }).getAttribute('aria-current')).toBe('page');
     expect(stageLight()).toBe('list');
   });
 
