@@ -11,7 +11,7 @@ const OPEN = 1;
 // Każde state_updated niesie pełny stan, a klient, który nie czyta, nie może trzymać pamięci serwera.
 export const LIVE_MAX_BUFFERED_BYTES = 1024 * 1024;
 
-export function sendTo(socket: LiveSocket, messages: readonly LiveMessage[]): void {
+export function sendTo<Message = LiveMessage>(socket: LiveSocket, messages: readonly Message[]): void {
   if (socket.readyState !== OPEN) {
     return;
   }
@@ -25,27 +25,28 @@ export function sendTo(socket: LiveSocket, messages: readonly LiveMessage[]): vo
   }
 }
 
-export interface LiveHub {
-  subscribe(matchId: string, socket: LiveSocket): () => void;
-  publish(matchId: string, messages: readonly LiveMessage[]): void;
+// Klucz to id gry albo, w drugim hubie, id turnieju.
+export interface LiveHub<Message = LiveMessage> {
+  subscribe(key: string, socket: LiveSocket): () => void;
+  publish(key: string, messages: readonly Message[]): void;
 }
 
-export function createLiveHub(): LiveHub {
+export function createLiveHub<Message = LiveMessage>(): LiveHub<Message> {
   const subscribers = new Map<string, Set<LiveSocket>>();
   return {
-    subscribe(matchId, socket) {
-      const sockets = subscribers.get(matchId) ?? new Set();
+    subscribe(key, socket) {
+      const sockets = subscribers.get(key) ?? new Set();
       sockets.add(socket);
-      subscribers.set(matchId, sockets);
+      subscribers.set(key, sockets);
       return () => {
         sockets.delete(socket);
-        if (sockets.size === 0 && subscribers.get(matchId) === sockets) {
-          subscribers.delete(matchId);
+        if (sockets.size === 0 && subscribers.get(key) === sockets) {
+          subscribers.delete(key);
         }
       };
     },
-    publish(matchId, messages) {
-      const sockets = subscribers.get(matchId);
+    publish(key, messages) {
+      const sockets = subscribers.get(key);
       if (!sockets) {
         return;
       }

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { applyGameThrow, countsToStats, createGame, isGameFinished, MAX_CHECKOUT_SEED } from '@autoscore/engine';
+import { applyGameThrow, countsToStats, createGame, isGameFinished, MAX_CHECKOUT_SEED, type GameState } from '@autoscore/engine';
 import {
   DARTS_PER_TURN,
   HitEvent,
@@ -18,6 +18,7 @@ import {
   type ThrowResult,
   type UndoResult,
 } from '@autoscore/schema';
+import type { FastifyBaseLogger } from 'fastify';
 import { createAchievementReference } from './achievement-reference.js';
 import { HttpError, invalidRequest, notFound, StaleStateHttpError } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
@@ -53,10 +54,39 @@ interface Dependencies {
   readonly now: () => number;
   readonly matchLockMs: number; // tyle po rzutce kończącej grę da się jeszcze cofać
   readonly cache: ReplayCache; // tylko dla listy gier i rekordów do osiągnięć
+  readonly logger: Pick<FastifyBaseLogger, 'error'>;
+  // Po zmianie legów w meczu turnieju, gdy wiadomości samej gry są już wysłane.
+  readonly onLegsChanged?: (match: StoredMatch) => Promise<void>;
 }
 
-export function createMatchService({ store, hub, queue, random, now, matchLockMs, cache }: Dependencies): MatchService {
+function legsWon(game: GameState): string {
+  return game.type === 'match' ? game.state.legsWon.join(':') : '';
+}
+
+export function createMatchService({
+  store,
+  hub,
+  queue,
+  random,
+  now,
+  matchLockMs,
+  cache,
+  logger,
+  onLegsChanged,
+}: Dependencies): MatchService {
   const references = createAchievementReference({ store, cache });
+
+  // Błąd turnieju nie może zmienić odpowiedzi gry, bo rzutka jest już zapisana.
+  async function legsChanged(match: StoredMatch, before: GameState, after: GameState): Promise<void> {
+    if (match.tournament === null || onLegsChanged === undefined || legsWon(before) === legsWon(after)) {
+      return;
+    }
+    try {
+      await onLegsChanged(match);
+    } catch (error) {
+      logger.error({ matchId: match.id, tournamentId: match.tournament.id, err: error }, 'Tournament update after a leg change failed');
+    }
+  }
 
   async function requireMatch(id: string): Promise<StoredMatch> {
     const match = await store.findMatch(id);
@@ -332,6 +362,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           ...detected.map((achievement): LiveMessage => ({ ...achievement, ...meta })),
           { type: 'state_updated', ...meta, state },
         ]);
+        await legsChanged(match, game, applied.state);
         return { statusCode: 201 as const, result: { throw: record, events: [...applied.events], state } };
       });
     },
@@ -414,6 +445,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           ...detected.map((achievement): LiveMessage => ({ ...achievement, ...meta })),
           { type: 'state_updated', ...meta, state },
         ]);
+        await legsChanged(match, game, after);
         return { statusCode: 201 as const, result: { throws: appended.throws, events: newEvents, state } };
       });
     },
@@ -469,6 +501,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           { type: 'throw_undone', ...meta, throwId: last.id },
           { type: 'state_updated', ...meta, state },
         ]);
+        await legsChanged(match, before, game);
         return { undoneThrowId: last.id, state };
       });
     },
