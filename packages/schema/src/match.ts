@@ -41,5 +41,9 @@ export const STARTING_SCORES: readonly StartingScore[] = StartingScore.options.m
 export const BestOf = z.union([z.literal(1), z.literal(3), z.literal(5)]);
 export type BestOf = z.infer<typeof BestOf>;
 
+// Długość meczu 1v1: do N wygranych legów.
+export const LegsToWin = z.int().min(1).max(9);
+export type LegsToWin = z.infer<typeof LegsToWin>;
+
 export const MatchStatus = z.enum(['in_progress', 'abandoned', 'ended', 'finished']);
 export type MatchStatus = z.infer<typeof MatchStatus>;

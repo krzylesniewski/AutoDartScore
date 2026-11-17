@@ -1,16 +1,16 @@
-import { BestOf, STARTING_SCORES, type DomainEvent, type Hit, type StartingScore } from '@autoscore/schema';
+import { LegsToWin, STARTING_SCORES, type DomainEvent, type Hit, type StartingScore } from '@autoscore/schema';
 import type { ApplyResult } from './apply-result.js';
 import { EngineError } from './errors.js';
 import { replaySteps } from './replay-steps.js';
 import { applyX01Dart } from './x01-turn.js';
 
-// X01, mecz 1v1: double-out, straight-in, best of N legów.
+// X01, mecz 1v1: double-out, straight-in, do N wygranych legów.
 // Czysta logika: bez I/O i bez losowości. Kto zaczyna pierwszy leg (losowanie) decyduje wywołujący.
 
 export interface X01MatchConfig {
   readonly playerIds: readonly [string, string];
   readonly startingScore: StartingScore;
-  readonly legsToWin: number; // best of 3 = 2
+  readonly legsToWin: number; // liczba wygranych legów potrzebna do wygrania meczu, 1-9
   readonly firstPlayerIndex: 0 | 1; // wynik losowania przed pierwszym legiem
 }
 
@@ -29,9 +29,6 @@ export interface X01MatchState {
   readonly winnerIndex: 0 | 1 | null;
 }
 
-// Serwer zapisuje legsToWin jako (bestOf + 1) / 2, więc inne wartości nie pochodzą z żadnego meczu.
-const LEGS_TO_WIN: readonly number[] = BestOf.options.map((option) => (option.value + 1) / 2);
-
 export function createX01Match(config: X01MatchConfig): X01MatchState {
   const [a, b] = config.playerIds;
   if (!a || !b || a === b) {
@@ -40,8 +37,8 @@ export function createX01Match(config: X01MatchConfig): X01MatchState {
   if (!STARTING_SCORES.includes(config.startingScore)) {
     throw new EngineError('invalid_config', `Starting score must be one of ${STARTING_SCORES.join(', ')}`);
   }
-  if (!LEGS_TO_WIN.includes(config.legsToWin)) {
-    throw new EngineError('invalid_config', `legsToWin must be one of ${LEGS_TO_WIN.join(', ')}`);
+  if (!LegsToWin.safeParse(config.legsToWin).success) {
+    throw new EngineError('invalid_config', 'legsToWin must be an integer from 1 to 9');
   }
   // Typ tego nie gwarantuje przy danych spoza TypeScriptu, a zły indeks dawałby wynik NaN bez błędu.
   if (config.firstPlayerIndex !== 0 && config.firstPlayerIndex !== 1) {

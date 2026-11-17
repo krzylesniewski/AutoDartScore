@@ -10,6 +10,7 @@ import {
   ExpectedSeq,
   HealthResponse,
   LegTurn,
+  LegsToWin,
   MatchListItem,
   MatchListQuery,
   MatchSnapshot,
@@ -44,14 +45,35 @@ describe('BestOf', () => {
   });
 });
 
+describe('LegsToWin', () => {
+  it.each([1, 9])('accepts %i', (value) => {
+    expect(LegsToWin.parse(value)).toBe(value);
+  });
+
+  it.each([0, 10, 2.5])('rejects %d', (value) => {
+    expect(LegsToWin.safeParse(value).success).toBe(false);
+  });
+});
+
 describe('CreateMatchRequest', () => {
-  it('defaults a 1v1 match to 301 and best of 1', () => {
-    expect(CreateMatchRequest.parse({ type: 'match', playerIds: ['p1', 'p2'] })).toEqual({
+  it('defaults a 1v1 match to 301 and leaves the length to the server', () => {
+    expect(CreateMatchRequest.parse({ type: 'match', playerIds: ['p1', 'p2'] })).toStrictEqual({
       type: 'match',
       playerIds: ['p1', 'p2'],
       startingScore: 301,
-      bestOf: 1,
     });
+  });
+
+  it('accepts a match length as legs to win', () => {
+    const parsed = CreateMatchRequest.parse({ type: 'match', playerIds: ['p1', 'p2'], legsToWin: 4 });
+    expect(parsed).toStrictEqual({ type: 'match', playerIds: ['p1', 'p2'], startingScore: 301, legsToWin: 4 });
+    expect('bestOf' in parsed).toBe(false);
+  });
+
+  it('rejects bestOf and legsToWin together', () => {
+    const result = CreateMatchRequest.safeParse({ type: 'match', playerIds: ['p1', 'p2'], bestOf: 3, legsToWin: 2 });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([['legsToWin']]);
   });
 
   it('keeps an explicit starting score and best of', () => {
@@ -120,6 +142,8 @@ describe('CreateMatchRequest', () => {
   it.each([
     ['startingScore 401', { type: 'match', playerIds: ['p1', 'p2'], startingScore: 401 }],
     ['bestOf 2', { type: 'match', playerIds: ['p1', 'p2'], bestOf: 2 }],
+    ['legsToWin 0', { type: 'match', playerIds: ['p1', 'p2'], legsToWin: 0 }],
+    ['legsToWin 10', { type: 'match', playerIds: ['p1', 'p2'], legsToWin: 10 }],
     ['startingScore 401 in casual', { type: 'casual', playerIds: ['p1', 'p2'], startingScore: 401 }],
     ['an unknown practice mode', { type: 'practice', practiceMode: 'around_the_clock', playerIds: ['p1'] }],
     ['an unknown type', { type: 'tournament', playerIds: ['p1', 'p2'] }],
@@ -314,6 +338,10 @@ describe('MatchSnapshot', () => {
       ],
     };
     expect(MatchSnapshot.parse(withTurns)).toEqual(withTurns);
+  });
+
+  it('rejects a snapshot with more than 9 legs to win', () => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, legsToWin: 10 }).success).toBe(false);
   });
 
   it('rejects a snapshot without legTurns', () => {

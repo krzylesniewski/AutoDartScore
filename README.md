@@ -108,7 +108,7 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 
 Rodzaje gry w `POST /matches`:
 
-- `match`: dokładnie 2 różnych graczy w `playerIds`, `startingScore` 301, 501 lub 701 (domyślnie 301), `bestOf` 1, 3 lub 5 (domyślnie 1),
+- `match`: dokładnie 2 różnych graczy w `playerIds`, `startingScore` 301, 501 lub 701 (domyślnie 301) i długość meczu: `bestOf` 1, 3 lub 5 albo `legsToWin` 1-9 (do N wygranych legów), nigdy oba naraz. Bez żadnego z nich mecz to best of 1. Oba pola naraz dają 400 `invalid_request`,
 - `casual`: 2-4 różnych graczy i `startingScore` (domyślnie 301),
 - `practice`: `practiceMode` `free_run`, `solo_501` albo `checkouts` i jeden gracz. `checkouts` wymaga `checkoutRange` (`2-50` albo `51-100`), a inne tryby go nie przyjmują.
 

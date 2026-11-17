@@ -4,6 +4,7 @@ import { createMatch } from '../api/client';
 import type { AchievementNotice } from '../api/use-match';
 import { casualPlaces } from '../game/casual-places';
 import { formatAverage } from '../game/format-stat';
+import { matchLengthLabel } from '../game/match-length-label';
 import { rematchRequest } from '../game/rematch-request';
 import { pl } from '../i18n/pl';
 import { AchievementNotices } from './AchievementNotices';
@@ -156,7 +157,7 @@ function setupLine(state: MatchSnapshot): string {
     parts.push(String(state.startingScore), pl.doubleOut);
   }
   if (state.legsToWin !== null) {
-    parts.push(pl.bestOfOption(state.legsToWin * 2 - 1));
+    parts.push(matchLengthLabel(state.legsToWin));
   }
   return parts.join(' · ');
 }

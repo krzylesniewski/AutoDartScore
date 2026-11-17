@@ -20,7 +20,7 @@ Jedno wejście dla wszystkich typów gry (`game.ts`):
 - `dartsInCurrentLeg(game)`: liczone rzutki bieżącego lega, `0` zaraz po wygranym legu i zawsze w treningu checkoutów,
 - `countsToStats(config)`: `true` tylko dla meczu 1v1, zabawy i Solo 501, więc `false` dla Free run i treningu checkoutów.
 
-Mecz 1v1, best of N legów (`x01-match.ts`):
+Mecz 1v1 do N wygranych legów, N od 1 do 9 (`x01-match.ts`):
 
 - `createX01Match`, `applyThrow`, `replayX01Match`, `currentPlayerId`,
 - wynik startowy to `StartingScore`, a dozwolone wartości (301, 501, 701) są w `STARTING_SCORES` z `@autoscore/schema`.
@@ -56,7 +56,7 @@ Punkty (`points.ts`):
 
 Błędy (`errors.ts`): `EngineError` z polem `code`:
 
-- `invalid_config`: zła konfiguracja gry, na przykład zła liczba graczy albo ziarno checkoutów spoza `0..MAX_CHECKOUT_SEED`. `createX01Match` odrzuca też `firstPlayerIndex` inny niż 0 lub 1 i `legsToWin` spoza 1, 2, 3 (best of 1, 3, 5 z `BestOf`),
+- `invalid_config`: zła konfiguracja gry, na przykład zła liczba graczy albo ziarno checkoutów spoza `0..MAX_CHECKOUT_SEED`. `createX01Match` odrzuca też `firstPlayerIndex` inny niż 0 lub 1 i `legsToWin` spoza 1-9 (`LegsToWin` z `@autoscore/schema`),
 - `invalid_hit`: trafienie niezgodne z kodowaniem,
 - `match_finished`: rzutka po końcu gry,
 - `wrong_mode`: rzutka w treningu checkoutów albo próba lub pominięcie checkoutu w innym trybie.

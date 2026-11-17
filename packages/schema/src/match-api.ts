@@ -7,6 +7,7 @@ import {
   CheckoutRange,
   CheckoutTarget,
   DARTS_PER_TURN,
+  LegsToWin,
   MatchStatus,
   MatchType,
   Placement,
@@ -22,12 +23,19 @@ function distinct(ids: readonly string[]): boolean {
 const distinctPlayers = { message: 'Player ids must be distinct', path: ['playerIds'] };
 
 export const CreateMatchRequest = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('match'),
-    playerIds: z.tuple([PlayerId, PlayerId]).refine(distinct, distinctPlayers),
-    startingScore: StartingScore.default(301),
-    bestOf: BestOf.default(1),
-  }),
+  z
+    .object({
+      type: z.literal('match'),
+      playerIds: z.tuple([PlayerId, PlayerId]).refine(distinct, distinctPlayers),
+      startingScore: StartingScore.default(301),
+      bestOf: BestOf.optional(),
+      legsToWin: LegsToWin.optional(),
+    })
+    .superRefine((request, ctx) => {
+      if (request.bestOf !== undefined && request.legsToWin !== undefined) {
+        ctx.addIssue({ code: 'custom', message: 'Give either bestOf or legsToWin, not both', path: ['legsToWin'] });
+      }
+    }),
   z.object({
     type: z.literal('casual'),
     playerIds: z.array(PlayerId).min(2).max(4).refine(distinct, distinctPlayers),
@@ -133,7 +141,7 @@ export const MatchSnapshot = z.object({
   type: MatchType,
   practiceMode: PracticeMode.nullable(),
   startingScore: z.int().min(1).nullable(), // null w Free run
-  legsToWin: z.int().min(1).nullable(), // tylko w meczu 1v1
+  legsToWin: LegsToWin.nullable(), // tylko w meczu 1v1
   countsToStats: z.boolean(),
   createdAt: z.iso.datetime(),
   finished: z.boolean(),

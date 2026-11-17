@@ -618,6 +618,11 @@ describe('MatchHeader', () => {
       expect(list.contains(screen.getByText('Kolejka 4'))).toBe(false);
     });
 
+    it('ends the 1v1 settings with Do 4 legów in a first to 4 match', () => {
+      renderHeader(snapshot({ legsToWin: 4 }));
+      expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Mecz 1v1', '501', 'Double-out', 'Do 4 legów']);
+    });
+
     it.each([
       ['a 1v1 in progress', snapshot(), true],
       ['an abandoned 1v1', abandoned(), false],
