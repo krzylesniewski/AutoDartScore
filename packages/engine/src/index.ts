@@ -7,3 +7,4 @@ export * from './solo-501.js';
 export * from './free-run.js';
 export * from './checkouts.js';
 export * from './game.js';
+export * from './tournament/tournament.js';

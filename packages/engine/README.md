@@ -1,8 +1,8 @@
 # @autoscore/engine
 
-Silnik gry. Czysta logika X01, zabawy i treningu, bez I/O, UI i czasu systemowego. Dostaje stan i trafienie, zwraca nowy stan i zdarzenia domenowe (`turn_completed`, `bust`, `leg_won`, `match_won`, `player_finished`, `casual_finished`). Stan da się zawsze odtworzyć z listy trafień (w treningu checkoutów z listy prób i pominięć), więc serwer nie przechowuje go osobno.
+Silnik gry. Czysta logika X01, zabawy, treningu i turniejów, bez I/O, UI i czasu systemowego. Dostaje stan i trafienie, zwraca nowy stan i zdarzenia domenowe (`turn_completed`, `bust`, `leg_won`, `match_won`, `player_finished`, `casual_finished`). Stan da się zawsze odtworzyć z listy trafień (w treningu checkoutów z listy prób i pominięć), więc serwer nie przechowuje go osobno.
 
-Losowania też tu nie ma. Kto zaczyna, podaje wywołujący w konfiguracji (`firstPlayerIndex`). Ziarno celów treningu checkoutów (`seed`) też podaje wywołujący.
+Losowania też tu nie ma. Kto zaczyna, podaje wywołujący w konfiguracji (`firstPlayerIndex`). Ziarno celów treningu checkoutów (`seed`) i kolejność losowania turnieju (`order`) też podaje wywołujący.
 
 ## API
 
@@ -50,13 +50,34 @@ Trening checkoutów, bez rzutek i bez zdarzeń domenowych (`checkouts.ts`):
 - `nextCheckoutTarget(seed, range, previous, n)`: cel numer `n > 0`. Losowanie jest równomierne i nigdy nie powtarza poprzedniego celu,
 - `CHECKOUT_RANGES` (`2-50`, `51-100`), `MAX_CHECKOUT_SEED` (`2 ** 31 - 1`, żeby ziarno mieściło się w kolumnie integer ze znakiem).
 
+Turniej (`tournament/tournament.ts`). Na razie tylko liga (`format: 'league'`), drabinki dojdą później:
+
+- `computeTournament(input)`: stan turnieju liczony zawsze od nowa, nigdzie nieprzechowywany. `TournamentInput` ma `config` (`TournamentConfig`), `order` (ostatnie losowanie, permutacja `config.playerIds`) i `matches`: jeden `FixtureFact` na rozpoczęty mecz, w kolejności rozpoczęcia,
+- `FixtureFact` ma `fixtureId`, `matchId`, `legs` (wygrane legi w kolejności slotów) i `scoring` (`FixtureScoring` dla obu slotów: punkty i rzutki z zamkniętych tur, bust za 0) albo `null`. Silnik nie zna darta, legi i punkty podaje serwer,
+- `TournamentState` ma `fixtures` (`Fixture` z `@autoscore/schema`), `standings` (`StandingRow`), `nextFixtureId`, `liveFixtureId`, `status`, `placements` i `canRedraw`,
+- mecz bez faktu jest `ready`, z faktem bez zwycięzcy `in_progress`, a gdy jedna strona ma `legsToWin` legów, `finished` z wynikiem. `legsToWin` każdego meczu ligi to `config.legsToWin.group`,
+- `nextFixtureId` to gotowy mecz o najniższym numerze, ale grać można dowolny gotowy. `liveFixtureId` to ostatnio rozpoczęty mecz w trakcie. Czy dwa mecze mogą trwać naraz, decyduje serwer,
+- liga kończy się, gdy wszystkie mecze są rozegrane. Wtedy `placements` to miejsca z tabeli, wcześniej lista jest pusta. `canRedraw` jest `true` tylko bez żadnego faktu.
+
+Terminarz to metoda kołowa dla 3-10 graczy: każda para gra raz, przy nieparzystej liczbie graczy jeden pauzuje w każdej rundzie. Rundy grane są w całości. Silnik szuka w głąb takiej kolejności rund i meczów w rundach, żeby nikt nie grał dwóch meczów pod rząd, i bierze pierwszą znalezioną (najpierw kolejność kanoniczna). Dla 3 i 4 graczy takiej kolejności nie ma i zostaje kanoniczna. Mecze dostają numery 1..k i identyfikatory `g-<numer>`.
+
+Tabela: 2 punkty za wygraną, 0 za porażkę, remisów nie ma. O kolejności decydują po kolei:
+
+1. punkty,
+2. różnica legów,
+3. mecze bezpośrednie: przy dwóch graczach ich mecz, przy trzech i więcej mała tabela (punkty, potem różnica legów) z meczów między nimi. Gdy rozdzieli tylko część graczy, pozostałych rozstrzyga od nowa mała tabela samej tej podgrupy,
+4. średnia na 3 rzutki (`null` niżej niż każda liczba),
+5. pozycja w losowaniu.
+
+Średnia w tabeli to `3 * Σpunkty / Σrzutki` z rozegranych meczów gracza, które mają `scoring`, zaokrąglona do dwóch miejsc po przecinku (jak średnia w statystykach serwera). `null`, gdy rzutek jest 0. Porównywana jest wartość zaokrąglona, ta sama, którą widać. `averages` meczu są tylko w rozegranym meczu, w którym obie strony mają rzutki.
+
 Punkty (`points.ts`):
 
 - `hitPoints(hit)`, `isDouble(hit)` (Bull też jest doublem), `isBust(after, hit)`.
 
 Błędy (`errors.ts`): `EngineError` z polem `code`:
 
-- `invalid_config`: zła konfiguracja gry, na przykład zła liczba graczy albo ziarno checkoutów spoza `0..MAX_CHECKOUT_SEED`. `createX01Match` odrzuca też `firstPlayerIndex` inny niż 0 lub 1 i `legsToWin` spoza 1-9 (`LegsToWin` z `@autoscore/schema`),
+- `invalid_config`: zła konfiguracja gry, na przykład zła liczba graczy albo ziarno checkoutów spoza `0..MAX_CHECKOUT_SEED`. `createX01Match` odrzuca też `firstPlayerIndex` inny niż 0 lub 1 i `legsToWin` spoza 1-9 (`LegsToWin` z `@autoscore/schema`). `computeTournament` odrzuca format inny niż `league`, liczbę graczy spoza 3-10, kolejność losowania, która nie jest permutacją graczy, fakt z nieznanym albo powtórzonym `fixtureId`, pusty albo powtórzony `matchId`, legi spoza 0..`legsToWin` albo obie strony z `legsToWin` oraz punkty lub rzutki, które nie są nieujemnymi liczbami całkowitymi,
 - `invalid_hit`: trafienie niezgodne z kodowaniem,
 - `match_finished`: rzutka po końcu gry,
 - `wrong_mode`: rzutka w treningu checkoutów albo próba lub pominięcie checkoutu w innym trybie.
@@ -77,3 +98,6 @@ Testy liczą pokrycie (v8) i nie przechodzą, gdy spadnie ono poniżej progów w
 - `checkouts.test.ts`: powtarzalność celów, zakres, brak powtórki poprzedniego celu, rozkład na 10 000 celach, próby w obu zasadach, pominięcia, odtwarzanie mieszanych kroków.
 - `game.test.ts`: wspólne wejście, `countsToStats`, `isGameFinished`, `wrong_mode`.
 - `replay-golden.test.ts`: odtworzenia meczu 1v1, zabawy, Solo 501, Free run i treningu checkoutów (także urwane w trakcie tury) porównane z migawką w `__snapshots__`, nagraną na silniku sprzed wspólnego rdzenia tury. Migawki się nie nadpisuje.
+- `tournament/round-robin.test.ts`: terminarz dla 3-10 graczy (każda para raz, gracz raz w rundzie, liczba rund, pauzy, brak meczów pod rząd od 5 graczy), wektory dla 3, 4, 5 i 6 graczy, zła liczba graczy i złe identyfikatory.
+- `tournament/standings.test.ts`: wiersze tabeli, średnia ważona rzutkami, każdy poziom rozstrzygania remisów, remisy trzech graczy rozstrzygane małą tabelą.
+- `tournament/tournament.test.ts`: numeracja i statusy meczów, tabela z makiety, mecz w trakcie, koniec ligi z miejscami, `canRedraw`, średnie meczów, odrzucane wejścia.
