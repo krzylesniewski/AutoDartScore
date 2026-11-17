@@ -326,6 +326,12 @@ describe('tournament responses', () => {
       'tournament_not_finished',
       'tournament_archived',
       'archived_player',
+      'fixture_not_finished',
+      'invalid_result',
+      'dependent_started',
+      'already_withdrawn',
+      'tournament_finished',
+      'player_withdrawn',
     ]);
     expect(TournamentApiErrorCode.safeParse('stale_state').success).toBe(false);
   });

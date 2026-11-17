@@ -1,4 +1,4 @@
-import { CreateTournamentRequest, TournamentListQuery } from '@autoscore/schema';
+import { CorrectResultRequest, CreateTournamentRequest, TournamentListQuery, WithdrawPlayerRequest } from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import { invalidRequest } from '../errors.js';
 import type { TournamentService } from '../tournament-service.js';
@@ -30,6 +30,22 @@ export async function tournamentRoutes(app: FastifyInstance, service: Tournament
   });
 
   app.get<TournamentParams>('/tournaments/:id', async (request) => service.get(request.params.id));
+
+  app.post<TournamentParams>('/tournaments/:id/withdrawals', async (request, reply) => {
+    const parsed = WithdrawPlayerRequest.safeParse(request.body);
+    if (!parsed.success) {
+      throw invalidRequest(parsed.error.issues);
+    }
+    return reply.code(201).send(await service.withdraw(request.params.id, parsed.data));
+  });
+
+  app.post<FixtureParams>('/tournaments/:id/fixtures/:fixtureId/result', async (request) => {
+    const parsed = CorrectResultRequest.safeParse(request.body);
+    if (!parsed.success) {
+      throw invalidRequest(parsed.error.issues);
+    }
+    return service.correctResult(request.params.id, request.params.fixtureId, parsed.data);
+  });
 
   // Losowanie, start meczu i archiwizacja czytają z body tylko expectedSeq, jak cofnięcie rzutki.
   await app.register((commandScope) => {

@@ -183,6 +183,12 @@ export const TournamentApiErrorCode = z.enum([
   'tournament_not_finished',
   'tournament_archived',
   'archived_player',
+  'fixture_not_finished',
+  'invalid_result',
+  'dependent_started',
+  'already_withdrawn',
+  'tournament_finished',
+  'player_withdrawn',
 ]);
 export type TournamentApiErrorCode = z.infer<typeof TournamentApiErrorCode>;
 

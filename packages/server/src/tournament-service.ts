@@ -1,5 +1,14 @@
-import { computeTournament, countsToStats, createGame } from '@autoscore/engine';
+import {
+  computeTournament,
+  correctResult as correctFixtureResult,
+  countsToStats,
+  createGame,
+  hasStartedDependent,
+  TournamentError,
+  withdrawPlayer as withdrawFromTournament,
+} from '@autoscore/engine';
 import type {
+  CorrectResultRequest,
   CreateTournamentRequest,
   Fixture,
   StartFixtureResult,
@@ -7,11 +16,12 @@ import type {
   TournamentListQuery,
   TournamentLiveMessage,
   TournamentView,
+  WithdrawPlayerRequest,
 } from '@autoscore/schema';
 import { HttpError, notFound, TournamentStaleStateHttpError } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
 import type { ReplayCache } from './replay-cache.js';
-import { gameConfig } from './replay.js';
+import { gameConfig, replayLog } from './replay.js';
 import type { SerialQueue } from './serial-queue.js';
 import type { NewMatch, Store, StoredMatch, StoredTournament } from './store/store.js';
 import { shuffle } from './tournament/shuffle.js';
@@ -25,6 +35,12 @@ export interface TournamentService {
   draw(id: string, expectedSeq?: number): Promise<TournamentView>;
   startFixture(id: string, fixtureId: string, expectedSeq?: number): Promise<{ statusCode: 200 | 201; result: StartFixtureResult }>;
   archive(id: string, expectedSeq?: number): Promise<TournamentView>;
+  // Pozostałe mecze gracza stają się walkowerami, a jego trwający mecz zostaje porzucony w tym samym zapisie.
+  withdraw(id: string, request: WithdrawPlayerRequest): Promise<TournamentView>;
+  correctResult(id: string, fixtureId: string, request: CorrectResultRequest): Promise<TournamentView>;
+  // Zapis cofnięcia rzutki kończącej mecz turnieju. Odrzuca go 409 match_locked, gdy zaczął się mecz zależny od wyniku.
+  // Wołający trzyma klucz meczu.
+  guardUndo<T>(match: StoredMatch, write: () => Promise<T>): Promise<T>;
   // Po zmianie legów w meczu turnieju. Rozsyła świeży widok.
   matchLegsChanged(match: StoredMatch): Promise<void>;
   // null, gdy turnieju nie ma. Inaczej funkcja do wypisania gniazda.
@@ -37,6 +53,8 @@ interface Dependencies {
   readonly hub: LiveHub<TournamentLiveMessage>;
   readonly queue: SerialQueue;
   readonly random: () => number;
+  // Rozsyła state_updated porzuconego meczu. Nie bierze kolejki, bo wołający trzyma już klucz meczu.
+  readonly publishMatchState?: (matchId: string) => Promise<void>;
 }
 
 // Jeden klucz dla wszystkich utworzeń, żeby dwa równoległe nie przeszły razem sprawdzenia aktywnego turnieju.
@@ -46,7 +64,23 @@ function queueKey(id: string): string {
   return `tournament:${id}`;
 }
 
-export function createTournamentService({ store, cache, hub, queue, random }: Dependencies): TournamentService {
+// Mecze trwających spotkań gracza, także już porzucone, posortowane jak kolejność brania kluczy.
+function liveMatchIds(view: TournamentView, playerId: string): string[] {
+  return view.fixtures
+    .filter(
+      (fixture) => fixture.status === 'in_progress' && fixture.slots.some((slot) => slot.kind === 'player' && slot.playerId === playerId),
+    )
+    .flatMap((fixture) => fixture.matchId ?? [])
+    .sort();
+}
+
+function sameIds(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
+}
+
+type Withdrawal = { readonly retry: string[] } | { readonly view: TournamentView; readonly abandoned: readonly string[] };
+
+export function createTournamentService({ store, cache, hub, queue, random, publishMatchState }: Dependencies): TournamentService {
   async function requireTournament(id: string): Promise<StoredTournament> {
     const tournament = await store.findTournament(id);
     if (!tournament) {
@@ -83,6 +117,53 @@ export function createTournamentService({ store, cache, hub, queue, random }: De
     const fresh = await view(tournament);
     publish(fresh);
     return fresh;
+  }
+
+  // Klucze meczów po kolei, w podanej kolejności. Klucz turnieju bierze dopiero zadanie.
+  function withMatchKeys<T>(matchIds: readonly string[], task: () => Promise<T>): Promise<T> {
+    const [first, ...rest] = matchIds;
+    return first === undefined ? task() : queue(first, () => withMatchKeys(rest, task));
+  }
+
+  // Pod kluczami meczów z locked i kluczem turnieju. Gdy zbiór trwających meczów gracza zmienił się od odczytu
+  // bez kluczy, nic nie zapisuje i zwraca nowy zbiór.
+  async function withdrawLocked(id: string, request: WithdrawPlayerRequest, locked: readonly string[]): Promise<Withdrawal> {
+    const { playerId, expectedSeq } = request;
+    const tournament = await requireTournament(id);
+    const { view: current, input } = await load(tournament);
+    requireSeq(current, expectedSeq);
+    requireNotArchived(current);
+    if (current.status === 'finished') {
+      throw new HttpError(409, 'tournament_finished', `Tournament ${id} is finished`);
+    }
+    if (input.withdrawals?.includes(playerId)) {
+      throw new HttpError(409, 'already_withdrawn', `Player ${playerId} has already withdrawn from tournament ${id}`);
+    }
+    const live = liveMatchIds(current, playerId);
+    if (!sameIds(live, locked)) {
+      return { retry: live };
+    }
+    // Drugie porzucenie bez wznowienia uszkodziłoby log meczu.
+    const abandoned: string[] = [];
+    for (const matchId of locked) {
+      const match = await store.findMatch(matchId);
+      if (!match) {
+        throw new Error(`Match ${matchId} of tournament ${id} was not found`);
+      }
+      if (replayLog(match, await store.loadLog(matchId)).abandonment === null) {
+        abandoned.push(matchId);
+      }
+    }
+    try {
+      withdrawFromTournament(input, playerId);
+    } catch (error) {
+      if (error instanceof TournamentError) {
+        throw new HttpError(409, 'already_withdrawn', error.message);
+      }
+      throw error;
+    }
+    await store.withdrawPlayer(id, playerId, abandoned);
+    return { view: await publishFresh(tournament), abandoned };
   }
 
   // Jak losowanie, kto zaczyna, w match-service.ts.
@@ -206,6 +287,75 @@ export function createTournamentService({ store, cache, hub, queue, random }: De
         }
         await store.appendTournamentEvent(id, { type: 'archived' });
         return publishFresh(tournament);
+      });
+    },
+
+    // Klucze meczów przed kluczem turnieju, jak przy rzutce, która zmienia legi. Inaczej rzutka i wycofanie mogłyby
+    // czekać na siebie nawzajem. Zbiór meczów znamy dopiero z widoku, więc po zmianie w międzyczasie zaczynamy od nowa.
+    async withdraw(id, request) {
+      const tournament = await requireTournament(id);
+      if (!tournament.config.playerIds.includes(request.playerId)) {
+        throw new HttpError(400, 'not_a_participant', `Player ${request.playerId} does not play in tournament ${id}`);
+      }
+      let locked = liveMatchIds(await view(tournament), request.playerId);
+      for (;;) {
+        const outcome = await withMatchKeys(locked, async () => {
+          const result = await queue(queueKey(id), () => withdrawLocked(id, request, locked));
+          if ('view' in result && publishMatchState !== undefined) {
+            for (const matchId of result.abandoned) {
+              await publishMatchState(matchId);
+            }
+          }
+          return result;
+        });
+        if ('view' in outcome) {
+          return outcome.view;
+        }
+        locked = outcome.retry;
+      }
+    },
+
+    correctResult(id, fixtureId, { legs, expectedSeq }) {
+      return queue(queueKey(id), async () => {
+        const tournament = await requireTournament(id);
+        const { view: current, input } = await load(tournament);
+        requireSeq(current, expectedSeq);
+        requireNotArchived(current);
+        const fixture = current.fixtures.find((candidate) => candidate.id === fixtureId);
+        if (!fixture) {
+          throw notFound(`Fixture ${fixtureId} of tournament ${id}`);
+        }
+        if (fixture.status !== 'finished') {
+          throw new HttpError(409, 'fixture_not_finished', `Fixture ${fixtureId} of tournament ${id} is ${fixture.status}`);
+        }
+        try {
+          correctFixtureResult(input, { fixtureId, legs });
+        } catch (error) {
+          if (error instanceof TournamentError && error.code === 'dependent_started') {
+            throw new HttpError(409, 'dependent_started', error.message);
+          }
+          if (error instanceof TournamentError) {
+            throw new HttpError(400, 'invalid_result', error.message);
+          }
+          throw error;
+        }
+        await store.appendTournamentEvent(id, { type: 'result_corrected', fixtureId, legs });
+        return publishFresh(tournament);
+      });
+    },
+
+    // Sprawdzenie i zapis pod kluczem turnieju, więc mecz zależny nie wystartuje pomiędzy nimi.
+    guardUndo(match, write) {
+      const link = match.tournament;
+      if (link === null) {
+        return write();
+      }
+      return queue(queueKey(link.id), async () => {
+        const { input } = await load(await requireTournament(link.id));
+        if (hasStartedDependent(input, link.fixtureId)) {
+          throw new HttpError(409, 'match_locked', `Match ${match.id} is locked because a fixture that depends on it has started`);
+        }
+        return write();
       });
     },
 

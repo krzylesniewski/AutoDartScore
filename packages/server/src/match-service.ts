@@ -44,6 +44,8 @@ export interface MatchService {
   list(query: MatchListQuery): Promise<MatchListItem[]>;
   // null, gdy gry nie ma. Inaczej funkcja do wypisania gniazda.
   subscribe(id: string, socket: LiveSocket): Promise<(() => void) | null>;
+  // Rozsyła state_updated ze świeżą migawką bez brania kolejki. Wołający musi trzymać klucz gry.
+  publishState(id: string): Promise<void>;
 }
 
 interface Dependencies {
@@ -57,6 +59,8 @@ interface Dependencies {
   readonly logger: Pick<FastifyBaseLogger, 'error'>;
   // Po zmianie legów w meczu turnieju, gdy wiadomości samej gry są już wysłane.
   readonly onLegsChanged?: (match: StoredMatch) => Promise<void>;
+  // Obejmuje zapis cofnięcia rzutki, która zakończyła mecz turnieju. Może go odrzucić błędem.
+  readonly guardTournamentUndo?: <T>(match: StoredMatch, write: () => Promise<T>) => Promise<T>;
 }
 
 function legsWon(game: GameState): string {
@@ -73,6 +77,7 @@ export function createMatchService({
   cache,
   logger,
   onLegsChanged,
+  guardTournamentUndo,
 }: Dependencies): MatchService {
   const references = createAchievementReference({ store, cache });
 
@@ -482,7 +487,12 @@ export function createMatchService({
           throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no throw to undo`);
         }
         const remaining = throws.slice(0, -1);
-        const seq = await store.appendUndo(id, last.id);
+        const append = () => store.appendUndo(id, last.id);
+        // Tylko sam zapis pod kluczem turnieju. legsChanged niżej bierze ten klucz, a kolejka nie jest wielowejściowa.
+        const seq =
+          match.tournament !== null && isGameFinished(before) && guardTournamentUndo !== undefined
+            ? await guardTournamentUndo(match, append)
+            : await append();
         if (match.type === 'match' && isGameFinished(before)) {
           references.invalidate();
         }
@@ -539,6 +549,15 @@ export function createMatchService({
         const { abandonment } = replayed;
         if (!abandonment) {
           throw new HttpError(409, 'match_not_abandoned', `Match ${id} is not abandoned`);
+        }
+        // Wznowienie zamieniłoby walkower z powrotem w rozgrywany mecz. Wycofanie zapisuje pod kluczem tego meczu,
+        // więc nie wejdzie między to sprawdzenie a zapis.
+        if (match.tournament !== null) {
+          const players = new Set(match.players.map((player) => player.id));
+          const log = await store.loadTournamentLog(match.tournament.id);
+          if (log.some((entry) => entry.type === 'player_withdrawn' && players.has(entry.playerId))) {
+            throw new HttpError(409, 'player_withdrawn', `A player of match ${id} has withdrawn from the tournament`);
+          }
         }
         await store.appendResume(id);
         const state = await snapshot(match);
@@ -642,6 +661,10 @@ export function createMatchService({
         sendTo(socket, [{ type: 'state_updated', matchId: id, eventSeq: state.eventSeq, state }]);
         return unsubscribe;
       });
+    },
+
+    async publishState(id) {
+      publishState(id, await snapshot(await requireMatch(id)));
     },
   };
 }
