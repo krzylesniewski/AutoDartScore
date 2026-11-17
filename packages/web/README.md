@@ -73,6 +73,7 @@ Ekran ma:
 #### Nagłówek i układ
 
 - Nagłówek pokazuje „Kolejka N”, czyli kolejkę rzucającego w bieżącym legu. Free run nie ma kolejki.
+- W meczu turnieju pierwsza pozycja ustawień w nagłówku to etykieta meczu, np. „Grupa, mecz 7” albo „Półfinał 2”, zamiast „Mecz 1v1”.
 - Obok stoi zegar lega liczony od pierwszej rzutki lega, bez przerw między porzuceniem a wznowieniem. W Free run to zegar sesji.
 - „Cofnij” stoi w klawiaturze. Po końcu Solo 501, gdy klawiatury już nie ma, stoi osobno pod slotami rzutek.
 - Od lg karta zamknięcia stoi na dole prawej kolumny i wypełnia całą wolną wysokość pod klawiaturą, co najmniej 80 px. Trasa i etykieta rosną razem z kartą, a klawiatura nie zmienia przez to rozmiaru ani miejsca. Poniżej lg karta stoi pod slotami, nad klawiaturą.
@@ -126,7 +127,7 @@ Skróty na klawiaturze komputera:
 - Po końcu gry podsumowanie pokazuje zamiast kolejki i zegara „Czas gry” jako osobny element z dużą wartością.
 - Podsumowanie meczu 1v1 pokazuje przy każdym legu jego czas z ikoną zegara. Trening nie pokazuje czasu lega.
 - Podsumowanie pokazuje przy każdym gościu przycisk „Zapisz gracza”.
-- Zakończony mecz 1v1 otwiera widok podsumowania z przyciskami „Rewanż” i „Nowy mecz”. Rewanż ma tych samych graczy, punkty i liczbę legów, a kto zaczyna, losuje serwer.
+- Zakończony mecz 1v1 otwiera widok podsumowania z przyciskami „Rewanż” i „Nowy mecz”. Rewanż ma tych samych graczy, punkty i liczbę legów, a kto zaczyna, losuje serwer. W meczu turnieju zamiast „Rewanż” jest link „Wróć do turnieju”, a obok tytułu etykieta meczu z ustawieniami.
 - Podsumowanie meczu 1v1 (pod kartami legów) i zabawy (pod tabelą) ma wykres „Leg N · zejście z wyniku”. Wykres pokazuje pozostały wynik po każdej rzutce ostatniego lega, jedną linię na gracza w kolorze avatara i z własnym wzorem. Bust jest oznaczony ikoną i tekstem „Bust”.
 - Siatka wykresu ma linię co kolejkę (3 lotki) i co 50 punktów (301) albo 100 punktów (501, 701), a obie osie mają liczby. Trening nie ma wykresu.
 - W zakończonej grze „Cofnij” odlicza czas do `editableUntil`, np. „Cofnij (4:12)”. Potem przycisk jest nieaktywny, a obok stoi kłódka i tekst „Mecz zamknięty, nie można go już zmienić”. Odliczanie idzie z zegara urządzenia, a o zamknięciu decyduje serwer.
@@ -183,7 +184,14 @@ Ekran startowy z wybranym typem „Turniej”. W nawigacji zaznaczona jest „No
 
 ### `#/tournaments/:id`: turniej
 
-Na razie zaślepka: nazwa, format z punktami startowymi i lista meczów w kolejności gry. Wiersz ma numer meczu, obie strony („Wolny los” albo „Do ustalenia”, gdy gracza jeszcze nie ma), wynik w legach i status. Nieznany turniej pokazuje „Nie znaleziono turnieju.” z linkiem do `#/tournaments`.
+Ekran turnieju. Stan bierze z `GET /tournaments/:id`, a potem śledzi `tournament_updated` z WebSocketa `/tournaments/:id/live`, z tym samym logowaniem i ponownym łączeniem co ekran gry. Starszy `eventSeq` niczego nie zmienia, a równy wygrywa, bo zmiana legów w meczu turnieju przychodzi z tym samym `eventSeq`. Nieznany turniej pokazuje „Nie znaleziono turnieju.” z linkiem do `#/tournaments`.
+
+- Nagłówek: „Turniej · format · punkty”, nazwa, stan fazy (np. „Faza grupowa · 9 z 15 meczów”, „Liga”, „Play-off” albo „Turniej zakończony”) i zakładki. Liga ma „Tabela”, grupa + play-off „Grupa” i „Play-off”, puchar „Drabinka”. Domyślna zakładka wynika z pierwszego widoku, a aktualizacje jej nie zmieniają. Strzałki w lewo i w prawo przechodzą między zakładkami.
+- „Losuj ponownie” jest tylko przed startem pierwszego meczu (`POST /tournaments/:id/draw`).
+- „Tabela” i „Grupa”: od sm tabela krzyżowa z wynikiem w legach od strony gracza z wiersza, numerem meczu w kółku dla meczu do rozegrania i kolumnami M, W, P, +/- i PKT. Mecz trwający, a bez niego następny, ma ramkę w kolorze akcentu i napis „trwa” albo „teraz”. Tabela przewija się w poziomie we własnej ramce. Poniżej sm krótka tabela: miejsce, gracz, W–P, +/- i PKT. W grupie + play-off miejsca dające awans mają strzałkę i tekst „awans do play-off” dla czytników ekranu.
+- „Play-off” i „Drabinka”: na razie lista meczów spoza grupy w kolejności gry. Wiersz ma numer meczu, obie strony („Wolny los” albo „Do ustalenia”, gdy gracza jeszcze nie ma), wynik w legach i status.
+- Prawa kolumna od lg, a poniżej lg nad tabelą: karta każdego trwającego meczu z linkiem „Wróć do meczu” i karta „Następny mecz” z graczami, miejscem w tabeli, długością meczu i przyciskiem „Zagraj mecz”. Pod tabelą (od lg pod kartą) „Kolejka” z pozostałymi gotowymi meczami, każdy z przyciskiem „Zagraj”.
+- „Zagraj mecz” i „Zagraj” wysyłają `POST /tournaments/:id/fixtures/:fixtureId/start` z bieżącym `eventSeq` i otwierają `#/matches/:id`. W trakcie komendy przyciski są nieaktywne. Błąd pokazuje polski tekst przy przycisku i pobiera turniej jeszcze raz.
 
 ## Pierwsze ładowanie
 
@@ -195,7 +203,7 @@ Kod ekranów statystyk, historii, ustawień i turniejów (`#/tournaments` i `#/t
 - Po zamknięciu fokus wraca do przycisku, który okno otworzył. Przy oknie otwartym z menu gry wraca do przycisku „Menu gry”.
 - Gdy okno nowego gracza albo edycji gracza zapisuje dane, Escape i „Anuluj” nic nie robią.
 - Czytniki ekranu ogłaszają od razu (`role="alert"`) komunikaty `Notice` o błędach i utracie połączenia, błąd startu gry i błędy w oknach gracza. Komunikaty o grze tylko do odczytu i zamkniętym meczu idą jako `role="status"`.
-- Błędy API przy starcie gry i w oknach gracza pokazują polski tekst wybrany po kodzie błędu, nigdy angielski komunikat serwera.
+- Błędy API przy starcie gry, w oknach gracza i przy komendach ekranu turnieju pokazują polski tekst wybrany po kodzie błędu, nigdy angielski komunikat serwera.
 
 ## Logowanie
 
@@ -207,7 +215,7 @@ Kod ekranów statystyk, historii, ustawień i turniejów (`#/tournaments` i `#/t
 
 ## Struktura
 
-- `src/api/`: klient REST, token i sygnał logowania (`session.ts`), generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook podsumowania meczu.
+- `src/api/`: klient REST, token i sygnał logowania (`session.ts`), generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook turnieju z tym samym kanałem na żywo (`use-tournament.ts`), hook podsumowania meczu.
 - `src/audio/`: głos z nagrań (`recorded-speaker.ts`) z Web Speech API jako zapasem, efekty przez Web Audio API, hook `useAnnouncer`.
 - `src/components/`:
   - wspólne okno modalne (`Dialog`), komunikat (`Notice`) i ekran wczytywany na żądanie (`LazyScreen`),
@@ -215,9 +223,10 @@ Kod ekranów statystyk, historii, ustawień i turniejów (`#/tournaments` i `#/t
   - formularz nowej gry z podsumowaniem, okno nowego gracza, lista gier do dokończenia,
   - historia gier (`MatchHistoryList`), ranking, profil gracza (`PlayerProfile`) z oknami edycji i archiwizacji,
   - wykres formy (`FormChart`), wykres zejścia z wyniku w ostatnim legu (`ScoreProgressChart`), bilans 1v1 (`HeadToHeadPanel`), panele statystyk i podsumowania meczu,
-  - pasek wyników, panel tury, klawiatura, nagłówek gry, komunikaty osiągnięć (`AchievementNotices`), okna porzucenia meczu i zakończenia treningu.
-- `src/game/`: podpowiedź zamknięcia i jej trasa dla bieżącej tury (`checkout-route.ts`), skróty klawiatury (`keypad-shortcut.ts`) i składanie cyfr w liczbę (`shortcut-number.ts`), etykiety trafień, kolejność paska wyników, formatowanie statystyk, stan formularza nowej gry, teksty i data aktywności na liście gier do dokończenia, teksty wiersza historii (`history-row.ts`), współrzędne, siatka i etykiety osi wykresu formy (`form-chart.ts`) i wykresu zejścia z wyniku (`score-progress-chart.ts`), teksty osiągnięć (`achievement-text.ts`), reguły porzucenia i zakończenia treningu.
-- `src/screens/`: `HomeScreen`, `GameScreen`, `StatsScreen`, `HistoryScreen`, `SettingsScreen` i `LoginScreen`.
+  - pasek wyników, panel tury, klawiatura, nagłówek gry, komunikaty osiągnięć (`AchievementNotices`), okna porzucenia meczu i zakończenia treningu,
+  - ekran turnieju: zakładki (`TournamentTabs`), tabela krzyżowa i krótka (`StandingsTable`), karta następnego meczu (`NextFixtureCard`), kolejka (`FixtureQueue`), trwające mecze (`RunningFixtures`) i lista meczów play-off (`FixtureList`).
+- `src/game/`: podpowiedź zamknięcia i jej trasa dla bieżącej tury (`checkout-route.ts`), skróty klawiatury (`keypad-shortcut.ts`) i składanie cyfr w liczbę (`shortcut-number.ts`), etykiety trafień, kolejność paska wyników, formatowanie statystyk, stan formularza nowej gry, teksty i data aktywności na liście gier do dokończenia, teksty wiersza historii (`history-row.ts`), współrzędne, siatka i etykiety osi wykresu formy (`form-chart.ts`) i wykresu zejścia z wyniku (`score-progress-chart.ts`), teksty osiągnięć (`achievement-text.ts`), reguły porzucenia i zakończenia treningu, stan fazy turnieju (`tournament-progress.ts`), komórki tabeli krzyżowej (`cross-table.ts`) i strony meczu turnieju (`tournament-slot.ts`).
+- `src/screens/`: `HomeScreen`, `GameScreen`, `StatsScreen`, `HistoryScreen`, `SettingsScreen`, `TournamentsScreen`, `TournamentScreen` i `LoginScreen`.
 - `src/i18n/`: teksty po polsku.
 
 ## Ikony i kolor przeglądarki

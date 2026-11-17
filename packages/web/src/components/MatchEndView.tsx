@@ -75,6 +75,9 @@ export function MatchEndView({
         {isCasual && (
           <span className="font-display text-[19px] text-(--color-text-sub)">{[pl.typeCasual, setupLine(state)].join(' · ')}</span>
         )}
+        {state.tournament !== null && (
+          <span className="font-display text-[19px] text-(--color-text-sub)">{[state.tournament.label, setupLine(state)].join(' · ')}</span>
+        )}
         <div className="ml-auto flex flex-wrap gap-2">
           <VoiceToggle enabled={voiceEnabled} onChange={onVoiceChange} />
           <EffectsToggle enabled={effectsEnabled} onChange={onEffectsChange} />
@@ -376,15 +379,24 @@ function ActionBar({ state, busy, undoLocked, undoCountdown, onUndo }: ActionBar
               <a href={HOME_HREF} className="sc-btn h-[60px] flex-1 text-[22px] font-bold shadow-(--shadow-key) lg:flex-none">
                 {pl.newMatch}
               </a>
-              {request && (
-                <button
-                  type="button"
-                  disabled={status === 'pending'}
-                  onClick={() => void rematch(request)}
+              {state.tournament !== null ? (
+                <a
+                  href={`#/tournaments/${encodeURIComponent(state.tournament.id)}`}
                   className="sc-btn sc-btn--primary h-[60px] flex-1 px-8 lg:flex-none"
                 >
-                  {pl.rematch}
-                </button>
+                  {pl.backToTournament}
+                </a>
+              ) : (
+                request && (
+                  <button
+                    type="button"
+                    disabled={status === 'pending'}
+                    onClick={() => void rematch(request)}
+                    className="sc-btn sc-btn--primary h-[60px] flex-1 px-8 lg:flex-none"
+                  >
+                    {pl.rematch}
+                  </button>
+                )
               )}
             </>
           )}

@@ -9,6 +9,8 @@ import {
   getMatch,
   getTournament,
   listTournaments,
+  redrawTournament,
+  startFixture,
   undo,
 } from './client';
 
@@ -123,6 +125,46 @@ describe('tournament requests', () => {
     const body = CreateTournamentRequest.parse({ name: 'Puchar', format: 'cup', playerIds: ['p1', 'p2', 'p3'] });
     const caught: unknown = await createTournament(body).catch((error: unknown) => error);
     expect(caught).toMatchObject({ status: 409, code: 'tournament_active' });
+  });
+
+  it('starts a fixture with encoded path segments and expectedSeq', async () => {
+    const view = tournamentView({ id: 't 1' });
+    const fetch = stub({ matchId: 'm7', tournament: view }, 201);
+    expect(await startFixture('t 1', 'g/1', 12)).toEqual({ matchId: 'm7', tournament: view });
+    expect(fetch.mock.calls[0]?.[0]).toBe('/api/tournaments/t%201/fixtures/g%2F1/start');
+    const init = fetch.mock.calls[0]?.[1];
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(init?.body as string)).toEqual({ expectedSeq: 12 });
+  });
+
+  it('starts a fixture without a body when expectedSeq is missing', async () => {
+    const fetch = stub({ matchId: 'm7', tournament: tournamentView() });
+    await startFixture('t1', 'g-1');
+    expect(fetch.mock.calls[0]?.[0]).toBe('/api/tournaments/t1/fixtures/g-1/start');
+    const init = fetch.mock.calls[0]?.[1];
+    expect(init?.method).toBe('POST');
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('redraws a tournament with and without expectedSeq', async () => {
+    const view = tournamentView({ id: 't 1', eventSeq: 2 });
+    const fetch = stub(view);
+    expect(await redrawTournament('t 1', 1)).toEqual(view);
+    await redrawTournament('t 1');
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual(['/api/tournaments/t%201/draw', '/api/tournaments/t%201/draw']);
+    const [first, second] = fetch.mock.calls.map((call) => call[1]);
+    expect(first?.method).toBe('POST');
+    expect(JSON.parse(first?.body as string)).toEqual({ expectedSeq: 1 });
+    expect(second?.method).toBe('POST');
+    expect(second?.body).toBeUndefined();
+  });
+
+  it('rejects a stale tournament command with a plain stale_state ApiRequestError', async () => {
+    stub({ error: 'stale_state', message: 'Tournament state changed', tournament: tournamentView({ eventSeq: 5 }) }, 409);
+    const caught: unknown = await redrawTournament('t1', 4).catch((error: unknown) => error);
+    expect(caught).toBeInstanceOf(ApiRequestError);
+    expect(caught).not.toBeInstanceOf(StaleStateRequestError);
+    expect(caught).toMatchObject({ status: 409, code: 'stale_state' });
   });
 });
 

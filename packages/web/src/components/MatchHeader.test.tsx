@@ -618,6 +618,11 @@ describe('MatchHeader', () => {
       expect(list.contains(screen.getByText('Kolejka 4'))).toBe(false);
     });
 
+    it('shows the fixture label instead of Mecz 1v1 in a tournament match', () => {
+      renderHeader(snapshot({ tournament: { id: 't1', name: 'Liga czwartkowa', fixtureId: 'g-7', label: 'Grupa, mecz 7' } }));
+      expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Grupa, mecz 7', '501', 'Double-out', 'Best of 3']);
+    });
+
     it('ends the 1v1 settings with Do 4 legów in a first to 4 match', () => {
       renderHeader(snapshot({ legsToWin: 4 }));
       expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Mecz 1v1', '501', 'Double-out', 'Do 4 legów']);

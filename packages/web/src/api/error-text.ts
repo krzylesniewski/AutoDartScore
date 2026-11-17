@@ -8,6 +8,10 @@ const TEXT_BY_CODE: Readonly<Record<string, string>> = {
   unknown_player: pl.unknownPlayer,
   archived_player: pl.archivedPlayer,
   tournament_active: pl.tournamentActive,
+  fixture_not_ready: pl.fixtureNotReady,
+  tournament_started: pl.tournamentStarted,
+  tournament_archived: pl.tournamentArchived,
+  stale_state: pl.staleState,
 };
 
 export function apiErrorText(caught: unknown): string {
