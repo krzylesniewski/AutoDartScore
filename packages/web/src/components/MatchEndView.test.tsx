@@ -134,6 +134,11 @@ describe('MatchEndView', () => {
     ]);
   });
 
+  it('shows a first to 4 match as Do 4 legów in the setup line', () => {
+    view({ state: { ...finished, legsToWin: 4 } });
+    expect(screen.getByText('501 · Double-out · Do 4 legów')).toBeTruthy();
+  });
+
   it('shows the achievement notices in a status region and keeps Cofnij working', () => {
     const props = view({
       achievements: [

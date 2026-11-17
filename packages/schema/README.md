@@ -13,7 +13,7 @@ Kontrakt projektu: schematy Zod i typy TypeScript wspólne dla wszystkich pakiet
 
 Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (50 pkt, liczy się jako double), a 25×3 jest odrzucane.
 
-`match.ts`: `MatchType` (`match`, `casual`, `practice`), `PracticeMode` (`free_run`, `solo_501`, `checkouts`), `CheckoutRange` (`2-50`, `51-100`), `CheckoutRule` (`new_each_attempt`, `repeat_on_miss`), `CheckoutTarget` (2-100), `CheckoutAttempt` (`{ target, success }`), `DARTS_PER_TURN` (3), `StartingScore` (301, 501, 701), `STARTING_SCORES` (te same wartości jako lista), `BestOf` (1, 3, 5), `Placement`, `MatchStatus` (`in_progress`, `abandoned`, `ended`, `finished`).
+`match.ts`: `MatchType` (`match`, `casual`, `practice`), `PracticeMode` (`free_run`, `solo_501`, `checkouts`), `CheckoutRange` (`2-50`, `51-100`), `CheckoutRule` (`new_each_attempt`, `repeat_on_miss`), `CheckoutTarget` (2-100), `CheckoutAttempt` (`{ target, success }`), `DARTS_PER_TURN` (3), `StartingScore` (301, 501, 701), `STARTING_SCORES` (te same wartości jako lista), `BestOf` (1, 3, 5), `LegsToWin` (1-9, do N wygranych legów), `Placement`, `MatchStatus` (`in_progress`, `abandoned`, `ended`, `finished`).
 
 - `CheckoutRule` to zasada losowania celów w treningu checkoutów. Serwer ją zapisuje, ale nie wysyła w odpowiedziach API.
 - `DARTS_PER_TURN` ogranicza `darts` w `TurnCompleted`, `Bust` i `LegTurn`, `throws` w `RestMissResult` oraz `MatchSnapshot.currentDarts` (do `DARTS_PER_TURN - 1`).
@@ -27,6 +27,7 @@ Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (
 - `StaleStateError` to body 409 `stale_state` (`STALE_STATE`) z bieżącym `state`. Parsuje się też jako `ApiError`.
 
 - `CreateMatchRequest` dla treningu `checkouts` wymaga `checkoutRange`, a dla innych trybów go odrzuca.
+- `CreateMatchRequest` dla meczu 1v1 przyjmuje `bestOf` albo `legsToWin`, nigdy oba naraz. Bez żadnego z nich serwer tworzy mecz best of 1. `MatchSnapshot.legsToWin` to `LegsToWin` albo `null` poza meczem 1v1.
 - `CheckoutSession` to postęp treningu checkoutów: `range`, bieżący `target`, `attempts`, `successes`, `skips` (pominięte cele, które nadal się liczą) i `history` (zakończone próby w kolejności). Pominięcia nie wchodzą do `attempts`, `successes` ani `history`. Liczniki prób muszą zgadzać się z historią. Ziarna i zasady losowania nie ma w żadnej odpowiedzi.
 - `LegTurn` to zamknięta tura bieżącego lega z `MatchSnapshot.legTurns`: `playerId`, `turnIndex`, `darts` (1-3 trafienia), `points`, `remainingAfter` (wynik po turze, `null` tylko w Free run) i `bust`. Bust ma `points: 0` i `remainingAfter` równe wynikowi sprzed tury.
 - `MatchSnapshot`, `MatchListItem` i `MatchSummary` mają pole `checkouts` z `CheckoutSession`, `null` poza treningiem checkoutów.

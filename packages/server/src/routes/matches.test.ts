@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { ApiError, MatchSnapshot, ThrowResult } from '@autoscore/schema';
+import { ApiError, MatchListItem, MatchSnapshot, ThrowResult } from '@autoscore/schema';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   D,
@@ -56,6 +56,20 @@ describe('POST /matches', () => {
     ]);
   });
 
+  it('creates a first to 4 legs match from legsToWin and lists it', async () => {
+    const [anna, bartek] = await createPlayers(t.app, 2);
+    const state = MatchSnapshot.parse(await createGame(t.app, { type: 'match', playerIds: [anna, bartek], legsToWin: 4 }));
+    expect(state).toMatchObject({ type: 'match', startingScore: 301, legsToWin: 4 });
+    const list = MatchListItem.array().parse((await t.app.inject({ method: 'GET', url: '/matches' })).json());
+    expect(list.find((item) => item.id === state.id)?.legsToWin).toBe(4);
+  });
+
+  it('turns best of 5 into three legs to win', async () => {
+    const [anna, bartek] = await createPlayers(t.app, 2);
+    const state = await createGame(t.app, { type: 'match', playerIds: [anna, bartek], bestOf: 5 });
+    expect(state.legsToWin).toBe(3);
+  });
+
   it('creates a casual game, a solo 501 and a free run', async () => {
     const [anna, bartek, celina] = await createPlayers(t.app, 3);
     const casual = await createGame(t.app, { type: 'casual', playerIds: [anna, bartek, celina], startingScore: 301 });
@@ -88,6 +102,13 @@ describe('POST /matches', () => {
   it.each([
     ['a bad player count', (ids: string[]) => ({ type: 'match', playerIds: ids.slice(0, 3) }), 'invalid_request'],
     ['startingScore 401', (ids: string[]) => ({ type: 'match', playerIds: ids.slice(0, 2), startingScore: 401 }), 'invalid_request'],
+    [
+      'bestOf and legsToWin together',
+      (ids: string[]) => ({ type: 'match', playerIds: ids.slice(0, 2), bestOf: 3, legsToWin: 2 }),
+      'invalid_request',
+    ],
+    ['legsToWin 0', (ids: string[]) => ({ type: 'match', playerIds: ids.slice(0, 2), legsToWin: 0 }), 'invalid_request'],
+    ['legsToWin 10', (ids: string[]) => ({ type: 'match', playerIds: ids.slice(0, 2), legsToWin: 10 }), 'invalid_request'],
     ['an unknown player', (ids: string[]) => ({ type: 'casual', playerIds: [ids[0], 'ghost'] }), 'unknown_player'],
   ])('rejects %s with 400', async (_name, body, error) => {
     const ids = await createPlayers(t.app, 3);

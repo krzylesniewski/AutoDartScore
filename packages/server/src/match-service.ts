@@ -129,7 +129,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           type: request.type,
           practiceMode: null,
           startingScore: request.startingScore,
-          legsToWin: (request.bestOf + 1) / 2,
+          legsToWin: request.legsToWin ?? ((request.bestOf ?? 1) + 1) / 2,
           firstPlayerIndex: draw(request.playerIds.length),
           checkoutRange: null,
           checkoutSeed: null,

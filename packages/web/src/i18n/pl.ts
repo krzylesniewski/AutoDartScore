@@ -111,6 +111,7 @@ export const pl = {
   startingScore: 'Punkty startowe',
   bestOf: 'Liczba legów',
   bestOfOption: (bestOf: number) => `Best of ${bestOf}`,
+  firstToLegs: (legsToWin: number) => `Do ${legsToWin} ${plural(legsToWin, 'lega', 'legów', 'legów')}`,
   practiceMode: 'Tryb treningu',
   playerCountHint: {
     match: 'Wybierz 2 graczy.',

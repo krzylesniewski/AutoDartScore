@@ -2,6 +2,7 @@ import type { MatchSnapshot } from '@autoscore/schema';
 import { useEffect, useId, useRef, useState, type Ref } from 'react';
 import { canAbandon } from '../game/can-abandon';
 import { canEndPractice } from '../game/can-end-practice';
+import { matchLengthLabel } from '../game/match-length-label';
 import { pl } from '../i18n/pl';
 import { AppMark } from './AppMark';
 import { EffectsToggle } from './EffectsToggle';
@@ -240,7 +241,7 @@ function chips(state: MatchSnapshot): string[] {
     labels.push(pl.doubleOut);
   }
   if (state.type === 'match' && state.legsToWin !== null) {
-    labels.push(pl.bestOfOption(state.legsToWin * 2 - 1));
+    labels.push(matchLengthLabel(state.legsToWin));
   }
   return labels;
 }

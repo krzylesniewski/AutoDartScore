@@ -68,19 +68,15 @@ describe('createX01Match', () => {
     expectEngineError(() => createX01Match({ ...config, startingScore: 401 as 501 }), 'invalid_config');
   });
 
-  it('rejects a non-positive legsToWin', () => {
-    expectEngineError(() => createX01Match({ ...config, legsToWin: 0 }), 'invalid_config');
-  });
-
   it.each([2, -1, 0.5])('rejects firstPlayerIndex %d', (firstPlayerIndex) => {
     expectEngineError(() => createX01Match({ ...config, firstPlayerIndex: firstPlayerIndex as unknown as 0 | 1 }), 'invalid_config');
   });
 
-  it.each([4, 5, 1.5])('rejects legsToWin %d outside best of 1, 3 and 5', (legsToWin) => {
+  it.each([0, 10, 1.5, -1])('rejects legsToWin %d outside 1 to 9', (legsToWin) => {
     expectEngineError(() => createX01Match({ ...config, legsToWin }), 'invalid_config');
   });
 
-  it.each([1, 2, 3])('accepts legsToWin %d', (legsToWin) => {
+  it.each([1, 4, 9])('accepts legsToWin %d', (legsToWin) => {
     expect(createX01Match({ ...config, legsToWin }).config.legsToWin).toBe(legsToWin);
   });
 });
@@ -231,6 +227,28 @@ describe('legs and match', () => {
 
   it('rejects a dart thrown after the match has finished', () => {
     const { state } = replayX01Match(short, [...quickLeg(true), ...quickLeg(false)]);
+    expectEngineError(() => applyThrow(state, S(20)), 'match_finished');
+  });
+
+  it('plays a first to 4 match over seven legs with alternating starters', () => {
+    const first4 = { ...short, legsToWin: 4 };
+    let state = createX01Match(first4);
+    const starters: string[] = [];
+    const legEvents = [];
+    for (let leg = 0; leg < 7; leg++) {
+      starters.push(currentPlayerId(state));
+      const result = throwAll(state, quickLeg(true));
+      state = result.state;
+      legEvents.push(result.events);
+    }
+    expect(starters).toEqual(['anna', 'bartek', 'anna', 'bartek', 'anna', 'bartek', 'anna']);
+    expect(
+      legEvents
+        .slice(0, 6)
+        .flat()
+        .some((event) => event.type === 'match_won'),
+    ).toBe(false);
+    expect(legEvents.at(-1)?.at(-1)).toEqual({ type: 'match_won', playerId: 'anna', legsWon: { anna: 4, bartek: 3 } });
     expectEngineError(() => applyThrow(state, S(20)), 'match_finished');
   });
 
