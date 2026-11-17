@@ -31,7 +31,7 @@ interface Placed {
 }
 
 function decided(fixture: Fixture): boolean {
-  return fixture.status === 'finished' || fixture.status === 'bye';
+  return fixture.status === 'finished' || fixture.status === 'walkover' || fixture.status === 'bye';
 }
 
 function bracketRounds(fixtures: readonly Fixture[], phase: FixturePhase): Fixture[][] {
