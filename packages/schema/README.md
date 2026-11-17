@@ -58,7 +58,7 @@ Zapytania statystyk (`PlayerStatsQuery`, `RankingsQuery`, `PlayerFormQuery`, `Ov
 - `TournamentEvent` to wpisy logu turnieju bez `seq` i `created_at`, które dodaje serwer. `draw` ma `order` (3-16 różnych graczy) i ostatnie losowanie w logu wyznacza bieżącą kolejność. Pozostałe wpisy: `fixture_started` (`fixtureId`, `matchId`), `player_withdrawn` (`playerId`), `result_corrected` (`fixtureId`, `legs`), `sharing_changed` (`sharing`), `archived`.
 - `MatchTournament` (`id`, `name`, `fixtureId`, `label`) wiąże mecz z turniejem. `label` to tekst do wyświetlenia, np. „Półfinał 2”.
 
-`tournament-api.ts`: `TournamentPlayer`, `TournamentPlacement`, `FixturePhase` (`group`, `playoff`, `third_place`, `consolation`), `FixtureStatus` (`waiting`, `ready`, `in_progress`, `finished`, `walkover`, `bye`), `FixtureSlot`, `FixtureResult`, `Fixture`, `StandingRow`, `TournamentStatus` (`in_progress`, `finished`), `TournamentView`, `TournamentListQuery`, `TournamentListItem`, `StartFixtureResult`, `TournamentRecord`, `TournamentLegRecord`, `TournamentRecords`, `TournamentStatsPlayer`, `TournamentStats`, `TournamentApiErrorCode`, `TournamentStaleStateError`, `TournamentUpdated`, `TournamentLiveMessage`, `CorrectResultRequest`, `WithdrawPlayerRequest`, `SharingRequest`.
+`tournament-api.ts`: `TournamentPlayer`, `TournamentPlacement`, `FixturePhase` (`group`, `playoff`, `third_place`, `consolation`), `FixtureStatus` (`waiting`, `ready`, `in_progress`, `finished`, `walkover`, `bye`), `FixtureSlot`, `FixtureResult`, `Fixture`, `StandingRow`, `TournamentStatus` (`in_progress`, `finished`), `TournamentView`, `TournamentListQuery`, `TournamentListItem`, `StartFixtureResult`, `TournamentRecord`, `TournamentLegRecord`, `TournamentRecords`, `TournamentStatsPlayer`, `TournamentStats`, `TournamentApiErrorCode`, `TournamentStaleStateError`, `TournamentUpdated`, `TournamentLiveMessage`, `CorrectResultRequest`, `WithdrawPlayerRequest`, `SharingRequest`. Eksportuje też `TournamentViewBase` (widok bez reguły `finishedAt`, bo Zod nie pozwala na `pick` ani `omit` po `refine`) oraz tę regułę: `finishedAtMatchesStatus` i `finishedAtRule`.
 
 - `TournamentPlayer` to profil gracza z `MatchSnapshotPlayer` (`id`, `name`, `avatar`, `color`, `guest`). `TournamentPlacement` ma `place` 1-16, a gracze mogą dzielić miejsce.
 - `FixtureSlot` to strona meczu: gracz (`seed`, `null` w grupie), zwycięzca albo przegrany innego meczu, miejsce w tabeli grupy albo wolny los (`bye`).
@@ -73,6 +73,14 @@ Zapytania statystyk (`PlayerStatsQuery`, `RankingsQuery`, `PlayerFormQuery`, `Ov
 - `TournamentStaleStateError` to body 409 `stale_state` komendy turnieju z bieżącym `tournament` zamiast `state`. Parsuje się też jako `ApiError`.
 - `TournamentLiveMessage` to unia wiadomości WebSocket jednego turnieju. Na razie ma tylko `TournamentUpdated` (`tournament_updated` z `tournamentId`, `eventSeq` i pełnym `tournament`). `LiveMessage` zostaje strumieniem jednej gry.
 - `CorrectResultRequest` (`legs`), `WithdrawPlayerRequest` (`playerId`) i `SharingRequest` (`sharing`) mają opcjonalne `expectedSeq`. Schemat nie zna długości meczu, więc to, czy zwycięzca ma dokładnie N legów, sprawdza serwer. Ponowne losowanie, start meczu i archiwizacja używają `CommandRequest`.
+
+`tournament-public.ts`: `PublicTournamentPlayer`, `PublicTournamentView`, `PublicTournamentStats`, `PublicMatchPlayer`, `PublicMatch`, `PublicTournamentMatch`, `PublicApiErrorCode` (`not_found`, `too_many_requests`). To odpowiedzi publicznego linku do turnieju, czytane bez tokenu.
+
+- `PublicTournamentPlayer` ma `id`, `name`, `avatar` i `color`, bez `guest`. `avatar` to jedno emoji (`isSingleEmoji`) albo `null`, więc adres zdjęcia nie przejdzie.
+- `PublicTournamentView` to `TournamentViewBase` bez `sharing`, `canRedraw`, `eventSeq` i `archivedAt`, z publicznymi graczami i tą samą regułą `finishedAt`. `config` zostaje bez zmian, razem z `config.sharing` z utworzenia.
+- `PublicTournamentStats` to ten sam schemat co `TournamentStats`. Ma tylko id graczy, a imiona są w widoku.
+- `PublicMatch` to część `MatchSnapshot`: `id`, `status`, `startingScore`, `legsToWin`, `createdAt`, `startedAt`, `finishedAt`, `pausedMs`, `currentPlayerId`, `winnerId` i `players`. `PublicMatchPlayer` ma `id`, `name`, `avatar` (jak wyżej), `color`, `legsWon` i `remaining`.
+- `PublicTournamentMatch` (`tournamentId`, `fixtureId`, `label`, `match`, `summary`, `legs`) to jeden mecz turnieju z `MatchSummary` i `MatchLegs`.
 
 ## Testy
 

@@ -8,3 +8,4 @@ export * from './stats.js';
 export * from './auth.js';
 export * from './tournament.js';
 export * from './tournament-api.js';
+export * from './tournament-public.js';

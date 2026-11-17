@@ -9,12 +9,16 @@ import type { Database } from './db/database.js';
 import { toApiError } from './errors.js';
 import { createLiveHub } from './live-hub.js';
 import { createMatchService } from './match-service.js';
+import { createPublicRateLimiter } from './public/rate-limiter.js';
+import { createPublicResponseCache } from './public/response-cache.js';
+import { createPublicTournamentService } from './public-tournament-service.js';
 import { createReplayCache, REPLAY_CACHE_MAX_MATCHES } from './replay-cache.js';
 import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
 import { LIVE_MAX_PAYLOAD_BYTES, LIVE_MAX_PENDING_CONNECTIONS, liveRoutes } from './routes/live.js';
 import { matchRoutes } from './routes/matches.js';
 import { playerRoutes } from './routes/players.js';
+import { publicRoutes } from './routes/public.js';
 import { statsRoutes } from './routes/stats.js';
 import { tournamentRoutes } from './routes/tournaments.js';
 import { firstSegment, webAppRoutes } from './routes/web-app.js';
@@ -30,7 +34,7 @@ export interface AppOptions {
   readonly trustProxy?: boolean; // adres klienta z X-Forwarded-For, tylko za reverse proxy. Domyślnie false
   readonly auth: AuthConfig | null;
   readonly corsOrigins?: readonly string[] | null;
-  readonly now?: () => number; // zegar dla tokenów, limitu logowań, blokady zakończonej gry i okresu statystyk. Domyślnie Date.now
+  readonly now?: () => number; // zegar dla tokenów, limitów żądań, blokady zakończonej gry, okresu statystyk i publicznych odpowiedzi. Domyślnie Date.now
   readonly liveAuthTimeoutMs?: number;
   readonly liveMaxPendingConnections?: number;
   readonly livePingIntervalMs?: number;
@@ -73,6 +77,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // turnieju, nigdy odwrotnie. Kilka kluczy gier bierzemy w kolejności posortowanych id. Inaczej dwa zadania
   // mogłyby czekać na siebie nawzajem.
   const queue = createSerialQueue();
+  const publicCache = createPublicResponseCache(now);
   const tournaments = createTournamentService({
     store,
     cache,
@@ -80,6 +85,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     queue,
     random,
     publishMatchState: (matchId) => service.publishState(matchId),
+    onPublished: (tournamentId) => publicCache.invalidate(tournamentId),
   });
   const service = createMatchService({
     store,
@@ -111,7 +117,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       maxPendingConnections: options.liveMaxPendingConnections ?? LIVE_MAX_PENDING_CONNECTIONS,
     },
   );
-  statsRoutes(app, createStatsService({ store, cache, now }));
+  const stats = createStatsService({ store, cache, now });
+  statsRoutes(app, stats);
+  // Przed plikami frontu, żeby public było zarezerwowanym pierwszym segmentem.
+  await publicRoutes(app, {
+    service: createPublicTournamentService({ tournaments, matches: service, stats, cache: publicCache }),
+    limiter: createPublicRateLimiter(now),
+  });
   if (webDir !== null) {
     await webAppRoutes(app, { webDir, webRoutes, apiSegments });
   }

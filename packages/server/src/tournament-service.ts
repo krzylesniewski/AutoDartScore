@@ -11,6 +11,7 @@ import type {
   CorrectResultRequest,
   CreateTournamentRequest,
   Fixture,
+  SharingRequest,
   StartFixtureResult,
   TournamentListItem,
   TournamentListQuery,
@@ -38,6 +39,8 @@ export interface TournamentService {
   draw(id: string, expectedSeq?: number): Promise<TournamentView>;
   startFixture(id: string, fixtureId: string, expectedSeq?: number): Promise<{ statusCode: 200 | 201; result: StartFixtureResult }>;
   archive(id: string, expectedSeq?: number): Promise<TournamentView>;
+  // Ta sama wartość nic nie zapisuje. Działa też w zakończonym turnieju.
+  setSharing(id: string, request: SharingRequest): Promise<TournamentView>;
   // Pozostałe mecze gracza stają się walkowerami, a jego trwający mecz zostaje porzucony w tym samym zapisie.
   withdraw(id: string, request: WithdrawPlayerRequest): Promise<TournamentView>;
   correctResult(id: string, fixtureId: string, request: CorrectResultRequest): Promise<TournamentView>;
@@ -58,6 +61,8 @@ interface Dependencies {
   readonly random: () => number;
   // Rozsyła state_updated porzuconego meczu. Nie bierze kolejki, bo wołający trzyma już klucz meczu.
   readonly publishMatchState?: (matchId: string) => Promise<void>;
+  // Po każdej opublikowanej zmianie turnieju, np. do czyszczenia publicznych odpowiedzi.
+  readonly onPublished?: (tournamentId: string) => void;
 }
 
 // Jeden klucz dla wszystkich utworzeń, żeby dwa równoległe nie przeszły razem sprawdzenia aktywnego turnieju.
@@ -83,7 +88,15 @@ function sameIds(a: readonly string[], b: readonly string[]): boolean {
 
 type Withdrawal = { readonly retry: string[] } | { readonly view: TournamentView; readonly abandoned: readonly string[] };
 
-export function createTournamentService({ store, cache, hub, queue, random, publishMatchState }: Dependencies): TournamentService {
+export function createTournamentService({
+  store,
+  cache,
+  hub,
+  queue,
+  random,
+  publishMatchState,
+  onPublished,
+}: Dependencies): TournamentService {
   async function requireTournament(id: string): Promise<StoredTournament> {
     const tournament = await store.findTournament(id);
     if (!tournament) {
@@ -113,6 +126,7 @@ export function createTournamentService({ store, cache, hub, queue, random, publ
   }
 
   function publish(view: TournamentView): void {
+    onPublished?.(view.id);
     hub.publish(view.id, [{ type: 'tournament_updated', tournamentId: view.id, eventSeq: view.eventSeq, tournament: view }]);
   }
 
@@ -294,6 +308,20 @@ export function createTournamentService({ store, cache, hub, queue, random, publ
           throw new HttpError(409, 'tournament_not_finished', `Tournament ${id} is still in progress`);
         }
         await store.appendTournamentEvent(id, { type: 'archived' });
+        return publishFresh(tournament);
+      });
+    },
+
+    setSharing(id, { sharing, expectedSeq }) {
+      return queue(queueKey(id), async () => {
+        const tournament = await requireTournament(id);
+        const current = await view(tournament);
+        requireSeq(current, expectedSeq);
+        requireNotArchived(current);
+        if (current.sharing === sharing) {
+          return current;
+        }
+        await store.appendTournamentEvent(id, { type: 'sharing_changed', sharing });
         return publishFresh(tournament);
       });
     },
