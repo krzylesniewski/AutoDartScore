@@ -15,6 +15,7 @@ import {
   StartingScore,
 } from './match.js';
 import { PlayerColor, PlayerId } from './player.js';
+import { MatchTournament } from './tournament.js';
 
 function distinct(ids: readonly string[]): boolean {
   return new Set(ids).size === ids.length;
@@ -172,6 +173,7 @@ export const MatchSnapshot = z.object({
     })
     .nullable(),
   checkouts: CheckoutSession.nullable(), // tylko w treningu checkoutów
+  tournament: MatchTournament.nullable(), // null poza meczem turniejowym
 });
 export type MatchSnapshot = z.infer<typeof MatchSnapshot>;
 
@@ -193,6 +195,7 @@ export const MatchListItem = MatchSnapshot.pick({
   winnerId: true,
   placements: true,
   endedAt: true,
+  tournament: true,
 }).extend({ updatedAt: z.iso.datetime() });
 export type MatchListItem = z.infer<typeof MatchListItem>;
 

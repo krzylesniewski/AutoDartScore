@@ -198,6 +198,7 @@ const snapshot = {
   placements: [],
   freeRun: null,
   checkouts: null,
+  tournament: null,
 };
 
 const checkoutSession = {
@@ -390,6 +391,15 @@ describe('MatchSnapshot', () => {
     expect(MatchSnapshot.safeParse({ ...snapshot, eventSeq: -1 }).success).toBe(false);
   });
 
+  it('accepts a tournament match and requires the tournament key', () => {
+    const tournamentMatch = { ...snapshot, tournament: { id: 't1', name: 'Liga listopad', fixtureId: 'p-sf-2', label: 'Półfinał 2' } };
+    expect(MatchSnapshot.parse(tournamentMatch)).toEqual(tournamentMatch);
+    expect(MatchSnapshot.safeParse({ ...snapshot, tournament: undefined }).success).toBe(false);
+    expect(MatchSnapshot.safeParse({ ...snapshot, tournament: { id: 't1', name: 'Liga', fixtureId: 'g-1', label: '' } }).success).toBe(
+      false,
+    );
+  });
+
   it.each([
     ['a missing color', undefined],
     ['color 0', 0],
@@ -513,6 +523,7 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament,
     } = snapshot;
     const item = {
       id,
@@ -531,6 +542,7 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament,
       updatedAt: '2026-10-15T18:31:00.000Z',
     };
     expect(MatchListItem.parse(item)).toEqual(item);
@@ -558,6 +570,7 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament: null,
       updatedAt: '2026-10-15T18:31:00.000Z',
     };
     expect(MatchListItem.parse(item)).toEqual(item);
@@ -582,6 +595,7 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament,
     } = snapshot;
     const item = {
       id,
@@ -600,11 +614,40 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament,
       updatedAt: '2026-10-15T18:31:00.000Z',
     };
     expect(MatchListItem.safeParse({ ...item, winnerId: undefined }).success).toBe(false);
     expect(MatchListItem.safeParse({ ...item, placements: undefined }).success).toBe(false);
     expect(MatchListItem.safeParse({ ...item, endedAt: undefined }).success).toBe(false);
+    expect(MatchListItem.safeParse({ ...item, tournament: undefined }).success).toBe(false);
+  });
+
+  it('keeps the tournament of a list item', () => {
+    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment } = snapshot;
+    const { currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements, endedAt } = snapshot;
+    const tournament = { id: 't1', name: 'Puchar', fixtureId: 'c-f', label: 'Finał' };
+    const item = {
+      id,
+      type,
+      practiceMode,
+      startingScore,
+      legsToWin,
+      createdAt,
+      status,
+      abandonment,
+      currentPlayerId,
+      legIndex,
+      players,
+      freeRun,
+      checkouts,
+      winnerId,
+      placements,
+      endedAt,
+      tournament,
+      updatedAt: '2026-10-15T18:31:00.000Z',
+    };
+    expect(MatchListItem.parse(item).tournament).toStrictEqual(tournament);
   });
 
   it('accepts only the unfinished status filter', () => {
