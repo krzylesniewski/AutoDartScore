@@ -7,7 +7,7 @@ Zestaw obejmuje:
 - `game.spec.ts`: 401 bez tokenu, logowanie, dwóch nowych graczy, mecz 1v1 301 wpisany klawiszami na ekranie i skrótami, Cofnij, zamknięcie lega na D14, ekran końca meczu i statystyki zwycięzcy. Drugie okno śledzi grę na żywo przez WebSocket.
 - `layout.spec.ts`: układ, którego testy jednostkowe w jsdom nie widzą. Przy 375×812, 768×1024, 1280×800 i 1920×1080:
   - Brak poziomego przewijania na ekranach nowej gry, kreatora turnieju, listy turniejów, statystyk, karty gracza, historii, ustawień, końca meczu, treningu końcówek oraz przebiegu Solo 501 i Free run.
-  - W kreatorze turnieju (`#/tournaments/new`) przycisk „Rozpocznij turniej” mieści się w oknie, a „Start gry” go nie zastępuje. Na `#/tournaments` widać link „Nowy turniej”. Testy tylko otwierają te strony i nie tworzą turnieju, bo trwający turniej we wspólnej bazie przekierowałby `#/tournaments` w innych testach.
+  - W kreatorze turnieju (`#/tournaments/new`) przycisk „Rozpocznij turniej” mieści się w oknie, a „Start gry” go nie zastępuje. Na `#/tournaments` widać link „Nowy turniej”. `layout.spec.ts` tylko otwiera te strony i nie tworzy turnieju, bo trwający turniej we wspólnej bazie przekierowałby tam `#/tournaments`. `tournament.spec.ts` tworzy własny turniej, a na końcu go kończy i archiwizuje.
   - Pięć linków głównej nawigacji stoi w jednym wierszu (ta sama górna krawędź), każdy ma co najmniej 44 px wysokości i mieści się w oknie.
   - Ustawienia otwierają się z nawigacji, a statusy kamery i głosu w pasku są tam czytelne, nie tylko dla czytnika ekranu. Tak samo tytuł „Nowa gra”. Karty układu klawiatury w ustawieniach mają co najmniej 44 px wysokości.
   - „Rewanż” i „Nowy mecz” na końcu meczu oraz „Udało się” i „Nie udało się” w treningu końcówek mieszczą się w oknie i da się je kliknąć. Nakładki ze statusem na końcu meczu i w grze przepuszczają kliknięcia.
@@ -24,6 +24,7 @@ Zestaw obejmuje:
   - Tak samo karta wypełnia miejsce w siatce i w Solo 501 przy 1920×1080 oraz w zabawie z 4 graczami przy 2560×1250.
 
   Poniżej lg „Tury” zamienia pasek wyników, panel tury, kartę zamknięcia i statystyki meczu na historię tur bez ruszania klawiatury, a bieżąca tura jest widoczna. Od lg historia tur stoi stale w lewej kolumnie, która przewija się sama i kończy się w oknie, tabela historii zaczyna się od bieżącej tury, a „Menu gry” znika, gdy nie ma w nim akcji. Przebieg Solo 501 i Free run zaczyna się od bieżącej tury przy każdej szerokości.
+- `tournament.spec.ts`: liga trzech nowych graczy do jednego wygranego lega, utworzona przez API. Przy 390×844, 768×1024, 1280×800 i 1920×1080 ekran turnieju nie przewija się w poziomie, a „Zagraj mecz” mieści się w oknie. Przy 1280×800 „Zagraj mecz” otwiera mecz z etykietą „Liga, mecz 1” w nagłówku, rzutki przez API kończą go 1:0, „Wróć do turnieju” wraca na ekran turnieju z wynikiem „1–0” w tabeli i stanem „Liga · 1 z 3 meczów”. Po testach pozostałe mecze kończą się przez API, a turniej idzie do archiwum.
 - `forced-colors.spec.ts`: w trybie wymuszonych kolorów (wysoki kontrast) przycisk „Zaloguj” z fokusem przeniesionym klawiszem Tab z pola hasła ma ciągły obrys 2 px, bo ten tryb usuwa pierścień fokusu rysowany cieniem.
 
 ## Uruchomienie

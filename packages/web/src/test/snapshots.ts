@@ -11,6 +11,7 @@ import type {
   MatchSummaryPlayer,
   Player,
   PlayerStatLine,
+  StandingRow,
   TournamentListItem,
   TournamentPlayer,
   TournamentView,
@@ -222,6 +223,29 @@ export function fixture(overrides: Partial<Fixture> = {}): Fixture {
     matchId: null,
     result: null,
     averages: null,
+    ...overrides,
+  };
+}
+
+// Mecze, bilans i punkty wynikają z wygranych, przegranych i legów, tak jak wymaga schemat.
+export function standingRow(playerId: string, place: number, overrides: Partial<StandingRow> = {}): StandingRow {
+  const won = overrides.won ?? 0;
+  const lost = overrides.lost ?? 0;
+  const legsFor = overrides.legsFor ?? 0;
+  const legsAgainst = overrides.legsAgainst ?? 0;
+  return {
+    playerId,
+    place,
+    played: won + lost,
+    won,
+    lost,
+    legsFor,
+    legsAgainst,
+    legDifference: legsFor - legsAgainst,
+    points: 2 * won,
+    average: null,
+    withdrawn: false,
+    advances: false,
     ...overrides,
   };
 }

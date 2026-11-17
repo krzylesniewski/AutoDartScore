@@ -13,6 +13,7 @@ import {
   STALE_STATE,
   StaleStateError,
   StatsOverall,
+  StartFixtureResult,
   StatsRankings,
   ThrowResult,
   TournamentListItem,
@@ -171,6 +172,18 @@ export function listTournaments(query: TournamentListQuery = {}): Promise<Tourna
 
 export function getTournament(id: string): Promise<TournamentView> {
   return request(`/tournaments/${encodeURIComponent(id)}`, TournamentView);
+}
+
+export function startFixture(tournamentId: string, fixtureId: string, expectedSeq?: number): Promise<StartFixtureResult> {
+  return request(
+    `/tournaments/${encodeURIComponent(tournamentId)}/fixtures/${encodeURIComponent(fixtureId)}/start`,
+    StartFixtureResult,
+    postCommand(expectedSeq),
+  );
+}
+
+export function redrawTournament(tournamentId: string, expectedSeq?: number): Promise<TournamentView> {
+  return request(`/tournaments/${encodeURIComponent(tournamentId)}/draw`, TournamentView, postCommand(expectedSeq));
 }
 
 export function postThrow(matchId: string, hit: HitEvent): Promise<ThrowResult> {

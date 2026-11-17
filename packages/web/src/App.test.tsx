@@ -154,6 +154,15 @@ describe('App', () => {
   });
 
   it('opens the tournament in #/tournaments/:id', async () => {
+    // Ekran turnieju otwiera kanał na żywo, a jsdom nie ma WebSocketa.
+    vi.stubGlobal(
+      'WebSocket',
+      class extends EventTarget {
+        close(): void {}
+
+        send(): void {}
+      },
+    );
     window.location.hash = `#/tournaments/${encodeURIComponent('t 1')}`;
     render(<App />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Liga klubowa' })).toBeTruthy();

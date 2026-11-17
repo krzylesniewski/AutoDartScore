@@ -226,7 +226,7 @@ function Round({ round }: { round: number }) {
 function chips(state: MatchSnapshot): string[] {
   const labels: string[] = [];
   if (state.type === 'match') {
-    labels.push(pl.typeMatch);
+    labels.push(state.tournament === null ? pl.typeMatch : state.tournament.label);
   }
   if (state.type === 'casual') {
     labels.push(pl.typeCasual);

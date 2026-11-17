@@ -24,4 +24,13 @@ describe('apiErrorText', () => {
     );
     expect(apiErrorText(new ApiRequestError(400, 'archived_player', 'x'))).toMatch(/zarchiwizowany/);
   });
+
+  it.each([
+    ['fixture_not_ready', 'Ten mecz nie jest jeszcze gotowy do gry.'],
+    ['tournament_started', 'Pierwszy mecz już się zaczął, losowania nie da się powtórzyć.'],
+    ['tournament_archived', 'Turniej jest zarchiwizowany.'],
+    ['stale_state', 'Dane zmieniły się na innym urządzeniu. Sprawdź stan i spróbuj ponownie.'],
+  ])('maps the 409 %s to Polish text', (code, text) => {
+    expect(apiErrorText(new ApiRequestError(409, code, 'x'))).toBe(text);
+  });
 });

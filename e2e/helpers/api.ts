@@ -11,6 +11,9 @@ import type {
   LoginResponse,
   MatchSnapshot,
   Player,
+  StartFixtureResult,
+  TournamentView,
+  CreateTournamentRequest,
 } from '@autoscore/schema';
 import { PASSWORD } from '../env';
 
@@ -109,4 +112,52 @@ export async function postThrowsByApi(request: APIRequestContext, token: string,
     const response = await request.post(`/matches/${matchId}/throws`, { headers: authorization(token), data: body });
     await expect(response).toBeOK();
   }
+}
+
+// Liga do jednego wygranego lega, więc FINISHING_DARTS kończy każdy mecz 1:0. Typ to wynik parsowania, więc idą wszystkie pola.
+export async function createTournamentByApi(
+  request: APIRequestContext,
+  token: string,
+  name: string,
+  playerIds: readonly string[],
+): Promise<TournamentView> {
+  const body: CreateTournamentRequest = {
+    name,
+    format: 'league',
+    playerIds: [...playerIds],
+    startingScore: 301,
+    thirdPlaceMatch: false,
+    consolation: false,
+    legsToWin: { group: 1, r16: 3, qf: 3, sf: 3, final: 4, thirdPlace: 2, consolation: 2 },
+    sharing: false,
+  };
+  const response = await request.post('/tournaments', { headers: authorization(token), data: body });
+  await expect(response).toBeOK();
+  return (await response.json()) as TournamentView;
+}
+
+export async function getTournamentByApi(request: APIRequestContext, token: string, tournamentId: string): Promise<TournamentView> {
+  const response = await request.get(`/tournaments/${encodeURIComponent(tournamentId)}`, { headers: authorization(token) });
+  await expect(response).toBeOK();
+  return (await response.json()) as TournamentView;
+}
+
+// Ponowny start trwającego meczu zwraca ten sam matchId.
+export async function startFixtureByApi(
+  request: APIRequestContext,
+  token: string,
+  tournamentId: string,
+  fixtureId: string,
+): Promise<StartFixtureResult> {
+  const path = `/tournaments/${encodeURIComponent(tournamentId)}/fixtures/${encodeURIComponent(fixtureId)}/start`;
+  const response = await request.post(path, { headers: authorization(token) });
+  await expect(response).toBeOK();
+  return (await response.json()) as StartFixtureResult;
+}
+
+// Serwer archiwizuje tylko zakończony turniej.
+export async function archiveTournamentByApi(request: APIRequestContext, token: string, tournamentId: string): Promise<TournamentView> {
+  const response = await request.post(`/tournaments/${encodeURIComponent(tournamentId)}/archive`, { headers: authorization(token) });
+  await expect(response).toBeOK();
+  return (await response.json()) as TournamentView;
 }
