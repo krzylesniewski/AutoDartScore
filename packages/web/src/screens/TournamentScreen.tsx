@@ -2,14 +2,16 @@ import type { Fixture, TournamentView } from '@autoscore/schema';
 import { useId, useRef, useState } from 'react';
 import { redrawTournament, startFixture } from '../api/client';
 import { apiErrorText } from '../api/error-text';
+import { useRunningLegs } from '../api/use-running-legs';
 import { useTournament } from '../api/use-tournament';
 import type { Connection } from '../api/use-match';
 import { AppNav } from '../components/AppNav';
-import { FixtureList } from '../components/FixtureList';
 import { FixtureQueue } from '../components/FixtureQueue';
 import { ShuffleIcon, TrophyIcon } from '../components/icons';
 import { NextFixtureCard } from '../components/NextFixtureCard';
 import { Notice } from '../components/Notice';
+import { PlacementsCard } from '../components/PlacementsCard';
+import { PlayoffBracket } from '../components/PlayoffBracket';
 import { RunningFixtures } from '../components/RunningFixtures';
 import { StandingsTable } from '../components/StandingsTable';
 import { TournamentTabs, type TournamentTab } from '../components/TournamentTabs';
@@ -103,6 +105,7 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
   const [error, setError] = useState<CommandError | null>(null);
   // Ref blokuje drugie kliknięcie w tym samym takcie, zanim stan zdąży wyłączyć przyciski.
   const pending = useRef(false);
+  const live = useRunningLegs(view);
 
   const tabs = tabsFor(view);
   const progress = tournamentProgress(view);
@@ -182,7 +185,7 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
       )}
       <div className="grid grid-cols-1 content-start gap-(--space-page) lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr]">
         <div className="flex min-w-0 flex-col gap-(--space-page) lg:col-start-2 lg:row-start-1">
-          <RunningFixtures view={view} />
+          <RunningFixtures view={view} live={live} />
           <NextFixtureCard view={view} busy={busy} error={errorAt('next')} onPlay={(fixture) => play('next', fixture)} />
         </div>
         <div
@@ -192,9 +195,10 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
           tabIndex={0}
           className="min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1"
         >
-          {tab === 'table' ? <StandingsTable view={view} /> : <FixtureList view={view} />}
+          {tab === 'table' ? <StandingsTable view={view} /> : <PlayoffBracket view={view} live={live} />}
         </div>
-        <div className="min-w-0 lg:col-start-2 lg:row-start-2">
+        <div className="flex min-w-0 flex-col gap-(--space-page) lg:col-start-2 lg:row-start-2">
+          {tab === 'playoff' && <PlacementsCard view={view} />}
           <FixtureQueue view={view} busy={busy} error={errorAt('queue')} onPlay={(fixture) => play('queue', fixture)} />
         </div>
       </div>

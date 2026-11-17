@@ -1,3 +1,4 @@
+import { computeTournament, type TournamentState } from '@autoscore/engine';
 import type {
   CheckoutAttempt,
   CheckoutSession,
@@ -12,6 +13,8 @@ import type {
   Player,
   PlayerStatLine,
   StandingRow,
+  TournamentConfig,
+  TournamentFormat,
   TournamentListItem,
   TournamentPlayer,
   TournamentView,
@@ -287,4 +290,89 @@ export function tournamentView(overrides: Partial<TournamentView> = {}): Tournam
 export function tournamentListItem(overrides: Partial<TournamentListItem> = {}): TournamentListItem {
   const { id, name, format, status, createdAt, finishedAt, archivedAt, players, placements } = tournamentView();
   return { id, name, format, status, createdAt, finishedAt, archivedAt, players, placements, ...overrides };
+}
+
+const TOURNAMENT_NAMES = [
+  'Anna',
+  'Bartek',
+  'Celina',
+  'Darek',
+  'Ewa',
+  'Filip',
+  'Gosia',
+  'Henryk',
+  'Iza',
+  'Jacek',
+  'Kasia',
+  'Leon',
+  'Marta',
+  'Norbert',
+  'Ola',
+  'Piotr',
+];
+
+export type ResultLegs = Readonly<Record<string, readonly [number, number]>>;
+
+// Gracze p1, p2… w kolejności losowania, więc w pucharze p1 ma rozstawienie 1.
+export function tournamentConfig(format: TournamentFormat, count: number, overrides: Partial<TournamentConfig> = {}): TournamentConfig {
+  return {
+    name: 'Turniej testowy',
+    format,
+    playerIds: Array.from({ length: count }, (_, index) => `p${index + 1}`),
+    startingScore: 501,
+    thirdPlaceMatch: false,
+    consolation: false,
+    legsToWin: { group: 3, r16: 3, qf: 3, sf: 3, final: 4, thirdPlace: 2, consolation: 2 },
+    sharing: true,
+    ...overrides,
+  };
+}
+
+function engineState(config: TournamentConfig, results: ResultLegs): TournamentState {
+  const matches = Object.entries(results).map(([fixtureId, legs]) => ({
+    fixtureId,
+    matchId: `m-${fixtureId}`,
+    legs: [legs[0], legs[1]] as const,
+    scoring: null,
+  }));
+  return computeTournament({ config, order: config.playerIds, matches });
+}
+
+// Do podanych legów dokłada mecze rozegrane po kolei: każdy gotowy mecz, który przepuści `play`, wygrywa gracz ze slotu 0.
+export function playedResults(
+  config: TournamentConfig,
+  preset: ResultLegs = {},
+  play: (entry: Fixture) => boolean = () => true,
+): ResultLegs {
+  const results: Record<string, readonly [number, number]> = { ...preset };
+  for (;;) {
+    const ready = engineState(config, results).fixtures.filter((entry) => entry.status === 'ready' && play(entry));
+    if (ready.length === 0) {
+      return results;
+    }
+    for (const entry of ready) {
+      results[entry.id] = [entry.legsToWin, 0];
+    }
+  }
+}
+
+// Widok turnieju policzony silnikiem z legów meczów w kolejności slotów. Mecz bez zwycięzcy trwa.
+export function computedView(config: TournamentConfig, results: ResultLegs = {}, overrides: Partial<TournamentView> = {}): TournamentView {
+  const state = engineState(config, results);
+  return tournamentView({
+    name: config.name,
+    format: config.format,
+    config,
+    players: config.playerIds.map((id, index) => tournamentPlayer(id, TOURNAMENT_NAMES[index] ?? id)),
+    status: state.status,
+    finishedAt: state.status === 'finished' ? '2026-11-12T21:00:00.000Z' : null,
+    fixtures: [...state.fixtures],
+    standings: [...state.standings],
+    nextFixtureId: state.nextFixtureId,
+    liveFixtureId: state.liveFixtureId,
+    placements: [...state.placements],
+    canRedraw: state.canRedraw,
+    eventSeq: Object.keys(results).length + 1,
+    ...overrides,
+  });
 }

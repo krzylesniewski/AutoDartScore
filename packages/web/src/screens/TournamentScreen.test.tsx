@@ -1,7 +1,17 @@
 import type { Fixture, FixtureSlot, StandingRow, TournamentLiveMessage, TournamentView } from '@autoscore/schema';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fixture, standingRow, tournamentPlayer, tournamentView } from '../test/snapshots';
+import {
+  computedView,
+  fixture,
+  player,
+  playedResults,
+  snapshot,
+  standingRow,
+  tournamentConfig,
+  tournamentPlayer,
+  tournamentView,
+} from '../test/snapshots';
 import { TournamentScreen } from './TournamentScreen';
 
 class FakeWebSocket extends EventTarget {
@@ -147,12 +157,18 @@ function updated(view: TournamentView): TournamentLiveMessage {
 
 let calls: Call[];
 let reply: () => Response;
+let matchReply: (url: string) => Response;
 let commandReply: (call: Call) => Response;
+
+function getReply(url: string): Response {
+  return url.startsWith('/api/matches/') ? matchReply(url) : reply();
+}
 
 beforeEach(() => {
   calls = [];
   FakeWebSocket.instances = [];
   reply = () => json(200, groupView());
+  matchReply = () => json(404, { error: 'not_found', message: 'Match not found' });
   commandReply = () => json(201, { matchId: 'm 42', tournament: groupView({ eventSeq: 13 }) });
   vi.stubGlobal('WebSocket', FakeWebSocket);
   vi.stubGlobal(
@@ -160,7 +176,7 @@ beforeEach(() => {
     vi.fn((url: string, init: RequestInit = {}) => {
       const call = { url, method: init.method ?? 'GET', body: typeof init.body === 'string' ? init.body : undefined };
       calls.push(call);
-      return Promise.resolve(call.method === 'GET' ? reply() : commandReply(call));
+      return Promise.resolve(call.method === 'GET' ? getReply(url) : commandReply(call));
     }),
   );
 });
@@ -299,8 +315,8 @@ describe('TournamentScreen: tabs', () => {
     await renderScreen();
     expect(screen.getByRole('tab', { name: 'Play-off' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByText('Play-off · 0 z 1 meczu')).toBeTruthy();
-    expect(within(screen.getByRole('tabpanel')).getByText('Mecz 16')).toBeTruthy();
-    expect(within(screen.getByRole('tabpanel')).queryByText('Mecz 1')).toBeNull();
+    expect(within(screen.getByRole('tabpanel')).getByText('Mecz #16 · do rozegrania')).toBeTruthy();
+    expect(within(screen.getByRole('tabpanel')).queryByText('Mecz #1 · zakończony')).toBeNull();
 
     socket().serverSend(updated(groupView({ eventSeq: 13 })));
     expect(screen.getByRole('tab', { name: 'Play-off' }).getAttribute('aria-selected')).toBe('true');
@@ -329,7 +345,7 @@ describe('TournamentScreen: tabs', () => {
     expect(screen.queryByText('awans do play-off')).toBeNull();
   });
 
-  it('shows the Drabinka tab with the play-off list in a cup', async () => {
+  it('shows the Drabinka tab with the bracket in a cup', async () => {
     reply = () =>
       json(
         200,
@@ -340,6 +356,7 @@ describe('TournamentScreen: tabs', () => {
               id: 'p-f',
               number: 3,
               phase: 'playoff',
+              round: 2,
               bracketRound: 'final',
               slots: [
                 { kind: 'player', playerId: 'p1', seed: 1 },
@@ -371,11 +388,17 @@ describe('TournamentScreen: tabs', () => {
       );
     await renderScreen();
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Drabinka']);
-    const items = within(screen.getByRole('tabpanel')).getAllByRole('listitem');
-    expect(items.map((item) => item.textContent)).toEqual([
-      'Mecz 1Anna vs Wolny losWolny los',
-      'Mecz 2Bartek vs Celina1 : 3Rozegrany',
-      'Mecz 3Anna vs Do ustaleniaCzeka na rywali',
+    const frame = screen.getByRole('region', { name: 'Drabinka' });
+    expect(
+      within(frame)
+        .getAllByRole('heading')
+        .map((heading) => heading.textContent),
+    ).toEqual(['Półfinały · do 3', 'Finał · do 3']);
+    const items = within(frame).getAllByRole('listitem');
+    expect(items.map((item) => visibleText(item))).toEqual([
+      '1AnnaWolny losAwans bez meczu',
+      'Bartek1Celinazwycięzca3Mecz #2 · zakończony',
+      '1AnnaZwycięzca półfinału 2Mecz #3 · po półfinałach',
     ]);
     expect(screen.getByText('Play-off · 1 z 2 meczów')).toBeTruthy();
   });
@@ -574,9 +597,273 @@ describe('TournamentScreen: running matches', () => {
     reply = () => json(200, groupView({ fixtures, liveFixtureId: 'g-12' }));
     await renderScreen();
     const running = within(screen.getByRole('list', { name: 'Trwające mecze' })).getAllByRole('listitem');
-    expect(running.map((item) => visibleText(item))).toEqual(['Trwa#12Filip vs DarekWróć do meczu', 'Trwa#11Anna vs EwaWróć do meczu']);
+    expect(running.map((item) => visibleText(item))).toEqual([
+      'Trwa: grupa, mecz 12#12FilipvsDarekWróć do meczu',
+      'Trwa: grupa, mecz 11#11AnnavsEwaWróć do meczu',
+    ]);
     const links = screen.getAllByRole('link', { name: 'Wróć do meczu' });
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['#/matches/m7', '#/matches/m6']);
+  });
+});
+
+function bracketFrame(): HTMLElement {
+  return screen.getByRole('region', { name: 'Drabinka' });
+}
+
+// Nagłówki kolumn i liczba meczów w każdej kolumnie ramki.
+function columnShape(frame: HTMLElement): [string, number][] {
+  return within(frame)
+    .getAllByRole('heading')
+    .map((heading) => {
+      const name = heading.textContent ?? '';
+      return [name, within(within(frame).getByRole('list', { name })).getAllByRole('listitem').length];
+    });
+}
+
+function playerName(view: TournamentView, fixtureId: string, index: 0 | 1): string {
+  const slot = view.fixtures.find((entry) => entry.id === fixtureId)?.slots[index];
+  const found = slot?.kind === 'player' ? view.players.find((entry) => entry.id === slot.playerId) : undefined;
+  if (!found) {
+    throw new Error(`No player in ${fixtureId}`);
+  }
+  return found.name;
+}
+
+// Pole meczu w drabince razem z linią stanu pod nim.
+function box(tag: string): HTMLElement {
+  const item = screen.getByText(tag).parentElement;
+  if (!item) {
+    throw new Error(`No box with ${tag}`);
+  }
+  return item;
+}
+
+const MOCKUP = tournamentConfig('group_playoff', 6, { advance: 4, thirdPlaceMatch: true, consolation: true });
+
+// Stan z makiety: grupa rozegrana, pierwszy półfinał i pocieszenie zakończone, drugi półfinał trwa.
+function mockupView(): TournamentView {
+  const group = playedResults(MOCKUP, {}, (entry) => entry.phase === 'group');
+  return computedView(MOCKUP, { ...group, 'p-sf-1': [3, 1], 'c-f': [0, 2], 'p-sf-2': [1, 1] });
+}
+
+function liveSemiFinal(view: TournamentView): (url: string) => Response {
+  const semi = view.fixtures.find((entry) => entry.id === 'p-sf-2');
+  const ids = semi?.slots.map((slot) => (slot.kind === 'player' ? slot.playerId : '')) ?? [];
+  return (url) =>
+    url === '/api/matches/m-p-sf-2'
+      ? json(
+          200,
+          snapshot({
+            id: 'm-p-sf-2',
+            legIndex: 2,
+            currentPlayerId: ids[0] ?? null,
+            players: ids.map((id) => player(id, id, { legsWon: 1 })),
+          }),
+        )
+      : json(404, { error: 'not_found', message: 'Match not found' });
+}
+
+describe('TournamentScreen: bracket', () => {
+  it.each([
+    [
+      4,
+      [
+        ['Półfinały · do 3', 2],
+        ['Finał · do 4', 1],
+      ],
+    ],
+    [
+      8,
+      [
+        ['Ćwierćfinały · do 3', 4],
+        ['Półfinały · do 3', 2],
+        ['Finał · do 4', 1],
+      ],
+    ],
+    [
+      16,
+      [
+        ['1/8 finału · do 3', 8],
+        ['Ćwierćfinały · do 3', 4],
+        ['Półfinały · do 3', 2],
+        ['Finał · do 4', 1],
+      ],
+    ],
+  ])('shows the columns of a cup of %i players in order', async (players, shape) => {
+    reply = () => json(200, computedView(tournamentConfig('cup', players)));
+    await renderScreen();
+    expect(columnShape(bracketFrame())).toEqual(shape);
+  });
+
+  it('puts the bracket in a keyboard scrollable frame', async () => {
+    reply = () => json(200, computedView(tournamentConfig('cup', 16)));
+    await renderScreen();
+    const frame = bracketFrame();
+    expect(frame.tabIndex).toBe(0);
+    // Klasa jest tu znaczeniem: tylko ta ramka przewija się w poziomie, a strona nie.
+    expect(frame.classList.contains('overflow-x-auto')).toBe(true);
+  });
+
+  it('shows the byes of a cup of 5 players', async () => {
+    reply = () => json(200, computedView(tournamentConfig('cup', 5)));
+    await renderScreen();
+    const frame = bracketFrame();
+    expect(within(frame).getAllByText('Wolny los')).toHaveLength(3);
+    expect(within(frame).getAllByText('Awans bez meczu')).toHaveLength(3);
+    expect(visibleText(box('Mecz #1 · do rozegrania'))).toBe('4Darek5EwaMecz #1 · do rozegrania');
+    expect(within(frame).getByText('Mecz #2 · po ćwierćfinałach')).toBeTruthy();
+  });
+
+  it('shows the group places while the group runs', async () => {
+    reply = () => json(200, computedView(tournamentConfig('group_playoff', 6, { advance: 4 })));
+    await renderScreen();
+    fireEvent.click(screen.getByRole('tab', { name: 'Play-off' }));
+    expect(visibleText(box('Mecz #16 · po fazie grupowej'))).toBe('1. miejsce w grupie4. miejsce w grupieMecz #16 · po fazie grupowej');
+  });
+
+  it('shows the mockup state with the live semi-final, the extra matches and the placements', async () => {
+    const view = mockupView();
+    reply = () => json(200, view);
+    matchReply = liveSemiFinal(view);
+    await renderScreen();
+    expect(screen.getByRole('tab', { name: 'Play-off' }).getAttribute('aria-selected')).toBe('true');
+    expect(await screen.findByText('Mecz #17 · na żywo, leg 3')).toBeTruthy();
+    expect(calls.filter((call) => call.url.startsWith('/api/matches/')).map((call) => call.url)).toEqual(['/api/matches/m-p-sf-2']);
+
+    expect(columnShape(bracketFrame())).toEqual([
+      ['Półfinały · do 3', 2],
+      ['Finał · do 4', 1],
+    ]);
+    expect(visibleText(box('Mecz #16 · zakończony'))).toBe(
+      `1${playerName(view, 'p-sf-1', 0)}zwycięzca34${playerName(view, 'p-sf-1', 1)}1Mecz #16 · zakończony`,
+    );
+    expect(visibleText(box('Mecz #17 · na żywo, leg 3'))).toBe(
+      `2${playerName(view, 'p-sf-2', 0)}13${playerName(view, 'p-sf-2', 1)}1Mecz #17 · na żywo, leg 3`,
+    );
+    expect(visibleText(box('Mecz #20 · po półfinałach'))).toBe(
+      `1${playerName(view, 'p-sf-1', 0)}Zwycięzca półfinału 2Mecz #20 · po półfinałach`,
+    );
+    expect(visibleText(box('Mecz #19 · po półfinałach'))).toBe(
+      `4${playerName(view, 'p-sf-1', 1)}Przegrany półfinału 2Mecz #19 · po półfinałach`,
+    );
+    expect(screen.getByRole('heading', { name: 'Mecz o 3. miejsce · do 2' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Pocieszenie · 5. z 6. · do 2' })).toBeTruthy();
+    expect(visibleText(box('Mecz #18 · zakończony'))).toBe(
+      `5${playerName(view, 'c-f', 0)}06${playerName(view, 'c-f', 1)}zwycięzca2Mecz #18 · zakończony`,
+    );
+
+    const running = within(screen.getByRole('list', { name: 'Trwające mecze' })).getByRole('listitem');
+    expect(within(running).getByText('Trwa: półfinał 2')).toBeTruthy();
+    expect(within(running).getByText('1 : 1')).toBeTruthy();
+    expect(within(running).getByText('Leg 3')).toBeTruthy();
+
+    const placements = within(screen.getByRole('region', { name: 'Klasyfikacja końcowa' })).getAllByRole('listitem');
+    expect(placements.map((item) => visibleText(item))).toEqual([
+      '1.rozstrzygnie finał',
+      '2.rozstrzygnie finał',
+      '3.rozstrzygnie mecz o 3. miejsce',
+      '4.rozstrzygnie mecz o 3. miejsce',
+      `5.${playerName(view, 'c-f', 1)}pocieszenie 2–0`,
+      `6.${playerName(view, 'c-f', 0)}pocieszenie`,
+    ]);
+  });
+
+  it('marks the winner row for screen readers and leaves the loser row unmarked', async () => {
+    const view = mockupView();
+    reply = () => json(200, view);
+    await renderScreen();
+    const decided = box('Mecz #16 · zakończony');
+    const winnerRow = within(decided).getByText(playerName(view, 'p-sf-1', 0)).parentElement;
+    const loserRow = within(decided).getByText(playerName(view, 'p-sf-1', 1)).parentElement;
+    expect(winnerRow?.querySelector('.sr-only')?.textContent).toBe('zwycięzca');
+    expect(loserRow?.querySelector('.sr-only')).toBeNull();
+    expect(within(decided).getAllByText('zwycięzca')).toHaveLength(1);
+  });
+
+  it('shows the running match without live legs until the match answers', async () => {
+    reply = () => json(200, mockupView());
+    await renderScreen();
+    const running = within(screen.getByRole('list', { name: 'Trwające mecze' })).getByRole('listitem');
+    await waitFor(() => expect(calls.some((call) => call.url === '/api/matches/m-p-sf-2')).toBe(true));
+    expect(within(running).getByText('vs')).toBeTruthy();
+    expect(within(running).queryByText(/^Leg /)).toBeNull();
+    expect(screen.getByText('Mecz #17 · na żywo')).toBeTruthy();
+  });
+
+  it('fetches the live legs again on every tournament update', async () => {
+    const view = mockupView();
+    reply = () => json(200, view);
+    matchReply = liveSemiFinal(view);
+    await renderScreen();
+    expect(await screen.findByText('1 : 1')).toBeTruthy();
+    const ids = view.fixtures.find((entry) => entry.id === 'p-sf-2')?.slots.map((slot) => (slot.kind === 'player' ? slot.playerId : ''));
+    matchReply = () =>
+      json(200, snapshot({ id: 'm-p-sf-2', legIndex: 3, players: (ids ?? []).map((id, index) => player(id, id, { legsWon: 2 - index })) }));
+    socket().serverSend(updated({ ...view }));
+    expect(await screen.findByText('2 : 1')).toBeTruthy();
+    expect(screen.getByText('Leg 4')).toBeTruthy();
+    expect(screen.getByText('Mecz #17 · na żywo, leg 4')).toBeTruthy();
+  });
+
+  it('has no extra section without a third place match and a consolation', async () => {
+    const config = tournamentConfig('group_playoff', 6, { advance: 4 });
+    reply = () =>
+      json(
+        200,
+        computedView(
+          config,
+          playedResults(config, {}, (entry) => entry.phase === 'group'),
+        ),
+      );
+    await renderScreen();
+    const panel = screen.getByRole('tabpanel');
+    expect(
+      within(panel)
+        .getAllByRole('heading')
+        .map((heading) => heading.textContent),
+    ).toEqual(['Drabinka', 'Półfinały · do 3', 'Finał · do 4']);
+    expect(within(panel).queryByText(/Mecz o 3\. miejsce/)).toBeNull();
+    expect(within(panel).queryByText(/Pocieszenie/)).toBeNull();
+    expect(screen.getByRole('region', { name: 'Klasyfikacja końcowa' })).toBeTruthy();
+  });
+
+  it('shows a consolation of more than one round as its own bracket', async () => {
+    const config = tournamentConfig('group_playoff', 7, { advance: 4, consolation: true });
+    reply = () =>
+      json(
+        200,
+        computedView(
+          config,
+          playedResults(config, {}, (entry) => entry.phase === 'group'),
+        ),
+      );
+    await renderScreen();
+    const consolation = screen.getByRole('region', { name: 'Pocieszenie' });
+    expect(consolation.tabIndex).toBe(0);
+    expect(columnShape(consolation)).toEqual([
+      ['Półfinały · do 2', 2],
+      ['Finał · do 2', 1],
+    ]);
+    expect(within(consolation).getByText('Wolny los')).toBeTruthy();
+    expect(within(consolation).getByText('Awans bez meczu')).toBeTruthy();
+    expect(within(consolation).getByText(/Zwycięzca półfinału 2 \(pocieszenie\)/)).toBeTruthy();
+    expect(within(bracketFrame()).queryByText('Wolny los')).toBeNull();
+  });
+
+  it('lists every place of a finished tournament without pending rows', async () => {
+    reply = () => json(200, computedView(MOCKUP, playedResults(MOCKUP)));
+    await renderScreen();
+    const placements = within(screen.getByRole('region', { name: 'Klasyfikacja końcowa' })).getAllByRole('listitem');
+    expect(placements.map((item) => visibleText(item).slice(0, 2))).toEqual(['1.', '2.', '3.', '4.', '5.', '6.']);
+    expect(placements.some((item) => item.textContent?.includes('rozstrzygnie'))).toBe(false);
+    expect(visibleText(placements[0] as HTMLElement)).toMatch(/finał 4–0$/);
+  });
+
+  it('shows no placements on the group tab', async () => {
+    reply = () => json(200, mockupView());
+    await renderScreen();
+    fireEvent.click(screen.getByRole('tab', { name: 'Grupa' }));
+    expect(screen.queryByRole('region', { name: 'Klasyfikacja końcowa' })).toBeNull();
   });
 });
 
