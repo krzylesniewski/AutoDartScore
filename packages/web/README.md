@@ -37,7 +37,7 @@ Po lewej formularz nowej gry:
 - Potem gracze, od ostatnio aktywnego, z przyciskiem „+ Nowy gracz”. Nowy gracz ma imię, avatar emoji i jeden z 16 kolorów. Bez wyboru kolor jest dobrany automatycznie.
 - Emoji wybiera się z siatki 3 grup po 10: „Film i gry”, „Sport”, „Postaci”. Można też wpisać jedno własne w polu „Inne emoji”, a „Bez emoji” zostawia inicjał.
 - Opcje zależne od typu: punkty startowe, liczba legów albo tryb treningu (Free run, Solo 501, Końcówki). Przy „Końcówkach” dochodzi przedział „2-50” albo „51-100” (domyślnie 2-50).
-- Każdy typ pamięta swój wybór graczy przy przełączaniu kafli. Turniej ma osobny stan od pozostałych typów.
+- Turniej ma własny wybór graczy, osobny od pozostałych typów, więc przełączanie kafli go nie zmienia. „Mecz 1v1”, „Zabawa” i „Trening” dzielą jeden wybór, a zmiana typu przycina go do limitu nowego typu.
 
 „Turniej” ma własne pola:
 

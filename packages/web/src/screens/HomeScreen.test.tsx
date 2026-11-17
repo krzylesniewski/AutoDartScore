@@ -1027,7 +1027,7 @@ describe('HomeScreen: tournament wizard', () => {
     expect(planRows().at(-1)).toEqual(['Razem meczów', '4']);
   });
 
-  it('keeps the selection of each kind while switching tiles', async () => {
+  it('keeps the tournament selection separate from the match selection', async () => {
     render(<HomeScreen />);
     await chips();
     pickAll(['Anna', 'Bartek']);

@@ -113,7 +113,7 @@ export function HomeScreen({ initialKind }: HomeScreenProps) {
   const known = players.status === 'ready' ? players.players : [];
   const selected: Player[] = setup.playerIds.flatMap((id) => known.find((player) => player.id === id) ?? []);
 
-  // Kafle przełączają widok, a każdy stan zostaje ze swoim wyborem graczy.
+  // Turniej ma osobny stan, więc jego wybór graczy zostaje przy przełączaniu kafli. Typy meczu dzielą jeden stan.
   function onKindChange(next: GameKind): void {
     setKind(next);
     if (next !== 'tournament') {
