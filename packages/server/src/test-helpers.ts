@@ -168,6 +168,10 @@ export function withdraw(app: FastifyInstance, tournamentId: string, payload?: o
   return app.inject({ method: 'POST', url: `/tournaments/${tournamentId}/withdrawals`, ...(payload && { payload }) });
 }
 
+export function setSharing(app: FastifyInstance, tournamentId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/tournaments/${tournamentId}/sharing`, ...(payload && { payload }) });
+}
+
 export function correctResult(app: FastifyInstance, tournamentId: string, fixtureId: string, payload?: object) {
   return app.inject({ method: 'POST', url: `/tournaments/${tournamentId}/fixtures/${fixtureId}/result`, ...(payload && { payload }) });
 }

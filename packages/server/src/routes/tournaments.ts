@@ -1,4 +1,10 @@
-import { CorrectResultRequest, CreateTournamentRequest, TournamentListQuery, WithdrawPlayerRequest } from '@autoscore/schema';
+import {
+  CorrectResultRequest,
+  CreateTournamentRequest,
+  SharingRequest,
+  TournamentListQuery,
+  WithdrawPlayerRequest,
+} from '@autoscore/schema';
 import type { FastifyInstance } from 'fastify';
 import { invalidRequest } from '../errors.js';
 import type { TournamentService } from '../tournament-service.js';
@@ -39,6 +45,14 @@ export async function tournamentRoutes(app: FastifyInstance, service: Tournament
       throw invalidRequest(parsed.error.issues);
     }
     return reply.code(201).send(await service.withdraw(request.params.id, parsed.data));
+  });
+
+  app.post<TournamentParams>('/tournaments/:id/sharing', async (request) => {
+    const parsed = SharingRequest.safeParse(request.body);
+    if (!parsed.success) {
+      throw invalidRequest(parsed.error.issues);
+    }
+    return service.setSharing(request.params.id, parsed.data);
   });
 
   app.post<FixtureParams>('/tournaments/:id/fixtures/:fixtureId/result', async (request) => {

@@ -124,7 +124,7 @@ export const TournamentStatus = z.enum(['in_progress', 'finished']);
 export type TournamentStatus = z.infer<typeof TournamentStatus>;
 
 // Bez refine, bo Zod nie pozwala na pick() z obiektu z refine. Z tej bazy powstaje TournamentListItem.
-const TournamentViewBase = z.object({
+export const TournamentViewBase = z.object({
   id: TournamentId,
   name: TournamentName,
   format: TournamentFormat,
@@ -144,11 +144,11 @@ const TournamentViewBase = z.object({
   archivedAt: z.iso.datetime().nullable(),
 });
 
-function finishedAtMatchesStatus(view: { status: TournamentStatus; finishedAt: string | null }): boolean {
+export function finishedAtMatchesStatus(view: { status: TournamentStatus; finishedAt: string | null }): boolean {
   return (view.finishedAt !== null) === (view.status === 'finished');
 }
 
-const finishedAtRule = { message: 'Only a finished tournament has finishedAt', path: ['finishedAt'] };
+export const finishedAtRule = { message: 'Only a finished tournament has finishedAt', path: ['finishedAt'] };
 
 // Stan turnieju odtworzony z konfiguracji, logu turnieju i wyników powiązanych meczów.
 export const TournamentView = TournamentViewBase.refine(finishedAtMatchesStatus, finishedAtRule);

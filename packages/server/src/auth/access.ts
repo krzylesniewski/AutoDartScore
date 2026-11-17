@@ -2,6 +2,7 @@ import cors from '@fastify/cors';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { AuthConfig } from '../config.js';
 import { HttpError, unauthorized } from '../errors.js';
+import { PUBLIC_TOURNAMENT_ROUTES } from '../routes/public.js';
 import { verifyToken } from './credentials.js';
 
 export interface AccessControlOptions {
@@ -12,6 +13,9 @@ export interface AccessControlOptions {
 }
 
 const PUBLIC_ROUTES = new Set(['/health', '/auth/login']);
+
+// Publiczny link do turnieju, tylko do odczytu. Zapis pod /public nie trafia w żadną trasę, więc dalej wymaga tokenu.
+const PUBLIC_READ_ROUTES = new Set<string>(Object.values(PUBLIC_TOURNAMENT_ROUTES));
 
 function bearerToken(request: FastifyRequest): string | null {
   const match = /^Bearer +(\S+)$/i.exec(request.headers.authorization ?? '');
@@ -56,7 +60,7 @@ export async function registerAccessControl(
       return null;
     }
     // Przeglądarka pobiera front bez tokenu, bo ekran logowania jest jego częścią. Decyduje dopasowana trasa, nie surowy adres.
-    if ((request.method === 'GET' || request.method === 'HEAD') && webRoutes.has(route)) {
+    if ((request.method === 'GET' || request.method === 'HEAD') && (webRoutes.has(route) || PUBLIC_READ_ROUTES.has(route))) {
       return null;
     }
     const token = bearerToken(request);
