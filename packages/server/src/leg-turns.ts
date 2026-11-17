@@ -6,8 +6,8 @@ function plain(darts: readonly Hit[]): Hit[] {
   return darts.map(({ segment, multiplier }) => ({ segment, multiplier }));
 }
 
-// Zdarzenia tur są w kolejności rzutów. Zwycięska tura to turn_completed z remaining 0.
-function fromEvents(events: readonly DomainEvent[], legIndex: number): LegTurn[] {
+// Zamknięte tury jednego lega. Zdarzenia tur są w kolejności rzutów. Zwycięska tura to turn_completed z remaining 0.
+export function legTurnsOf(events: readonly DomainEvent[], legIndex: number): LegTurn[] {
   const turns: LegTurn[] = [];
   for (const event of events) {
     if ((event.type !== 'turn_completed' && event.type !== 'bust') || event.legIndex !== legIndex) {
@@ -39,13 +39,13 @@ function freeRunTurns(playerId: string, hits: readonly Hit[]): LegTurn[] {
 export function buildLegTurns(game: GameState, events: readonly DomainEvent[], hits: readonly Hit[]): LegTurn[] {
   switch (game.type) {
     case 'match':
-      return fromEvents(events, game.state.legIndex);
+      return legTurnsOf(events, game.state.legIndex);
     case 'casual':
-      return fromEvents(events, 0);
+      return legTurnsOf(events, 0);
     case 'practice':
       switch (game.practiceMode) {
         case 'solo_501':
-          return fromEvents(events, 0);
+          return legTurnsOf(events, 0);
         case 'free_run':
           return freeRunTurns(game.state.config.playerId, hits);
         case 'checkouts':

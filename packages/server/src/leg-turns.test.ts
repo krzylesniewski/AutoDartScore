@@ -1,7 +1,7 @@
 import { replayGame, type GameConfig } from '@autoscore/engine';
 import type { Hit, ThrowRecord } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
-import { buildLegTurns } from './leg-turns.js';
+import { buildLegTurns, legTurnsOf } from './leg-turns.js';
 
 const S = (segment: number): Hit => ({ segment, multiplier: 1 });
 const D = (segment: number): Hit => ({ segment, multiplier: 2 });
@@ -107,5 +107,20 @@ describe('buildLegTurns', () => {
     const [turn] = buildLegTurns(state, events, records);
     expect(turn?.darts).toStrictEqual([S(20), T(20), MISS]);
     turn?.darts.forEach((dart) => expect(Object.keys(dart)).toEqual(['segment', 'multiplier']));
+  });
+});
+
+describe('legTurnsOf', () => {
+  it('lists the closed turns of any leg, not only the current one', () => {
+    const { events } = replayGame(match(2), [...LEG, MISS, MISS, MISS]);
+    expect(legTurnsOf(events, 0).map((turn) => [turn.playerId, turn.turnIndex, turn.points])).toEqual([
+      ['anna', 0, 180],
+      ['bartek', 1, 0],
+      ['anna', 2, 121],
+    ]);
+    expect(legTurnsOf(events, 1)).toEqual([
+      { playerId: 'bartek', turnIndex: 0, darts: [MISS, MISS, MISS], points: 0, remainingAfter: 301, bust: false },
+    ]);
+    expect(legTurnsOf(events, 2)).toEqual([]);
   });
 });

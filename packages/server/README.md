@@ -131,6 +131,10 @@ Turniej to wiersz w `tournaments` (nazwa, format i reszta konfiguracji jako JSON
 
 Widoku turnieju (`TournamentView`) serwer nie zapisuje. Każdy odczyt, komenda i wiadomość na kanale na żywo liczy go od nowa funkcją `computeTournament` z silnika, z konfiguracji, ostatniego losowania, wpisów logu i wygranych legów powiązanych meczów. Legi pochodzą z odtworzenia logów tych meczów przez pamięć podręczną odtworzeń. Mecz, którego nie da się wczytać albo odtworzyć, kończy odczyt turnieju błędem 500, bo pominięcie go zmieniłoby wynik. Odrzucenie zapisanych danych przez silnik to uszkodzony log, więc też daje 500, a nie 400.
 
+Średnie w widoku też pochodzą z odtworzeń. Serwer podaje silnikowi dla każdego rozpoczętego meczu punkty i rzutki obu graczy z zamkniętych tur (`tallyGame`, bust liczy rzutki za 0 punktów). Silnik wpisuje z nich `Fixture.averages` tylko w statusie `finished`, gdy obaj gracze mają zamkniętą turę, i sumuje je w `StandingRow.average` z meczów grupy bez walkowerów. Mecze play-off nie zmieniają tabeli. Średnie meczu są więc równe średnim z `GET /matches/:id/summary`. Cofnięcie rzutki kończącej mecz bez korekty przywraca status `in_progress` i średnie znikają.
+
+`GET /tournaments/:id/stats` liczy `buildTournamentStats` z widoku, tych samych odtworzeń i kolejności `fixture_started`. Bilans i legi pochodzą z `result` każdego meczu z wynikiem, więc obejmują walkowery (N:0) i korekty. Rzutki i rekordy liczą się tylko z meczów o statusie `finished`, także po korekcie wyniku. Trwający, porzucony i zamieniony w walkower mecz nic do nich nie wnosi. Rekordy sprawdzają mecze w kolejności startu, zdarzenia w kolejności logu i slot 0 przed slotem 1, a zmieniają się tylko na wartość ściśle lepszą.
+
 - Id turnieju to `t_` i 128 losowych bitów (`randomBytes(16)` w base64url), bo posłuży też za publiczny link.
 - Start meczu turnieju zapisuje w jednej transakcji wiersz gry z `tournament_id` i `fixture_id`, jej graczy w kolejności slotów i wpis `fixture_started`. Ponowny start zwraca tę samą grę.
 - Mecz turnieju to zwykły mecz 1v1. Porzucenie i wznowienie działają jak w każdej grze, a mecz turnieju zostaje `in_progress` z tym samym `matchId`. Wyjątek: po wycofaniu jednego z graczy z turnieju wznowienie daje 409 `player_withdrawn`, bo zamieniłoby walkower z powrotem w rozgrywany mecz.
@@ -166,15 +170,15 @@ Uszkodzona gra (log, którego nie da się odtworzyć, albo brak wymaganego pola 
   - `auth.ts`: `POST /auth/login`.
   - `players.ts`: utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu.
   - `matches.ts`: gry, lista gier z filtrami `status`, `playerId`, `type` i `tournamentId`, rzutki, reszta tury jako Miss (`rest-miss`), próby i pominięcia checkoutu, cofnięcie, porzucenie, wznowienie i zakończenie treningu. Cofnięcie, wznowienie, zakończenie i pominięcie checkoutu czytają z body tylko `expectedSeq`, a pusty albo niepoprawny JSON i wartość, która nie jest obiektem, traktują jak brak body.
-  - `tournaments.ts`: `POST /tournaments`, lista z filtrami `status` i `archived=include`, `GET /tournaments/:id`, ponowne losowanie, start meczu turnieju, archiwizacja, wycofanie gracza i korekta wyniku. Losowanie, start i archiwizacja czytają z body tylko `expectedSeq`, jak cofnięcie. Wycofanie i korekta mają ścisłe body JSON, jak utworzenie turnieju.
+  - `tournaments.ts`: `POST /tournaments`, lista z filtrami `status` i `archived=include`, `GET /tournaments/:id`, `GET /tournaments/:id/stats`, ponowne losowanie, start meczu turnieju, archiwizacja, wycofanie gracza i korekta wyniku. Losowanie, start i archiwizacja czytają z body tylko `expectedSeq`, jak cofnięcie. Wycofanie i korekta mają ścisłe body JSON, jak utworzenie turnieju.
   - `command-body.ts`: parser body komend, które czytają tylko `expectedSeq`, wspólny dla gier i turniejów.
   - `live.ts`: WebSocket gry (`/matches/:id/live`) i turnieju (`/tournaments/:id/live`) z wiadomością `auth` i pingiem.
-  - `stats.ts`: statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, `GET /players/:id/frequent-hits`, podsumowanie meczu, ranking graczy i `GET /stats/overall`. Statystyki gracza, bilans, forma, ranking i `GET /stats/overall` przyjmują `?period=30d`, `90d` albo `all` (domyślnie `all`). Statystyki gracza, forma i ranking przyjmują też `?type=tournament`, czyli tylko mecze 1v1 z turniejów.
+  - `stats.ts`: statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, `GET /players/:id/frequent-hits`, podsumowanie meczu, historia legów meczu 1v1 (`GET /matches/:id/legs`), ranking graczy i `GET /stats/overall`. Statystyki gracza, bilans, forma, ranking i `GET /stats/overall` przyjmują `?period=30d`, `90d` albo `all` (domyślnie `all`). Statystyki gracza, forma i ranking przyjmują też `?type=tournament`, czyli tylko mecze 1v1 z turniejów.
 - `src/match-service.ts`: komendy gry (utworzenie, rzutka, reszta tury jako Miss, próba i pominięcie checkoutu, cofnięcie, porzucenie, wznowienie, zakończenie treningu, lista, subskrypcja), sprawdzenie `expectedSeq` opisane w „Powtórzone komendy” i `publishState`, czyli wysyłka stanu gry bez brania kolejki, dla wycofania gracza z turnieju.
 - `src/replay.ts`: wybór rzutek oraz prób i pominięć checkoutu, które się liczą, stan porzucenia, czas zakończenia treningu i odtworzenie stanu w silniku. `replayLog` daje z wczytanego logu cały wynik odtworzenia (`ReplayedMatch`).
 - `src/replay-cache.ts`: pamięć podręczna odtworzeń dla list i statystyk (`createReplayCache`, `REPLAY_CACHE_MAX_MATCHES`), opisana wyżej w „Lista gier i statystyki”.
 - `src/snapshot.ts`: budowa `MatchSnapshot` ze stanu silnika.
-- `src/leg-turns.ts`: `buildLegTurns`, czyli zamknięte tury bieżącego lega (`legTurns`) ze zdarzeń odtworzenia, a w Free run z pełnych podejść po 3 rzutki.
+- `src/leg-turns.ts`: `buildLegTurns`, czyli zamknięte tury bieżącego lega (`legTurns`) ze zdarzeń odtworzenia, a w Free run z pełnych podejść po 3 rzutki. `legTurnsOf` daje zamknięte tury dowolnego lega.
 - `src/stats-service.ts` i `src/stats/`: statystyki liczone z odtworzenia logu. Gry spoza okresu odrzuca już zapytanie w `store.ts`, więc nie są odtwarzane. Średnia na 3 rzutki na karcie gracza, w rankingu, w bilansie i na wykresie formy liczy tylko ukończone legi. W `src/stats/` są:
   - `tally.ts`: sumy gracza w grze, także trafienia T20.
   - `completed-legs.ts`: punkty i rzutki w ukończonych legach.
@@ -184,12 +188,13 @@ Uszkodzona gra (log, którego nie da się odtworzyć, albo brak wymaganego pola 
   - `form.ts`: średnia z każdej z ostatnich gier.
   - `frequent-hits.ts`: do 6 najczęstszych trafień gracza bez Miss, według liczby, potem punktów, potem segmentu.
   - `leg-progress.ts`: pozostały wynik po każdej rzutce ostatniego lega z zamkniętych tur, do podsumowania gry.
+  - `match-legs.ts`: historia legów meczu 1v1 do `GET /matches/:id/legs`, czyli zaczynający, zwycięzca, zamknięcie, rzutki, średnia graczy w legu i zamknięte tury.
   - `leg-durations.ts`: czas każdego wygranego lega z rzutek, które się liczą, bez przerw przyciętych do lega.
   - `achievements.ts`: rekordy gracza i wykrywanie osiągnięć.
   - `period.ts`: `periodStart`, czyli najstarsze `createdAt` gry w okresie statystyk liczone od zegara serwera z `AppOptions.now`.
 - `src/achievement-reference.ts`: rekordy gracza z ukończonych meczów 1v1 do wykrywania osiągnięć. Osiągnięcia (`achievement` na WebSocket) dotyczą tylko meczów 1v1 i zapisanych profili, od drugiego ukończonego meczu 1v1 gracza. Liczymy je z logu, z pamięcią podręczną w procesie, i niczego nie zapisujemy.
-- `src/tournament-service.ts`: komendy turnieju (utworzenie, lista, odczyt, ponowne losowanie, start meczu, archiwizacja, wycofanie gracza, korekta wyniku, subskrypcja), blokada cofnięcia końca meczu (`guardUndo`) i wysyłka widoku po zmianie legów w meczu turnieju.
-- `src/tournament/`: `view.ts` (wejście silnika `tournamentInput` i budowa `TournamentView` z konfiguracji, logu turnieju i odtworzeń powiązanych meczów), `fixture-label.ts` (polska nazwa meczu turnieju z jego id) i `shuffle.ts` (losowanie kolejności graczy).
+- `src/tournament-service.ts`: komendy turnieju (utworzenie, lista, odczyt, statystyki, ponowne losowanie, start meczu, archiwizacja, wycofanie gracza, korekta wyniku, subskrypcja), blokada cofnięcia końca meczu (`guardUndo`) i wysyłka widoku po zmianie legów w meczu turnieju.
+- `src/tournament/`: `view.ts` (wejście silnika `tournamentInput` i budowa `TournamentView` z konfiguracji, logu turnieju i odtworzeń powiązanych meczów, z sumami rzutów do średnich), `stats.ts` (`buildTournamentStats`, czyli wiersze graczy i rekordy turnieju), `fixture-label.ts` (polska nazwa meczu turnieju z jego id) i `shuffle.ts` (losowanie kolejności graczy).
 - `src/live-hub.ts`: rozsyłanie wiadomości do subskrybentów jednej gry albo, w drugim hubie, jednego turnieju.
 - `src/serial-queue.ts`: kolejka komend z kluczem gry albo turnieju, jedna wspólna dla obu serwisów (kolejność kluczy opisana w „Turnieje”).
 - `src/store/store.ts`: warstwa dostępu do danych.

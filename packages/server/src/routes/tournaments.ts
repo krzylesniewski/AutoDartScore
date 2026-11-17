@@ -31,6 +31,8 @@ export async function tournamentRoutes(app: FastifyInstance, service: Tournament
 
   app.get<TournamentParams>('/tournaments/:id', async (request) => service.get(request.params.id));
 
+  app.get<TournamentParams>('/tournaments/:id/stats', async (request) => service.stats(request.params.id));
+
   app.post<TournamentParams>('/tournaments/:id/withdrawals', async (request, reply) => {
     const parsed = WithdrawPlayerRequest.safeParse(request.body);
     if (!parsed.success) {

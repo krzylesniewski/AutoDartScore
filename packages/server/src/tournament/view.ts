@@ -1,7 +1,15 @@
-import { computeTournament, EngineError, type FixtureFact, type ResultCorrection, type TournamentInput } from '@autoscore/engine';
+import {
+  computeTournament,
+  EngineError,
+  type FixtureFact,
+  type FixtureScoring,
+  type ResultCorrection,
+  type TournamentInput,
+} from '@autoscore/engine';
 import type { TournamentView } from '@autoscore/schema';
 import type { ReplayCache } from '../replay-cache.js';
 import type { ReplayedMatch } from '../replay.js';
+import { EMPTY_TOTALS, tallyGame } from '../stats/tally.js';
 import type { Store, StoredTournament, TournamentLogEntry } from '../store/store.js';
 
 export interface TournamentSource {
@@ -27,9 +35,16 @@ function fact(source: TournamentSource, fixtureId: string, matchId: string): Fix
   if (replay.game.type !== 'match') {
     throw corrupt(source.tournament, `match ${matchId} of fixture ${fixtureId} is not a 1v1 match`);
   }
-  const [first, second] = replay.game.state.legsWon;
-  // Gracze meczu są zapisani w kolejności slotów, więc legsWon jest już w tej kolejności.
-  return { fixtureId, matchId, legs: [first, second], scoring: null };
+  const { legsWon, config } = replay.game.state;
+  // Gracze meczu są zapisani w kolejności slotów, więc legsWon i playerIds są już w tej kolejności.
+  // Silnik sam decyduje, kiedy użyć sum rzutów, więc idą z każdym rozpoczętym meczem.
+  const tally = tallyGame('match', config.playerIds, replay.events);
+  const side = (playerId: string): FixtureScoring => {
+    const { points, darts } = tally.players.get(playerId) ?? EMPTY_TOTALS;
+    return { points, darts };
+  };
+  const [first, second] = config.playerIds;
+  return { fixtureId, matchId, legs: [legsWon[0], legsWon[1]], scoring: [side(first), side(second)] };
 }
 
 // Wejście silnika: konfiguracja, ostatnie losowanie, fakty meczów, wycofania i korekty z logu.
@@ -127,6 +142,7 @@ export interface LoadedTournament {
   readonly view: TournamentView;
   readonly log: readonly TournamentLogEntry[];
   readonly input: TournamentInput;
+  readonly replays: ReadonlyMap<string, ReplayedMatch>; // odtworzenia powiązanych meczów po id meczu
 }
 
 // Mecz, którego nie da się wczytać ani odtworzyć, przerywa odczyt. Pominięcie go zmieniłoby wynik turnieju.
@@ -139,5 +155,5 @@ export async function loadTournament(
   const replays = new Map(linked.map(({ match, replay }) => [match.id, replay]));
   const source = { tournament, log, replays };
   const input = tournamentInput(source);
-  return { view: viewOf(source, input), log, input };
+  return { view: viewOf(source, input), log, input, replays };
 }
