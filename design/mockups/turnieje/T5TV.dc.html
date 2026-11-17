@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 5, widok TV na żywo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#fff7e6}
+</style>
+</helmet>
+<div style="width: 1600px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 1000px 700px at 35% -15%, #3a261c 0%, #16120f 50%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; padding: 32px 40px; display: flex; flex-direction: column; gap: 24px;">
+  <header style="display: flex; align-items: center; gap: 18px;">
+    <svg width="40" height="40" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="#d8352a"></circle><circle cx="17" cy="17" r="10" fill="#0f0f0f"></circle><circle cx="17" cy="17" r="6" fill="#f3ecd8"></circle><circle cx="17" cy="17" r="2.4" fill="#d8352a"></circle></svg>
+    <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 44px; line-height: 1;">Jama jesień 16.11.2026</h1>
+    <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 26px; color: #a8a08a;">Półfinał 2 · do 3 wygranych legów</span>
+    <span style="flex-grow: 1;"></span>
+    <span style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 999px; background: rgba(216,53,42,0.16); box-shadow: 0 0 0 1px rgba(216,53,42,0.6) inset; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: 0.12em;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #d8352a; box-shadow: 0 0 12px #d8352a;"></span>NA ŻYWO</span>
+  </header>
+
+  <div style="flex-grow: 1; min-height: 0; display: flex; gap: 28px;">
+    <section aria-label="Trwający mecz" style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 18px;">
+      <sc-for list="{{players}}" as="p" hint-placeholder-count="2">
+        <div style="{{p.card}}">
+          <span style="{{p.avatar}}">{{p.initial}}</span>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+            <span style="display: flex; align-items: center; gap: 14px;">
+              <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 46px; line-height: 1;">{{p.name}}</span>
+              <sc-if value="{{p.throwing}}" hint-placeholder-val="{{true}}"><span style="padding: 4px 12px; border-radius: 999px; background: #d8352a; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: 0.1em;">RZUCA</span></sc-if>
+            </span>
+            <span style="font-size: 20px; color: #a8a08a;">{{p.line}}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; width: 120px;">
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: 0.16em; color: #a8a08a;">LEGI</span>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 64px; line-height: 1;">{{p.legs}}</span>
+          </div>
+          <span style="{{p.scoreStyle}}">{{p.score}}</span>
+        </div>
+      </sc-for>
+      <div style="display: flex; gap: 18px;">
+        <div style="flex: 1; border-radius: 22px; padding: 18px 24px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; align-items: center; gap: 18px;">
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 0.16em; color: #a8a08a;">TA TURA</span>
+          <span style="display: flex; gap: 10px;">
+            <span style="width: 90px; height: 64px; border-radius: 14px; background: #1b1714; box-shadow: 0 0 0 1px rgba(243,236,216,0.2) inset; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 34px;">T20</span>
+            <span style="width: 90px; height: 64px; border-radius: 14px; box-sizing: border-box; border: 2px dashed rgba(243,236,216,0.2);"></span>
+            <span style="width: 90px; height: 64px; border-radius: 14px; box-sizing: border-box; border: 2px dashed rgba(243,236,216,0.2);"></span>
+          </span>
+          <span style="flex-grow: 1;"></span>
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 48px;">60</span>
+        </div>
+        <div style="width: 420px; border-radius: 22px; padding: 18px 24px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; display: flex; align-items: center; gap: 16px;">
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 0.16em; color: #a8a08a;">ZAMKNIĘCIE</span>
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 40px;">T19 · D12</span>
+        </div>
+      </div>
+    </section>
+
+    <aside style="width: 470px; flex-shrink: 0; display: flex; flex-direction: column; gap: 18px;">
+      <section aria-labelledby="tv-bracket" style="border-radius: 22px; padding: 18px 22px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); display: flex; flex-direction: column; gap: 10px;">
+        <h2 id="tv-bracket" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 0.16em; color: #a8a08a;">PLAY-OFF</h2>
+        <sc-for list="{{matches}}" as="m" hint-placeholder-count="4">
+          <div style="{{m.row}}">
+            <span style="width: 120px; font-size: 15px; color: #a8a08a;">{{m.stage}}</span>
+            <span style="flex-grow: 1; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px;">{{m.pair}}</span>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 24px; font-variant-numeric: tabular-nums;">{{m.score}}</span>
+          </div>
+        </sc-for>
+      </section>
+      <section aria-labelledby="tv-next" style="border-radius: 22px; padding: 18px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 6px;">
+        <h2 id="tv-next" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 0.16em; color: #a8a08a;">NASTĘPNY MECZ</h2>
+        <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 30px;">Finał: Szymon – zwycięzca tego meczu</span>
+        <span style="font-size: 17px; color: #a8a08a;">do 4 wygranych legów</span>
+      </section>
+      <section aria-label="Śledź na telefonie" style="flex-grow: 1; min-height: 0; border-radius: 22px; padding: 18px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; align-items: center; gap: 20px;">
+        <svg width="150" height="150" viewBox="0 0 25 25" role="img" aria-label="Kod QR publicznego linku do turnieju" style="flex-shrink: 0; background: #f3ecd8; border-radius: 10px; padding: 8px;">
+          <sc-for list="{{qr}}" as="q" hint-placeholder-count="120"><rect x="{{q.x}}" y="{{q.y}}" width="1" height="1" fill="#0a0908"></rect></sc-for>
+        </svg>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 28px; line-height: 1.05;">Śledź turniej na telefonie</span>
+          <span style="font-size: 16px; color: #a8a08a;">Tabela, drabinka i statystyki meczów, bez logowania.</span>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const pl = [
+{ name: 'Grzesiek', initial: 'G', color: '#b28cff', legs: '1', score: '81', throwing: true, line: 'średnia meczu 41,72 · ostatnia tura 85' },
+{ name: 'Krzysiek', initial: 'XD', color: '#ff70b8', legs: '1', score: '96', throwing: false, line: 'średnia meczu 44,95 · ostatnia tura 100' }
+];
+const players = pl.map((p) => ({
+...p,
+avatar: 'width: 104px; height: 104px; flex-shrink: 0; border-radius: 50%; background: ' + p.color + '; color: #111111; display: flex; align-items: center; justify-content: center; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: ' + (p.initial.length > 1 ? 38 : 48) + 'px;' + (p.throwing ? ' box-shadow: 0 0 0 5px #1b1714, 0 0 0 8px #d8352a, 0 0 36px rgba(216,53,42,0.7);' : ''),
+card: 'flex: 1; min-height: 0; box-sizing: border-box; border-radius: 26px; padding: 0 34px; display: flex; align-items: center; gap: 28px; ' + (p.throwing ? 'background: linear-gradient(180deg, #3a2520 0%, #241815 100%); box-shadow: 0 0 0 2px #d8352a inset, 0 0 50px -10px rgba(216,53,42,0.5);' : 'background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset;'),
+scoreStyle: 'width: 300px; text-align: right; font-family: Barlow Condensed, sans-serif; font-weight: 900; font-size: 190px; line-height: 0.85; font-variant-numeric: tabular-nums; color: ' + (p.throwing ? '#f3ecd8' : '#c9bfa6') + ';'
+}));
+const rowBase = 'display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 12px; border-radius: 12px;';
+const matches = [
+{ stage: 'Półfinał 1', pair: 'Szymon – Kuba', score: '3 : 1', row: rowBase },
+{ stage: 'Półfinał 2', pair: 'Grzesiek – Krzysiek', score: '1 : 1', row: rowBase + ' background: rgba(216,53,42,0.14); box-shadow: 0 0 0 1px rgba(216,53,42,0.6) inset;' },
+{ stage: 'O 3. miejsce', pair: 'Kuba – przegrany PF 2', score: '–', row: rowBase },
+{ stage: 'Pocieszenie', pair: 'Matek – Dzimi', score: '0 : 2', row: rowBase }
+];
+const qr = [];
+let seed = 7;
+const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+const finder = (x, y) => { for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) { const edge = i === 0 || j === 0 || i === 6 || j === 6; const core = i >= 2 && i <= 4 && j >= 2 && j <= 4; if (edge || core) qr.push({ x: x + i, y: y + j }); } };
+finder(0, 0); finder(18, 0); finder(0, 18);
+for (let x = 0; x < 25; x++) for (let y = 0; y < 25; y++) {
+const inF = (x < 8 && y < 8) || (x > 16 && y < 8) || (x < 8 && y > 16);
+if (!inF && rnd() > 0.52) qr.push({ x, y });
+}
+return { players, matches, qr };
+}
+}
+</script>
+</body>
+</html>
