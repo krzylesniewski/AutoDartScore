@@ -1,8 +1,9 @@
+import { TournamentConfig, TournamentEvent } from '@autoscore/schema';
 import type { Kysely } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { migrateToLatest, openDatabase, type Database } from '../db/index.js';
 import { MISS, S, countRows, hitEvent, logEntries } from '../test-helpers.js';
-import { createStore, type Store } from './store.js';
+import { createStore, type NewMatch, type Store } from './store.js';
 
 let db: Kysely<Database>;
 let store: Store;
@@ -52,5 +53,87 @@ describe('appendThrows', () => {
     await expect(store.appendThrows([hitEvent(matchId, MISS), hitEvent(matchId, MISS, { eventId: existing.eventId })])).rejects.toThrow();
     expect(await countRows(db, 'throws')).toBe(1);
     expect(await logEntries(db, matchId)).toHaveLength(1);
+  });
+});
+
+describe('tournaments', () => {
+  async function tournament(): Promise<string> {
+    const ids = [];
+    for (const name of ['Bartek', 'Celina', 'Darek']) {
+      ids.push((await store.createPlayer({ name, guest: false })).id);
+    }
+    const config = TournamentConfig.parse({ name: 'Liga testowa', format: 'league', playerIds: ids, startingScore: 301 });
+    return store.createTournament(config, [...ids].reverse());
+  }
+
+  const fixtureMatch = (playerIds: readonly string[]): NewMatch => ({
+    type: 'match',
+    practiceMode: null,
+    startingScore: 301,
+    legsToWin: 1,
+    firstPlayerIndex: 0,
+    countsToStats: true,
+    checkoutRange: null,
+    checkoutSeed: null,
+    checkoutRule: null,
+    playerIds,
+  });
+
+  it('stores the config, the players in entry order and the first draw', async () => {
+    const id = await tournament();
+    expect(id).toMatch(/^t_[A-Za-z0-9_-]{22}$/);
+    const stored = await store.findTournament(id);
+    const playerIds = stored?.players.map((player) => player.id) ?? [];
+    expect(stored?.config).toMatchObject({ name: 'Liga testowa', format: 'league', playerIds, startingScore: 301, sharing: true });
+    expect(stored?.players.map((player) => player.name)).toEqual(['Bartek', 'Celina', 'Darek']);
+    const [draw, ...rest] = await store.loadTournamentLog(id);
+    expect(draw).toMatchObject({ type: 'draw', order: [...playerIds].reverse(), seq: 1 });
+    expect(rest).toEqual([]);
+    expect(await store.findTournament('t_nope')).toBeNull();
+  });
+
+  it('links the fixture match to the tournament and logs the start in one step', async () => {
+    const id = await tournament();
+    const players = (await store.findTournament(id))?.players.map((player) => player.id) ?? [];
+    const started = await store.startFixture(id, 'g-1', fixtureMatch(players.slice(0, 2)));
+    expect(started.seq).toBe(2);
+    const link = { id, name: 'Liga testowa', format: 'league', fixtureId: 'g-1' };
+    expect((await store.findMatch(started.matchId))?.tournament).toEqual(link);
+    expect((await store.findMatch(matchId))?.tournament).toBeNull();
+    expect((await store.listMatches({ tournamentId: id })).map((match) => [match.id, match.tournament])).toEqual([[started.matchId, link]]);
+    expect((await store.loadTournamentLog(id)).at(-1)).toMatchObject({
+      type: 'fixture_started',
+      fixtureId: 'g-1',
+      matchId: started.matchId,
+      seq: 2,
+    });
+  });
+
+  it('leaves no match and no log entry when the start fails', async () => {
+    const id = await tournament();
+    await expect(store.startFixture(id, 'g-1', fixtureMatch(['nope', 'nada']))).rejects.toThrow();
+    expect(await countRows(db, 'matches')).toBe(1);
+    expect(await store.loadTournamentLog(id)).toHaveLength(1);
+  });
+
+  it('round-trips every event type and rejects a corrupt row', async () => {
+    const id = await tournament();
+    const playerId = (await store.findTournament(id))?.players[0]?.id ?? '';
+    await store.appendTournamentEvent(id, { type: 'player_withdrawn', playerId });
+    await store.appendTournamentEvent(id, { type: 'result_corrected', fixtureId: 'g-1', legs: [0, 1] });
+    await store.appendTournamentEvent(id, { type: 'sharing_changed', sharing: false });
+    expect(await store.appendTournamentEvent(id, { type: 'archived' })).toBe(5);
+    expect((await store.loadTournamentLog(id)).slice(1).map((entry) => TournamentEvent.parse(entry))).toEqual([
+      { type: 'player_withdrawn', playerId },
+      { type: 'result_corrected', fixtureId: 'g-1', legs: [0, 1] },
+      { type: 'sharing_changed', sharing: false },
+      { type: 'archived' },
+    ]);
+
+    await db
+      .insertInto('tournament_events')
+      .values({ tournament_id: id, seq: 6, type: 'draw', draw_order: 'nie json', created_at: new Date().toISOString() })
+      .execute();
+    await expect(store.loadTournamentLog(id)).rejects.toThrow('Corrupt tournament log: draw at seq 6');
   });
 });

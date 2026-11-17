@@ -19,6 +19,7 @@ import type {
 import { buildLegTurns } from './leg-turns.js';
 import type { GameTimes } from './replay.js';
 import type { StoredMatch } from './store/store.js';
+import { fixtureLabel } from './tournament/fixture-label.js';
 
 type Progress = Pick<
   MatchSnapshot,
@@ -192,6 +193,11 @@ export function toSnapshot(
       guest: player.guest,
       ...perPlayer(player, index),
     })),
-    tournament: null,
+    tournament: match.tournament && {
+      id: match.tournament.id,
+      name: match.tournament.name,
+      fixtureId: match.tournament.fixtureId,
+      label: fixtureLabel(match.tournament.format, match.tournament.fixtureId),
+    },
   };
 }

@@ -1,5 +1,12 @@
 import { EngineError } from '@autoscore/engine';
-import { STALE_STATE, type ApiError, type MatchSnapshot, type StaleStateError } from '@autoscore/schema';
+import {
+  STALE_STATE,
+  type ApiError,
+  type MatchSnapshot,
+  type StaleStateError,
+  type TournamentStaleStateError,
+  type TournamentView,
+} from '@autoscore/schema';
 
 export class HttpError extends Error {
   readonly statusCode: number;
@@ -21,6 +28,17 @@ export class StaleStateHttpError extends HttpError {
     super(409, STALE_STATE, `Match ${id} changed since seq ${expectedSeq}`);
     this.name = 'StaleStateHttpError';
     this.state = state;
+  }
+}
+
+// Komenda turnieju z nieaktualnym expectedSeq. Klient dostaje bieżący widok turnieju.
+export class TournamentStaleStateHttpError extends HttpError {
+  readonly tournament: TournamentView;
+
+  constructor(id: string, expectedSeq: number, tournament: TournamentView) {
+    super(409, STALE_STATE, `Tournament ${id} changed since seq ${expectedSeq}`);
+    this.name = 'TournamentStaleStateHttpError';
+    this.tournament = tournament;
   }
 }
 
@@ -56,9 +74,12 @@ function isClientError(error: unknown): error is { statusCode: number; message: 
   return typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500;
 }
 
-export function toApiError(error: unknown): { statusCode: number; body: ApiError | StaleStateError } {
+export function toApiError(error: unknown): { statusCode: number; body: ApiError | StaleStateError | TournamentStaleStateError } {
   if (error instanceof StaleStateHttpError) {
     return { statusCode: error.statusCode, body: { error: STALE_STATE, message: error.message, state: error.state } };
+  }
+  if (error instanceof TournamentStaleStateHttpError) {
+    return { statusCode: error.statusCode, body: { error: STALE_STATE, message: error.message, tournament: error.tournament } };
   }
   if (error instanceof HttpError) {
     return { statusCode: error.statusCode, body: { error: error.code, message: error.message } };

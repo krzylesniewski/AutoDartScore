@@ -47,6 +47,45 @@ async function createListIndexes(db: Kysely<unknown>): Promise<void> {
   await db.schema.createIndex('match_players_player_id_idx').on('match_players').column('player_id').execute();
 }
 
+async function createTournaments(db: Kysely<unknown>): Promise<void> {
+  await db.schema
+    .createTable('tournaments')
+    .addColumn('id', 'text', (col) => col.primaryKey())
+    .addColumn('name', 'text', (col) => col.notNull())
+    .addColumn('format', 'text', (col) => col.notNull())
+    .addColumn('config', 'text', (col) => col.notNull())
+    .addColumn('created_at', 'text', (col) => col.notNull())
+    .execute();
+  await db.schema
+    .createTable('tournament_players')
+    .addColumn('tournament_id', 'text', (col) => col.notNull().references('tournaments.id'))
+    .addColumn('player_id', 'text', (col) => col.notNull().references('players.id'))
+    .addColumn('position', 'integer', (col) => col.notNull())
+    .addPrimaryKeyConstraint('tournament_players_pk', ['tournament_id', 'position'])
+    .execute();
+  // Kolumny wpisów, których jeszcze nikt nie zapisuje (wycofanie, korekta, udostępnianie), są od razu, żeby nie wymagały migracji.
+  await db.schema
+    .createTable('tournament_events')
+    .addColumn('tournament_id', 'text', (col) => col.notNull().references('tournaments.id'))
+    .addColumn('seq', 'integer', (col) => col.notNull())
+    .addColumn('type', 'text', (col) => col.notNull())
+    .addColumn('draw_order', 'text')
+    .addColumn('fixture_id', 'text')
+    .addColumn('match_id', 'text', (col) => col.references('matches.id'))
+    .addColumn('player_id', 'text', (col) => col.references('players.id'))
+    .addColumn('legs_first', 'integer')
+    .addColumn('legs_second', 'integer')
+    .addColumn('sharing', 'integer')
+    .addColumn('created_at', 'text', (col) => col.notNull())
+    .addPrimaryKeyConstraint('tournament_events_pk', ['tournament_id', 'seq'])
+    .execute();
+  await db.schema
+    .alterTable('matches')
+    .addColumn('tournament_id', 'text', (col) => col.references('tournaments.id'))
+    .execute();
+  await db.schema.alterTable('matches').addColumn('fixture_id', 'text').execute();
+}
+
 // Tylko typy text, integer i real oraz brak funkcji JSON, żeby migracje działały też na PostgreSQL.
 const migrations: Record<string, Migration> = {
   '0001_initial': {
@@ -165,6 +204,17 @@ const migrations: Record<string, Migration> = {
         return;
       }
       await db.transaction().execute(createListIndexes);
+    },
+  },
+  // Widoku turnieju nie zapisujemy. Serwer odtwarza go z konfiguracji, logu turnieju i legów powiązanych meczów.
+  '0008_tournaments': {
+    async up(db: Kysely<unknown>) {
+      // Jak w 0007_list_indexes.
+      if (db.isTransaction) {
+        await createTournaments(db);
+        return;
+      }
+      await db.transaction().execute(createTournaments);
     },
   },
 };

@@ -10,9 +10,13 @@ import {
   checkoutSkip,
   createGame,
   createPlayers,
+  createTournament,
   endPractice,
   getMatch,
+  getTournament,
+  playFixture,
   setup,
+  startFixture,
   throwDarts,
   undo,
 } from './test-helpers.js';
@@ -139,6 +143,29 @@ describe('restart', () => {
       expect(after).toEqual(before);
       expect(after.checkouts).toMatchObject({ range: '2-50', attempts: 3, successes: 1, skips: 2 });
       expect(after.checkouts?.history.map((attempt) => attempt.success)).toEqual([false, true, false]);
+    } finally {
+      await second.close();
+    }
+  });
+
+  it('rebuilds the same tournament view from a file database', async () => {
+    const path = join(dir, 'games.sqlite');
+    const first = await setup({ path });
+    const players = await createPlayers(first.app, 4);
+    const created = await createTournament(first.app, { name: 'Liga testowa', format: 'league', playerIds: players });
+    await playFixture(first.app, created.id, 'g-1');
+    const started = await startFixture(first.app, created.id, 'g-2');
+    expect(started.statusCode).toBe(201);
+    await throwDarts(first.app, started.json<{ matchId: string }>().matchId, [T(20), S(5)]);
+    const before = await getTournament(first.app, created.id);
+    await first.close();
+
+    const second = await setup({ path, random: () => 0.987 });
+    try {
+      const after = await getTournament(second.app, created.id);
+      expect(after).toEqual(before);
+      expect(after).toMatchObject({ status: 'in_progress', liveFixtureId: 'g-2', eventSeq: 3 });
+      expect(after.fixtures.slice(0, 2).map((fixture) => fixture.status)).toEqual(['finished', 'in_progress']);
     } finally {
       await second.close();
     }

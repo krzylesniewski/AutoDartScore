@@ -20,6 +20,9 @@ describe('migrateToLatest', () => {
       'player_changes',
       'players',
       'throws',
+      'tournament_events',
+      'tournament_players',
+      'tournaments',
     ]);
     await db.destroy();
   });
@@ -423,17 +426,18 @@ describe('migrateToLatest', () => {
     const before = await rows();
     expect(await indexes()).toEqual([]);
 
-    await migrateToLatest(db);
+    await migrateTo(db, '0007_list_indexes');
     expect(await indexes()).toEqual(['match_players_player_id_idx', 'throws_match_id_idx']);
     expect(await rows()).toEqual(before);
     const applied = await migrations();
     expect(applied.at(-1)).toBe('0007_list_indexes');
 
-    await migrateToLatest(db);
+    await migrateTo(db, '0007_list_indexes');
     expect(await migrations()).toEqual(applied);
     expect(await indexes()).toEqual(['match_players_player_id_idx', 'throws_match_id_idx']);
     expect(await rows()).toEqual(before);
 
+    await migrateToLatest(db);
     const app = await buildApp({ db, auth: null, random: () => 0 });
     try {
       const list = await app.inject({ method: 'GET', url: '/matches' });
@@ -442,6 +446,94 @@ describe('migrateToLatest', () => {
       const rankings = await app.inject({ method: 'GET', url: '/stats/rankings' });
       expect(rankings.statusCode).toBe(200);
       expect(rankings.json()).toMatchObject({ games: 1, legs: 1 });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('adds the tournament tables under 0008_tournaments and reads a match written under 0007_list_indexes', async () => {
+    const db = openDatabase(':memory:');
+    await migrateTo(db, '0007_list_indexes');
+    const createdAt = '2026-11-16T18:30:00.000Z';
+    await db
+      .insertInto('players')
+      .values([
+        { id: 'p1', name: 'Anna', avatar: null, color: 1, guest: 0, created_at: createdAt },
+        { id: 'p2', name: 'Bartek', avatar: null, color: 2, guest: 0, created_at: createdAt },
+      ])
+      .execute();
+    await db
+      .insertInto('matches')
+      .values({
+        id: 'm1',
+        type: 'match',
+        practice_mode: null,
+        starting_score: 301,
+        legs_to_win: 1,
+        first_player_index: 0,
+        counts_to_stats: 1,
+        checkout_range: null,
+        checkout_seed: null,
+        checkout_rule: null,
+        created_at: createdAt,
+      })
+      .execute();
+    await db
+      .insertInto('match_players')
+      .values([
+        { match_id: 'm1', player_id: 'p1', position: 0 },
+        { match_id: 'm1', player_id: 'p2', position: 1 },
+      ])
+      .execute();
+    const darts = LEG_301.slice(0, 4).map(([segment, multiplier], index) => ({
+      id: `t${index + 1}`,
+      match_id: 'm1',
+      event_id: `00000000-0000-4000-8000-00000000000${index + 1}`,
+      source: 'keypad',
+      sequence: index,
+      segment,
+      multiplier,
+      confidence: 1,
+      detected_at: createdAt,
+      received_at: createdAt,
+    }));
+    await db.insertInto('throws').values(darts).execute();
+    await db
+      .insertInto('match_events')
+      .values(
+        darts.map((dart, index) => ({
+          match_id: 'm1',
+          seq: index + 1,
+          type: 'throw' as const,
+          throw_id: dart.id,
+          player_id: null,
+          reason: null,
+          success: null,
+          created_at: createdAt,
+        })),
+      )
+      .execute();
+
+    await migrateToLatest(db);
+    const tables = (await db.introspection.getTables()).map((table) => table.name);
+    expect(tables).toEqual(expect.arrayContaining(['tournaments', 'tournament_players', 'tournament_events']));
+    expect(await db.selectFrom('matches').select(['id', 'tournament_id', 'fixture_id']).execute()).toEqual([
+      { id: 'm1', tournament_id: null, fixture_id: null },
+    ]);
+
+    const app = await buildApp({ db, auth: null, random: () => 0 });
+    try {
+      const match = await app.inject({ method: 'GET', url: '/matches/m1' });
+      expect(match.statusCode).toBe(200);
+      expect(match.json()).toMatchObject({ eventSeq: 4, status: 'in_progress', tournament: null });
+      expect(match.json<MatchSnapshot>().players.map((player) => player.remaining)).toEqual([121, 301]);
+      const list = await app.inject({ method: 'GET', url: '/matches' });
+      expect(list.statusCode).toBe(200);
+      expect(list.json()).toMatchObject([{ id: 'm1', tournament: null }]);
+      const tournaments = await app.inject({ method: 'GET', url: '/tournaments' });
+      expect(tournaments.statusCode).toBe(200);
+      expect(tournaments.json()).toEqual([]);
     } finally {
       await app.close();
       await db.destroy();

@@ -1,4 +1,5 @@
 import websocket from '@fastify/websocket';
+import type { TournamentLiveMessage } from '@autoscore/schema';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Kysely } from 'kysely';
 import { registerAccessControl } from './auth/access.js';
@@ -15,14 +16,16 @@ import { LIVE_MAX_PAYLOAD_BYTES, LIVE_MAX_PENDING_CONNECTIONS, liveRoutes } from
 import { matchRoutes } from './routes/matches.js';
 import { playerRoutes } from './routes/players.js';
 import { statsRoutes } from './routes/stats.js';
+import { tournamentRoutes } from './routes/tournaments.js';
 import { firstSegment, webAppRoutes } from './routes/web-app.js';
 import { createSerialQueue } from './serial-queue.js';
 import { createStatsService } from './stats-service.js';
 import { createStore } from './store/store.js';
+import { createTournamentService } from './tournament-service.js';
 
 export interface AppOptions {
   readonly db: Kysely<Database>;
-  readonly random?: () => number; // losowanie, kto zaczyna, i ziarna celów treningu checkoutów. Domyślnie Math.random
+  readonly random?: () => number; // losowanie, kto zaczyna, ziarna celów treningu checkoutów i kolejności w turnieju. Domyślnie Math.random
   readonly logger?: boolean;
   readonly trustProxy?: boolean; // adres klienta z X-Forwarded-For, tylko za reverse proxy. Domyślnie false
   readonly auth: AuthConfig | null;
@@ -65,14 +68,24 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   const store = createStore(options.db);
   const cache = createReplayCache({ store, log: app.log, maxEntries: options.replayCacheSize ?? REPLAY_CACHE_MAX_MATCHES });
+  const random = options.random ?? Math.random;
+  const tournaments = createTournamentService({
+    store,
+    cache,
+    hub: createLiveHub<TournamentLiveMessage>(),
+    queue: createSerialQueue(),
+    random,
+  });
   const service = createMatchService({
     store,
     hub: createLiveHub(),
     queue: createSerialQueue(),
-    random: options.random ?? Math.random,
+    random,
     now,
     matchLockMs: (options.matchLockMinutes ?? 5) * 60_000,
     cache,
+    logger: app.log,
+    onLegsChanged: (match) => tournaments.matchLegsChanged(match),
   });
   healthRoutes(app);
   if (auth !== null) {
@@ -80,13 +93,18 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   }
   playerRoutes(app, store);
   await matchRoutes(app, service);
-  liveRoutes(app, service, {
-    auth,
-    now,
-    authTimeoutMs: options.liveAuthTimeoutMs ?? 5000,
-    pingIntervalMs: options.livePingIntervalMs ?? 30_000,
-    maxPendingConnections: options.liveMaxPendingConnections ?? LIVE_MAX_PENDING_CONNECTIONS,
-  });
+  await tournamentRoutes(app, tournaments);
+  liveRoutes(
+    app,
+    { matches: service, tournaments },
+    {
+      auth,
+      now,
+      authTimeoutMs: options.liveAuthTimeoutMs ?? 5000,
+      pingIntervalMs: options.livePingIntervalMs ?? 30_000,
+      maxPendingConnections: options.liveMaxPendingConnections ?? LIVE_MAX_PENDING_CONNECTIONS,
+    },
+  );
   statsRoutes(app, createStatsService({ store, cache, now }));
   if (webDir !== null) {
     await webAppRoutes(app, { webDir, webRoutes, apiSegments });

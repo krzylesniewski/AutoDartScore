@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { LegsToWin } from './match.js';
-import { ExpectedSeq, MatchSnapshotPlayer } from './match-api.js';
+import { ExpectedSeq, MatchSnapshotPlayer, STALE_STATE } from './match-api.js';
 import { PlayerId } from './player.js';
 import {
   BracketRound,
@@ -120,31 +120,92 @@ export type StandingRow = z.infer<typeof StandingRow>;
 export const TournamentStatus = z.enum(['in_progress', 'finished']);
 export type TournamentStatus = z.infer<typeof TournamentStatus>;
 
+// Bez refine, bo Zod nie pozwala na pick() z obiektu z refine. Z tej bazy powstaje TournamentListItem.
+const TournamentViewBase = z.object({
+  id: TournamentId,
+  name: TournamentName,
+  format: TournamentFormat,
+  config: TournamentConfig, // jak przy utworzeniu, z wartościami domyślnymi
+  status: TournamentStatus,
+  createdAt: z.iso.datetime(),
+  finishedAt: z.iso.datetime().nullable(),
+  players: z.array(TournamentPlayer), // w kolejności zgłoszenia
+  fixtures: z.array(Fixture),
+  standings: z.array(StandingRow), // pusta w pucharze
+  nextFixtureId: FixtureId.nullable(),
+  liveFixtureId: FixtureId.nullable(),
+  placements: z.array(TournamentPlacement), // w trakcie turnieju tylko znane miejsca
+  sharing: z.boolean(), // bieżąca wartość po sharing_changed. config.sharing zostaje z utworzenia
+  canRedraw: z.boolean(),
+  eventSeq: z.int().min(0),
+  archivedAt: z.iso.datetime().nullable(),
+});
+
+function finishedAtMatchesStatus(view: { status: TournamentStatus; finishedAt: string | null }): boolean {
+  return (view.finishedAt !== null) === (view.status === 'finished');
+}
+
+const finishedAtRule = { message: 'Only a finished tournament has finishedAt', path: ['finishedAt'] };
+
 // Stan turnieju odtworzony z konfiguracji, logu turnieju i wyników powiązanych meczów.
-export const TournamentView = z
-  .object({
-    id: TournamentId,
-    name: TournamentName,
-    format: TournamentFormat,
-    config: TournamentConfig, // jak przy utworzeniu, z wartościami domyślnymi
-    status: TournamentStatus,
-    createdAt: z.iso.datetime(),
-    finishedAt: z.iso.datetime().nullable(),
-    players: z.array(TournamentPlayer), // w kolejności zgłoszenia
-    fixtures: z.array(Fixture),
-    standings: z.array(StandingRow), // pusta w pucharze
-    nextFixtureId: FixtureId.nullable(),
-    liveFixtureId: FixtureId.nullable(),
-    placements: z.array(TournamentPlacement), // w trakcie turnieju tylko znane miejsca
-    sharing: z.boolean(), // bieżąca wartość po sharing_changed. config.sharing zostaje z utworzenia
-    canRedraw: z.boolean(),
-    eventSeq: z.int().min(0),
-  })
-  .refine((view) => (view.finishedAt !== null) === (view.status === 'finished'), {
-    message: 'Only a finished tournament has finishedAt',
-    path: ['finishedAt'],
-  });
+export const TournamentView = TournamentViewBase.refine(finishedAtMatchesStatus, finishedAtRule);
 export type TournamentView = z.infer<typeof TournamentView>;
+
+export const TournamentListQuery = z.object({
+  status: TournamentStatus.optional(),
+  archived: z.literal('include').optional(),
+});
+export type TournamentListQuery = z.infer<typeof TournamentListQuery>;
+
+export const TournamentListItem = TournamentViewBase.pick({
+  id: true,
+  name: true,
+  format: true,
+  status: true,
+  createdAt: true,
+  finishedAt: true,
+  archivedAt: true,
+  players: true,
+  placements: true,
+}).refine(finishedAtMatchesStatus, finishedAtRule);
+export type TournamentListItem = z.infer<typeof TournamentListItem>;
+
+export const StartFixtureResult = z.object({
+  matchId: z.string().min(1),
+  tournament: TournamentView,
+});
+export type StartFixtureResult = z.infer<typeof StartFixtureResult>;
+
+export const TournamentApiErrorCode = z.enum([
+  'tournament_active',
+  'tournament_started',
+  'fixture_not_ready',
+  'tournament_not_finished',
+  'tournament_archived',
+  'archived_player',
+]);
+export type TournamentApiErrorCode = z.infer<typeof TournamentApiErrorCode>;
+
+// Odpowiedź 409 na komendę turnieju z nieaktualnym expectedSeq. Jest też poprawnym ApiError.
+export const TournamentStaleStateError = z.object({
+  error: z.literal(STALE_STATE),
+  message: z.string(),
+  tournament: TournamentView,
+});
+export type TournamentStaleStateError = z.infer<typeof TournamentStaleStateError>;
+
+// eventSeq to najwyższy seq logu turnieju. Zmiana legów w meczu turnieju wysyła widok z tym samym eventSeq.
+export const TournamentUpdated = z.object({
+  type: z.literal('tournament_updated'),
+  tournamentId: TournamentId,
+  eventSeq: z.int().min(0),
+  tournament: TournamentView,
+});
+export type TournamentUpdated = z.infer<typeof TournamentUpdated>;
+
+// Wiadomości WebSocket dla jednego turnieju.
+export const TournamentLiveMessage = z.discriminatedUnion('type', [TournamentUpdated]);
+export type TournamentLiveMessage = z.infer<typeof TournamentLiveMessage>;
 
 // Serwer sprawdza, czy zwycięzca ma dokładnie tyle legów, ile wymaga mecz.
 export const CorrectResultRequest = z.object({

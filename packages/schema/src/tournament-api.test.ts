@@ -1,13 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ApiError,
   CorrectResultRequest,
   Fixture,
   FixtureSlot,
   SharingRequest,
   StandingRow,
+  StartFixtureResult,
+  TournamentApiErrorCode,
   TournamentConfig,
+  TournamentListItem,
+  TournamentListQuery,
+  TournamentLiveMessage,
   TournamentPlacement,
   TournamentPlayer,
+  TournamentStaleStateError,
+  TournamentUpdated,
   TournamentView,
   WithdrawPlayerRequest,
 } from './index.js';
@@ -222,6 +230,7 @@ const view = {
   sharing: false,
   canRedraw: false,
   eventSeq: 2,
+  archivedAt: null,
 };
 
 describe('TournamentView', () => {
@@ -255,6 +264,85 @@ describe('TournamentView', () => {
 
   it('rejects a negative eventSeq', () => {
     expect(TournamentView.safeParse({ ...view, eventSeq: -1 }).success).toBe(false);
+  });
+
+  it('parses archivedAt set or null and rejects a missing or invalid one', () => {
+    const archived = { ...view, archivedAt: '2026-11-17T09:00:00.000Z' };
+    expect(TournamentView.parse(archived)).toStrictEqual(archived);
+    expect(TournamentView.parse(view).archivedAt).toBeNull();
+    expect(paths(TournamentView.safeParse({ ...view, archivedAt: undefined }))).toEqual([['archivedAt']]);
+    expect(paths(TournamentView.safeParse({ ...view, archivedAt: 'yesterday' }))).toEqual([['archivedAt']]);
+  });
+});
+
+describe('TournamentListQuery', () => {
+  it('parses an empty query, a status and the archived switch', () => {
+    expect(TournamentListQuery.parse({})).toStrictEqual({});
+    expect(TournamentListQuery.parse({ status: 'finished', archived: 'include' })).toStrictEqual({
+      status: 'finished',
+      archived: 'include',
+    });
+  });
+
+  it('rejects an unknown status and an archived value other than include', () => {
+    expect(paths(TournamentListQuery.safeParse({ status: 'archived' }))).toEqual([['status']]);
+    expect(paths(TournamentListQuery.safeParse({ archived: 'true' }))).toEqual([['archived']]);
+  });
+});
+
+describe('TournamentListItem', () => {
+  it('keeps only the list fields of a full view', () => {
+    expect(TournamentListItem.parse(view)).toStrictEqual({
+      id: 't1',
+      name: 'Liga listopad',
+      format: 'league',
+      status: 'in_progress',
+      createdAt: '2026-11-16T18:00:00.000Z',
+      finishedAt: null,
+      archivedAt: null,
+      players: view.players,
+      placements: [],
+    });
+  });
+
+  it('rejects finishedAt in a tournament in progress', () => {
+    const item = TournamentListItem.parse(view);
+    expect(paths(TournamentListItem.safeParse({ ...item, finishedAt: '2026-11-16T21:00:00.000Z' }))).toEqual([['finishedAt']]);
+  });
+});
+
+describe('tournament responses', () => {
+  it('parses a started fixture with the view', () => {
+    const result = { matchId: 'm2', tournament: view };
+    expect(StartFixtureResult.parse(result)).toStrictEqual(result);
+    expect(StartFixtureResult.safeParse({ ...result, matchId: '' }).success).toBe(false);
+  });
+
+  it('lists the tournament error codes', () => {
+    expect(TournamentApiErrorCode.options).toEqual([
+      'tournament_active',
+      'tournament_started',
+      'fixture_not_ready',
+      'tournament_not_finished',
+      'tournament_archived',
+      'archived_player',
+    ]);
+    expect(TournamentApiErrorCode.safeParse('stale_state').success).toBe(false);
+  });
+
+  it('parses a stale tournament error, which is also an ApiError', () => {
+    const body = { error: 'stale_state', message: 'Tournament t1 changed since seq 1', tournament: view };
+    expect(TournamentStaleStateError.parse(body)).toStrictEqual(body);
+    expect(ApiError.safeParse(body).success).toBe(true);
+    expect(TournamentStaleStateError.safeParse({ ...body, error: 'not_found' }).success).toBe(false);
+  });
+
+  it('parses tournament_updated as a live message', () => {
+    const message = { type: 'tournament_updated', tournamentId: 't1', eventSeq: 2, tournament: view };
+    expect(TournamentUpdated.parse(message)).toStrictEqual(message);
+    expect(TournamentLiveMessage.parse(message)).toStrictEqual(message);
+    expect(TournamentLiveMessage.safeParse({ ...message, type: 'state_updated' }).success).toBe(false);
+    expect(TournamentLiveMessage.safeParse({ ...message, eventSeq: -1 }).success).toBe(false);
   });
 });
 
