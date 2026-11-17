@@ -571,6 +571,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           checkouts,
           winnerId,
           placements,
+          tournament,
         } = state;
         items.push({
           id,
@@ -589,6 +590,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           winnerId,
           placements,
           endedAt,
+          tournament,
           updatedAt,
         });
       }

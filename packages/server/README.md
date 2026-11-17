@@ -107,6 +107,8 @@ Stan gry podaje `finishedAt` (czas przyjęcia rzutki kończącej grę) i `editab
 
 Stan gry podaje też `round` (kolejka rzucającego w bieżącym legu, liczona od 1, `null` po końcu gry, w Free run i w treningu checkoutów), `startedAt` i `legStartedAt` (czas przyjęcia pierwszej liczonej rzutki gry i bieżącego lega, `null` przed nią i zawsze w treningu checkoutów, który nie ma rzutek) oraz `pausedMs` i `legPausedMs` (suma zamkniętych przerw od porzucenia do wznowienia, liczona od `startedAt` i od `legStartedAt`). Wszystkie czasy pochodzą z logu, więc cofnięcie rzutki przesuwa je razem ze stanem. Otwarte porzucenie nie wchodzi do sumy przerw.
 
+Stan gry i pozycje listy `GET /matches` mają pole `tournament` (powiązanie meczu z turniejem). Na razie jest zawsze `null`.
+
 Pole `legTurns` to zamknięte tury bieżącego lega w kolejności rzutów. Każdy wpis ma gracza (`playerId`), numer tury (`turnIndex`), rzutki (`darts`), zdobyte punkty (`points`), wynik po turze (`remainingAfter`) i znacznik `bust`.
 
 - Otwarta tura nie trafia na listę, jej rzutki są w `currentDarts`.

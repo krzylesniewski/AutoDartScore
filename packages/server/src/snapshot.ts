@@ -192,5 +192,6 @@ export function toSnapshot(
       guest: player.guest,
       ...perPlayer(player, index),
     })),
+    tournament: null,
   };
 }

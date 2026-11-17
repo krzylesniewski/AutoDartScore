@@ -59,9 +59,9 @@ describe('POST /matches', () => {
   it('creates a first to 4 legs match from legsToWin and lists it', async () => {
     const [anna, bartek] = await createPlayers(t.app, 2);
     const state = MatchSnapshot.parse(await createGame(t.app, { type: 'match', playerIds: [anna, bartek], legsToWin: 4 }));
-    expect(state).toMatchObject({ type: 'match', startingScore: 301, legsToWin: 4 });
+    expect(state).toMatchObject({ type: 'match', startingScore: 301, legsToWin: 4, tournament: null });
     const list = MatchListItem.array().parse((await t.app.inject({ method: 'GET', url: '/matches' })).json());
-    expect(list.find((item) => item.id === state.id)?.legsToWin).toBe(4);
+    expect(list.find((item) => item.id === state.id)).toMatchObject({ legsToWin: 4, tournament: null });
   });
 
   it('turns best of 5 into three legs to win', async () => {

@@ -31,6 +31,7 @@ Kodowanie trafienia: miss to 0×0, Outer Bull to 25×1 (25 pkt), Bull to 25×2 (
 - `CheckoutSession` to postęp treningu checkoutów: `range`, bieżący `target`, `attempts`, `successes`, `skips` (pominięte cele, które nadal się liczą) i `history` (zakończone próby w kolejności). Pominięcia nie wchodzą do `attempts`, `successes` ani `history`. Liczniki prób muszą zgadzać się z historią. Ziarna i zasady losowania nie ma w żadnej odpowiedzi.
 - `LegTurn` to zamknięta tura bieżącego lega z `MatchSnapshot.legTurns`: `playerId`, `turnIndex`, `darts` (1-3 trafienia), `points`, `remainingAfter` (wynik po turze, `null` tylko w Free run) i `bust`. Bust ma `points: 0` i `remainingAfter` równe wynikowi sprzed tury.
 - `MatchSnapshot`, `MatchListItem` i `MatchSummary` mają pole `checkouts` z `CheckoutSession`, `null` poza treningiem checkoutów.
+- `MatchSnapshot` i `MatchListItem` mają wymagane pole `tournament` z `MatchTournament`, `null` poza meczem turniejowym. `MatchType` nie ma wartości `tournament`, bo mecz turniejowy to zwykły mecz 1v1.
 - `UndoResult.undoneThrowId` jest `null`, gdy cofnięto próbę albo pominięcie checkoutu.
 
 `domain-events.ts`: `DomainEvent`, unia zdarzeń `TurnCompleted`, `Bust`, `LegWon`, `MatchWon`, `PlayerFinished`, `CasualFinished`.
@@ -44,6 +45,25 @@ Zapytania statystyk (`PlayerStatsQuery`, `RankingsQuery`, `PlayerFormQuery`, `Ov
 `auth.ts`: `LoginRequest` (hasło bez przycinania spacji), `LoginResponse` (`token`, `expiresAt`), `LiveAuthMessage` (pierwsza wiadomość klienta na WebSocket, `{ type: 'auth', token }`).
 
 `live.ts`: `LiveMessage`, unia wiadomości WebSocket. Obejmuje `StateUpdated`, `ThrowRegistered`, `ThrowUndone`, `Achievement` (rodzaj z `AchievementKind`, `value` i `previous`, które jest `null` tylko dla `first_*`) i zdarzenia domenowe, każde z polami `matchId` i `eventSeq`.
+
+`tournament.ts`: `TournamentId`, `FixtureId`, `TournamentFormat` (`league`, `cup`, `group_playoff`), `TournamentAdvance` (2, 4, 8), `TOURNAMENT_PLAYER_LIMITS`, `DEFAULT_TOURNAMENT_STARTING_SCORE` (501), `POINTS_PER_WIN` (2), `BracketRound` (`r16`, `qf`, `sf`, `final`), `TournamentLegsToWin`, `TournamentName`, `TournamentConfig`, `CreateTournamentRequest`, `FixtureLegs`, `TournamentEvent` (`TournamentDraw`, `FixtureStarted`, `PlayerWithdrawn`, `ResultCorrected`, `SharingChanged`, `TournamentArchived`), `MatchTournament`.
+
+- `TournamentConfig` (i `CreateTournamentRequest`, ten sam schemat) to konfiguracja turnieju. `name` jest wymagane (1-60 znaków po przycięciu spacji). Domyślną nazwę z datą buduje klient. Domyślnie `startingScore` to 501, `thirdPlaceMatch` i `consolation` to `false`, a `sharing` to `true`.
+- `TournamentLegsToWin` to długość meczów (`LegsToWin`) w każdej fazie: `group` 3, `r16` 3, `qf` 3, `sf` 3, `final` 4, `thirdPlace` 2, `consolation` 2. Brakujący klucz dostaje wartość domyślną. W lidze `group` to długość każdego meczu.
+- `TOURNAMENT_PLAYER_LIMITS`: liga i grupa + play-off 3-10 graczy, puchar 3-16. `playerIds` muszą być różne.
+- Zasady formatów: `advance` jest wymagane w `group_playoff` i nie może przekraczać liczby graczy. Liga i puchar odrzucają `advance` i `consolation: true`, a liga także `thirdPlaceMatch: true`. Jawne `false` przechodzi zawsze. Przełącznik, z którego drabinka nie zrobi meczu (np. mecz o 3. miejsce przy `advance: 2`), przechodzi, a silnik wtedy go pomija.
+- `FixtureLegs` to wygrane legi obu stron (0-9) w kolejności slotów. Remis jest odrzucany.
+- `TournamentEvent` to wpisy logu turnieju bez `seq` i `created_at`, które dodaje serwer. `draw` ma `order` (3-16 różnych graczy) i ostatnie losowanie w logu wyznacza bieżącą kolejność. Pozostałe wpisy: `fixture_started` (`fixtureId`, `matchId`), `player_withdrawn` (`playerId`), `result_corrected` (`fixtureId`, `legs`), `sharing_changed` (`sharing`), `archived`.
+- `MatchTournament` (`id`, `name`, `fixtureId`, `label`) wiąże mecz z turniejem. `label` to tekst do wyświetlenia, np. „Półfinał 2”.
+
+`tournament-api.ts`: `TournamentPlayer`, `TournamentPlacement`, `FixturePhase` (`group`, `playoff`, `third_place`, `consolation`), `FixtureStatus` (`waiting`, `ready`, `in_progress`, `finished`, `walkover`, `bye`), `FixtureSlot`, `FixtureResult`, `Fixture`, `StandingRow`, `TournamentStatus` (`in_progress`, `finished`), `TournamentView`, `CorrectResultRequest`, `WithdrawPlayerRequest`, `SharingRequest`.
+
+- `TournamentPlayer` to profil gracza z `MatchSnapshotPlayer` (`id`, `name`, `avatar`, `color`, `guest`). `TournamentPlacement` ma `place` 1-16, a gracze mogą dzielić miejsce.
+- `FixtureSlot` to strona meczu: gracz (`seed`, `null` w grupie), zwycięzca albo przegrany innego meczu, miejsce w tabeli grupy albo wolny los (`bye`).
+- `Fixture` to mecz turnieju. Mecze ligi mają fazę `group`, mecze drabinki pucharu `playoff`. `bracketRound` jest ustawione tylko w `playoff` i `consolation`. `averages` jest na razie zawsze `null`. Wynik (`FixtureResult`) jest tylko w statusie `finished` albo `walkover`. `winnerId` musi być graczem z jednego ze slotów. Zwycięzca ma dokładnie `legsToWin` legów, a przegrany mniej, więc walkower to `legsToWin`:0.
+- `StandingRow` to wiersz tabeli grupy albo ligi. `played` to `won + lost`, `legDifference` to `legsFor - legsAgainst`, a `points` to `won * POINTS_PER_WIN`. `average` jest na razie zawsze `null`.
+- `TournamentView` to stan turnieju odtworzony z konfiguracji, logu turnieju i wyników powiązanych meczów. `config` to konfiguracja z utworzenia z wartościami domyślnymi, więc `config.sharing` się nie zmienia. Bieżące udostępnianie po `sharing_changed` jest w `sharing`. `standings` jest puste w pucharze, a `placements` w trakcie turnieju zawiera tylko znane miejsca. `finishedAt` jest ustawione tylko w statusie `finished`.
+- `CorrectResultRequest` (`legs`), `WithdrawPlayerRequest` (`playerId`) i `SharingRequest` (`sharing`) mają opcjonalne `expectedSeq`. Schemat nie zna długości meczu, więc to, czy zwycięzca ma dokładnie N legów, sprawdza serwer. Ponowne losowanie, start meczu i archiwizacja używają `CommandRequest`.
 
 ## Testy
 

@@ -65,6 +65,7 @@ export function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot 
     legStartedAt: null,
     pausedMs: 0,
     legPausedMs: 0,
+    tournament: null,
     ...overrides,
   };
 }
@@ -185,6 +186,7 @@ export function listItem(overrides: Partial<MatchListItem> = {}): MatchListItem 
     winnerId: null,
     placements: [],
     endedAt: null,
+    tournament: null,
     updatedAt: '2026-10-18T10:05:00.000Z',
     ...overrides,
   };
