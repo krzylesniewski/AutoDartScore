@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { LegWon } from './domain-events.js';
 import { Hit, MISS_SEGMENT, Multiplier, Segment } from './hit.js';
-import { CheckoutSession } from './match-api.js';
-import { MatchType, StartingScore } from './match.js';
+import { CheckoutSession, LegTurn } from './match-api.js';
+import { LegsToWin, MatchType, StartingScore } from './match.js';
 import { PlayerColor, PlayerId } from './player.js';
 
 // Statystyki liczone na żądanie z logu rzutek. Liczą się tylko zamknięte tury.
@@ -101,6 +101,43 @@ export const MatchSummary = z.object({
   checkouts: CheckoutSession.nullable(), // tylko w treningu checkoutów
 });
 export type MatchSummary = z.infer<typeof MatchSummary>;
+
+// Rzutki i średnia z zamkniętych tur gracza w legu. Bust liczy rzutki za 0 punktów.
+export const MatchLegPlayer = z.object({
+  playerId: PlayerId,
+  darts: Count,
+  average: Average,
+});
+export type MatchLegPlayer = z.infer<typeof MatchLegPlayer>;
+
+// Leg bez zwycięzcy to leg w trakcie albo pusty leg na początku meczu.
+export const MatchLeg = z
+  .object({
+    legIndex: z.int().min(0),
+    starterId: PlayerId,
+    winnerId: PlayerId.nullable(),
+    checkout: LegWon.shape.checkout.nullable(),
+    dartsThrown: LegWon.shape.dartsThrown.nullable(), // rzutki zwycięzcy
+    players: z.array(MatchLegPlayer), // w kolejności playerIds
+    turns: z.array(LegTurn), // tylko zamknięte tury, otwarta tura jest w currentDarts stanu gry
+  })
+  .refine((leg) => (leg.winnerId === null) === (leg.checkout === null) && (leg.winnerId === null) === (leg.dartsThrown === null), {
+    message: 'A leg has a winner, a checkout and darts thrown together or none of them',
+    path: ['winnerId'],
+  });
+export type MatchLeg = z.infer<typeof MatchLeg>;
+
+// Historia legów meczu 1v1, od legu 0 do bieżącego.
+export const MatchLegs = z.object({
+  matchId: z.string().min(1),
+  finished: z.boolean(),
+  eventSeq: z.int().min(0), // seq ostatniego wpisu w logu, jak w MatchSnapshot
+  startingScore: StartingScore,
+  legsToWin: LegsToWin,
+  players: z.array(PlayerId), // w kolejności playerIds
+  legs: z.array(MatchLeg),
+});
+export type MatchLegs = z.infer<typeof MatchLegs>;
 
 // Ranking graczy. Średnia liczy tylko ukończone legi, a pozycję dostaje gracz z co najmniej MIN_LEGS_FOR_AVERAGE legami.
 export const MIN_LEGS_FOR_AVERAGE = 3;

@@ -29,7 +29,7 @@ export interface FixtureFact {
   readonly fixtureId: string;
   readonly matchId: string;
   readonly legs: readonly [number, number]; // wygrane legi w kolejności slotów
-  readonly scoring: readonly [FixtureScoring, FixtureScoring] | null; // null, dopóki serwer nie liczy średnich
+  readonly scoring: readonly [FixtureScoring, FixtureScoring] | null; // w kolejności slotów, null bez sum rzutów (średnie są wtedy null)
 }
 
 export type ResultCorrection = Pick<ResultCorrected, 'fixtureId' | 'legs'>;

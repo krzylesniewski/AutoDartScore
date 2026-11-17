@@ -1,7 +1,8 @@
 import { EngineError } from '@autoscore/engine';
-import { TournamentConfig, TournamentView, type Player, type TournamentEvent } from '@autoscore/schema';
+import { TournamentConfig, TournamentView, type DomainEvent, type Hit, type Player, type TournamentEvent } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import type { ReplayedMatch } from '../replay.js';
+import { threeDartAverage } from '../stats/tally.js';
 import type { StoredTournament, TournamentLogEntry } from '../store/store.js';
 import { buildTournamentView } from './view.js';
 
@@ -28,15 +29,50 @@ function log(...events: TournamentEvent[]): TournamentLogEntry[] {
   return events.map((event, index) => ({ ...event, seq: index + 1, createdAt: at(index + 1) }));
 }
 
-// Tylko pola, których używa widok turnieju.
-function replay(legsWon: [number, number], finishedAt: string | null): ReplayedMatch {
-  return { game: { type: 'match', state: { legsWon } }, finishedAt } as unknown as ReplayedMatch;
+// Tylko pola, których używa widok turnieju. Gracze meczu w kolejności slotów.
+function replay(
+  legsWon: [number, number],
+  finishedAt: string | null,
+  playerIds: readonly [string, string] = ['p1', 'p2'],
+  events: readonly DomainEvent[] = [],
+): ReplayedMatch {
+  return { game: { type: 'match', state: { legsWon, config: { playerIds } } }, finishedAt, events } as unknown as ReplayedMatch;
+}
+
+const MISSES: Hit[] = [
+  { segment: 0, multiplier: 0 },
+  { segment: 0, multiplier: 0 },
+  { segment: 0, multiplier: 0 },
+];
+
+// Tury po trzy rzutki. Średnia bierze tylko sumę tur i liczbę rzutek, więc rzutki nie muszą dawać tej sumy.
+function turns(playerId: string, ...totals: number[]): DomainEvent[] {
+  return totals.map((total, turnIndex) => ({
+    type: 'turn_completed',
+    playerId,
+    legIndex: 0,
+    turnIndex,
+    darts: MISSES,
+    total,
+    remaining: 0,
+  }));
+}
+
+function bust(playerId: string, darts: number): DomainEvent {
+  return { type: 'bust', playerId, legIndex: 0, turnIndex: 0, darts: MISSES.slice(0, darts), remaining: 100 };
 }
 
 const draw: TournamentEvent = { type: 'draw', order: ['p1', 'p2', 'p3'] };
 
 function build(entries: TournamentLogEntry[], replays: Record<string, ReplayedMatch> = {}): TournamentView {
   return TournamentView.parse(buildTournamentView({ tournament, log: entries, replays: new Map(Object.entries(replays)) }));
+}
+
+// Gracze meczu po losowaniu draw, w kolejności slotów.
+function slots(fixtureId: string): [string, string] {
+  const fixture = build(log(draw)).fixtures.find((candidate) => candidate.id === fixtureId);
+  const [first, second] = fixture?.slots.map((slot) => (slot.kind === 'player' ? slot.playerId : '')) ?? [];
+  return [first ?? '', second ?? ''];
 }
 
 describe('buildTournamentView', () => {
@@ -52,14 +88,57 @@ describe('buildTournamentView', () => {
     expect(build(log(draw)).fixtures).toEqual(view.fixtures);
   });
 
-  it('reads the legs of started fixtures in slot order', () => {
-    const view = build(log(draw, { type: 'fixture_started', fixtureId: 'g-1', matchId: 'm1' }), { m1: replay([0, 1], at(10)) });
+  it('reads the legs and averages of started fixtures in slot order', () => {
+    const [first, second] = slots('g-1');
+    const events = [...turns(first, 0), ...turns(second, 180, 121), bust(first, 1)];
+    const view = build(log(draw, { type: 'fixture_started', fixtureId: 'g-1', matchId: 'm1' }), {
+      m1: replay([0, 1], at(10), [first, second], events),
+    });
     expect(view.fixtures.find((fixture) => fixture.id === 'g-1')).toMatchObject({
       status: 'finished',
       matchId: 'm1',
       result: { legs: [0, 1], corrected: false },
-      averages: null,
+      averages: [0, 150.5],
     });
+    expect(view.standings.find((row) => row.playerId === first)?.average).toBe(0);
+    expect(view.standings.find((row) => row.playerId === second)?.average).toBe(150.5);
+    expect(view.standings.filter((row) => row.average === null)).toHaveLength(1);
+  });
+
+  it('keeps averages out of a fixture in progress', () => {
+    const [first, second] = slots('g-1');
+    const view = build(log(draw, { type: 'fixture_started', fixtureId: 'g-1', matchId: 'm1' }), {
+      m1: replay([0, 0], null, [first, second], [...turns(first, 60), ...turns(second, 45)]),
+    });
+    expect(view.fixtures.find((fixture) => fixture.id === 'g-1')).toMatchObject({ status: 'in_progress', averages: null });
+    expect(view.standings.every((row) => row.average === null)).toBe(true);
+  });
+
+  it('averages the summed points and darts of all group matches of a player', () => {
+    const both = slots('g-1').find((playerId) => slots('g-2').includes(playerId)) ?? '';
+    const replayOf = (fixtureId: string, own: DomainEvent[]) => {
+      const pair = slots(fixtureId);
+      const other = pair.find((playerId) => playerId !== both) ?? '';
+      return replay(pair[0] === both ? [1, 0] : [0, 1], at(10), pair, [...own, ...turns(other, 26)]);
+    };
+    const entries = log(
+      draw,
+      { type: 'fixture_started', fixtureId: 'g-1', matchId: 'm1' },
+      { type: 'fixture_started', fixtureId: 'g-2', matchId: 'm2' },
+    );
+    const view = build(entries, {
+      m1: replayOf('g-1', turns(both, 100, 100, 101)),
+      m2: replayOf('g-2', [...turns(both, 60), bust(both, 2)]),
+    });
+    expect(threeDartAverage(361, 14)).toBe(77.36);
+    expect(view.standings.find((row) => row.playerId === both)).toMatchObject({ played: 2, won: 2, average: threeDartAverage(361, 14) });
+  });
+
+  it('keeps averages out of a walkover that has a match', () => {
+    const [first, second] = slots('g-1');
+    const entries = log(draw, { type: 'fixture_started', fixtureId: 'g-1', matchId: 'm1' }, { type: 'player_withdrawn', playerId: second });
+    const view = build(entries, { m1: replay([0, 0], null, [first, second], [...turns(first, 140), ...turns(second, 100)]) });
+    expect(view.fixtures.find((fixture) => fixture.id === 'g-1')).toMatchObject({ status: 'walkover', matchId: 'm1', averages: null });
     expect(view.standings.every((row) => row.average === null)).toBe(true);
   });
 

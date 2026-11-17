@@ -13,8 +13,13 @@ import {
   TournamentListQuery,
   TournamentLiveMessage,
   TournamentPlacement,
+  TournamentLegRecord,
   TournamentPlayer,
+  TournamentRecord,
+  TournamentRecords,
   TournamentStaleStateError,
+  TournamentStats,
+  TournamentStatsPlayer,
   TournamentUpdated,
   TournamentView,
   WithdrawPlayerRequest,
@@ -368,5 +373,77 @@ describe('tournament commands', () => {
     expect(CorrectResultRequest.safeParse({ legs: [2, 2] }).success).toBe(false);
     expect(WithdrawPlayerRequest.safeParse({ playerId: '' }).success).toBe(false);
     expect(SharingRequest.safeParse({}).success).toBe(false);
+  });
+});
+
+const statsRow = {
+  playerId: 'p1',
+  dartsThrown: 54,
+  average: 62.5,
+  first9Average: 70.33,
+  scores100: 2,
+  scores140: 1,
+  scores180: 0,
+  highestCheckout: 81,
+  bestLegDarts: 18,
+  played: 2,
+  won: 1,
+  lost: 1,
+  legsFor: 3,
+  legsAgainst: 2,
+  legDifference: 1,
+};
+
+const record = { playerId: 'p1', fixtureId: 'g-1', matchId: 'm1', value: 62.5 };
+
+describe('TournamentStats', () => {
+  it('parses one row per player and the four records', () => {
+    const stats = {
+      tournamentId: 't1',
+      players: [
+        statsRow,
+        { ...statsRow, playerId: 'p2', played: 0, won: 0, lost: 0, average: null, highestCheckout: null, bestLegDarts: null },
+      ],
+      records: {
+        highestMatchAverage: record,
+        highestCheckout: { ...record, value: 81, legIndex: 2 },
+        shortestLeg: { ...record, value: 18, legIndex: 0 },
+        highestTurn: null,
+      },
+    };
+    expect(TournamentStats.parse(stats)).toStrictEqual(stats);
+  });
+
+  it('parses a tournament without records', () => {
+    const stats = {
+      tournamentId: 't1',
+      players: [],
+      records: { highestMatchAverage: null, highestCheckout: null, shortestLeg: null, highestTurn: null },
+    };
+    expect(TournamentStats.parse(stats)).toStrictEqual(stats);
+  });
+
+  it('keeps only the picked stat line fields', () => {
+    expect(TournamentStatsPlayer.parse({ ...statsRow, points: 1125, legsWon: 3 })).toStrictEqual(statsRow);
+  });
+
+  it('rejects played other than won plus lost', () => {
+    expect(paths(TournamentStatsPlayer.safeParse({ ...statsRow, played: 3 }))).toEqual([['played']]);
+  });
+
+  it('rejects a leg difference that does not follow from the legs', () => {
+    expect(paths(TournamentStatsPlayer.safeParse({ ...statsRow, legDifference: -1 }))).toEqual([['legDifference']]);
+  });
+
+  it('requires legIndex on leg records only', () => {
+    expect(TournamentRecord.parse(record)).toStrictEqual(record);
+    expect(TournamentLegRecord.safeParse(record).success).toBe(false);
+    expect(TournamentLegRecord.safeParse({ ...record, legIndex: -1 }).success).toBe(false);
+    expect(TournamentRecords.safeParse({ highestMatchAverage: record }).success).toBe(false);
+  });
+
+  it('rejects a negative record value and an empty match id', () => {
+    expect(TournamentRecord.safeParse({ ...record, value: -1 }).success).toBe(false);
+    expect(TournamentRecord.safeParse({ ...record, matchId: '' }).success).toBe(false);
   });
 });

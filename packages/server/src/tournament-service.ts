@@ -15,6 +15,7 @@ import type {
   TournamentListItem,
   TournamentListQuery,
   TournamentLiveMessage,
+  TournamentStats,
   TournamentView,
   WithdrawPlayerRequest,
 } from '@autoscore/schema';
@@ -25,6 +26,7 @@ import { gameConfig, replayLog } from './replay.js';
 import type { SerialQueue } from './serial-queue.js';
 import type { NewMatch, Store, StoredMatch, StoredTournament } from './store/store.js';
 import { shuffle } from './tournament/shuffle.js';
+import { buildTournamentStats } from './tournament/stats.js';
 import { loadTournament, type LoadedTournament } from './tournament/view.js';
 
 // expectedSeq w komendach jest opcjonalne, jak w komendach gry. Porównujemy je z eventSeq widoku, czyli najwyższym seq logu turnieju.
@@ -32,6 +34,7 @@ export interface TournamentService {
   create(request: CreateTournamentRequest): Promise<TournamentView>;
   list(query: TournamentListQuery): Promise<TournamentListItem[]>;
   get(id: string): Promise<TournamentView>;
+  stats(id: string): Promise<TournamentStats>;
   draw(id: string, expectedSeq?: number): Promise<TournamentView>;
   startFixture(id: string, fixtureId: string, expectedSeq?: number): Promise<{ statusCode: 200 | 201; result: StartFixtureResult }>;
   archive(id: string, expectedSeq?: number): Promise<TournamentView>;
@@ -237,6 +240,11 @@ export function createTournamentService({ store, cache, hub, queue, random, publ
 
     async get(id) {
       return view(await requireTournament(id));
+    },
+
+    async stats(id) {
+      const { view: current, replays, input } = await load(await requireTournament(id));
+      return buildTournamentStats({ view: current, replays, matches: input.matches });
     },
 
     draw(id, expectedSeq) {

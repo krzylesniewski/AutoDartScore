@@ -5,6 +5,7 @@ import type {
   HeadToHead,
   Hit,
   LegProgress,
+  MatchLegs,
   MatchSummary,
   PlayerForm,
   PlayerStats,
@@ -23,6 +24,7 @@ import { buildFrequentHits } from './stats/frequent-hits.js';
 import { buildHeadToHead, type HeadToHeadGame } from './stats/head-to-head.js';
 import { legDurations } from './stats/leg-durations.js';
 import { buildLegProgress } from './stats/leg-progress.js';
+import { buildMatchLegs } from './stats/match-legs.js';
 import { buildOverall } from './stats/overall.js';
 import { periodStart } from './stats/period.js';
 import { buildRankings, type RankedGame } from './stats/rankings.js';
@@ -32,6 +34,8 @@ import type { MatchFilter, Store, StoredMatch } from './store/store.js';
 export interface StatsService {
   playerStats(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<PlayerStats>;
   matchSummary(matchId: string): Promise<MatchSummary>;
+  // Tylko mecz 1v1, także turniejowy. Zabawa i trening dają 409 not_a_match.
+  matchLegs(matchId: string): Promise<MatchLegs>;
   rankings(filter: StatsFilter, period: StatsPeriod): Promise<StatsRankings>;
   overall(period: StatsPeriod): Promise<StatsOverall>;
   headToHead(playerId: string, opponentId: string, period: StatsPeriod): Promise<HeadToHead>;
@@ -169,6 +173,30 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
         }),
         lastLegProgress: lastLegProgress(state, playerIds, events),
         checkouts: state.type === 'practice' && state.practiceMode === 'checkouts' ? checkoutSession(state.state) : null,
+      };
+    },
+
+    async matchLegs(matchId) {
+      const match = await store.findMatch(matchId);
+      if (!match) {
+        throw notFound(`Match ${matchId}`);
+      }
+      if (match.type !== 'match') {
+        throw new HttpError(409, 'not_a_match', `Match ${matchId} is not a 1v1 match`);
+      }
+      const { seq, game, events } = await cache.one(match);
+      if (game.type !== 'match') {
+        throw new Error(`Corrupt match ${matchId}: a 1v1 match replays as ${game.type}`);
+      }
+      const { config } = game.state;
+      return {
+        matchId,
+        finished: isGameFinished(game),
+        eventSeq: seq,
+        startingScore: config.startingScore,
+        legsToWin: config.legsToWin,
+        players: [...config.playerIds],
+        legs: buildMatchLegs(game.state, events),
       };
     },
 

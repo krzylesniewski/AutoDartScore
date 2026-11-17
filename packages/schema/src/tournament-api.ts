@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { LegsToWin } from './match.js';
 import { ExpectedSeq, MatchSnapshotPlayer, STALE_STATE } from './match-api.js';
 import { PlayerId } from './player.js';
+import { PlayerStatLine } from './stats.js';
 import {
   BracketRound,
   FixtureId,
@@ -70,7 +71,9 @@ export const Fixture = z
     status: FixtureStatus,
     matchId: z.string().min(1).nullable(),
     result: FixtureResult.nullable(),
-    averages: z.tuple([z.number().min(0), z.number().min(0)]).nullable(), // na razie zawsze null
+    // Średnie w kolejności slotów ze wszystkich zamkniętych tur meczu, jak w MatchSummary. Bust liczy rzutki za 0 punktów.
+    // Tylko w statusie finished, gdy obaj gracze mają zamkniętą turę. Walkower ma zawsze null.
+    averages: z.tuple([z.number().min(0), z.number().min(0)]).nullable(),
   })
   .refine((fixture) => (fixture.result !== null) === RESULT_STATUSES.includes(fixture.status), {
     message: 'Only a finished fixture or a walkover has a result',
@@ -105,7 +108,7 @@ export const StandingRow = z
     legsAgainst: z.int().min(0),
     legDifference: z.int(),
     points: z.int().min(0),
-    average: z.number().min(0).nullable(), // na razie zawsze null
+    average: z.number().min(0).nullable(), // z zamkniętych tur zakończonych meczów grupy bez walkowerów, null bez rzutek
     withdrawn: z.boolean(),
     advances: z.boolean(),
   })
@@ -175,6 +178,62 @@ export const StartFixtureResult = z.object({
   tournament: TournamentView,
 });
 export type StartFixtureResult = z.infer<typeof StartFixtureResult>;
+
+// Rekord z meczu o statusie finished. Przy równej wartości zostaje pierwszy osiągnięty.
+export const TournamentRecord = z.object({
+  playerId: PlayerId,
+  fixtureId: FixtureId,
+  matchId: z.string().min(1),
+  value: z.number().min(0),
+});
+export type TournamentRecord = z.infer<typeof TournamentRecord>;
+
+export const TournamentLegRecord = TournamentRecord.extend({ legIndex: z.int().min(0) });
+export type TournamentLegRecord = z.infer<typeof TournamentLegRecord>;
+
+// Rekord jest null, gdy żaden mecz o statusie finished go nie daje.
+export const TournamentRecords = z.object({
+  highestMatchAverage: TournamentRecord.nullable(), // ze średnich Fixture.averages
+  highestCheckout: TournamentLegRecord.nullable(),
+  shortestLeg: TournamentLegRecord.nullable(), // rzutki zwycięzcy lega
+  highestTurn: TournamentLegRecord.nullable(), // tura z bustem się nie liczy
+});
+export type TournamentRecords = z.infer<typeof TournamentRecords>;
+
+// Bilans i legi ze wszystkich meczów z wynikiem, także z walkowerów (N:0) i po korektach.
+// Statystyki rzutek tylko z meczów o statusie finished.
+export const TournamentStatsPlayer = PlayerStatLine.pick({
+  dartsThrown: true,
+  average: true, // wszystkie zamknięte tury meczów o statusie finished, jak w MatchSummary
+  first9Average: true,
+  scores100: true,
+  scores140: true,
+  scores180: true,
+  highestCheckout: true,
+  bestLegDarts: true,
+})
+  .extend({
+    playerId: PlayerId,
+    played: z.int().min(0),
+    won: z.int().min(0),
+    lost: z.int().min(0),
+    legsFor: z.int().min(0),
+    legsAgainst: z.int().min(0),
+    legDifference: z.int(),
+  })
+  .refine((row) => row.played === row.won + row.lost, { message: 'Played must equal won plus lost', path: ['played'] })
+  .refine((row) => row.legDifference === row.legsFor - row.legsAgainst, {
+    message: 'Leg difference must equal legs for minus legs against',
+    path: ['legDifference'],
+  });
+export type TournamentStatsPlayer = z.infer<typeof TournamentStatsPlayer>;
+
+export const TournamentStats = z.object({
+  tournamentId: TournamentId,
+  players: z.array(TournamentStatsPlayer), // w kolejności zgłoszenia, z gośćmi
+  records: TournamentRecords,
+});
+export type TournamentStats = z.infer<typeof TournamentStats>;
 
 export const TournamentApiErrorCode = z.enum([
   'tournament_active',
