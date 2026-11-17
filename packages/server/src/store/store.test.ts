@@ -109,6 +109,19 @@ describe('tournaments', () => {
     });
   });
 
+  it('lists only tournament matches or only the others with inTournament', async () => {
+    const id = await tournament();
+    const players = (await store.findTournament(id))?.players.map((player) => player.id) ?? [];
+    const { matchId: fixtureId } = await store.startFixture(id, 'g-1', fixtureMatch(players.slice(0, 2)));
+    const plainId = await store.createMatch(fixtureMatch(players.slice(0, 2)));
+    const ids = async (inTournament: boolean | undefined) =>
+      (await store.listMatches({ types: ['match'], inTournament })).map((match) => match.id);
+
+    expect(await ids(true)).toEqual([fixtureId]);
+    expect(await ids(false)).toEqual([plainId]);
+    expect((await ids(undefined)).sort()).toEqual([fixtureId, plainId].sort());
+  });
+
   it('leaves no match and no log entry when the start fails', async () => {
     const id = await tournament();
     await expect(store.startFixture(id, 'g-1', fixtureMatch(['nope', 'nada']))).rejects.toThrow();

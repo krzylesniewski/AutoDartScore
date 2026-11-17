@@ -6,7 +6,6 @@ import type {
   Hit,
   LegProgress,
   MatchSummary,
-  MatchType,
   PlayerForm,
   PlayerStats,
   StatsFilter,
@@ -28,7 +27,7 @@ import { buildOverall } from './stats/overall.js';
 import { periodStart } from './stats/period.js';
 import { buildRankings, type RankedGame } from './stats/rankings.js';
 import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine, winRatePercent } from './stats/tally.js';
-import type { Store, StoredMatch } from './store/store.js';
+import type { MatchFilter, Store, StoredMatch } from './store/store.js';
 
 export interface StatsService {
   playerStats(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<PlayerStats>;
@@ -46,11 +45,13 @@ interface Dependencies {
   readonly now: () => number; // zegar serwera, od którego liczy się okres statystyk
 }
 
-const FILTER_TYPES: Record<StatsFilter, readonly MatchType[]> = {
-  all: ['match', 'casual', 'practice'],
-  match: ['match'],
-  casual: ['casual'],
-  practice: ['practice'],
+// Mecz turniejowy jest zapisany jako match, więc filtr match obejmuje też mecze z turniejów.
+const FILTER_MATCHES: Record<StatsFilter, Pick<MatchFilter, 'types' | 'inTournament'>> = {
+  all: { types: ['match', 'casual', 'practice'] },
+  match: { types: ['match'] },
+  casual: { types: ['casual'] },
+  practice: { types: ['practice'] },
+  tournament: { types: ['match'], inTournament: true },
 };
 
 // Po match_won silnik zostaje na ostatnim legu, a w trwającym meczu po wygranym legu legIndex wskazuje już nowy leg.
@@ -94,7 +95,7 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
   // Gry gracza, które wchodzą do statystyk, w kolejności utworzenia.
   // Okres filtruje już zapytanie, więc starsze gry nie są wczytywane ani odtwarzane.
   function statsMatches(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<StoredMatch[]> {
-    return store.listMatches({ playerId, types: FILTER_TYPES[filter], countsToStats: true, createdFrom: periodStart(period, now()) });
+    return store.listMatches({ playerId, ...FILTER_MATCHES[filter], countsToStats: true, createdFrom: periodStart(period, now()) });
   }
 
   async function statsGames(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<MatchReplay[]> {
@@ -103,7 +104,7 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
 
   // Gry wszystkich graczy liczone do statystyk, w przeciwieństwie do statsGames dla jednego gracza.
   async function rankedGames(filter: StatsFilter, period: StatsPeriod): Promise<RankedGame[]> {
-    const matches = await store.listMatches({ types: FILTER_TYPES[filter], countsToStats: true, createdFrom: periodStart(period, now()) });
+    const matches = await store.listMatches({ ...FILTER_MATCHES[filter], countsToStats: true, createdFrom: periodStart(period, now()) });
     return (await cache.many(matches)).map(({ match, replay }) => {
       const { finished, playerIds, events, tally } = replayed(match, replay);
       return { type: match.type, finished, legs: completedPlayerLegs(match.type, playerIds, events), tally };

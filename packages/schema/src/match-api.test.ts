@@ -665,6 +665,17 @@ describe('MatchListItem and MatchListQuery', () => {
     expect(MatchListQuery.safeParse({ type: 'bogus' }).success).toBe(false);
     expect(MatchListQuery.safeParse({ playerId: '' }).success).toBe(false);
   });
+
+  it('filters by tournament alone and together with the other filters', () => {
+    expect(MatchListQuery.parse({ tournamentId: 't_abc' })).toEqual({ tournamentId: 't_abc' });
+    expect(MatchListQuery.parse({ status: 'unfinished', playerId: 'p1', type: 'match', tournamentId: 't_abc' })).toEqual({
+      status: 'unfinished',
+      playerId: 'p1',
+      type: 'match',
+      tournamentId: 't_abc',
+    });
+    expect(MatchListQuery.safeParse({ tournamentId: '' }).success).toBe(false);
+  });
 });
 
 describe('ThrowResult and UndoResult', () => {

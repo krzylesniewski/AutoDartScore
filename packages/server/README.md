@@ -149,7 +149,7 @@ Przed użyciem wpisu serwer jednym zapytaniem czyta najwyższy `seq` każdej gry
 
 To nie jest licznik. Migawki, profile graczy i sumy statystyk są liczone przy każdym żądaniu z odtworzenia, więc zmianę imienia widać od razu. Komendy, `GET /matches/:id` i kanał na żywo zawsze odtwarzają świeżo wczytany log i nie używają pamięci podręcznej.
 
-Gracze i logi gier z listy są wczytywane zbiorczo, a filtry `type` i `playerId` listy gier działają już w zapytaniu. Filtr `status` wymaga odtworzenia, więc działa po nim. Migracja `0007_list_indexes` dodaje indeksy na `throws(match_id)` i `match_players(player_id)`. `match_events` nie potrzebuje osobnego indeksu, bo wyszukiwanie po `match_id` obsługuje klucz główny `(match_id, seq)`.
+Gracze i logi gier z listy są wczytywane zbiorczo, a filtry `type`, `playerId` i `tournamentId` listy gier działają już w zapytaniu. Filtr `status` wymaga odtworzenia, więc działa po nim. Migracja `0007_list_indexes` dodaje indeksy na `throws(match_id)` i `match_players(player_id)`. `match_events` nie potrzebuje osobnego indeksu, bo wyszukiwanie po `match_id` obsługuje klucz główny `(match_id, seq)`.
 
 Uszkodzona gra (log, którego nie da się odtworzyć, albo brak wymaganego pola w wierszu gry) trafia do logu serwera jako ostrzeżenie i jest pomijana w liście gier, rankingu, `GET /stats/overall`, statystykach gracza, bilansie, formie, najczęstszych trafieniach i rekordach do osiągnięć. `GET /matches/:id` i podsumowanie `GET /matches/:id/summary` dla takiej gry nadal kończą się błędem 500.
 
@@ -165,11 +165,11 @@ Uszkodzona gra (log, którego nie da się odtworzyć, albo brak wymaganego pola 
   - `web-app.ts`: pliki frontu z `AUTOSCORE_WEB_DIR`.
   - `auth.ts`: `POST /auth/login`.
   - `players.ts`: utworzenie, lista z `?archived=include` i `PATCH /players/:id` do zmiany profilu.
-  - `matches.ts`: gry, lista gier z filtrami `status`, `playerId` i `type`, rzutki, reszta tury jako Miss (`rest-miss`), próby i pominięcia checkoutu, cofnięcie, porzucenie, wznowienie i zakończenie treningu. Cofnięcie, wznowienie, zakończenie i pominięcie checkoutu czytają z body tylko `expectedSeq`, a pusty albo niepoprawny JSON i wartość, która nie jest obiektem, traktują jak brak body.
+  - `matches.ts`: gry, lista gier z filtrami `status`, `playerId`, `type` i `tournamentId`, rzutki, reszta tury jako Miss (`rest-miss`), próby i pominięcia checkoutu, cofnięcie, porzucenie, wznowienie i zakończenie treningu. Cofnięcie, wznowienie, zakończenie i pominięcie checkoutu czytają z body tylko `expectedSeq`, a pusty albo niepoprawny JSON i wartość, która nie jest obiektem, traktują jak brak body.
   - `tournaments.ts`: `POST /tournaments`, lista z filtrami `status` i `archived=include`, `GET /tournaments/:id`, ponowne losowanie, start meczu turnieju, archiwizacja, wycofanie gracza i korekta wyniku. Losowanie, start i archiwizacja czytają z body tylko `expectedSeq`, jak cofnięcie. Wycofanie i korekta mają ścisłe body JSON, jak utworzenie turnieju.
   - `command-body.ts`: parser body komend, które czytają tylko `expectedSeq`, wspólny dla gier i turniejów.
   - `live.ts`: WebSocket gry (`/matches/:id/live`) i turnieju (`/tournaments/:id/live`) z wiadomością `auth` i pingiem.
-  - `stats.ts`: statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, `GET /players/:id/frequent-hits`, podsumowanie meczu, ranking graczy i `GET /stats/overall`. Statystyki gracza, bilans, forma, ranking i `GET /stats/overall` przyjmują `?period=30d`, `90d` albo `all` (domyślnie `all`).
+  - `stats.ts`: statystyki gracza, `GET /players/:id/head-to-head/:opponentId`, `GET /players/:id/form`, `GET /players/:id/frequent-hits`, podsumowanie meczu, ranking graczy i `GET /stats/overall`. Statystyki gracza, bilans, forma, ranking i `GET /stats/overall` przyjmują `?period=30d`, `90d` albo `all` (domyślnie `all`). Statystyki gracza, forma i ranking przyjmują też `?type=tournament`, czyli tylko mecze 1v1 z turniejów.
 - `src/match-service.ts`: komendy gry (utworzenie, rzutka, reszta tury jako Miss, próba i pominięcie checkoutu, cofnięcie, porzucenie, wznowienie, zakończenie treningu, lista, subskrypcja), sprawdzenie `expectedSeq` opisane w „Powtórzone komendy” i `publishState`, czyli wysyłka stanu gry bez brania kolejki, dla wycofania gracza z turnieju.
 - `src/replay.ts`: wybór rzutek oraz prób i pominięć checkoutu, które się liczą, stan porzucenia, czas zakończenia treningu i odtworzenie stanu w silniku. `replayLog` daje z wczytanego logu cały wynik odtworzenia (`ReplayedMatch`).
 - `src/replay-cache.ts`: pamięć podręczna odtworzeń dla list i statystyk (`createReplayCache`, `REPLAY_CACHE_MAX_MATCHES`), opisana wyżej w „Lista gier i statystyki”.
@@ -180,7 +180,7 @@ Uszkodzona gra (log, którego nie da się odtworzyć, albo brak wymaganego pola 
   - `completed-legs.ts`: punkty i rzutki w ukończonych legach.
   - `rankings.ts`: ranking graczy, rekordy oraz listy procentu wygranych i trafień T20.
   - `overall.ts`: łączna liczba lotek, średnia ze średnich graczy, gracze powyżej i poniżej niej.
-  - `head-to-head.ts`: bilans dwóch graczy z ukończonych meczów 1v1.
+  - `head-to-head.ts`: bilans dwóch graczy z ukończonych meczów 1v1, także turniejowych.
   - `form.ts`: średnia z każdej z ostatnich gier.
   - `frequent-hits.ts`: do 6 najczęstszych trafień gracza bez Miss, według liczby, potem punktów, potem segmentu.
   - `leg-progress.ts`: pozostały wynik po każdej rzutce ostatniego lega z zamkniętych tur, do podsumowania gry.

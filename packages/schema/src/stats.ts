@@ -8,7 +8,8 @@ import { PlayerColor, PlayerId } from './player.js';
 // Statystyki liczone na żądanie z logu rzutek. Liczą się tylko zamknięte tury.
 
 // practice to Solo 501, bo Free run nigdy nie wchodzi do statystyk.
-export const StatsFilter = z.enum(['all', 'match', 'casual', 'practice']);
+// tournament to tylko mecze 1v1 z turniejów, a match obejmuje je razem z pozostałymi meczami 1v1.
+export const StatsFilter = z.enum(['all', 'match', 'casual', 'practice', 'tournament']);
 export type StatsFilter = z.infer<typeof StatsFilter>;
 
 // Okres liczony wstecz od zegara serwera. Gra wchodzi, gdy createdAt >= teraz minus N dni. all nie ma granicy.
@@ -168,7 +169,7 @@ export const StatsOverall = z.object({
 });
 export type StatsOverall = z.infer<typeof StatsOverall>;
 
-// Bilans dwóch graczy z ukończonych meczów 1v1. Porzucona gra nie ma zwycięzcy, więc nie wchodzi do bilansu.
+// Bilans dwóch graczy z ukończonych meczów 1v1, także turniejowych. Porzucona gra nie ma zwycięzcy, więc nie wchodzi do bilansu.
 export const HeadToHeadQuery = z.object({ period: StatsPeriod.default('all') });
 export type HeadToHeadQuery = z.infer<typeof HeadToHeadQuery>;
 

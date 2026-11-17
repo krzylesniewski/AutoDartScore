@@ -15,7 +15,7 @@ import {
   StartingScore,
 } from './match.js';
 import { PlayerColor, PlayerId } from './player.js';
-import { MatchTournament } from './tournament.js';
+import { MatchTournament, TournamentId } from './tournament.js';
 
 function distinct(ids: readonly string[]): boolean {
   return new Set(ids).size === ids.length;
@@ -204,6 +204,7 @@ export const MatchListQuery = z.object({
   status: z.literal('unfinished').optional(),
   playerId: PlayerId.optional(),
   type: MatchType.optional(),
+  tournamentId: TournamentId.optional(),
 });
 export type MatchListQuery = z.infer<typeof MatchListQuery>;
 

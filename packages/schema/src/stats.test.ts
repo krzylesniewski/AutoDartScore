@@ -126,7 +126,7 @@ describe('PlayerStatsQuery', () => {
     expect(PlayerStatsQuery.parse({})).toEqual({ type: 'all', period: 'all' });
   });
 
-  it.each(['match', 'casual', 'practice'])('accepts %s', (type) => {
+  it.each(['match', 'casual', 'practice', 'tournament'])('accepts %s', (type) => {
     expect(PlayerStatsQuery.parse({ type })).toEqual({ type, period: 'all' });
   });
 
@@ -379,6 +379,10 @@ describe('RankingsQuery', () => {
     expect(RankingsQuery.parse({})).toEqual({ type: 'all', period: 'all' });
   });
 
+  it('accepts the tournament filter', () => {
+    expect(RankingsQuery.parse({ type: 'tournament' })).toEqual({ type: 'tournament', period: 'all' });
+  });
+
   it('rejects an unknown filter', () => {
     expect(RankingsQuery.safeParse({ type: 'bogus' }).success).toBe(false);
   });
@@ -451,6 +455,10 @@ describe('PlayerForm', () => {
     expect(FORM_GAMES).toBe(20);
     expect(PlayerFormQuery.parse({})).toEqual({ type: 'all', period: 'all' });
     expect(PlayerFormQuery.safeParse({ type: 'bogus' }).success).toBe(false);
+  });
+
+  it('accepts the tournament filter', () => {
+    expect(PlayerFormQuery.parse({ type: 'tournament' })).toEqual({ type: 'tournament', period: 'all' });
   });
 });
 
