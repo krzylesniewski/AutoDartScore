@@ -97,6 +97,7 @@ export interface MatchFilter {
   readonly playerId?: string | undefined;
   readonly countsToStats?: boolean | undefined;
   readonly tournamentId?: string | undefined;
+  readonly inTournament?: boolean | undefined;
 }
 
 export interface Store {
@@ -111,6 +112,7 @@ export interface Store {
   findMatch(id: string): Promise<StoredMatch | null>;
   // Gry w kolejności utworzenia. Gry gracza, które wchodzą do statystyk, to filtr z playerId, types i countsToStats: true.
   // createdFrom to najstarsze dozwolone created_at (ISO, włącznie). null albo brak znaczy bez dolnej granicy.
+  // inTournament true to tylko gry z dowolnego turnieju, false tylko gry spoza turniejów, brak to obie.
   listMatches(filter?: MatchFilter): Promise<StoredMatch[]>;
   loadLog(matchId: string): Promise<MatchLog>;
   // Najwyższy seq w logu każdej gry, 0 dla gry bez wpisów.
@@ -656,7 +658,7 @@ export function createStore(db: Kysely<Database>): Store {
     },
 
     async listMatches(filter = {}) {
-      const { createdFrom, types, playerId, countsToStats, tournamentId } = filter;
+      const { createdFrom, types, playerId, countsToStats, tournamentId, inTournament } = filter;
       if (types?.length === 0) {
         return [];
       }
@@ -672,6 +674,9 @@ export function createStore(db: Kysely<Database>): Store {
       }
       if (tournamentId !== undefined) {
         query = query.where('matches.tournament_id', '=', tournamentId);
+      }
+      if (inTournament !== undefined) {
+        query = query.where('matches.tournament_id', inTournament ? 'is not' : 'is', null);
       }
       if (playerId !== undefined) {
         // exists zamiast złączenia, żeby gra nigdy nie pojawiła się dwa razy.

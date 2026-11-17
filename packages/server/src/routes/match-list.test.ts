@@ -8,9 +8,13 @@ import {
   createGame,
   createPlayer,
   createPlayers,
+  createTournament,
   endPractice,
+  fixtureOf,
   listMatches,
+  playFixture,
   setup,
+  slotPlayers,
   throwDarts,
   type TestApp,
 } from '../test-helpers.js';
@@ -118,6 +122,30 @@ describe('GET /matches', () => {
     expect((await list(`?playerId=${celina}&type=match`)).map((item) => item.id)).toEqual([]);
     expect((await list(`?playerId=${bartek}&status=unfinished`)).map((item) => item.id)).toEqual([practice.id]);
     expect(await list('?playerId=nobody')).toEqual([]);
+  });
+
+  it('filters by tournament, alone and together with the player', async () => {
+    const players = await createPlayers(t.app, 3);
+    const view = await createTournament(t.app, { name: 'Liga testowa', format: 'league', playerIds: players });
+    at('10:01:00');
+    const first = await playFixture(t.app, view.id, 'g-1');
+    at('10:02:00');
+    const second = await playFixture(t.app, view.id, 'g-2');
+    at('10:03:00');
+    const plain = await createGame(t.app, { type: 'match', playerIds: players.slice(0, 2), startingScore: 301, bestOf: 1 });
+    await throwDarts(t.app, plain.id, LEG_301);
+
+    const inTournament = await list(`?tournamentId=${view.id}`);
+    expect(inTournament.map((item) => item.id).sort()).toEqual([first.matchId, second.matchId].sort());
+    expect(inTournament.every((item) => item.tournament?.id === view.id)).toBe(true);
+    const onlyFirst = slotPlayers(fixtureOf(view, 'g-1')).find((id) => !slotPlayers(fixtureOf(view, 'g-2')).includes(id)) ?? '';
+    expect((await list(`?tournamentId=${view.id}&playerId=${onlyFirst}`)).map((item) => item.id)).toEqual([first.matchId]);
+    expect(await list('?tournamentId=t_nope')).toEqual([]);
+    expect((await list()).map((item) => item.id).sort()).toEqual([first.matchId, second.matchId, plain.id].sort());
+
+    const response = await listMatches(t.app, '?tournamentId=');
+    expect(response.statusCode).toBe(400);
+    expect(ApiError.parse(response.json()).error).toBe('invalid_request');
   });
 
   it('gives the result of finished games and the end of a practice', async () => {

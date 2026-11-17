@@ -600,7 +600,11 @@ export function createMatchService({
 
     async list(query) {
       const items: MatchListItem[] = [];
-      const matches = await store.listMatches({ types: query.type === undefined ? undefined : [query.type], playerId: query.playerId });
+      const matches = await store.listMatches({
+        types: query.type === undefined ? undefined : [query.type],
+        playerId: query.playerId,
+        tournamentId: query.tournamentId,
+      });
       // Status wynika z odtworzenia, więc ten filtr działa dopiero po nim.
       for (const { match, replay } of await cache.many(matches)) {
         const { abandonment, endedAt, updatedAt } = replay;
