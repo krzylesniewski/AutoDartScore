@@ -138,6 +138,8 @@ export interface Store {
   appendTournamentEvent(id: string, event: TournamentEvent): Promise<number>;
   // Mecz, jego gracze i wpis fixture_started w jednej transakcji, więc nie ma meczu bez wpisu ani wpisu bez meczu.
   startFixture(tournamentId: string, fixtureId: string, match: NewMatch): Promise<{ matchId: string; seq: number }>;
+  // Porzucenie każdego z meczów przez wycofanego gracza i wpis player_withdrawn w jednej transakcji. Zwraca seq turnieju.
+  withdrawPlayer(tournamentId: string, playerId: string, abandonMatchIds: readonly string[]): Promise<number>;
 }
 
 // Najwyżej tyle wartości w jednym in (...), żeby zapytanie mieściło się w limicie parametrów SQLite i PostgreSQL.
@@ -845,6 +847,20 @@ export function createStore(db: Kysely<Database>): Store {
         const matchId = await insertMatch(trx, match, { tournamentId, fixtureId });
         const seq = await insertTournamentEvent(trx, tournamentId, { type: 'fixture_started', fixtureId, matchId });
         return { matchId, seq };
+      });
+    },
+
+    withdrawPlayer(tournamentId, playerId, abandonMatchIds) {
+      return db.transaction().execute(async (trx) => {
+        const createdAt = now();
+        for (const matchId of abandonMatchIds) {
+          const seq = await nextSeq(trx, matchId);
+          await trx
+            .insertInto('match_events')
+            .values({ match_id: matchId, seq, type: 'match_abandoned', player_id: playerId, reason: null, created_at: createdAt })
+            .execute();
+        }
+        return insertTournamentEvent(trx, tournamentId, { type: 'player_withdrawn', playerId });
       });
     },
   };

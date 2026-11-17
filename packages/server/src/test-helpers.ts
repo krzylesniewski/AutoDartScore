@@ -164,6 +164,14 @@ export function startFixture(app: FastifyInstance, tournamentId: string, fixture
   return app.inject({ method: 'POST', url: `/tournaments/${tournamentId}/fixtures/${fixtureId}/start`, ...(payload && { payload }) });
 }
 
+export function withdraw(app: FastifyInstance, tournamentId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/tournaments/${tournamentId}/withdrawals`, ...(payload && { payload }) });
+}
+
+export function correctResult(app: FastifyInstance, tournamentId: string, fixtureId: string, payload?: object) {
+  return app.inject({ method: 'POST', url: `/tournaments/${tournamentId}/fixtures/${fixtureId}/result`, ...(payload && { payload }) });
+}
+
 export function fixtureOf(view: TournamentView, fixtureId: string): Fixture {
   const fixture = view.fixtures.find((candidate) => candidate.id === fixtureId);
   expect(fixture).toBeDefined();

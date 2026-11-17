@@ -116,6 +116,35 @@ describe('tournaments', () => {
     expect(await store.loadTournamentLog(id)).toHaveLength(1);
   });
 
+  it('abandons the matches and logs the withdrawal in one step', async () => {
+    const id = await tournament();
+    const players = (await store.findTournament(id))?.players.map((player) => player.id) ?? [];
+    const started = await store.startFixture(id, 'g-1', fixtureMatch(players.slice(0, 2)));
+    await store.appendThrow(hitEvent(started.matchId, S(20)));
+
+    expect(await store.withdrawPlayer(id, players[1] ?? '', [started.matchId])).toBe(3);
+    expect((await logEntries(db, started.matchId)).map((entry) => [entry.seq, entry.type, entry.player_id, entry.reason])).toEqual([
+      [1, 'throw', null, null],
+      [2, 'match_abandoned', players[1], null],
+    ]);
+    expect((await store.loadTournamentLog(id)).at(-1)).toMatchObject({ type: 'player_withdrawn', playerId: players[1], seq: 3 });
+
+    expect(await store.withdrawPlayer(id, players[2] ?? '', [])).toBe(4);
+    expect(await logEntries(db, started.matchId)).toHaveLength(2);
+  });
+
+  it('leaves no abandonment when the withdrawal entry fails', async () => {
+    const id = await tournament();
+    const players = (await store.findTournament(id))?.players.map((player) => player.id) ?? [];
+    const started = await store.startFixture(id, 'g-1', fixtureMatch(players.slice(0, 2)));
+    const before = await countRows(db, 'match_events');
+
+    await expect(store.withdrawPlayer('t_nope', players[0] ?? '', [started.matchId])).rejects.toThrow();
+    expect(await countRows(db, 'match_events')).toBe(before);
+    expect(await logEntries(db, started.matchId)).toEqual([]);
+    expect(await store.loadTournamentLog('t_nope')).toEqual([]);
+  });
+
   it('round-trips every event type and rejects a corrupt row', async () => {
     const id = await tournament();
     const playerId = (await store.findTournament(id))?.players[0]?.id ?? '';

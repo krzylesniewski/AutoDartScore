@@ -69,23 +69,29 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const store = createStore(options.db);
   const cache = createReplayCache({ store, log: app.log, maxEntries: options.replayCacheSize ?? REPLAY_CACHE_MAX_MATCHES });
   const random = options.random ?? Math.random;
+  // Jedna kolejka dla gier i turniejów, bez wielowejściowości. Zadanie trzymające klucze gier może czekać na klucz
+  // turnieju, nigdy odwrotnie. Kilka kluczy gier bierzemy w kolejności posortowanych id. Inaczej dwa zadania
+  // mogłyby czekać na siebie nawzajem.
+  const queue = createSerialQueue();
   const tournaments = createTournamentService({
     store,
     cache,
     hub: createLiveHub<TournamentLiveMessage>(),
-    queue: createSerialQueue(),
+    queue,
     random,
+    publishMatchState: (matchId) => service.publishState(matchId),
   });
   const service = createMatchService({
     store,
     hub: createLiveHub(),
-    queue: createSerialQueue(),
+    queue,
     random,
     now,
     matchLockMs: (options.matchLockMinutes ?? 5) * 60_000,
     cache,
     logger: app.log,
     onLegsChanged: (match) => tournaments.matchLegsChanged(match),
+    guardTournamentUndo: (match, write) => tournaments.guardUndo(match, write),
   });
   healthRoutes(app);
   if (auth !== null) {
