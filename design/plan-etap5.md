@@ -212,6 +212,8 @@ Trasy: `#/tournaments` (aktywny turniej albo lista zakończonych), `#/tournament
 
 **Zmiana:** trasa `#/tournaments/:id/matches/:matchId`: wynik w legach, etykieta i długość meczu, data i czas trwania, tabela statystyk obu graczy (lepsza wartość wyróżniona), przebieg lega z zakładkami legów (Zdobył / Zostało / Rzutki, zamknięcie oznaczone, zdanie podsumowujące leg). Wejście z komórki tabeli, pola drabinki, rekordów i kolejki zakończonych meczów. Mecz w toku pokazuje dotychczasowe legi i odświeża się na żywo.
 
+**Mecz z poprawionym wynikiem (decyzja autora 2026-11-18):** strona pokazuje oba wyniki. W nagłówku jest wynik poprawiony z oznaczeniem tekstowym „popr.” (jak w tabeli i drabince) oraz dopisek „rozegrano X:Y” z wynikiem z logu meczu; statystyki i przebieg legów zostają takie, jak rozegrano. Strona dociąga w tym celu widok turnieju. To samo dotyczy publicznej strony meczu w T17 (z publicznego widoku turnieju).
+
 **Testy:** dane z makiety; bust w przebiegu; mecz w toku; telefon 390 px.
 
 ### T16: publiczny podgląd, API tylko do odczytu (server, schema)
