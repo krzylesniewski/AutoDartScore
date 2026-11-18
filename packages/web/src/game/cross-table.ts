@@ -2,7 +2,12 @@ import type { Fixture, TournamentView } from '@autoscore/schema';
 
 export type CrossCell =
   | { readonly kind: 'self' }
-  | { readonly kind: 'result'; readonly legs: readonly [number, number]; readonly fixture: Fixture }
+  | {
+      readonly kind: 'result';
+      readonly legs: readonly [number, number];
+      readonly fixture: Fixture;
+      readonly average: number | null; // średnia gracza z wiersza z tego meczu, null przy walkowerze
+    }
   | { readonly kind: 'pending'; readonly fixture: Fixture }
   | { readonly kind: 'none' };
 
@@ -29,7 +34,8 @@ export function crossCell(view: TournamentView, rowPlayerId: string, columnPlaye
     }
     if (fixture.result !== null && (fixture.status === 'finished' || fixture.status === 'walkover')) {
       const [own, other] = fixture.result.legs;
-      return { kind: 'result', legs: straight ? [own, other] : [other, own], fixture };
+      const average = fixture.averages?.[straight ? 0 : 1] ?? null;
+      return { kind: 'result', legs: straight ? [own, other] : [other, own], fixture, average };
     }
     return { kind: 'pending', fixture };
   }

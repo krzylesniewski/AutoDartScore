@@ -7,6 +7,7 @@ import {
   formatDifference,
   formatDoubles,
   formatDoublesParts,
+  formatLegDifference,
   formatNumber,
   formatPercent,
 } from './format-stat';
@@ -39,6 +40,12 @@ describe('formatAverage', () => {
 
   it('renders null as a dash', () => {
     expect(formatAverage(null)).toBe('—');
+  });
+});
+
+describe('formatLegDifference', () => {
+  it('signs only a positive value with a plus', () => {
+    expect([3, 0, -4].map(formatLegDifference)).toEqual(['+3', '0', '-4']);
   });
 });
 

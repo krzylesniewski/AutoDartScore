@@ -17,6 +17,8 @@ import type {
   TournamentFormat,
   TournamentListItem,
   TournamentPlayer,
+  TournamentStats,
+  TournamentStatsPlayer,
   TournamentView,
 } from '@autoscore/schema';
 
@@ -283,6 +285,42 @@ export function tournamentView(overrides: Partial<TournamentView> = {}): Tournam
     canRedraw: true,
     eventSeq: 1,
     archivedAt: null,
+    ...overrides,
+  };
+}
+
+// Mecze i bilans legów wynikają z wygranych, przegranych i legów, tak jak wymaga schemat.
+export function tournamentStatsPlayer(playerId: string, overrides: Partial<TournamentStatsPlayer> = {}): TournamentStatsPlayer {
+  const won = overrides.won ?? 0;
+  const lost = overrides.lost ?? 0;
+  const legsFor = overrides.legsFor ?? 0;
+  const legsAgainst = overrides.legsAgainst ?? 0;
+  return {
+    playerId,
+    played: won + lost,
+    won,
+    lost,
+    legsFor,
+    legsAgainst,
+    legDifference: legsFor - legsAgainst,
+    dartsThrown: 0,
+    average: null,
+    first9Average: null,
+    scores100: 0,
+    scores140: 0,
+    scores180: 0,
+    highestCheckout: null,
+    bestLegDarts: null,
+    ...overrides,
+  };
+}
+
+// Statystyki turnieju z tournamentView(): trzech graczy bez rozegranych meczów i bez rekordów.
+export function tournamentStats(overrides: Partial<TournamentStats> = {}): TournamentStats {
+  return {
+    tournamentId: 't1',
+    players: ['p1', 'p2', 'p3'].map((playerId) => tournamentStatsPlayer(playerId)),
+    records: { highestMatchAverage: null, highestCheckout: null, shortestLeg: null, highestTurn: null },
     ...overrides,
   };
 }

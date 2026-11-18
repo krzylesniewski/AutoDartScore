@@ -1,24 +1,12 @@
 import type { TournamentView } from '@autoscore/schema';
 import { useId } from 'react';
+import { placeColor } from '../game/place-color';
 import { placementRows } from '../game/placement-rows';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
 
 export interface PlacementsCardProps {
   view: TournamentView;
-}
-
-function placeColor(place: number): string {
-  switch (place) {
-    case 1:
-      return 'text-(--color-gold)';
-    case 2:
-      return 'text-(--color-silver)';
-    case 3:
-      return 'text-(--color-bronze)';
-    default:
-      return 'text-(--color-text-muted)';
-  }
 }
 
 // W trakcie turnieju tylko znane miejsca i te, o których rozstrzygnie jeszcze konkretny mecz.

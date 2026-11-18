@@ -1,8 +1,10 @@
 import type { Fixture, StandingRow, TournamentPlayer, TournamentView } from '@autoscore/schema';
 import { useId } from 'react';
 import { crossCell, highlightedFixtureId } from '../game/cross-table';
+import { formatAverage, formatLegDifference } from '../game/format-stat';
 import { useMediaQuery } from '../game/use-media-query';
 import { pl } from '../i18n/pl';
+import { Abbreviation } from './Abbreviation';
 import { Avatar } from './Avatar';
 import { ArrowUpIcon } from './icons';
 
@@ -14,19 +16,6 @@ const SM_QUERY = '(min-width: 40rem)';
 
 const headClass = 'px-1.5 pb-1 font-display text-[15px] font-bold tracking-[0.1em] text-(--color-text-muted) uppercase';
 const numberClass = 'px-1 text-center text-lg tabular-nums';
-
-function legDifference(value: number): string {
-  return value > 0 ? `+${value}` : String(value);
-}
-
-function Abbreviation({ short, full }: { short: string; full: string }) {
-  return (
-    <>
-      <span aria-hidden="true">{short}</span>
-      <span className="sr-only">{full}</span>
-    </>
-  );
-}
 
 function PlaceCell({ row }: { row: StandingRow }) {
   return (
@@ -44,16 +33,27 @@ function PlaceCell({ row }: { row: StandingRow }) {
   );
 }
 
-function PlayerHeader({ player, withdrawn }: { player: TournamentPlayer | undefined; withdrawn: boolean }) {
+function PlayerHeader({ player, row }: { player: TournamentPlayer | undefined; row: StandingRow }) {
   const name = player?.name ?? '';
   return (
     <th scope="row" className="px-1.5 text-left font-normal">
       <span className="flex min-w-0 items-center gap-2.5">
         {player && <Avatar name={name} avatar={player.avatar} color={player.color} size="medium" />}
-        <span className={`min-w-0 truncate font-display text-[22px] leading-tight font-bold ${withdrawn ? 'text-(--color-text-sub)' : ''}`}>
-          {name}
+        <span className="flex min-w-0 flex-col">
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span
+              className={`min-w-0 truncate font-display text-[22px] leading-tight font-bold ${row.withdrawn ? 'text-(--color-text-sub)' : ''}`}
+            >
+              {name}
+            </span>
+            {row.withdrawn && <span className="shrink-0 text-sm text-(--color-text-sub)">{pl.withdrawnTag}</span>}
+          </span>
+          {row.average !== null && (
+            <span className="truncate text-[13px] text-(--color-text-muted) tabular-nums">
+              <Abbreviation short={pl.averageAbbreviation} full={pl.averageSr} /> {formatAverage(row.average)}
+            </span>
+          )}
         </span>
-        {withdrawn && <span className="shrink-0 text-sm text-(--color-text-sub)">{pl.withdrawnTag}</span>}
       </span>
     </th>
   );
@@ -111,6 +111,12 @@ function CrossCellView({
           {mark && (
             <span className="text-xs leading-none text-(--color-text-sub)">
               <Abbreviation short={mark.short} full={mark.full} />
+            </span>
+          )}
+          {!mark && cell.average !== null && (
+            <span className="text-xs leading-none text-(--color-text-sub) tabular-nums">
+              <span className="sr-only">{pl.averageSr} </span>
+              {formatAverage(cell.average)}
             </span>
           )}
         </span>
@@ -175,7 +181,7 @@ function CrossTable({ view, titleId, players }: TableProps) {
           {view.standings.map((row) => (
             <tr key={row.playerId} className="h-16">
               <PlaceCell row={row} />
-              <PlayerHeader player={players.get(row.playerId)} withdrawn={row.withdrawn} />
+              <PlayerHeader player={players.get(row.playerId)} row={row} />
               {view.standings.map((column) => (
                 <CrossCellView
                   key={column.playerId}
@@ -188,7 +194,7 @@ function CrossTable({ view, titleId, players }: TableProps) {
               <td className={numberClass}>{row.played}</td>
               <td className={numberClass}>{row.won}</td>
               <td className={numberClass}>{row.lost}</td>
-              <td className={numberClass}>{legDifference(row.legDifference)}</td>
+              <td className={numberClass}>{formatLegDifference(row.legDifference)}</td>
               <td className="px-1 text-center font-display text-[28px] font-black tabular-nums">{row.points}</td>
             </tr>
           ))}
@@ -247,9 +253,9 @@ function ShortTable({ view, titleId, players }: TableProps) {
         {view.standings.map((row) => (
           <tr key={row.playerId} className="h-14">
             <PlaceCell row={row} />
-            <PlayerHeader player={players.get(row.playerId)} withdrawn={row.withdrawn} />
+            <PlayerHeader player={players.get(row.playerId)} row={row} />
             <td className={numberClass}>{pl.wonLost(row.won, row.lost)}</td>
-            <td className={numberClass}>{legDifference(row.legDifference)}</td>
+            <td className={numberClass}>{formatLegDifference(row.legDifference)}</td>
             <td className="px-1 text-center font-display text-[24px] font-black tabular-nums">{row.points}</td>
           </tr>
         ))}
