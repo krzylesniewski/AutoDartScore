@@ -26,6 +26,7 @@ import type {
   CommandRequest,
   CreateMatchRequest,
   CreatePlayerRequest,
+  CorrectResultRequest,
   CreateTournamentRequest,
   HitEvent,
   ListPlayersQuery,
@@ -36,6 +37,7 @@ import type {
   StatsPeriod,
   TournamentListQuery,
   UpdatePlayerRequest,
+  WithdrawPlayerRequest,
 } from '@autoscore/schema';
 import { resolveApiBase } from './api-url';
 import { handleUnauthorized, readToken } from './session';
@@ -184,6 +186,30 @@ export function startFixture(tournamentId: string, fixtureId: string, expectedSe
 
 export function redrawTournament(tournamentId: string, expectedSeq?: number): Promise<TournamentView> {
   return request(`/tournaments/${encodeURIComponent(tournamentId)}/draw`, TournamentView, postCommand(expectedSeq));
+}
+
+export function withdrawPlayer(tournamentId: string, playerId: string, expectedSeq?: number): Promise<TournamentView> {
+  const body: WithdrawPlayerRequest = { playerId, ...withExpectedSeq(expectedSeq) };
+  return request(`/tournaments/${encodeURIComponent(tournamentId)}/withdrawals`, TournamentView, postJson(body));
+}
+
+// Legi w kolejności slotów meczu.
+export function correctResult(
+  tournamentId: string,
+  fixtureId: string,
+  legs: readonly [number, number],
+  expectedSeq?: number,
+): Promise<TournamentView> {
+  const body: CorrectResultRequest = { legs: [legs[0], legs[1]], ...withExpectedSeq(expectedSeq) };
+  return request(
+    `/tournaments/${encodeURIComponent(tournamentId)}/fixtures/${encodeURIComponent(fixtureId)}/result`,
+    TournamentView,
+    postJson(body),
+  );
+}
+
+export function archiveTournament(tournamentId: string, expectedSeq?: number): Promise<TournamentView> {
+  return request(`/tournaments/${encodeURIComponent(tournamentId)}/archive`, TournamentView, postCommand(expectedSeq));
 }
 
 export function postThrow(matchId: string, hit: HitEvent): Promise<ThrowResult> {

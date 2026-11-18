@@ -328,14 +328,20 @@ export function tournamentConfig(format: TournamentFormat, count: number, overri
   };
 }
 
-function engineState(config: TournamentConfig, results: ResultLegs): TournamentState {
+// Korekta wymaga rozegranego wyniku tego samego meczu w results, inaczej silnik rzuca wyjątek.
+export interface TournamentIncidents {
+  readonly withdrawals?: string[];
+  readonly corrections?: { fixtureId: string; legs: [number, number] }[];
+}
+
+function engineState(config: TournamentConfig, results: ResultLegs, incidents: TournamentIncidents = {}): TournamentState {
   const matches = Object.entries(results).map(([fixtureId, legs]) => ({
     fixtureId,
     matchId: `m-${fixtureId}`,
     legs: [legs[0], legs[1]] as const,
     scoring: null,
   }));
-  return computeTournament({ config, order: config.playerIds, matches });
+  return computeTournament({ config, order: config.playerIds, matches, ...incidents });
 }
 
 // Do podanych legów dokłada mecze rozegrane po kolei: każdy gotowy mecz, który przepuści `play`, wygrywa gracz ze slotu 0.
@@ -357,8 +363,13 @@ export function playedResults(
 }
 
 // Widok turnieju policzony silnikiem z legów meczów w kolejności slotów. Mecz bez zwycięzcy trwa.
-export function computedView(config: TournamentConfig, results: ResultLegs = {}, overrides: Partial<TournamentView> = {}): TournamentView {
-  const state = engineState(config, results);
+export function computedView(
+  config: TournamentConfig,
+  results: ResultLegs = {},
+  overrides: Partial<TournamentView> = {},
+  incidents: TournamentIncidents = {},
+): TournamentView {
+  const state = engineState(config, results, incidents);
   return tournamentView({
     name: config.name,
     format: config.format,

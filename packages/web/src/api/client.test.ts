@@ -5,6 +5,8 @@ import {
   ApiRequestError,
   REQUEST_TIMEOUT_MS,
   StaleStateRequestError,
+  archiveTournament,
+  correctResult,
   createTournament,
   getMatch,
   getTournament,
@@ -12,6 +14,7 @@ import {
   redrawTournament,
   startFixture,
   undo,
+  withdrawPlayer,
 } from './client';
 
 function json(status: number, body: unknown): Response {
@@ -155,6 +158,53 @@ describe('tournament requests', () => {
     const [first, second] = fetch.mock.calls.map((call) => call[1]);
     expect(first?.method).toBe('POST');
     expect(JSON.parse(first?.body as string)).toEqual({ expectedSeq: 1 });
+    expect(second?.method).toBe('POST');
+    expect(second?.body).toBeUndefined();
+  });
+
+  it('withdraws a player with encoded ids, with and without expectedSeq', async () => {
+    const view = tournamentView({ id: 't 1', eventSeq: 3 });
+    const fetch = stub(view, 201);
+    expect(await withdrawPlayer('t 1', 'p/2', 2)).toEqual(view);
+    await withdrawPlayer('t 1', 'p/2');
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual(['/api/tournaments/t%201/withdrawals', '/api/tournaments/t%201/withdrawals']);
+    const [first, second] = fetch.mock.calls.map((call) => call[1]);
+    expect(first?.method).toBe('POST');
+    expect(JSON.parse(first?.body as string)).toEqual({ playerId: 'p/2', expectedSeq: 2 });
+    expect(second?.method).toBe('POST');
+    expect(Object.keys(JSON.parse(second?.body as string) as object)).toEqual(['playerId']);
+  });
+
+  it('corrects a result with the legs in slot order, with and without expectedSeq', async () => {
+    const view = tournamentView({ id: 't 1', eventSeq: 4 });
+    const fetch = stub(view);
+    expect(await correctResult('t 1', 'g/7', [1, 3], 3)).toEqual(view);
+    await correctResult('t 1', 'g/7', [3, 2]);
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual([
+      '/api/tournaments/t%201/fixtures/g%2F7/result',
+      '/api/tournaments/t%201/fixtures/g%2F7/result',
+    ]);
+    const [first, second] = fetch.mock.calls.map((call) => call[1]);
+    expect(first?.method).toBe('POST');
+    expect(JSON.parse(first?.body as string)).toEqual({ legs: [1, 3], expectedSeq: 3 });
+    expect(second?.method).toBe('POST');
+    expect(JSON.parse(second?.body as string)).toEqual({ legs: [3, 2] });
+  });
+
+  it('archives a tournament with and without expectedSeq', async () => {
+    const view = tournamentView({
+      id: 't 1',
+      status: 'finished',
+      finishedAt: '2026-11-12T21:00:00.000Z',
+      archivedAt: '2026-11-13T10:00:00.000Z',
+    });
+    const fetch = stub(view);
+    expect(await archiveTournament('t 1', 9)).toEqual(view);
+    await archiveTournament('t 1');
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual(['/api/tournaments/t%201/archive', '/api/tournaments/t%201/archive']);
+    const [first, second] = fetch.mock.calls.map((call) => call[1]);
+    expect(first?.method).toBe('POST');
+    expect(JSON.parse(first?.body as string)).toEqual({ expectedSeq: 9 });
     expect(second?.method).toBe('POST');
     expect(second?.body).toBeUndefined();
   });

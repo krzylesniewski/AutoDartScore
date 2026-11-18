@@ -109,6 +109,19 @@ describe('fixtureTag', () => {
     expect(fixtureTag(view, find(view, 'p-sf-1'), null)).toBe('Awans bez meczu');
   });
 
+  it('marks a corrected result and keeps the walkover text', () => {
+    const config = tournamentConfig('cup', 4);
+    const corrected = computedView(config, { 'p-sf-1': [3, 1] }, {}, { corrections: [{ fixtureId: 'p-sf-1', legs: [1, 3] }] });
+    expect(find(corrected, 'p-sf-1').result?.corrected).toBe(true);
+    expect(fixtureTag(corrected, find(corrected, 'p-sf-1'), null)).toBe('Mecz #1 · zakończony, wynik poprawiony');
+    const walkover = computedView(config, {}, {}, { withdrawals: ['p4'] });
+    const forfeited = walkover.fixtures.find((entry) => entry.status === 'walkover');
+    if (!forfeited) {
+      throw new Error('No walkover');
+    }
+    expect(fixtureTag(walkover, forfeited, null)).toBe(`Mecz #${forfeited.number} · walkower`);
+  });
+
   it('describes a live fixture with and without the leg number', () => {
     const view = computedView(tournamentConfig('cup', 4), { 'p-sf-1': [1, 1] });
     const live = find(view, 'p-sf-1');

@@ -6,6 +6,7 @@ import { useRunningLegs } from '../api/use-running-legs';
 import { useTournament } from '../api/use-tournament';
 import type { Connection } from '../api/use-match';
 import { AppNav } from '../components/AppNav';
+import { CorrectResultDialog } from '../components/CorrectResultDialog';
 import { FixtureQueue } from '../components/FixtureQueue';
 import { ShuffleIcon, TrophyIcon } from '../components/icons';
 import { NextFixtureCard } from '../components/NextFixtureCard';
@@ -15,6 +16,8 @@ import { PlayoffBracket } from '../components/PlayoffBracket';
 import { RunningFixtures } from '../components/RunningFixtures';
 import { StandingsTable } from '../components/StandingsTable';
 import { TournamentTabs, type TournamentTab } from '../components/TournamentTabs';
+import { WithdrawPlayerDialog } from '../components/WithdrawPlayerDialog';
+import { correctableFixtures, withdrawCandidates } from '../game/tournament-incidents';
 import { tournamentProgress, type TournamentProgress } from '../game/tournament-progress';
 import { FORMAT_LABELS } from '../game/tournament-setup';
 import { pl } from '../i18n/pl';
@@ -26,6 +29,10 @@ export interface TournamentScreenProps {
 type TabId = 'table' | 'playoff';
 
 type CommandSource = 'redraw' | 'next' | 'queue';
+
+type Incident = 'correct' | 'withdraw';
+
+const incidentButton = 'sc-btn sc-btn--outline h-auto min-h-12 min-w-36 flex-1 py-2 text-lg font-bold';
 
 interface CommandError {
   readonly source: CommandSource;
@@ -103,6 +110,7 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
   const [tab, setTab] = useState<TabId>(() => defaultTab(view));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<CommandError | null>(null);
+  const [incident, setIncident] = useState<Incident | null>(null);
   // Ref blokuje drugie kliknięcie w tym samym takcie, zanim stan zdąży wyłączyć przyciski.
   const pending = useRef(false);
   const live = useRunningLegs(view);
@@ -110,6 +118,9 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
   const tabs = tabsFor(view);
   const progress = tournamentProgress(view);
   const canRedraw = view.canRedraw && view.status === 'in_progress' && view.archivedAt === null;
+  // Poprawić wynik można też w zakończonym turnieju, a wycofać gracza tylko w trwającym.
+  const canCorrect = view.archivedAt === null && correctableFixtures(view).length > 0;
+  const canWithdraw = view.status === 'in_progress' && view.archivedAt === null && withdrawCandidates(view).length > 0;
   const tabId = (id: TabId) => `${baseId}-tab-${id}`;
   const panelId = (id: TabId) => `${baseId}-panel-${id}`;
 
@@ -148,6 +159,11 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
   }
 
   const errorAt = (source: CommandSource) => (error?.source === source ? error.text : null);
+
+  function saved(next: TournamentView): void {
+    accept(next);
+    setIncident(null);
+  }
 
   return (
     <>
@@ -200,8 +216,24 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
         <div className="flex min-w-0 flex-col gap-(--space-page) lg:col-start-2 lg:row-start-2">
           {tab === 'playoff' && <PlacementsCard view={view} />}
           <FixtureQueue view={view} busy={busy} error={errorAt('queue')} onPlay={(fixture) => play('queue', fixture)} />
+          {(canCorrect || canWithdraw) && (
+            <div className="flex flex-wrap gap-2.5 lg:mt-auto">
+              {canCorrect && (
+                <button type="button" disabled={busy} onClick={() => setIncident('correct')} className={incidentButton}>
+                  {pl.correctResult}
+                </button>
+              )}
+              {canWithdraw && (
+                <button type="button" disabled={busy} onClick={() => setIncident('withdraw')} className={incidentButton}>
+                  {pl.withdrawPlayer}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
+      {incident === 'correct' && <CorrectResultDialog view={view} onSaved={saved} onFailed={reload} onCancel={() => setIncident(null)} />}
+      {incident === 'withdraw' && <WithdrawPlayerDialog view={view} onSaved={saved} onFailed={reload} onCancel={() => setIncident(null)} />}
     </>
   );
 }
