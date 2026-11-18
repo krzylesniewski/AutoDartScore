@@ -2,6 +2,7 @@ import type { Fixture, StandingRow, TournamentPlayer, TournamentView } from '@au
 import { useId } from 'react';
 import { crossCell, highlightedFixtureId } from '../game/cross-table';
 import { formatAverage, formatLegDifference } from '../game/format-stat';
+import { tournamentMatchHref } from '../game/tournament-match-href';
 import { useMediaQuery } from '../game/use-media-query';
 import { pl } from '../i18n/pl';
 import { Abbreviation } from './Abbreviation';
@@ -100,9 +101,21 @@ function CrossCellView({
     // Pierwsza cyfra to legi gracza z wiersza (legi mają jedną cyfrę), więc ::first-letter pogrubia stronę zwycięzcy.
     const weight = won ? 'font-semibold first-letter:font-black' : 'font-black first-letter:font-semibold';
     const mark = resultMark(cell.fixture);
+    const { matchId } = cell.fixture;
+    // Walkower nie ma rozegranego meczu do pokazania, więc link mają tylko zakończone mecze.
+    const href = cell.fixture.status === 'finished' && matchId !== null ? tournamentMatchHref(view.id, matchId) : null;
+    const Box = href === null ? 'span' : 'a';
     return (
       <td className="px-0.5">
-        <span className={`${box} shadow-(--shadow-inset-line) ${won ? 'bg-(--color-surface-soft)' : ''}`}>
+        <Box
+          href={href ?? undefined}
+          className={`${box} text-(--color-text) no-underline shadow-(--shadow-inset-line) ${won ? 'bg-(--color-surface-soft)' : ''}`}
+        >
+          {href !== null && (
+            <>
+              <span className="sr-only">{pl.fixtureDetails(cell.fixture.number)}</span>{' '}
+            </>
+          )}
           <span
             className={`block font-display text-[22px] leading-none tabular-nums ${weight} ${won ? 'text-(--color-text)' : 'text-(--color-text-sub)'}`}
           >
@@ -119,7 +132,7 @@ function CrossCellView({
               {formatAverage(cell.average)}
             </span>
           )}
-        </span>
+        </Box>
       </td>
     );
   }

@@ -132,9 +132,9 @@ describe('TournamentStatsPanel: records', () => {
     const records = screen.getByRole('region', { name: 'Rekordy turnieju' });
     const links = within(records).getAllByRole('link');
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
-      ['Najwyższa średnia w meczu56,05AnnaFinał · rywal: Bartek', '#/matches/m%20p-f'],
-      ['Najwyższe zamknięcie64BartekPółfinał 2 · leg 2', '#/matches/m-p-sf-2'],
-      ['Najwyższa tura140AnnaFinał · leg 5', '#/matches/m%20p-f'],
+      ['Najwyższa średnia w meczu56,05AnnaFinał · rywal: Bartek', '#/tournaments/t1/matches/m%20p-f'],
+      ['Najwyższe zamknięcie64BartekPółfinał 2 · leg 2', '#/tournaments/t1/matches/m-p-sf-2'],
+      ['Najwyższa tura140AnnaFinał · leg 5', '#/tournaments/t1/matches/m%20p-f'],
     ]);
     const items = within(records).getAllByRole('listitem');
     expect(items.map((item) => item.textContent)).toContain('Najkrótszy leg—');

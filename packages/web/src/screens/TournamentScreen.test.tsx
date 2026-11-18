@@ -404,7 +404,7 @@ describe('TournamentScreen: tabs', () => {
     const items = within(frame).getAllByRole('listitem');
     expect(items.map((item) => visibleText(item))).toEqual([
       '1AnnaWolny losAwans bez meczu',
-      'Bartek1Celinazwycięzca3Mecz #2 · zakończony',
+      'Szczegóły meczu #2 Bartek1Celinazwycięzca3Mecz #2 · zakończony',
       '1AnnaZwycięzca półfinału 2Mecz #3 · po półfinałach',
     ]);
     expect(screen.getByText('Play-off · 1 z 2 meczów')).toBeTruthy();
@@ -426,8 +426,8 @@ describe('TournamentScreen: table', () => {
         .slice(7)
         .map((cell) => cell.textContent),
     ).toEqual(['3', '0', '3', '-7', '0']);
-    expect(crossCellText('Anna', 2)).toBe('3–1');
-    expect(crossCellText('Celina', 0)).toBe('1–3');
+    expect(crossCellText('Anna', 2)).toBe('Szczegóły meczu #8 3–1');
+    expect(crossCellText('Celina', 0)).toBe('Szczegóły meczu #8 1–3');
     const bartekCelina = crossCellText('Bartek', 2);
     expect(bartekCelina).toContain('10');
     expect(bartekCelina).toContain('teraz');
@@ -742,10 +742,10 @@ describe('TournamentScreen: bracket', () => {
       ['Finał · do 4', 1],
     ]);
     expect(visibleText(box('Mecz #16 · zakończony'))).toBe(
-      `1${playerName(view, 'p-sf-1', 0)}zwycięzca34${playerName(view, 'p-sf-1', 1)}1Mecz #16 · zakończony`,
+      `Szczegóły meczu #16 1${playerName(view, 'p-sf-1', 0)}zwycięzca34${playerName(view, 'p-sf-1', 1)}1Mecz #16 · zakończony`,
     );
     expect(visibleText(box('Mecz #17 · na żywo, leg 3'))).toBe(
-      `2${playerName(view, 'p-sf-2', 0)}13${playerName(view, 'p-sf-2', 1)}1Mecz #17 · na żywo, leg 3`,
+      `Szczegóły meczu #17 2${playerName(view, 'p-sf-2', 0)}13${playerName(view, 'p-sf-2', 1)}1Mecz #17 · na żywo, leg 3`,
     );
     expect(visibleText(box('Mecz #20 · po półfinałach'))).toBe(
       `1${playerName(view, 'p-sf-1', 0)}Zwycięzca półfinału 2Mecz #20 · po półfinałach`,
@@ -756,7 +756,7 @@ describe('TournamentScreen: bracket', () => {
     expect(screen.getByRole('heading', { name: 'Mecz o 3. miejsce · do 2' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Pocieszenie · 5. z 6. · do 2' })).toBeTruthy();
     expect(visibleText(box('Mecz #18 · zakończony'))).toBe(
-      `5${playerName(view, 'c-f', 0)}06${playerName(view, 'c-f', 1)}zwycięzca2Mecz #18 · zakończony`,
+      `Szczegóły meczu #18 5${playerName(view, 'c-f', 0)}06${playerName(view, 'c-f', 1)}zwycięzca2Mecz #18 · zakończony`,
     );
 
     const running = within(screen.getByRole('list', { name: 'Trwające mecze' })).getByRole('listitem');
@@ -995,8 +995,8 @@ describe('TournamentScreen: incidents', () => {
     expect(postCalls()).toEqual([
       { url: '/api/tournaments/t1/fixtures/g-9/result', method: 'POST', body: '{"legs":[2,3],"expectedSeq":12}' },
     ]);
-    expect(cellOf('Darek', 4)).toBe('2–3popr.wynik poprawiony');
-    expect(cellOf('Ewa', 3)).toBe('3–2popr.wynik poprawiony');
+    expect(cellOf('Darek', 4)).toBe('Szczegóły meczu #9 2–3popr.wynik poprawiony');
+    expect(cellOf('Ewa', 3)).toBe('Szczegóły meczu #9 3–2popr.wynik poprawiony');
     expect(screen.getByText('popr.: wynik poprawiony.')).toBeTruthy();
     expect(screen.queryByText('wo: walkower.')).toBeNull();
   });
@@ -1098,11 +1098,11 @@ describe('TournamentScreen: averages', () => {
     const annaRow = rowHeader(/^Anna/).closest('tr') as HTMLElement;
     const celinaRow = rowHeader(/^Celina/).closest('tr') as HTMLElement;
     const cell = (row: HTMLElement, column: number) => row.querySelectorAll('td')[1 + column]?.textContent ?? '';
-    expect(cell(annaRow, 2)).toBe('3–1średnia 52,50');
-    expect(cell(celinaRow, 0)).toBe('1–3średnia 41,25');
+    expect(cell(annaRow, 2)).toBe('Szczegóły meczu #8 3–1średnia 52,50');
+    expect(cell(celinaRow, 0)).toBe('Szczegóły meczu #8 1–3średnia 41,25');
     expect(cell(annaRow, 3)).toBe('3–0wowalkower');
-    expect(crossCellText('Bartek', 3)).toBe('3–2popr.wynik poprawiony');
-    expect(crossCellText('Bartek', 4)).toBe('3–2');
+    expect(crossCellText('Bartek', 3)).toBe('Szczegóły meczu #4 3–2popr.wynik poprawiony');
+    expect(crossCellText('Bartek', 4)).toBe('Szczegóły meczu #1 3–2');
   });
 
   it('shows the group average under the name in the cross table', async () => {
@@ -1165,7 +1165,9 @@ describe('TournamentScreen: averages', () => {
         }),
       );
     await renderScreen();
-    expect(visibleText(box('Mecz #1 · zakończony'))).toBe('1Annazwycięzcaśrednia 48,5034Darekśrednia 36,001Mecz #1 · zakończony');
+    expect(visibleText(box('Mecz #1 · zakończony'))).toBe(
+      'Szczegóły meczu #1 1Annazwycięzcaśrednia 48,5034Darekśrednia 36,001Mecz #1 · zakończony',
+    );
     const running = box('Mecz #2 · na żywo');
     expect(running.textContent).not.toContain('średnia');
   });
@@ -1238,8 +1240,8 @@ describe('TournamentScreen: live updates', () => {
     expect(crossCellText('Bartek', 2)).toContain('teraz');
     const fixtures = GROUP_FIXTURES.map((entry) => (entry.id === 'g-10' ? played(10, 'p2', 'p3', [1, 3]) : entry));
     socket().serverSend(updated(groupView({ eventSeq: 13, fixtures, nextFixtureId: 'g-11' })));
-    expect(crossCellText('Bartek', 2)).toBe('1–3');
-    expect(crossCellText('Celina', 1)).toBe('3–1');
+    expect(crossCellText('Bartek', 2)).toBe('Szczegóły meczu #10 1–3');
+    expect(crossCellText('Celina', 1)).toBe('Szczegóły meczu #10 3–1');
     expect(screen.getByText('Faza grupowa · 10 z 15 meczów')).toBeTruthy();
     expect(within(screen.getByRole('region', { name: 'Następny mecz' })).getByText('#11')).toBeTruthy();
   });
@@ -1266,5 +1268,108 @@ describe('TournamentScreen: loading failures', () => {
     await renderScreen('t 1');
     expect(calls.map((call) => call.url)).toEqual(['/api/tournaments/t%201']);
     expect(socket().url).toMatch(/\/api\/tournaments\/t%201\/live$/);
+  });
+});
+
+describe('TournamentScreen: match page links', () => {
+  it('links a finished cross table cell to the match page and keeps the legs text on its own', async () => {
+    wideScreen();
+    const fixtures = GROUP_FIXTURES.map((entry): Fixture =>
+      entry.id === 'g-2' ? { ...entry, status: 'walkover', matchId: 'm-2', averages: null } : entry,
+    );
+    reply = () => json(200, groupView({ id: 't 1', fixtures }));
+    await renderScreen('t 1');
+    const links = within(table()).getAllByRole('link', { name: /^Szczegóły meczu #8\b/ });
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['#/tournaments/t%201/matches/m-8', '#/tournaments/t%201/matches/m-8']);
+    expect(within(links[0] as HTMLElement).getByText('3–1', { exact: true })).toBeTruthy();
+    expect(within(table()).queryByRole('link', { name: /^Szczegóły meczu #2\b/ })).toBeNull();
+    expect(within(table()).queryByRole('link', { name: /^Szczegóły meczu #10\b/ })).toBeNull();
+  });
+
+  it('links the finished and the running bracket boxes to the match page', async () => {
+    const finished = fixture({
+      id: 'p-sf-1',
+      number: 1,
+      phase: 'playoff',
+      bracketRound: 'sf',
+      slots: [
+        { kind: 'player', playerId: 'p1', seed: 1 },
+        { kind: 'player', playerId: 'p4', seed: 4 },
+      ],
+      status: 'finished',
+      matchId: 'm 1',
+      result: { legs: [3, 1], winnerId: 'p1', corrected: false },
+    });
+    const running = fixture({
+      id: 'p-sf-2',
+      number: 2,
+      phase: 'playoff',
+      bracketRound: 'sf',
+      slots: [
+        { kind: 'player', playerId: 'p2', seed: 2 },
+        { kind: 'player', playerId: 'p3', seed: 3 },
+      ],
+      status: 'in_progress',
+      matchId: 'm2',
+    });
+    const final = fixture({
+      id: 'p-f',
+      number: 3,
+      phase: 'playoff',
+      bracketRound: 'final',
+      slots: [
+        { kind: 'winner_of', fixtureId: 'p-sf-1' },
+        { kind: 'winner_of', fixtureId: 'p-sf-2' },
+      ],
+      status: 'waiting',
+    });
+    reply = () =>
+      json(
+        200,
+        tournamentView({
+          format: 'cup',
+          players: PLAYERS.slice(0, 4),
+          fixtures: [finished, running, final],
+          nextFixtureId: null,
+          liveFixtureId: 'p-sf-2',
+        }),
+      );
+    await renderScreen();
+    const frame = bracketFrame();
+    expect(
+      within(frame)
+        .getByRole('link', { name: /^Szczegóły meczu #1\b/ })
+        .getAttribute('href'),
+    ).toBe('#/tournaments/t1/matches/m%201');
+    expect(
+      within(frame)
+        .getByRole('link', { name: /^Szczegóły meczu #2\b/ })
+        .getAttribute('href'),
+    ).toBe('#/tournaments/t1/matches/m2');
+    expect(within(frame).queryByRole('link', { name: /^Szczegóły meczu #3\b/ })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Wróć do meczu' }).getAttribute('href')).toBe('#/matches/m2');
+  });
+
+  it('lists the played fixtures from the last one with the tournament result and a details link', async () => {
+    const fixtures = GROUP_FIXTURES.map((entry): Fixture =>
+      entry.id === 'g-9' && entry.result ? { ...entry, result: { legs: [1, 3], winnerId: 'p5', corrected: true } } : entry,
+    );
+    reply = () => json(200, groupView({ fixtures }));
+    await renderScreen();
+    const list = screen.getByRole('region', { name: 'Rozegrane mecze' });
+    const rows = within(list).getAllByRole('listitem');
+    expect(rows).toHaveLength(9);
+    expect(visibleText(rows[0] as HTMLElement)).toBe('#9Darek1 : 3wynik poprawionyEwaSzczegóły');
+    expect(visibleText(rows[8] as HTMLElement)).toBe('#1Bartek3 : 2EwaSzczegóły');
+    const details = within(list).getByRole('link', { name: 'Szczegóły meczu #9' });
+    expect(details.getAttribute('href')).toBe('#/tournaments/t1/matches/m-9');
+    expect(within(list).getByRole('link', { name: 'Szczegóły meczu #1' }).getAttribute('href')).toBe('#/tournaments/t1/matches/m-1');
+  });
+
+  it('leaves the played fixtures out before the first finished match', async () => {
+    reply = () => json(200, tournamentView({ fixtures: [fixture()] }));
+    await renderScreen();
+    expect(screen.queryByRole('region', { name: 'Rozegrane mecze' })).toBeNull();
+    expect(screen.queryByText('Rozegrane mecze')).toBeNull();
   });
 });

@@ -171,6 +171,31 @@ describe('App', () => {
     expect(stageLight()).toBe('list');
   });
 
+  it('opens the tournament match page in #/tournaments/:id/matches/:matchId', async () => {
+    const sockets: string[] = [];
+    vi.stubGlobal(
+      'WebSocket',
+      class extends EventTarget {
+        constructor(url: string) {
+          super();
+          sockets.push(url);
+        }
+
+        close(): void {}
+
+        send(): void {}
+      },
+    );
+    window.location.hash = `#/tournaments/${encodeURIComponent('t 1')}/matches/${encodeURIComponent('m/2')}`;
+    render(<App />);
+    expect(await screen.findByRole('link', { name: 'Turniej' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Turniej' }).getAttribute('aria-current')).toBe('page');
+    await vi.waitFor(() => expect(urls).toContain('/api/tournaments/t%201'));
+    expect(sockets.some((url) => url.endsWith('/api/matches/m%2F2/live'))).toBe(true);
+    expect(screen.getByText('Ładowanie…')).toBeTruthy();
+    expect(stageLight()).toBe('list');
+  });
+
   it('opens the statistics of the player in #/stats/:playerId', async () => {
     window.location.hash = `#/stats/${encodeURIComponent('p 2')}`;
     render(<App />);

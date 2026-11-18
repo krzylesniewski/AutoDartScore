@@ -12,6 +12,9 @@ const HistoryScreen = lazy(() => import('./screens/HistoryScreen').then((module)
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then((module) => ({ default: module.SettingsScreen })));
 const TournamentsScreen = lazy(() => import('./screens/TournamentsScreen').then((module) => ({ default: module.TournamentsScreen })));
 const TournamentScreen = lazy(() => import('./screens/TournamentScreen').then((module) => ({ default: module.TournamentScreen })));
+const TournamentMatchScreen = lazy(() =>
+  import('./screens/TournamentMatchScreen').then((module) => ({ default: module.TournamentMatchScreen })),
+);
 
 const HOME = '#/';
 
@@ -24,6 +27,7 @@ type Route =
   | { screen: 'settings' }
   | { screen: 'tournaments' }
   | { screen: 'tournament'; tournamentId: string }
+  | { screen: 'tournament-match'; tournamentId: string; matchId: string }
   | null;
 
 function parseRoute(hash: string): Route {
@@ -57,6 +61,14 @@ function parseRoute(hash: string): Route {
   const tournament = /^#\/tournaments\/([^/]+)$/.exec(hash);
   if (tournament?.[1]) {
     return { screen: 'tournament', tournamentId: decodeURIComponent(tournament[1]) };
+  }
+  const tournamentMatch = /^#\/tournaments\/([^/]+)\/matches\/([^/]+)$/.exec(hash);
+  if (tournamentMatch?.[1] && tournamentMatch[2]) {
+    return {
+      screen: 'tournament-match',
+      tournamentId: decodeURIComponent(tournamentMatch[1]),
+      matchId: decodeURIComponent(tournamentMatch[2]),
+    };
   }
   return null;
 }
@@ -139,6 +151,15 @@ export function App() {
       <Stage light="list">
         <LazyScreen key={route.screen}>
           <TournamentScreen key={route.tournamentId} tournamentId={route.tournamentId} />
+        </LazyScreen>
+      </Stage>
+    );
+  }
+  if (route?.screen === 'tournament-match') {
+    return (
+      <Stage light="list">
+        <LazyScreen key={route.screen}>
+          <TournamentMatchScreen key={`${route.tournamentId}/${route.matchId}`} tournamentId={route.tournamentId} matchId={route.matchId} />
         </LazyScreen>
       </Stage>
     );

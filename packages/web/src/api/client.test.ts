@@ -1,6 +1,15 @@
 import { CreateTournamentRequest } from '@autoscore/schema';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { snapshot, tournamentListItem, tournamentStats, tournamentStatsPlayer, tournamentView } from '../test/snapshots';
+import {
+  matchLeg,
+  matchLegs,
+  scoredTurns,
+  snapshot,
+  tournamentListItem,
+  tournamentStats,
+  tournamentStatsPlayer,
+  tournamentView,
+} from '../test/snapshots';
 import {
   ApiRequestError,
   REQUEST_TIMEOUT_MS,
@@ -9,6 +18,7 @@ import {
   correctResult,
   createTournament,
   getMatch,
+  getMatchLegs,
   getTournament,
   getTournamentStats,
   listTournaments,
@@ -127,6 +137,18 @@ describe('tournament requests', () => {
   it('rejects tournament stats that do not match the schema', async () => {
     stub({ ...tournamentStats(), players: [{ playerId: 'p1' }] });
     await expect(getTournamentStats('t1')).rejects.toThrow();
+  });
+
+  it('gets the match legs by the encoded id and parses them', async () => {
+    const legs = matchLegs([matchLeg({ turns: scoredTurns('p1', [60]) })], { matchId: 'm 1', eventSeq: 3 });
+    const fetch = stub(legs);
+    expect(await getMatchLegs('m 1')).toEqual(legs);
+    expect(fetch.mock.calls[0]?.[0]).toBe('/api/matches/m%201/legs');
+  });
+
+  it('rejects match legs that do not match the schema', async () => {
+    stub({ ...matchLegs(), legs: [{ ...matchLeg(), winnerId: 'p1' }] });
+    await expect(getMatchLegs('m1')).rejects.toThrow();
   });
 
   it('rejects an unknown tournament with a 404 ApiRequestError', async () => {

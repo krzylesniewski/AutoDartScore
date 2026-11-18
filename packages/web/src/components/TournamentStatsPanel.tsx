@@ -10,6 +10,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { NO_VALUE, formatAverage, formatLegDifference, formatNumber } from '../game/format-stat';
 import { placeColor } from '../game/place-color';
 import { placementRows } from '../game/placement-rows';
+import { tournamentMatchHref } from '../game/tournament-match-href';
 import {
   DEFAULT_SORT,
   bestValues,
@@ -88,7 +89,7 @@ function RecordItem({ view, players, entry }: { view: TournamentView; players: P
   const where = recordWhere(view, record);
   return (
     <li>
-      <a href={`#/matches/${encodeURIComponent(record.matchId)}`} className={`${box} text-(--color-text) no-underline`}>
+      <a href={tournamentMatchHref(view.id, record.matchId)} className={`${box} text-(--color-text) no-underline`}>
         {label}
         <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
           <span className="font-display text-[32px] leading-none font-black tabular-nums">{entry.format(record.value)}</span>
