@@ -230,6 +230,8 @@ Trasy: `#/tournaments` (aktywny turniej albo lista zakończonych), `#/tournament
 
 **Zmiana:** trasy `#/t/:id` i `#/t/:id/matches/:matchId` działające bez logowania (nie pokazują ekranu logowania, nie mają nawigacji aplikacji ani żadnej akcji zapisu), zakładki Wyniki / Grupa / Play-off / Statystyki, odświeżanie co 10 s, komunikat przy 404. Na ekranie turnieju „Udostępnij”: okno z adresem, „Kopiuj link”, kodem QR i przełącznikiem udostępniania. Kod QR generowany w przeglądarce (mała biblioteka bez zależności, bez wysyłania adresu na zewnątrz).
 
+**Adres lokalny (decyzja autora 2026-11-18):** gdy aplikacja jest otwarta pod `localhost` lub `127.0.0.1`, okno „Udostępnij” nie pokazuje linku, „Kopiuj link” ani kodu QR; zamiast nich jest komunikat z ikoną i tekstem, że udostępnianie wymaga otwarcia aplikacji po adresie w sieci. Przełącznik udostępniania zostaje.
+
 **Testy:** strona publiczna bez tokenu w pamięci przeglądarki; brak akcji zapisu; odświeżanie; okno udostępniania; wyłączenie udostępniania.
 
 ---
