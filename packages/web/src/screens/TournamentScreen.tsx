@@ -16,6 +16,7 @@ import { PlacementsCard } from '../components/PlacementsCard';
 import { PlayedFixtures } from '../components/PlayedFixtures';
 import { PlayoffBracket } from '../components/PlayoffBracket';
 import { RunningFixtures } from '../components/RunningFixtures';
+import { ShareTournamentDialog } from '../components/ShareTournamentDialog';
 import { StandingsTable } from '../components/StandingsTable';
 import { TournamentStatsPanel } from '../components/TournamentStatsPanel';
 import { TournamentTabs, type TournamentTab } from '../components/TournamentTabs';
@@ -33,7 +34,7 @@ type TabId = 'table' | 'playoff' | 'stats';
 
 type CommandSource = 'redraw' | 'next' | 'queue';
 
-type Incident = 'correct' | 'withdraw';
+type Incident = 'correct' | 'withdraw' | 'share';
 
 const incidentButton = 'sc-btn sc-btn--outline h-auto min-h-12 min-w-36 flex-1 py-2 text-lg font-bold';
 
@@ -128,6 +129,7 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
   // Poprawić wynik można też w zakończonym turnieju, a wycofać gracza tylko w trwającym.
   const canCorrect = view.archivedAt === null && correctableFixtures(view).length > 0;
   const canWithdraw = view.status === 'in_progress' && view.archivedAt === null && withdrawCandidates(view).length > 0;
+  const canShare = view.archivedAt === null;
   const tabId = (id: TabId) => `${baseId}-tab-${id}`;
   const panelId = (id: TabId) => `${baseId}-panel-${id}`;
 
@@ -198,6 +200,11 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
               {pl.redraw}
             </button>
           )}
+          {canShare && (
+            <button type="button" onClick={() => setIncident('share')} className="sc-btn sc-btn--outline">
+              {pl.share}
+            </button>
+          )}
         </div>
       </header>
       {(connection === 'closed' || errorAt('redraw')) && (
@@ -248,6 +255,7 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
       )}
       {incident === 'correct' && <CorrectResultDialog view={view} onSaved={saved} onFailed={reload} onCancel={() => setIncident(null)} />}
       {incident === 'withdraw' && <WithdrawPlayerDialog view={view} onSaved={saved} onFailed={reload} onCancel={() => setIncident(null)} />}
+      {incident === 'share' && <ShareTournamentDialog view={view} onAccept={accept} onFailed={reload} onClose={() => setIncident(null)} />}
     </>
   );
 }

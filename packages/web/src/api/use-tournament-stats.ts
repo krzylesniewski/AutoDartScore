@@ -1,4 +1,4 @@
-import type { TournamentStats, TournamentView } from '@autoscore/schema';
+import type { PublicTournamentView, TournamentStats } from '@autoscore/schema';
 import { useEffect, useRef, useState } from 'react';
 import { getTournamentStats } from './client';
 
@@ -14,7 +14,11 @@ interface Fetched {
 
 // Nowy widok przychodzi po każdej zmianie legów, więc każdy nowy obiekt widoku pobiera statystyki jeszcze raz.
 // Liczy się tylko ostatnia runda, a ostatnie statystyki zostają na ekranie także po błędzie.
-export function useTournamentStats(view: TournamentView): TournamentStatsState {
+// Publiczny podgląd podaje swój loader. Ma to być stała funkcja z modułu, bo nowa funkcja też pobiera statystyki jeszcze raz.
+export function useTournamentStats(
+  view: PublicTournamentView,
+  load: (id: string) => Promise<TournamentStats> = getTournamentStats,
+): TournamentStatsState {
   const [fetched, setFetched] = useState<Fetched>({ stats: null, failed: false });
   const round = useRef(0);
   const mounted = useRef(true);
@@ -30,7 +34,7 @@ export function useTournamentStats(view: TournamentView): TournamentStatsState {
     round.current += 1;
     const current = round.current;
     const latest = () => mounted.current && current === round.current;
-    getTournamentStats(view.id).then(
+    load(view.id).then(
       (stats) => {
         if (latest()) {
           setFetched({ stats, failed: false });
@@ -42,7 +46,7 @@ export function useTournamentStats(view: TournamentView): TournamentStatsState {
         }
       },
     );
-  }, [view]);
+  }, [view, load]);
 
   if (fetched.failed) {
     return { status: 'error', stats: fetched.stats };

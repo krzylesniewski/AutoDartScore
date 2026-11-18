@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react';
 import { act, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
-import { statLine, tournamentView } from './test/snapshots';
+import { UNAUTHORIZED_EVENT } from './api/session';
+import { publicMatch, publicTournamentMatch, publicTournamentView, snapshot, statLine, tournamentView } from './test/snapshots';
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -328,5 +329,94 @@ describe('login', () => {
       FakeWebSocket.instances.at(-1)?.dispatchEvent(new CloseEvent('close', { code: 4401 }));
     });
     expect(screen.getByLabelText('Hasło')).toBeTruthy();
+  });
+});
+
+describe('public routes', () => {
+  let requests: { url: string; init: RequestInit | undefined }[];
+  let sockets: number;
+
+  beforeEach(() => {
+    requests = [];
+    sockets = 0;
+    localStorage.clear();
+    vi.stubGlobal(
+      'WebSocket',
+      class extends EventTarget {
+        constructor() {
+          super();
+          sockets += 1;
+        }
+
+        close(): void {}
+
+        send(): void {}
+      },
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        requests.push({ url, init });
+        if (url === '/api/public/tournaments/t%201') {
+          return Promise.resolve(json(200, publicTournamentView(tournamentView({ id: 't 1', name: 'Liga klubowa' }))));
+        }
+        if (url === '/api/public/tournaments/t%201/matches/m%2F2') {
+          return Promise.resolve(json(200, publicTournamentMatch({ tournamentId: 't 1', match: publicMatch(snapshot({ id: 'm/2' })) })));
+        }
+        // Każde inne zapytanie wymaga logowania, więc prywatny ekran pokazałby tu logowanie.
+        return Promise.resolve(json(401, { error: 'unauthorized', message: 'Missing or invalid token' }));
+      }),
+    );
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  function expectPublicOnly(): void {
+    expect(requests.length).toBeGreaterThan(0);
+    expect(requests.every((request) => request.url.startsWith('/api/public/tournaments/'))).toBe(true);
+    expect(requests.map((request) => new Headers(request.init?.headers).get('authorization'))).toEqual(requests.map(() => null));
+    expect(sockets).toBe(0);
+  }
+
+  it('renders the public tournament on #/t/:id without login and without the app navigation', async () => {
+    window.location.hash = `#/t/${encodeURIComponent('t 1')}`;
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Liga klubowa' })).toBeTruthy();
+    expect(screen.getByText('podgląd publiczny')).toBeTruthy();
+    expect(screen.queryByRole('navigation', { name: 'Główna nawigacja' })).toBeNull();
+    expect(screen.queryByLabelText('Hasło')).toBeNull();
+    expect(stageLight()).toBe('list');
+    expectPublicOnly();
+
+    act(() => {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    });
+    expect(screen.queryByLabelText('Hasło')).toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Liga klubowa' })).toBeTruthy();
+  });
+
+  it('renders the public match on #/t/:id/matches/:matchId without login and without the app navigation', async () => {
+    window.location.hash = `#/t/${encodeURIComponent('t 1')}/matches/${encodeURIComponent('m/2')}`;
+    render(<App />);
+    const back = await screen.findByRole('link', { name: 'Wróć do turnieju Liga klubowa' });
+    expect(back.getAttribute('href')).toBe('#/t/t%201');
+    expect(screen.queryByRole('navigation', { name: 'Główna nawigacja' })).toBeNull();
+    expect(screen.queryByLabelText('Hasło')).toBeNull();
+    expect(stageLight()).toBe('list');
+    expectPublicOnly();
+
+    act(() => {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    });
+    expect(screen.queryByLabelText('Hasło')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Wróć do turnieju Liga klubowa' })).toBe(back);
+  });
+
+  it('redirects other #/t/ shapes to #/', async () => {
+    window.location.hash = '#/t/t1/stats';
+    render(<App />);
+    await vi.waitFor(() => expect(window.location.hash).toBe('#/'));
   });
 });

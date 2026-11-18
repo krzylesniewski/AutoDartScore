@@ -10,6 +10,9 @@ import {
   Player,
   PlayerForm,
   PlayerStats,
+  PublicTournamentMatch,
+  PublicTournamentStats,
+  PublicTournamentView,
   RestMissResult,
   STALE_STATE,
   StaleStateError,
@@ -35,6 +38,7 @@ import type {
   LoginRequest,
   MatchListQuery,
   RestMissRequest,
+  SharingRequest,
   StatsFilter,
   StatsPeriod,
   TournamentListQuery,
@@ -84,11 +88,9 @@ function withToken(init: RequestInit, token: string): RequestInit {
   return { ...init, headers };
 }
 
-async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {}): Promise<T> {
-  const sentToken = readToken();
+async function send<T>(path: string, schema: Parser<T>, init: RequestInit, onUnauthorized: () => void): Promise<T> {
   // Przekroczenie czasu nie jest ApiRequestError, więc wywołujący traktują je jak błąd sieci.
-  const timed: RequestInit = { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) };
-  const response = await fetch(`${API_BASE}${path}`, sentToken === null ? timed : withToken(timed, sentToken));
+  const response = await fetch(`${API_BASE}${path}`, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     if (response.status === 409) {
@@ -100,13 +102,23 @@ async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {
     const error = ApiError.safeParse(body);
     if (error.success) {
       if (response.status === 401 && error.data.error === 'unauthorized') {
-        handleUnauthorized(sentToken);
+        onUnauthorized();
       }
       throw new ApiRequestError(response.status, error.data.error, error.data.message);
     }
     throw new ApiRequestError(response.status, 'http_error', `HTTP ${response.status}`);
   }
   return schema.parse(body);
+}
+
+async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {}): Promise<T> {
+  const sentToken = readToken();
+  return send(path, schema, sentToken === null ? init : withToken(init, sentToken), () => handleUnauthorized(sentToken));
+}
+
+// Publiczny link działa bez logowania: żądanie idzie bez tokenu, a odpowiedź 401 nie otwiera ekranu logowania.
+function publicRequest<T>(path: string, schema: Parser<T>): Promise<T> {
+  return send(path, schema, {}, () => undefined);
 }
 
 function postJson(body: unknown): RequestInit {
@@ -212,6 +224,23 @@ export function correctResult(
     TournamentView,
     postJson(body),
   );
+}
+
+export function setTournamentSharing(tournamentId: string, sharing: boolean, expectedSeq?: number): Promise<TournamentView> {
+  const body: SharingRequest = { sharing, ...withExpectedSeq(expectedSeq) };
+  return request(`/tournaments/${encodeURIComponent(tournamentId)}/sharing`, TournamentView, postJson(body));
+}
+
+export function getPublicTournament(id: string): Promise<PublicTournamentView> {
+  return publicRequest(`/public/tournaments/${encodeURIComponent(id)}`, PublicTournamentView);
+}
+
+export function getPublicTournamentStats(id: string): Promise<PublicTournamentStats> {
+  return publicRequest(`/public/tournaments/${encodeURIComponent(id)}/stats`, PublicTournamentStats);
+}
+
+export function getPublicTournamentMatch(id: string, matchId: string): Promise<PublicTournamentMatch> {
+  return publicRequest(`/public/tournaments/${encodeURIComponent(id)}/matches/${encodeURIComponent(matchId)}`, PublicTournamentMatch);
 }
 
 export function archiveTournament(tournamentId: string, expectedSeq?: number): Promise<TournamentView> {

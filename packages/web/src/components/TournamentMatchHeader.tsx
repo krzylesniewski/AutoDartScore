@@ -1,4 +1,4 @@
-import type { Fixture, MatchSnapshot, MatchSnapshotPlayer } from '@autoscore/schema';
+import type { Fixture, PublicMatch, PublicMatchPlayer } from '@autoscore/schema';
 import { formatClock } from '../game/activity-date';
 import { gameElapsedMs } from '../game/leg-clock';
 import { headerResult } from '../game/tournament-match-result';
@@ -8,8 +8,11 @@ import { Abbreviation } from './Abbreviation';
 import { Avatar } from './Avatar';
 import { TrophyIcon } from './icons';
 
+// Te same propsy z meczu prywatnego (MatchSnapshot) i z publicznego API (PublicMatch).
 export interface TournamentMatchHeaderProps {
-  state: MatchSnapshot;
+  match: PublicMatch;
+  label: string;
+  legNumber: number;
   fixture: Fixture | undefined;
 }
 
@@ -19,19 +22,18 @@ const MARKS = {
 } as const;
 
 // Etykiety grupy i ligi mają już numer meczu („Liga, mecz 7”), a pozostałe dostają go po kropce.
-function labelLine(state: MatchSnapshot, fixture: Fixture | undefined): string {
-  const label = state.tournament?.label ?? '';
+function labelLine(label: string, fixture: Fixture | undefined): string {
   return fixture && fixture.phase !== 'group' ? `${label} · ${pl.fixtureTagNumber(fixture.number)}` : label;
 }
 
-function dateLine(state: MatchSnapshot): string {
-  const start = state.startedAt ?? state.createdAt;
+function dateLine(match: PublicMatch): string {
+  const start = match.startedAt ?? match.createdAt;
   const day = `${formatDay(new Date(start))} · ${formatClock(start)}`;
-  const elapsed = gameElapsedMs(state);
+  const elapsed = gameElapsedMs(match);
   return elapsed === null ? day : `${day} · ${pl.matchMinutes(Math.max(1, Math.round(elapsed / 60000)))}`;
 }
 
-function PlayerSide({ player, winner }: { player: MatchSnapshotPlayer | undefined; winner: boolean }) {
+function PlayerSide({ player, winner }: { player: PublicMatchPlayer | undefined; winner: boolean }) {
   if (!player) {
     return <span className="min-w-0 flex-1" />;
   }
@@ -57,34 +59,34 @@ function PlayerSide({ player, winner }: { player: MatchSnapshotPlayer | undefine
   );
 }
 
-function StatusTag({ state, walkover }: { state: MatchSnapshot; walkover: boolean }) {
-  if (state.status === 'in_progress') {
+function StatusTag({ match, legNumber, walkover }: { match: PublicMatch; legNumber: number; walkover: boolean }) {
+  if (match.status === 'in_progress') {
     return (
       <span className="inline-flex items-center gap-2 text-[15px] text-(--color-text)">
         <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-(--color-accent)" />
-        {pl.tagLiveLeg(state.legIndex + 1)}
+        {pl.tagLiveLeg(legNumber)}
       </span>
     );
   }
-  if (state.status === 'abandoned' && !walkover) {
+  if (match.status === 'abandoned' && !walkover) {
     return <span className="text-[15px] text-(--color-text-muted)">{pl.statusAbandoned}</span>;
   }
   return null;
 }
 
-export function TournamentMatchHeader({ state, fixture }: TournamentMatchHeaderProps) {
-  const result = headerResult(state, fixture);
-  const running = state.status === 'in_progress';
+export function TournamentMatchHeader({ match, label, legNumber, fixture }: TournamentMatchHeaderProps) {
+  const result = headerResult(match, fixture);
+  const running = match.status === 'in_progress';
   const winnerId = running ? null : result.winnerId;
-  const [first, second] = state.players;
+  const [first, second] = match.players;
   return (
     <header className="sc-panel min-w-0 gap-4 px-4 py-5 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,auto)_minmax(0,1fr)] lg:items-center lg:gap-6">
       <div className="flex min-w-0 flex-col gap-1">
         <h1 className="font-display text-(length:--text-label) font-bold tracking-[0.18em] break-words text-(--color-text-muted) uppercase">
-          {labelLine(state, fixture)}
+          {labelLine(label, fixture)}
         </h1>
-        {state.legsToWin !== null && state.startingScore !== null && (
-          <p className="text-[15px] text-(--color-text-sub)">{pl.matchPageMeta(state.legsToWin, state.startingScore)}</p>
+        {match.legsToWin !== null && match.startingScore !== null && (
+          <p className="text-[15px] text-(--color-text-sub)">{pl.matchPageMeta(match.legsToWin, match.startingScore)}</p>
         )}
       </div>
       <div className="flex min-w-0 items-center justify-center gap-3 sm:gap-6">
@@ -103,11 +105,11 @@ export function TournamentMatchHeader({ state, fixture }: TournamentMatchHeaderP
               {pl.playedResult(result.played[0], result.played[1])}
             </span>
           )}
-          <StatusTag state={state} walkover={result.mark === 'walkover'} />
+          <StatusTag match={match} legNumber={legNumber} walkover={result.mark === 'walkover'} />
         </div>
         <PlayerSide player={second} winner={second !== undefined && second.id === winnerId} />
       </div>
-      <p className="text-[15px] text-(--color-text-sub) tabular-nums lg:text-right">{dateLine(state)}</p>
+      <p className="text-[15px] text-(--color-text-sub) tabular-nums lg:text-right">{dateLine(match)}</p>
     </header>
   );
 }

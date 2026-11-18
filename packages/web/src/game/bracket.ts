@@ -1,4 +1,4 @@
-import type { BracketRound, Fixture, TournamentView } from '@autoscore/schema';
+import type { BracketRound, Fixture, PublicTournamentView } from '@autoscore/schema';
 import { pl } from '../i18n/pl';
 import { fixtureOrdinal } from './fixture-label';
 
@@ -10,7 +10,7 @@ export interface BracketColumn {
 }
 
 // Rundy od pierwszej do finału. W kolumnie kolejność z id, bo numery gry stawiają wolne losy na końcu.
-export function bracketColumns(view: TournamentView, phase: 'playoff' | 'consolation'): BracketColumn[] {
+export function bracketColumns(view: PublicTournamentView, phase: 'playoff' | 'consolation'): BracketColumn[] {
   const rounds = new Map<number, Fixture[]>();
   for (const fixture of view.fixtures) {
     if (fixture.phase === phase && fixture.bracketRound !== null) {
@@ -27,7 +27,7 @@ export function bracketColumns(view: TournamentView, phase: 'playoff' | 'consola
 }
 
 // Na co czeka mecz: na pierwszy slot bez gracza.
-function feederText(view: TournamentView, fixture: Fixture): string | null {
+function feederText(view: PublicTournamentView, fixture: Fixture): string | null {
   for (const slot of fixture.slots) {
     if (slot.kind === 'standing') {
       return pl.tagAfterGroup;
@@ -41,7 +41,7 @@ function feederText(view: TournamentView, fixture: Fixture): string | null {
 }
 
 // Linia stanu pod meczem w drabince. legNumber to bieżący leg trwającego meczu, gdy jest znany.
-export function fixtureTag(view: TournamentView, fixture: Fixture, legNumber: number | null): string {
+export function fixtureTag(view: PublicTournamentView, fixture: Fixture, legNumber: number | null): string {
   switch (fixture.status) {
     case 'finished':
       return pl.fixtureTag(fixture.number, fixture.result?.corrected ? pl.tagCorrected : pl.tagFinished);

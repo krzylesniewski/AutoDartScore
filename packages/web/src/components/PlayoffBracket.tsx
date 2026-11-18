@@ -1,15 +1,15 @@
-import type { BracketRound, Fixture, FixtureSlot, TournamentView } from '@autoscore/schema';
+import type { BracketRound, Fixture, FixtureSlot, PublicTournamentView } from '@autoscore/schema';
 import { useId } from 'react';
 import type { RunningLegs } from '../api/use-running-legs';
 import { bracketColumns, fixtureTag, type BracketColumn } from '../game/bracket';
 import { formatAverage } from '../game/format-stat';
-import { tournamentMatchHref } from '../game/tournament-match-href';
 import { slotPlayer, slotSourceText } from '../game/tournament-slot';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
+import { useMatchHref } from './match-href-context';
 
 export interface PlayoffBracketProps {
-  view: TournamentView;
+  view: PublicTournamentView;
   live: ReadonlyMap<string, RunningLegs>;
 }
 
@@ -30,7 +30,7 @@ function boxLegs(fixture: Fixture, live: ReadonlyMap<string, RunningLegs>): read
 }
 
 interface SlotRowProps {
-  view: TournamentView;
+  view: PublicTournamentView;
   slot: FixtureSlot;
   legs: number | null;
   average: number | null;
@@ -78,12 +78,13 @@ function SlotRow({ view, slot, legs, average, outcome }: SlotRowProps) {
 }
 
 interface MatchBoxProps {
-  view: TournamentView;
+  view: PublicTournamentView;
   fixture: Fixture;
   live: ReadonlyMap<string, RunningLegs>;
 }
 
 function MatchBox({ view, fixture, live }: MatchBoxProps) {
+  const matchHref = useMatchHref();
   const legs = boxLegs(fixture, live);
   const running = fixture.status === 'in_progress';
   const outcomeOf = (slot: FixtureSlot): SlotRowProps['outcome'] => {
@@ -93,7 +94,7 @@ function MatchBox({ view, fixture, live }: MatchBoxProps) {
     return slot.playerId === fixture.result.winnerId ? 'winner' : 'loser';
   };
   const { matchId } = fixture;
-  const href = matchId !== null && (fixture.status === 'finished' || running) ? tournamentMatchHref(view.id, matchId) : null;
+  const href = matchId !== null && (fixture.status === 'finished' || running) ? matchHref(view.id, matchId) : null;
   const Box = href === null ? 'div' : 'a';
   return (
     <div className="flex flex-col gap-1.5">
@@ -126,7 +127,7 @@ function MatchBox({ view, fixture, live }: MatchBoxProps) {
 }
 
 interface ColumnsProps {
-  view: TournamentView;
+  view: PublicTournamentView;
   columns: readonly BracketColumn[];
   live: ReadonlyMap<string, RunningLegs>;
   labelledBy: string;
@@ -163,7 +164,7 @@ function BracketColumns({ view, columns, live, labelledBy, headingLevel }: Colum
 }
 
 interface ExtraMatchProps {
-  view: TournamentView;
+  view: PublicTournamentView;
   title: string;
   fixture: Fixture;
   live: ReadonlyMap<string, RunningLegs>;

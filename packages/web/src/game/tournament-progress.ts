@@ -1,4 +1,4 @@
-import type { Fixture, TournamentView } from '@autoscore/schema';
+import type { Fixture, PublicTournamentView } from '@autoscore/schema';
 
 export type ProgressPhase = 'league' | 'group' | 'playoff' | 'finished';
 
@@ -17,7 +17,7 @@ function count(phase: ProgressPhase, fixtures: readonly Fixture[]): TournamentPr
 }
 
 // Wolny los nie jest meczem do rozegrania, więc nie wchodzi do sumy.
-export function tournamentProgress(view: TournamentView): TournamentProgress {
+export function tournamentProgress(view: PublicTournamentView): TournamentProgress {
   const played = view.fixtures.filter((fixture) => fixture.status !== 'bye');
   if (view.status === 'finished') {
     return count('finished', played);

@@ -125,6 +125,15 @@ describe('useTournamentStats', () => {
     await waitFor(() => expect(result.current).toEqual({ status: 'ready', stats: statsWith(42) }));
   });
 
+  it('uses the given loader instead of the private endpoint', async () => {
+    const view = tournamentView();
+    const load = vi.fn((id: string) => Promise.resolve(statsWith(id === 't1' ? 41 : 0)));
+    const { result } = renderHook(() => useTournamentStats(view, load));
+    await waitFor(() => expect(result.current).toEqual({ status: 'ready', stats: statsWith(41) }));
+    expect(load).toHaveBeenCalledWith('t1');
+    expect(pending).toEqual([]);
+  });
+
   it('ignores a response that arrives after unmount', async () => {
     const { result, unmount } = render();
     unmount();

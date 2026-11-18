@@ -1373,3 +1373,59 @@ describe('TournamentScreen: match page links', () => {
     expect(screen.queryByText('Rozegrane mecze')).toBeNull();
   });
 });
+
+describe('TournamentScreen: sharing', () => {
+  const finishedAt = '2026-11-12T21:00:00.000Z';
+
+  it('shows Udostępnij in a running and in a finished tournament, but not in an archived one', async () => {
+    await renderScreen();
+    expect(screen.getByRole('button', { name: 'Udostępnij' })).toBeTruthy();
+
+    socket().serverSend(
+      updated(groupView({ status: 'finished', finishedAt, fixtures: GROUP_FIXTURES.map(finishedVersion), eventSeq: 13 })),
+    );
+    expect(screen.getByRole('button', { name: 'Udostępnij' })).toBeTruthy();
+
+    socket().serverSend(
+      updated(
+        groupView({ status: 'finished', finishedAt, fixtures: GROUP_FIXTURES.map(finishedVersion), archivedAt: finishedAt, eventSeq: 14 }),
+      ),
+    );
+    expect(screen.queryByRole('button', { name: 'Udostępnij' })).toBeNull();
+  });
+
+  it('opens the dialog, switches sharing off and takes the returned view', async () => {
+    commandReply = () => json(200, groupView({ sharing: false, eventSeq: 13 }));
+    await renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: 'Udostępnij' }));
+    const dialog = screen.getByRole('dialog', { name: 'Udostępnij turniej' });
+    const toggle = within(dialog).getByRole('button', { name: 'Publiczny link z kodem QR' });
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle.getAttribute('aria-pressed')).toBe('false'));
+    expect(postCalls()).toEqual([
+      { url: '/api/tournaments/t1/sharing', method: 'POST', body: JSON.stringify({ sharing: false, expectedSeq: 12 }) },
+    ]);
+    expect(screen.getByRole('dialog', { name: 'Udostępnij turniej' })).toBe(dialog);
+  });
+
+  it('fetches the tournament again after a failed switch', async () => {
+    commandReply = () => json(409, { error: 'tournament_archived', message: 'Tournament is archived' });
+    await renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: 'Udostępnij' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publiczny link z kodem QR' }));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    await waitFor(() => expect(calls.filter((call) => call.method === 'GET' && call.url === '/api/tournaments/t1')).toHaveLength(2));
+  });
+
+  it('returns the focus to Udostępnij after Zamknij', async () => {
+    await renderScreen();
+    const share = screen.getByRole('button', { name: 'Udostępnij' });
+    share.focus();
+    fireEvent.click(share);
+    fireEvent.click(screen.getByRole('button', { name: 'Zamknij' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(share);
+    expect(postCalls()).toEqual([]);
+  });
+});
