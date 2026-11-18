@@ -3,6 +3,7 @@ import { useId } from 'react';
 import type { RunningLegs } from '../api/use-running-legs';
 import { bracketColumns, fixtureTag, type BracketColumn } from '../game/bracket';
 import { formatAverage } from '../game/format-stat';
+import { tournamentMatchHref } from '../game/tournament-match-href';
 import { slotPlayer, slotSourceText } from '../game/tournament-slot';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
@@ -91,11 +92,20 @@ function MatchBox({ view, fixture, live }: MatchBoxProps) {
     }
     return slot.playerId === fixture.result.winnerId ? 'winner' : 'loser';
   };
+  const { matchId } = fixture;
+  const href = matchId !== null && (fixture.status === 'finished' || running) ? tournamentMatchHref(view.id, matchId) : null;
+  const Box = href === null ? 'div' : 'a';
   return (
     <div className="flex flex-col gap-1.5">
-      <div
-        className={`flex flex-col overflow-hidden rounded-(--radius-card) bg-(--color-surface) ${running ? 'inset-ring-2 inset-ring-(--color-accent)' : 'shadow-(--shadow-inset-line)'}`}
+      <Box
+        href={href ?? undefined}
+        className={`flex flex-col overflow-hidden rounded-(--radius-card) bg-(--color-surface) text-(--color-text) no-underline ${running ? 'inset-ring-2 inset-ring-(--color-accent)' : 'shadow-(--shadow-inset-line)'}`}
       >
+        {href !== null && (
+          <>
+            <span className="sr-only">{pl.fixtureDetails(fixture.number)}</span>{' '}
+          </>
+        )}
         {fixture.slots.map((slot, index) => (
           <SlotRow
             key={index}
@@ -106,7 +116,7 @@ function MatchBox({ view, fixture, live }: MatchBoxProps) {
             outcome={outcomeOf(slot)}
           />
         ))}
-      </div>
+      </Box>
       <p className={`flex items-center gap-1.5 text-[13px] ${running ? 'text-(--color-text)' : 'text-(--color-text-muted)'}`}>
         {running && <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-(--color-accent)" />}
         {fixtureTag(view, fixture, live.get(fixture.id)?.legNumber ?? null)}

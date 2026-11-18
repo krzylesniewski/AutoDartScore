@@ -13,6 +13,7 @@ import { ShuffleIcon, TrophyIcon } from '../components/icons';
 import { NextFixtureCard } from '../components/NextFixtureCard';
 import { Notice } from '../components/Notice';
 import { PlacementsCard } from '../components/PlacementsCard';
+import { PlayedFixtures } from '../components/PlayedFixtures';
 import { PlayoffBracket } from '../components/PlayoffBracket';
 import { RunningFixtures } from '../components/RunningFixtures';
 import { StandingsTable } from '../components/StandingsTable';
@@ -227,6 +228,7 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
           <div className="flex min-w-0 flex-col gap-(--space-page) lg:col-start-2 lg:row-start-2">
             {tab === 'playoff' && <PlacementsCard view={view} />}
             <FixtureQueue view={view} busy={busy} error={errorAt('queue')} onPlay={(fixture) => play('queue', fixture)} />
+            <PlayedFixtures view={view} />
             {(canCorrect || canWithdraw) && (
               <div className="flex flex-wrap gap-2.5 lg:mt-auto">
                 {canCorrect && (

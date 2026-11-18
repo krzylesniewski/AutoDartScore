@@ -3,6 +3,7 @@ import {
   FrequentHitsResponse,
   HeadToHead,
   LoginResponse,
+  MatchLegs,
   MatchListItem,
   MatchSnapshot,
   MatchSummary,
@@ -258,6 +259,10 @@ export function getOverall(period: StatsPeriod): Promise<StatsOverall> {
 
 export function getMatchSummary(matchId: string): Promise<MatchSummary> {
   return request(`/matches/${encodeURIComponent(matchId)}/summary`, MatchSummary);
+}
+
+export function getMatchLegs(matchId: string): Promise<MatchLegs> {
+  return request(`/matches/${encodeURIComponent(matchId)}/legs`, MatchLegs);
 }
 
 // Pusty powód (same spacje) nie idzie do serwera.

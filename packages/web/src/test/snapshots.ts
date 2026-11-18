@@ -5,6 +5,8 @@ import type {
   Fixture,
   LegProgress,
   LegTurn,
+  MatchLeg,
+  MatchLegs,
   MatchListItem,
   MatchSnapshot,
   MatchSnapshotPlayer,
@@ -36,6 +38,45 @@ export function legTurn(playerId: string, overrides: Partial<LegTurn> = {}): Leg
     points: bust ? 0 : 60,
     remainingAfter: bust ? 501 : 441,
     bust,
+    ...overrides,
+  };
+}
+
+// Kolejne tury gracza po trzy rzutki z podanych punktów, z pozostałym wynikiem liczonym od startingScore.
+export function scoredTurns(playerId: string, points: readonly number[], startingScore = 501): LegTurn[] {
+  let remaining = startingScore;
+  return points.map((scored, index) => {
+    remaining -= scored;
+    return legTurn(playerId, { turnIndex: index, points: scored, remainingAfter: remaining });
+  });
+}
+
+// Leg bez zwycięzcy i bez tur między p1 i p2, zaczyna p1.
+export function matchLeg(overrides: Partial<MatchLeg> = {}): MatchLeg {
+  return {
+    legIndex: 0,
+    starterId: 'p1',
+    winnerId: null,
+    checkout: null,
+    dartsThrown: null,
+    players: [
+      { playerId: 'p1', darts: 0, average: null },
+      { playerId: 'p2', darts: 0, average: null },
+    ],
+    turns: [],
+    ...overrides,
+  };
+}
+
+export function matchLegs(legs: readonly MatchLeg[] = [matchLeg()], overrides: Partial<MatchLegs> = {}): MatchLegs {
+  return {
+    matchId: 'm1',
+    finished: false,
+    eventSeq: 0,
+    startingScore: 501,
+    legsToWin: 2,
+    players: ['p1', 'p2'],
+    legs: [...legs],
     ...overrides,
   };
 }
