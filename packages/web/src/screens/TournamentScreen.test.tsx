@@ -278,6 +278,15 @@ describe('TournamentScreen: header', () => {
     expect(screen.getByText('Brak połączenia z serwerem. Łączę ponownie…')).toBeTruthy();
     expect(screen.getByRole('heading', { level: 1, name: 'Grupa jesienna' })).toBeTruthy();
   });
+
+  it('links to the TV view from the header', async () => {
+    reply = () => json(200, groupView({ id: 't 1' }));
+    await renderScreen('t 1');
+    const header = screen.getByRole('heading', { level: 1 }).closest('header');
+    expect(header).not.toBeNull();
+    const link = within(header as HTMLElement).getByRole('link', { name: 'Widok TV' });
+    expect(link.getAttribute('href')).toBe('#/tournaments/t%201/tv');
+  });
 });
 
 describe('TournamentScreen: tabs', () => {

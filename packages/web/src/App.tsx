@@ -15,6 +15,7 @@ const TournamentScreen = lazy(() => import('./screens/TournamentScreen').then((m
 const TournamentMatchScreen = lazy(() =>
   import('./screens/TournamentMatchScreen').then((module) => ({ default: module.TournamentMatchScreen })),
 );
+const TournamentTvScreen = lazy(() => import('./screens/TournamentTvScreen').then((module) => ({ default: module.TournamentTvScreen })));
 const PublicTournamentScreen = lazy(() =>
   import('./screens/PublicTournamentScreen').then((module) => ({ default: module.PublicTournamentScreen })),
 );
@@ -32,6 +33,7 @@ type Route =
   | { screen: 'tournaments' }
   | { screen: 'tournament'; tournamentId: string }
   | { screen: 'tournament-match'; tournamentId: string; matchId: string }
+  | { screen: 'tournament-tv'; tournamentId: string }
   | { screen: 'public-tournament'; tournamentId: string }
   | { screen: 'public-match'; tournamentId: string; matchId: string }
   | null;
@@ -75,6 +77,10 @@ function parseRoute(hash: string): Route {
       tournamentId: decodeURIComponent(tournamentMatch[1]),
       matchId: decodeURIComponent(tournamentMatch[2]),
     };
+  }
+  const tournamentTv = /^#\/tournaments\/([^/]+)\/tv$/.exec(hash);
+  if (tournamentTv?.[1]) {
+    return { screen: 'tournament-tv', tournamentId: decodeURIComponent(tournamentTv[1]) };
   }
   const publicTournament = /^#\/t\/([^/]+)$/.exec(hash);
   if (publicTournament?.[1]) {
@@ -198,6 +204,15 @@ export function App() {
       <Stage light="list">
         <LazyScreen key={route.screen}>
           <TournamentMatchScreen key={`${route.tournamentId}/${route.matchId}`} tournamentId={route.tournamentId} matchId={route.matchId} />
+        </LazyScreen>
+      </Stage>
+    );
+  }
+  if (route?.screen === 'tournament-tv') {
+    return (
+      <Stage light="game">
+        <LazyScreen key={route.screen}>
+          <TournamentTvScreen key={route.tournamentId} tournamentId={route.tournamentId} />
         </LazyScreen>
       </Stage>
     );

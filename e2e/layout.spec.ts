@@ -13,7 +13,16 @@ import {
   postThrowsByApi,
 } from './helpers/api';
 import { currentThrower, keypadKey, scoreboard, throwerRow, waitForKeypad } from './helpers/game';
-import { boxOf, expectInViewport, expectNoHorizontalScroll, expectNoOverlap, expectSameBox, keypadBox, type Box } from './helpers/layout';
+import {
+  boxOf,
+  expectInViewport,
+  expectNoHorizontalScroll,
+  expectNoOverlap,
+  expectNoVerticalScroll,
+  expectSameBox,
+  keypadBox,
+  type Box,
+} from './helpers/layout';
 import { uniqueName, useToken } from './helpers/session';
 
 const VIEWPORTS = [
@@ -621,20 +630,6 @@ async function placeholderBox(page: Page): Promise<Box> {
     const rect = node.getBoundingClientRect();
     return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
   });
-}
-
-async function expectNoVerticalScroll(page: Page): Promise<void> {
-  const measured = await page.evaluate(() => {
-    const scrolling = document.scrollingElement;
-    const main = document.querySelector('main');
-    return [
-      ...(scrolling ? [{ name: 'document.scrollingElement', overflow: scrolling.scrollHeight - scrolling.clientHeight }] : []),
-      ...(main ? [{ name: 'main', overflow: main.scrollHeight - main.clientHeight }] : []),
-    ];
-  });
-  for (const { name, overflow } of measured) {
-    expect(overflow, name).toBeLessThanOrEqual(1);
-  }
 }
 
 function expectNear(actual: number, expected: number, what: string): void {
