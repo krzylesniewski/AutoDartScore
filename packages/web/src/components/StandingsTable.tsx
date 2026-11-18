@@ -1,16 +1,18 @@
-import type { Fixture, StandingRow, TournamentPlayer, TournamentView } from '@autoscore/schema';
+import type { Fixture, PublicTournamentPlayer, PublicTournamentView, StandingRow } from '@autoscore/schema';
 import { useId } from 'react';
 import { crossCell, highlightedFixtureId } from '../game/cross-table';
 import { formatAverage, formatLegDifference } from '../game/format-stat';
-import { tournamentMatchHref } from '../game/tournament-match-href';
 import { useMediaQuery } from '../game/use-media-query';
 import { pl } from '../i18n/pl';
 import { Abbreviation } from './Abbreviation';
 import { Avatar } from './Avatar';
 import { ArrowUpIcon } from './icons';
+import { useMatchHref } from './match-href-context';
 
 export interface StandingsTableProps {
-  view: TournamentView;
+  view: PublicTournamentView;
+  // auto: tabela krzyżowa od sm, krótka poniżej. short: zawsze krótka.
+  variant?: 'auto' | 'short';
 }
 
 const SM_QUERY = '(min-width: 40rem)';
@@ -34,7 +36,7 @@ function PlaceCell({ row }: { row: StandingRow }) {
   );
 }
 
-function PlayerHeader({ player, row }: { player: TournamentPlayer | undefined; row: StandingRow }) {
+function PlayerHeader({ player, row }: { player: PublicTournamentPlayer | undefined; row: StandingRow }) {
   const name = player?.name ?? '';
   return (
     <th scope="row" className="px-1.5 text-left font-normal">
@@ -78,11 +80,12 @@ function CrossCellView({
   columnId,
   highlighted,
 }: {
-  view: TournamentView;
+  view: PublicTournamentView;
   rowId: string;
   columnId: string;
   highlighted: string | null;
 }) {
+  const matchHref = useMatchHref();
   const cell = crossCell(view, rowId, columnId);
   const box = 'mx-auto flex h-[54px] min-w-[52px] flex-col items-center justify-center gap-px rounded-(--radius-chip)';
   if (cell.kind === 'self') {
@@ -103,7 +106,7 @@ function CrossCellView({
     const mark = resultMark(cell.fixture);
     const { matchId } = cell.fixture;
     // Walkower nie ma rozegranego meczu do pokazania, więc link mają tylko zakończone mecze.
-    const href = cell.fixture.status === 'finished' && matchId !== null ? tournamentMatchHref(view.id, matchId) : null;
+    const href = cell.fixture.status === 'finished' && matchId !== null ? matchHref(view.id, matchId) : null;
     const Box = href === null ? 'span' : 'a';
     return (
       <td className="px-0.5">
@@ -156,9 +159,9 @@ function CrossCellView({
 }
 
 interface TableProps {
-  view: TournamentView;
+  view: PublicTournamentView;
   titleId: string;
-  players: ReadonlyMap<string, TournamentPlayer>;
+  players: ReadonlyMap<string, PublicTournamentPlayer>;
 }
 
 function CrossTable({ view, titleId, players }: TableProps) {
@@ -287,9 +290,9 @@ function Legend({ items }: { items: readonly string[] }) {
   );
 }
 
-export function StandingsTable({ view }: StandingsTableProps) {
+export function StandingsTable({ view, variant = 'auto' }: StandingsTableProps) {
   const titleId = useId();
-  const wide = useMediaQuery(SM_QUERY);
+  const wide = useMediaQuery(SM_QUERY) && variant === 'auto';
   const isGroup = view.format === 'group_playoff';
   const players = new Map(view.players.map((player) => [player.id, player]));
   const meta = [pl.tableLegsMeta(view.config.legsToWin.group)];

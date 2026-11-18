@@ -1,16 +1,15 @@
 import type {
+  PublicTournamentPlayer,
+  PublicTournamentView,
   TournamentLegRecord,
-  TournamentPlayer,
   TournamentRecord,
   TournamentStats,
   TournamentStatsPlayer,
-  TournamentView,
 } from '@autoscore/schema';
 import { useId, useState, type ReactNode } from 'react';
 import { NO_VALUE, formatAverage, formatLegDifference, formatNumber } from '../game/format-stat';
 import { placeColor } from '../game/place-color';
 import { placementRows } from '../game/placement-rows';
-import { tournamentMatchHref } from '../game/tournament-match-href';
 import {
   DEFAULT_SORT,
   bestValues,
@@ -27,18 +26,19 @@ import { pl } from '../i18n/pl';
 import { Abbreviation } from './Abbreviation';
 import { Avatar } from './Avatar';
 import { StarIcon } from './icons';
+import { useMatchHref } from './match-href-context';
 
 export interface TournamentStatsPanelProps {
-  view: TournamentView;
+  view: PublicTournamentView;
   stats: TournamentStats;
 }
 
-type Players = ReadonlyMap<string, TournamentPlayer>;
+type Players = ReadonlyMap<string, PublicTournamentPlayer>;
 
 const labelClass = 'font-display text-(length:--text-label) font-bold tracking-[0.18em] text-(--color-text-muted) uppercase';
 const titleClass = 'font-display text-[26px] leading-tight font-extrabold';
 
-function Podium({ view, players }: { view: TournamentView; players: Players }) {
+function Podium({ view, players }: { view: PublicTournamentView; players: Players }) {
   const titleId = useId();
   const rows = placementRows(view).filter((row) => row.place <= 3 && row.playerId !== null);
   return (
@@ -74,7 +74,8 @@ interface RecordEntry {
   format(value: number): string;
 }
 
-function RecordItem({ view, players, entry }: { view: TournamentView; players: Players; entry: RecordEntry }) {
+function RecordItem({ view, players, entry }: { view: PublicTournamentView; players: Players; entry: RecordEntry }) {
+  const matchHref = useMatchHref();
   const box = 'flex min-h-11 flex-col gap-0.5 border-t border-(--color-border-subtle) py-2.5';
   const label = <span className="text-sm text-(--color-text-muted)">{entry.label}</span>;
   const { record } = entry;
@@ -89,7 +90,7 @@ function RecordItem({ view, players, entry }: { view: TournamentView; players: P
   const where = recordWhere(view, record);
   return (
     <li>
-      <a href={tournamentMatchHref(view.id, record.matchId)} className={`${box} text-(--color-text) no-underline`}>
+      <a href={matchHref(view.id, record.matchId)} className={`${box} text-(--color-text) no-underline`}>
         {label}
         <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
           <span className="font-display text-[32px] leading-none font-black tabular-nums">{entry.format(record.value)}</span>
@@ -101,7 +102,7 @@ function RecordItem({ view, players, entry }: { view: TournamentView; players: P
   );
 }
 
-function Records({ view, stats, players }: { view: TournamentView; stats: TournamentStats; players: Players }) {
+function Records({ view, stats, players }: { view: PublicTournamentView; stats: TournamentStats; players: Players }) {
   const titleId = useId();
   const { records } = stats;
   const entries: RecordEntry[] = [
@@ -205,7 +206,7 @@ function ValueCell({ column, row, best }: { column: Column; row: TournamentStats
   );
 }
 
-function PlayersTable({ view, stats, players }: { view: TournamentView; stats: TournamentStats; players: Players }) {
+function PlayersTable({ view, stats, players }: { view: PublicTournamentView; stats: TournamentStats; players: Players }) {
   const titleId = useId();
   const [sort, setSort] = useState<StatsSort>(DEFAULT_SORT);
   const places = new Map(view.placements.map((placement) => [placement.playerId, placement.place]));

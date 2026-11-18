@@ -1,4 +1,4 @@
-import type { Fixture, TournamentView } from '@autoscore/schema';
+import type { Fixture, PublicTournamentView } from '@autoscore/schema';
 import { pl } from '../i18n/pl';
 
 export interface PlacementRow {
@@ -16,7 +16,7 @@ function sourceName(fixture: Fixture): string {
 }
 
 // Ostatni rozegrany mecz gracza. Zwycięzca dostaje też wynik, od swojej strony.
-function knownText(view: TournamentView, playerId: string): string {
+function knownText(view: PublicTournamentView, playerId: string): string {
   const last = view.fixtures
     .filter((fixture) => decided(fixture) && fixture.slots.some((slot) => slot.kind === 'player' && slot.playerId === playerId))
     .reduce<Fixture | null>((latest, fixture) => (latest === null || fixture.number > latest.number ? fixture : latest), null);
@@ -39,7 +39,7 @@ interface Pending {
 }
 
 // Miejsca znane z widoku i te, o których jeszcze rozstrzygnie finał, mecz o 3. miejsce albo finał pocieszenia.
-export function placementRows(view: TournamentView): PlacementRow[] {
+export function placementRows(view: PublicTournamentView): PlacementRow[] {
   const rows: PlacementRow[] = view.placements.map(({ playerId, place }) => ({ place, playerId, text: knownText(view, playerId) }));
   const advance = view.config.advance ?? 0;
   const pending: Pending[] = [

@@ -1,4 +1,4 @@
-import type { TournamentView } from '@autoscore/schema';
+import type { PublicTournamentView } from '@autoscore/schema';
 import { useId } from 'react';
 import { placeColor } from '../game/place-color';
 import { placementRows } from '../game/placement-rows';
@@ -6,7 +6,7 @@ import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
 
 export interface PlacementsCardProps {
-  view: TournamentView;
+  view: PublicTournamentView;
 }
 
 // W trakcie turnieju tylko znane miejsca i te, o których rozstrzygnie jeszcze konkretny mecz.

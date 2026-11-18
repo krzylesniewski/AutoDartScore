@@ -1,8 +1,8 @@
-import type { FixtureSlot, TournamentPlayer, TournamentView } from '@autoscore/schema';
+import type { FixtureSlot, PublicTournamentPlayer, PublicTournamentView } from '@autoscore/schema';
 import { pl } from '../i18n/pl';
 import { fixtureOrdinal } from './fixture-label';
 
-export function slotPlayer(view: TournamentView, slot: FixtureSlot): TournamentPlayer | null {
+export function slotPlayer(view: PublicTournamentView, slot: FixtureSlot): PublicTournamentPlayer | null {
   if (slot.kind !== 'player') {
     return null;
   }
@@ -10,7 +10,7 @@ export function slotPlayer(view: TournamentView, slot: FixtureSlot): TournamentP
 }
 
 // Wolny los ma własny napis. Zwycięzca innego meczu albo miejsce z tabeli jeszcze nie ma gracza.
-export function slotText(view: TournamentView, slot: FixtureSlot): string {
+export function slotText(view: PublicTournamentView, slot: FixtureSlot): string {
   const player = slotPlayer(view, slot);
   if (player) {
     return player.name;
@@ -19,7 +19,7 @@ export function slotText(view: TournamentView, slot: FixtureSlot): string {
 }
 
 // Dopełniacz meczu, z którego przyjdzie gracz: „półfinału 2”, „ćwierćfinału 3 (pocieszenie)”.
-function sourceFixture(view: TournamentView, fixtureId: string): string | null {
+function sourceFixture(view: PublicTournamentView, fixtureId: string): string | null {
   const source = view.fixtures.find((fixture) => fixture.id === fixtureId);
   if (!source?.bracketRound) {
     return null;
@@ -30,7 +30,7 @@ function sourceFixture(view: TournamentView, fixtureId: string): string | null {
 }
 
 // W drabince slot bez gracza mówi, skąd gracz przyjdzie.
-export function slotSourceText(view: TournamentView, slot: FixtureSlot): string {
+export function slotSourceText(view: PublicTournamentView, slot: FixtureSlot): string {
   switch (slot.kind) {
     case 'player':
       return slotPlayer(view, slot)?.name ?? pl.slotPending;

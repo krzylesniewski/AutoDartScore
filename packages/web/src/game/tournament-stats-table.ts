@@ -1,10 +1,10 @@
 import type {
   Fixture,
+  PublicTournamentView,
   TournamentLegRecord,
   TournamentPlacement,
   TournamentRecord,
   TournamentStatsPlayer,
-  TournamentView,
 } from '@autoscore/schema';
 import { pl } from '../i18n/pl';
 import { fixtureLabel } from './fixture-label';
@@ -109,7 +109,7 @@ export function isBest(best: BestValues, column: BestColumn, value: number | nul
   return value !== null && best[column] === value;
 }
 
-function opponentName(view: TournamentView, fixture: Fixture, playerId: string): string | null {
+function opponentName(view: PublicTournamentView, fixture: Fixture, playerId: string): string | null {
   const other = fixture.slots.find((slot) => slot.kind === 'player' && slot.playerId !== playerId);
   if (other?.kind !== 'player') {
     return null;
@@ -118,7 +118,7 @@ function opponentName(view: TournamentView, fixture: Fixture, playerId: string):
 }
 
 // Gdzie padł rekord: etykieta meczu i rywal (średnia meczu) albo numer lega (rekordy z lega).
-export function recordWhere(view: TournamentView, record: TournamentRecord | TournamentLegRecord): string {
+export function recordWhere(view: PublicTournamentView, record: TournamentRecord | TournamentLegRecord): string {
   const fixture = view.fixtures.find((entry) => entry.id === record.fixtureId);
   if (!fixture) {
     return '';

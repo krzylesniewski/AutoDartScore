@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   matchLeg,
   matchLegs,
+  publicTournamentMatch,
+  publicTournamentView,
   scoredTurns,
   snapshot,
   tournamentListItem,
@@ -19,14 +21,19 @@ import {
   createTournament,
   getMatch,
   getMatchLegs,
+  getPublicTournament,
+  getPublicTournamentMatch,
+  getPublicTournamentStats,
   getTournament,
   getTournamentStats,
   listTournaments,
   redrawTournament,
+  setTournamentSharing,
   startFixture,
   undo,
   withdrawPlayer,
 } from './client';
+import { UNAUTHORIZED_EVENT, clearToken, readToken, saveToken } from './session';
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -276,5 +283,83 @@ describe('request time limit', () => {
     const caught: unknown = await getMatch('m1').catch((error: unknown) => error);
     expect(caught).toBe(timedOut);
     expect(caught).not.toBeInstanceOf(ApiRequestError);
+  });
+});
+
+describe('public tournament requests', () => {
+  function stubPublic(status = 200) {
+    const fetch = vi.fn<typeof globalThis.fetch>((input) => {
+      const url = typeof input === 'string' ? input : '';
+      if (status !== 200) {
+        return Promise.resolve(json(status, { error: status === 401 ? 'unauthorized' : 'not_found', message: 'Nope' }));
+      }
+      if (url.endsWith('/stats')) {
+        return Promise.resolve(json(200, tournamentStats({ tournamentId: 't 1' })));
+      }
+      if (url.includes('/matches/')) {
+        return Promise.resolve(json(200, publicTournamentMatch({ tournamentId: 't 1' })));
+      }
+      return Promise.resolve(json(200, publicTournamentView(tournamentView({ id: 't 1' }))));
+    });
+    vi.stubGlobal('fetch', fetch);
+    return fetch;
+  }
+
+  afterEach(() => {
+    clearToken();
+  });
+
+  it('gets the public view, stats and match by encoded ids', async () => {
+    const fetch = stubPublic();
+    const view = await getPublicTournament('t 1');
+    const stats = await getPublicTournamentStats('t 1');
+    const match = await getPublicTournamentMatch('t 1', 'm/2');
+    expect([view.id, stats.tournamentId, match.tournamentId]).toEqual(['t 1', 't 1', 't 1']);
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual([
+      '/api/public/tournaments/t%201',
+      '/api/public/tournaments/t%201/stats',
+      '/api/public/tournaments/t%201/matches/m%2F2',
+    ]);
+  });
+
+  it('never sends the stored token', async () => {
+    saveToken('t1');
+    const fetch = stubPublic();
+    await getPublicTournament('t 1');
+    await getPublicTournamentStats('t 1');
+    await getPublicTournamentMatch('t 1', 'm1');
+    expect(fetch).toHaveBeenCalledTimes(3);
+    for (const call of fetch.mock.calls) {
+      expect(new Headers(call[1]?.headers).get('authorization')).toBeNull();
+    }
+  });
+
+  it.each([401, 404])('rejects a public %i without the unauthorized event and keeps the token', async (status) => {
+    const target = new EventTarget();
+    vi.stubGlobal('window', target);
+    const listener = vi.fn();
+    target.addEventListener(UNAUTHORIZED_EVENT, listener);
+    saveToken('t1');
+    stubPublic(status);
+    const caught: unknown = await getPublicTournament('t1').catch((error: unknown) => error);
+    expect(caught).toBeInstanceOf(ApiRequestError);
+    expect(caught).toMatchObject({ status });
+    expect(listener).not.toHaveBeenCalled();
+    expect(readToken()).toBe('t1');
+  });
+
+  it('switches sharing with an authenticated JSON POST, with and without expectedSeq', async () => {
+    saveToken('t1');
+    const view = tournamentView({ id: 't 1', sharing: false, eventSeq: 4 });
+    const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(json(200, view)));
+    vi.stubGlobal('fetch', fetch);
+    expect(await setTournamentSharing('t 1', false, 3)).toEqual(view);
+    await setTournamentSharing('t 1', true);
+    expect(fetch.mock.calls.map((call) => call[0])).toEqual(['/api/tournaments/t%201/sharing', '/api/tournaments/t%201/sharing']);
+    const [first, second] = fetch.mock.calls.map((call) => call[1]);
+    expect(first?.method).toBe('POST');
+    expect(new Headers(first?.headers).get('authorization')).toBe('Bearer t1');
+    expect(JSON.parse(first?.body as string)).toEqual({ sharing: false, expectedSeq: 3 });
+    expect(JSON.parse(second?.body as string)).toEqual({ sharing: true });
   });
 });

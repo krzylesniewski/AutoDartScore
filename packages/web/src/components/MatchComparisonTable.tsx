@@ -1,12 +1,14 @@
-import type { MatchSnapshotPlayer, MatchSummary, PlayerStatLine } from '@autoscore/schema';
+import type { MatchSummary, PlayerStatLine, PublicMatchPlayer } from '@autoscore/schema';
 import { useId } from 'react';
 import { betterSide } from '../game/better-side';
 import { NO_VALUE, formatAverage, formatBestLeg, formatDoubles, formatNumber } from '../game/format-stat';
 import { pl } from '../i18n/pl';
 import { Notice } from './Notice';
 
+type ComparedPlayer = Pick<PublicMatchPlayer, 'id' | 'name'>;
+
 export interface MatchComparisonTableProps {
-  players: readonly [MatchSnapshotPlayer, MatchSnapshotPlayer];
+  players: readonly [ComparedPlayer, ComparedPlayer];
   summary: MatchSummary | null; // null do pierwszej odpowiedzi
   error: boolean;
 }

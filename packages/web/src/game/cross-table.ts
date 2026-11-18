@@ -1,4 +1,4 @@
-import type { Fixture, TournamentView } from '@autoscore/schema';
+import type { Fixture, PublicTournamentView } from '@autoscore/schema';
 
 export type CrossCell =
   | { readonly kind: 'self' }
@@ -17,7 +17,7 @@ function playerIn(fixture: Fixture, slot: 0 | 1): string | null {
 }
 
 // Legi zawsze od strony gracza z wiersza, więc komórki po obu stronach przekątnej są swoim odbiciem.
-export function crossCell(view: TournamentView, rowPlayerId: string, columnPlayerId: string): CrossCell {
+export function crossCell(view: PublicTournamentView, rowPlayerId: string, columnPlayerId: string): CrossCell {
   if (rowPlayerId === columnPlayerId) {
     return { kind: 'self' };
   }
@@ -42,6 +42,6 @@ export function crossCell(view: TournamentView, rowPlayerId: string, columnPlaye
   return { kind: 'none' };
 }
 
-export function highlightedFixtureId(view: TournamentView): string | null {
+export function highlightedFixtureId(view: PublicTournamentView): string | null {
   return view.liveFixtureId ?? view.nextFixtureId;
 }

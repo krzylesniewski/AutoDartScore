@@ -14,6 +14,9 @@ import type {
   MatchSummaryPlayer,
   Player,
   PlayerStatLine,
+  PublicMatch,
+  PublicTournamentMatch,
+  PublicTournamentView,
   StandingRow,
   TournamentConfig,
   TournamentFormat,
@@ -362,6 +365,62 @@ export function tournamentStats(overrides: Partial<TournamentStats> = {}): Tourn
     tournamentId: 't1',
     players: ['p1', 'p2', 'p3'].map((playerId) => tournamentStatsPlayer(playerId)),
     records: { highestMatchAverage: null, highestCheckout: null, shortestLeg: null, highestTurn: null },
+    ...overrides,
+  };
+}
+
+// Publiczny widok z prywatnego: bez pól tylko dla zalogowanych i bez flagi gościa.
+export function publicTournamentView(view: TournamentView = tournamentView()): PublicTournamentView {
+  return {
+    id: view.id,
+    name: view.name,
+    format: view.format,
+    config: view.config,
+    status: view.status,
+    createdAt: view.createdAt,
+    finishedAt: view.finishedAt,
+    players: view.players.map(({ id, name, avatar, color }) => ({ id, name, avatar, color })),
+    fixtures: view.fixtures,
+    standings: view.standings,
+    nextFixtureId: view.nextFixtureId,
+    liveFixtureId: view.liveFixtureId,
+    placements: view.placements,
+  };
+}
+
+export function publicMatch(state: MatchSnapshot = snapshot()): PublicMatch {
+  const { id, status, startingScore, legsToWin, createdAt, startedAt, finishedAt, pausedMs, currentPlayerId, winnerId } = state;
+  return {
+    id,
+    status,
+    startingScore,
+    legsToWin,
+    createdAt,
+    startedAt,
+    finishedAt,
+    pausedMs,
+    currentPlayerId,
+    winnerId,
+    players: state.players.map(({ id: playerId, name, avatar, color, legsWon, remaining }) => ({
+      id: playerId,
+      name,
+      avatar,
+      color,
+      legsWon,
+      remaining,
+    })),
+  };
+}
+
+// Mecz ligi g-1 z tournamentView() w trakcie, bez rzutek.
+export function publicTournamentMatch(overrides: Partial<PublicTournamentMatch> = {}): PublicTournamentMatch {
+  return {
+    tournamentId: 't1',
+    fixtureId: 'g-1',
+    label: 'Liga, mecz 1',
+    match: publicMatch(),
+    summary: summary(),
+    legs: matchLegs(),
     ...overrides,
   };
 }

@@ -15,6 +15,10 @@ const TournamentScreen = lazy(() => import('./screens/TournamentScreen').then((m
 const TournamentMatchScreen = lazy(() =>
   import('./screens/TournamentMatchScreen').then((module) => ({ default: module.TournamentMatchScreen })),
 );
+const PublicTournamentScreen = lazy(() =>
+  import('./screens/PublicTournamentScreen').then((module) => ({ default: module.PublicTournamentScreen })),
+);
+const PublicMatchScreen = lazy(() => import('./screens/PublicMatchScreen').then((module) => ({ default: module.PublicMatchScreen })));
 
 const HOME = '#/';
 
@@ -28,6 +32,8 @@ type Route =
   | { screen: 'tournaments' }
   | { screen: 'tournament'; tournamentId: string }
   | { screen: 'tournament-match'; tournamentId: string; matchId: string }
+  | { screen: 'public-tournament'; tournamentId: string }
+  | { screen: 'public-match'; tournamentId: string; matchId: string }
   | null;
 
 function parseRoute(hash: string): Route {
@@ -70,6 +76,18 @@ function parseRoute(hash: string): Route {
       matchId: decodeURIComponent(tournamentMatch[2]),
     };
   }
+  const publicTournament = /^#\/t\/([^/]+)$/.exec(hash);
+  if (publicTournament?.[1]) {
+    return { screen: 'public-tournament', tournamentId: decodeURIComponent(publicTournament[1]) };
+  }
+  const publicMatch = /^#\/t\/([^/]+)\/matches\/([^/]+)$/.exec(hash);
+  if (publicMatch?.[1] && publicMatch[2]) {
+    return {
+      screen: 'public-match',
+      tournamentId: decodeURIComponent(publicMatch[1]),
+      matchId: decodeURIComponent(publicMatch[2]),
+    };
+  }
   return null;
 }
 
@@ -92,6 +110,26 @@ export function App() {
   }, [unknown]);
 
   useEffect(() => onUnauthorized(() => setLoginRequired(true)), []);
+
+  // Publiczny link działa bez logowania, więc 401 z innego miejsca nie może go zasłonić ekranem logowania.
+  if (route?.screen === 'public-tournament') {
+    return (
+      <Stage light="list">
+        <LazyScreen key={route.screen}>
+          <PublicTournamentScreen key={route.tournamentId} tournamentId={route.tournamentId} />
+        </LazyScreen>
+      </Stage>
+    );
+  }
+  if (route?.screen === 'public-match') {
+    return (
+      <Stage light="list">
+        <LazyScreen key={route.screen}>
+          <PublicMatchScreen key={`${route.tournamentId}/${route.matchId}`} tournamentId={route.tournamentId} matchId={route.matchId} />
+        </LazyScreen>
+      </Stage>
+    );
+  }
 
   // Po zalogowaniu ekran z adresu montuje się od nowa i pobiera dane już z tokenem.
   if (loginRequired) {

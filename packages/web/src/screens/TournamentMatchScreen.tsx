@@ -90,7 +90,7 @@ function MatchPage({ view, state, summary, legs, connectionLost }: MatchPageProp
       {connectionLost && !state.finished && <Notice text={pl.connectionLost} appearance="soft" />}
       <div className="grid grid-cols-1 content-start gap-(--space-6) lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)] lg:items-start lg:gap-(--space-page)">
         <div className="min-w-0 lg:col-span-2">
-          <TournamentMatchHeader state={state} fixture={fixture} />
+          <TournamentMatchHeader match={state} label={state.tournament?.label ?? ''} legNumber={state.legIndex + 1} fixture={fixture} />
         </div>
         {first && second && <MatchComparisonTable players={[first, second]} summary={summary.summary} error={summary.error} />}
         <LegHistory legs={legs.legs} error={legs.error} names={names} />

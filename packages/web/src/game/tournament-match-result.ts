@@ -1,4 +1,4 @@
-import type { Fixture, FixtureResult, MatchSnapshot } from '@autoscore/schema';
+import type { Fixture, FixtureResult, PublicMatch, PublicMatchPlayer } from '@autoscore/schema';
 
 export interface HeaderResult {
   readonly legs: readonly [number, number];
@@ -7,7 +7,8 @@ export interface HeaderResult {
   readonly played: readonly [number, number] | null;
 }
 
-type ResultState = Pick<MatchSnapshot, 'id' | 'players' | 'winnerId'>;
+// Pasuje do MatchSnapshot i do PublicMatch z publicznego API.
+type ResultState = Pick<PublicMatch, 'id' | 'winnerId'> & { readonly players: readonly Pick<PublicMatchPlayer, 'id' | 'legsWon'>[] };
 
 function playerIds(state: ResultState): [string, string] {
   return [state.players[0]?.id ?? '', state.players[1]?.id ?? ''];
