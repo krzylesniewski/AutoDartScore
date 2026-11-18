@@ -716,4 +716,13 @@ export const pl = {
   copyFailed: 'Nie udało się skopiować. Adres jest zaznaczony, skopiuj go ręcznie.',
   sharingOff: 'Udostępnianie jest wyłączone. Link i kod QR pojawią się po włączeniu.',
   qrCode: 'Kod QR publicznego linku',
+  tvView: 'Widok TV',
+  tvRunningMatch: 'Trwający mecz',
+  tvThisTurn: 'Ta tura',
+  tvPlayerLine: (average: string, lastTurn: string) => `średnia meczu ${average} · ostatnia tura ${lastTurn}`,
+  tvLastTurnBust: 'bust',
+  slotWinnerOfThis: 'Zwycięzca tego meczu',
+  slotLoserOfThis: 'Przegrany tego meczu',
+  tvFollowTitle: 'Śledź turniej na telefonie',
+  tvFollowText: 'Tabela, drabinka i statystyki meczów, bez logowania.',
 } as const;

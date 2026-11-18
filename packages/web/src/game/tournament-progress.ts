@@ -1,4 +1,5 @@
 import type { Fixture, PublicTournamentView } from '@autoscore/schema';
+import { pl } from '../i18n/pl';
 
 export type ProgressPhase = 'league' | 'group' | 'playoff' | 'finished';
 
@@ -33,4 +34,17 @@ export function tournamentProgress(view: PublicTournamentView): TournamentProgre
     'playoff',
     played.filter((fixture) => fixture.phase !== 'group'),
   );
+}
+
+export function progressText(progress: TournamentProgress): string {
+  switch (progress.phase) {
+    case 'finished':
+      return pl.tournamentFinished;
+    case 'league':
+      return pl.phaseProgress(pl.formatLeague, progress.done, progress.total);
+    case 'group':
+      return pl.phaseProgress(pl.phaseGroup, progress.done, progress.total);
+    default:
+      return pl.phaseProgress(pl.phasePlayoff, progress.done, progress.total);
+  }
 }

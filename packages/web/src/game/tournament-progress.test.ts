@@ -1,7 +1,7 @@
 import type { FixtureSlot } from '@autoscore/schema';
 import { describe, expect, it } from 'vitest';
 import { fixture, tournamentView } from '../test/snapshots';
-import { tournamentProgress } from './tournament-progress';
+import { progressText, tournamentProgress } from './tournament-progress';
 
 const PAIR: [FixtureSlot, FixtureSlot] = [
   { kind: 'player', playerId: 'p1', seed: null },
@@ -72,5 +72,17 @@ describe('tournamentProgress', () => {
       fixtures: [played('g-1', 1), played('g-2', 2), bye('p-sf-1', 3), played('p-f', 4, 'playoff')],
     });
     expect(tournamentProgress(view)).toEqual({ phase: 'finished', done: 3, total: 3 });
+  });
+});
+
+describe('progressText', () => {
+  it('names each phase with its progress', () => {
+    expect(progressText({ phase: 'league', done: 1, total: 3 })).toBe('Liga · 1 z 3 meczów');
+    expect(progressText({ phase: 'group', done: 9, total: 15 })).toBe('Faza grupowa · 9 z 15 meczów');
+    expect(progressText({ phase: 'playoff', done: 0, total: 1 })).toBe('Play-off · 0 z 1 meczu');
+  });
+
+  it('says the tournament is finished without a count', () => {
+    expect(progressText({ phase: 'finished', done: 3, total: 3 })).toBe('Turniej zakończony');
   });
 });

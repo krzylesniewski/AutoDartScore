@@ -22,7 +22,7 @@ import { TournamentStatsPanel } from '../components/TournamentStatsPanel';
 import { TournamentTabs, type TournamentTab } from '../components/TournamentTabs';
 import { WithdrawPlayerDialog } from '../components/WithdrawPlayerDialog';
 import { correctableFixtures, withdrawCandidates } from '../game/tournament-incidents';
-import { tournamentProgress, type TournamentProgress } from '../game/tournament-progress';
+import { progressText, tournamentProgress } from '../game/tournament-progress';
 import { FORMAT_LABELS } from '../game/tournament-setup';
 import { pl } from '../i18n/pl';
 
@@ -67,19 +67,6 @@ function defaultTab(view: TournamentView): TabId {
     return 'playoff';
   }
   return tabsFor(view)[0]?.id ?? 'table';
-}
-
-function progressText(progress: TournamentProgress): string {
-  switch (progress.phase) {
-    case 'finished':
-      return pl.tournamentFinished;
-    case 'league':
-      return pl.phaseProgress(pl.formatLeague, progress.done, progress.total);
-    case 'group':
-      return pl.phaseProgress(pl.phaseGroup, progress.done, progress.total);
-    default:
-      return pl.phaseProgress(pl.phasePlayoff, progress.done, progress.total);
-  }
 }
 
 export function TournamentScreen({ tournamentId }: TournamentScreenProps) {
@@ -205,6 +192,9 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
               {pl.share}
             </button>
           )}
+          <a href={`#/tournaments/${encodeURIComponent(view.id)}/tv`} className="sc-btn sc-btn--outline">
+            {pl.tvView}
+          </a>
         </div>
       </header>
       {(connection === 'closed' || errorAt('redraw')) && (

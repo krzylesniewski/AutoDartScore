@@ -172,6 +172,24 @@ describe('App', () => {
     expect(stageLight()).toBe('list');
   });
 
+  it('opens the TV view in #/tournaments/:id/tv without the main navigation', async () => {
+    vi.stubGlobal(
+      'WebSocket',
+      class extends EventTarget {
+        close(): void {}
+
+        send(): void {}
+      },
+    );
+    window.location.hash = `#/tournaments/${encodeURIComponent('t 1')}/tv`;
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Liga klubowa' })).toBeTruthy();
+    expect(urls).toContain('/api/tournaments/t%201');
+    expect(window.location.hash).toBe('#/tournaments/t%201/tv');
+    expect(screen.queryByRole('navigation', { name: 'Główna nawigacja' })).toBeNull();
+    expect(stageLight()).toBe('game');
+  });
+
   it('opens the tournament match page in #/tournaments/:id/matches/:matchId', async () => {
     const sockets: string[] = [];
     vi.stubGlobal(

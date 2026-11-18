@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   FINISHING_DARTS,
+  MISS,
   archiveTournamentByApi,
   createPlayerByApi,
   createTournamentByApi,
@@ -9,7 +10,7 @@ import {
   postThrowsByApi,
   startFixtureByApi,
 } from './helpers/api';
-import { boxOf, expectInViewport, expectNoHorizontalScroll } from './helpers/layout';
+import { boxOf, expectInViewport, expectNoHorizontalScroll, expectNoVerticalScroll } from './helpers/layout';
 import { uniqueName, useToken } from './helpers/session';
 
 const VIEWPORTS = [
@@ -96,4 +97,59 @@ test('plays a tournament match and returns to the tournament', async ({ page, re
   await expect(page).toHaveURL(/#\/tournaments\/[^/]+$/);
   await expect(page.getByText('Liga · 1 z 3 meczów')).toBeVisible();
   await expect(page.getByText('1–0', { exact: true })).toBeVisible();
+});
+
+// Mecz startuje w pierwszym teście TV, a następne go oglądają. afterAll kończy go razem z pozostałymi.
+let matchId: string;
+
+function tvUrl(): string {
+  return `/#/tournaments/${encodeURIComponent(tournamentId)}/tv`;
+}
+
+test('TV view shows the next match, then the started match without a reload at 1280×720', async ({ page, request }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(tvUrl());
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Następny mecz' })).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  await expectNoVerticalScroll(page);
+
+  const { nextFixtureId } = await getTournamentByApi(request, token, tournamentId);
+  expect(nextFixtureId).not.toBeNull();
+  ({ matchId } = await startFixtureByApi(request, token, tournamentId, nextFixtureId ?? ''));
+
+  const live = page.getByRole('region', { name: 'Trwający mecz' });
+  await expect(live).toBeVisible();
+  await expect(live.getByText('Rzuca', { exact: true })).toBeVisible();
+  await expectInViewport(await boxOf(live), page);
+  await expectNoHorizontalScroll(page);
+  await expectNoVerticalScroll(page);
+});
+
+test('TV view fits the live match at 1920×1080', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(tvUrl());
+  const live = page.getByRole('region', { name: 'Trwający mecz' });
+  await expect(live.getByText('Rzuca', { exact: true })).toBeVisible();
+  await expectInViewport(await boxOf(live), page);
+  await expectNoHorizontalScroll(page);
+  await expectNoVerticalScroll(page);
+});
+
+test('TV view has no horizontal scroll at 390×844', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(tvUrl());
+  await expect(page.getByRole('region', { name: 'Trwający mecz' }).getByText('Rzuca', { exact: true })).toBeVisible();
+  await expectNoHorizontalScroll(page);
+});
+
+test('TV view shows the last turn after three misses without a reload', async ({ page, request }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(tvUrl());
+  const live = page.getByRole('region', { name: 'Trwający mecz' });
+  await expect(live.getByText('Rzuca', { exact: true })).toBeVisible();
+  await expect(live.getByText('ostatnia tura 0')).toHaveCount(0);
+
+  await postThrowsByApi(request, token, matchId, [MISS, MISS, MISS]);
+  await expect(live.getByText('ostatnia tura 0')).toBeVisible();
 });
