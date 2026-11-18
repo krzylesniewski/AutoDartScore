@@ -44,7 +44,7 @@ function feederText(view: TournamentView, fixture: Fixture): string | null {
 export function fixtureTag(view: TournamentView, fixture: Fixture, legNumber: number | null): string {
   switch (fixture.status) {
     case 'finished':
-      return pl.fixtureTag(fixture.number, pl.tagFinished);
+      return pl.fixtureTag(fixture.number, fixture.result?.corrected ? pl.tagCorrected : pl.tagFinished);
     case 'walkover':
       return pl.fixtureTag(fixture.number, pl.tagWalkover);
     case 'in_progress':

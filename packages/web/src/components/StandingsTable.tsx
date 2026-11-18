@@ -1,4 +1,4 @@
-import type { StandingRow, TournamentPlayer, TournamentView } from '@autoscore/schema';
+import type { Fixture, StandingRow, TournamentPlayer, TournamentView } from '@autoscore/schema';
 import { useId } from 'react';
 import { crossCell, highlightedFixtureId } from '../game/cross-table';
 import { useMediaQuery } from '../game/use-media-query';
@@ -44,16 +44,30 @@ function PlaceCell({ row }: { row: StandingRow }) {
   );
 }
 
-function PlayerHeader({ player }: { player: TournamentPlayer | undefined }) {
+function PlayerHeader({ player, withdrawn }: { player: TournamentPlayer | undefined; withdrawn: boolean }) {
   const name = player?.name ?? '';
   return (
     <th scope="row" className="px-1.5 text-left font-normal">
       <span className="flex min-w-0 items-center gap-2.5">
         {player && <Avatar name={name} avatar={player.avatar} color={player.color} size="medium" />}
-        <span className="min-w-0 truncate font-display text-[22px] leading-tight font-bold">{name}</span>
+        <span className={`min-w-0 truncate font-display text-[22px] leading-tight font-bold ${withdrawn ? 'text-(--color-text-sub)' : ''}`}>
+          {name}
+        </span>
+        {withdrawn && <span className="shrink-0 text-sm text-(--color-text-sub)">{pl.withdrawnTag}</span>}
       </span>
     </th>
   );
+}
+
+// Druga linia komórki z wynikiem: skrót na ekranie, pełny tekst dla czytników ekranu.
+function resultMark(fixture: Fixture): { short: string; full: string } | null {
+  if (fixture.status === 'walkover') {
+    return { short: pl.walkoverShort, full: pl.tagWalkover };
+  }
+  if (fixture.result?.corrected) {
+    return { short: pl.correctedShort, full: pl.correctedFull };
+  }
+  return null;
 }
 
 // Komórka ma tło z tokenu i obrys, a wyróżniony mecz dostaje ramkę w kolorze akcentu i słowo pod numerem.
@@ -85,6 +99,7 @@ function CrossCellView({
     const won = own > other;
     // Pierwsza cyfra to legi gracza z wiersza (legi mają jedną cyfrę), więc ::first-letter pogrubia stronę zwycięzcy.
     const weight = won ? 'font-semibold first-letter:font-black' : 'font-black first-letter:font-semibold';
+    const mark = resultMark(cell.fixture);
     return (
       <td className="px-0.5">
         <span className={`${box} shadow-(--shadow-inset-line) ${won ? 'bg-(--color-surface-soft)' : ''}`}>
@@ -93,6 +108,11 @@ function CrossCellView({
           >
             {pl.legsCell(own, other)}
           </span>
+          {mark && (
+            <span className="text-xs leading-none text-(--color-text-sub)">
+              <Abbreviation short={mark.short} full={mark.full} />
+            </span>
+          )}
         </span>
       </td>
     );
@@ -155,7 +175,7 @@ function CrossTable({ view, titleId, players }: TableProps) {
           {view.standings.map((row) => (
             <tr key={row.playerId} className="h-16">
               <PlaceCell row={row} />
-              <PlayerHeader player={players.get(row.playerId)} />
+              <PlayerHeader player={players.get(row.playerId)} withdrawn={row.withdrawn} />
               {view.standings.map((column) => (
                 <CrossCellView
                   key={column.playerId}
@@ -227,7 +247,7 @@ function ShortTable({ view, titleId, players }: TableProps) {
         {view.standings.map((row) => (
           <tr key={row.playerId} className="h-14">
             <PlaceCell row={row} />
-            <PlayerHeader player={players.get(row.playerId)} />
+            <PlayerHeader player={players.get(row.playerId)} withdrawn={row.withdrawn} />
             <td className={numberClass}>{pl.wonLost(row.won, row.lost)}</td>
             <td className={numberClass}>{legDifference(row.legDifference)}</td>
             <td className="px-1 text-center font-display text-[24px] font-black tabular-nums">{row.points}</td>
@@ -260,6 +280,13 @@ export function StandingsTable({ view }: StandingsTableProps) {
   const legend: string[] = [pl.legendResult, pl.legendNumber, pl.legendTiebreak];
   if (isGroup) {
     legend.push(pl.legendAdvance);
+  }
+  const groupFixtures = view.fixtures.filter((fixture) => fixture.phase === 'group');
+  if (groupFixtures.some((fixture) => fixture.status === 'walkover')) {
+    legend.push(pl.legendWalkover);
+  }
+  if (groupFixtures.some((fixture) => fixture.status === 'finished' && fixture.result?.corrected)) {
+    legend.push(pl.legendCorrected);
   }
   // Bez nazwy na sekcji: regionem z tytułem jest tylko przewijana ramka tabeli, a całość leży już w panelu zakładki.
   return (

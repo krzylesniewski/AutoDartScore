@@ -33,4 +33,16 @@ describe('apiErrorText', () => {
   ])('maps the 409 %s to Polish text', (code, text) => {
     expect(apiErrorText(new ApiRequestError(409, code, 'x'))).toBe(text);
   });
+
+  it.each([
+    [409, 'dependent_started', 'Zaczął się już mecz zależny od tego wyniku, więc wyniku nie da się poprawić.'],
+    [409, 'fixture_not_finished', 'Poprawić można tylko zakończony mecz.'],
+    [400, 'invalid_result', 'Zwycięzca musi mieć dokładnie tyle legów, ile wymaga mecz, a przegrany mniej.'],
+    [409, 'already_withdrawn', 'Ten gracz jest już wycofany.'],
+    [409, 'tournament_finished', 'Turniej jest już zakończony.'],
+    [409, 'tournament_not_finished', 'Zarchiwizować można tylko zakończony turniej.'],
+    [400, 'not_a_participant', 'Ten gracz nie gra w turnieju.'],
+  ])('maps the %i %s of the incident commands to Polish text', (status, code, text) => {
+    expect(apiErrorText(new ApiRequestError(status, code, 'x'))).toBe(text);
+  });
 });

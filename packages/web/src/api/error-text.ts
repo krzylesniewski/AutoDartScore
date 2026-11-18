@@ -12,6 +12,13 @@ const TEXT_BY_CODE: Readonly<Record<string, string>> = {
   tournament_started: pl.tournamentStarted,
   tournament_archived: pl.tournamentArchived,
   stale_state: pl.staleState,
+  dependent_started: pl.dependentStarted,
+  fixture_not_finished: pl.fixtureNotFinished,
+  invalid_result: pl.invalidResult,
+  already_withdrawn: pl.alreadyWithdrawn,
+  tournament_finished: pl.tournamentAlreadyFinished,
+  tournament_not_finished: pl.tournamentNotFinished,
+  not_a_participant: pl.notAParticipant,
 };
 
 export function apiErrorText(caught: unknown): string {

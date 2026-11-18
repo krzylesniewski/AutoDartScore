@@ -2,6 +2,8 @@ import type { TournamentListItem } from '@autoscore/schema';
 import { useEffect, useState } from 'react';
 import { listTournaments } from '../api/client';
 import { AppNav } from '../components/AppNav';
+import { ArchiveTournamentDialog } from '../components/ArchiveTournamentDialog';
+import { ArchiveIcon } from '../components/icons';
 import { Notice } from '../components/Notice';
 import { FORMAT_LABELS, formatDay } from '../game/tournament-setup';
 import { pl } from '../i18n/pl';
@@ -22,6 +24,7 @@ function winnerName(item: TournamentListItem): string | null {
 // Trwający turniej jest najwyżej jeden, więc wpis „Turniej” prowadzi prosto do niego. Bez niego ekran pokazuje zakończone.
 export function TournamentsScreen() {
   const [tournaments, setTournaments] = useState<Tournaments>({ status: 'loading' });
+  const [archiving, setArchiving] = useState<TournamentListItem | null>(null);
   const active = tournaments.status === 'ready' ? tournaments.items.find((item) => item.status === 'in_progress') : undefined;
 
   useEffect(() => {
@@ -50,6 +53,13 @@ export function TournamentsScreen() {
   }, [active]);
 
   const finished = tournaments.status === 'ready' ? tournaments.items.filter((item) => item.status === 'finished') : [];
+
+  function archived(id: string): void {
+    setArchiving(null);
+    setTournaments((current) =>
+      current.status === 'ready' ? { status: 'ready', items: current.items.filter((item) => item.id !== id) } : current,
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -80,16 +90,29 @@ export function TournamentsScreen() {
                 {finished.map((item) => {
                   const winner = winnerName(item);
                   return (
-                    <li key={item.id}>
-                      <a
-                        href={tournamentHref(item.id)}
-                        className="flex min-h-16 flex-wrap items-center gap-x-5 gap-y-1 rounded-(--radius-card) bg-(--color-surface-softer) px-5 py-3 text-(--color-text) shadow-(--shadow-inset-line)"
+                    // Przycisk obok linku, nie w nim, bo element interaktywny w <a> jest niedozwolony.
+                    <li key={item.id} className="flex items-stretch gap-2.5">
+                      {/* Siatka rozciąga link na wysokość wiersza, a min-w-0 pozwala skrócić długą nazwę. */}
+                      <div className="grid min-w-0 flex-1">
+                        <a
+                          href={tournamentHref(item.id)}
+                          className="flex min-h-16 flex-wrap items-center gap-x-5 gap-y-1 rounded-(--radius-card) bg-(--color-surface-softer) px-5 py-3 text-(--color-text) shadow-(--shadow-inset-line)"
+                        >
+                          <span className="min-w-0 flex-1 basis-60 truncate font-display text-2xl font-bold">{item.name}</span>
+                          <span className="text-(--color-text-sub)">{FORMAT_LABELS[item.format]}</span>
+                          <span className="text-(--color-text-muted) tabular-nums">{formatDay(new Date(item.createdAt))}</span>
+                          {winner && <span className="font-semibold">{pl.tournamentWinner(winner)}</span>}
+                        </a>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={pl.archiveTournamentOf(item.name)}
+                        onClick={() => setArchiving(item)}
+                        className="sc-btn sc-btn--outline h-auto min-h-11 shrink-0 rounded-(--radius-card) px-3.5 sm:px-5"
                       >
-                        <span className="min-w-0 flex-1 basis-60 truncate font-display text-2xl font-bold">{item.name}</span>
-                        <span className="text-(--color-text-sub)">{FORMAT_LABELS[item.format]}</span>
-                        <span className="text-(--color-text-muted) tabular-nums">{formatDay(new Date(item.createdAt))}</span>
-                        {winner && <span className="font-semibold">{pl.tournamentWinner(winner)}</span>}
-                      </a>
+                        <ArchiveIcon />
+                        {pl.archive}
+                      </button>
                     </li>
                   );
                 })}
@@ -97,6 +120,7 @@ export function TournamentsScreen() {
             )}
           </section>
         )}
+        {archiving && <ArchiveTournamentDialog tournament={archiving} onArchived={archived} onCancel={() => setArchiving(null)} />}
       </main>
     </div>
   );

@@ -898,6 +898,169 @@ describe('TournamentScreen: redraw', () => {
   });
 });
 
+function finishedGroupView(overrides: Partial<TournamentView> = {}): TournamentView {
+  return groupView({
+    status: 'finished',
+    finishedAt: '2026-11-12T21:00:00.000Z',
+    fixtures: GROUP_FIXTURES.map(finishedVersion),
+    nextFixtureId: null,
+    ...overrides,
+  });
+}
+
+// Filip wycofany: jego dwa mecze do rozegrania (12 i 15) przegrywa walkowerem.
+function withdrawnFilipView(): TournamentView {
+  const fixtures = GROUP_FIXTURES.map((entry) => {
+    if (entry.id === 'g-12') {
+      return { ...entry, status: 'walkover' as const, result: { legs: [0, 3] as [number, number], winnerId: 'p4', corrected: false } };
+    }
+    if (entry.id === 'g-15') {
+      return { ...entry, status: 'walkover' as const, result: { legs: [0, 3] as [number, number], winnerId: 'p5', corrected: false } };
+    }
+    return entry;
+  });
+  const standings = STANDINGS.map((entry) => (entry.playerId === 'p6' ? { ...entry, withdrawn: true } : entry));
+  return groupView({ eventSeq: 13, fixtures, standings });
+}
+
+function incidentButton(name: 'Popraw wynik' | 'Wycofaj gracza'): HTMLButtonElement {
+  return screen.getByRole<HTMLButtonElement>('button', { name });
+}
+
+function cellOf(rowName: string, columnIndex: number): string {
+  const tr = within(table())
+    .getByRole('rowheader', { name: new RegExp(`^${rowName}`) })
+    .closest('tr');
+  return tr?.querySelectorAll('td')[1 + columnIndex]?.textContent ?? '';
+}
+
+describe('TournamentScreen: incidents', () => {
+  it('shows both buttons below the queue and not in the header while the tournament runs', async () => {
+    await renderScreen();
+    const correct = incidentButton('Popraw wynik');
+    const withdraw = incidentButton('Wycofaj gracza');
+    expect(correct.disabled).toBe(false);
+    expect(document.querySelector('header')?.contains(correct)).toBe(false);
+    const queue = screen.getByRole('region', { name: 'Kolejka' });
+    expect(queue.compareDocumentPosition(correct) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(correct.parentElement).toBe(withdraw.parentElement);
+    // Kolejność w DOM-ie: telefon pokazuje tabelę przed tymi przyciskami, więc „Zagraj mecz” zostaje na górze.
+    expect(table().compareDocumentPosition(correct) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows only Popraw wynik in a finished tournament', async () => {
+    reply = () => json(200, finishedGroupView());
+    await renderScreen();
+    expect(incidentButton('Popraw wynik')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Wycofaj gracza' })).toBeNull();
+  });
+
+  it('shows neither button in an archived tournament', async () => {
+    reply = () => json(200, finishedGroupView({ archivedAt: '2026-11-13T10:00:00.000Z' }));
+    await renderScreen();
+    expect(screen.queryByRole('button', { name: 'Popraw wynik' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Wycofaj gracza' })).toBeNull();
+  });
+
+  it('hides Popraw wynik before the first finished match', async () => {
+    reply = () => json(200, computedView(tournamentConfig('league', 4)));
+    await renderScreen();
+    expect(screen.queryByRole('button', { name: 'Popraw wynik' })).toBeNull();
+    expect(incidentButton('Wycofaj gracza')).toBeTruthy();
+  });
+
+  it('corrects a result and shows popr. in the returned table', async () => {
+    wideScreen();
+    const fixtures = GROUP_FIXTURES.map((entry) =>
+      entry.id === 'g-9' ? { ...entry, result: { legs: [2, 3] as [number, number], winnerId: 'p5', corrected: true } } : entry,
+    );
+    commandReply = () => json(200, groupView({ eventSeq: 13, fixtures }));
+    await renderScreen();
+    expect(screen.queryByText('popr.: wynik poprawiony.')).toBeNull();
+    fireEvent.click(incidentButton('Popraw wynik'));
+    const dialog = screen.getByRole('dialog', { name: 'Popraw wynik' });
+    expect(within(dialog).getByRole<HTMLSelectElement>('combobox', { name: 'Mecz' }).value).toBe('g-9');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Mniej legów: Darek' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Więcej legów: Ewa' }));
+    expect(within(dialog).getByText('Zwycięzcą meczu zostanie Ewa.')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Popraw wynik' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(postCalls()).toEqual([
+      { url: '/api/tournaments/t1/fixtures/g-9/result', method: 'POST', body: '{"legs":[2,3],"expectedSeq":12}' },
+    ]);
+    expect(cellOf('Darek', 4)).toBe('2–3popr.wynik poprawiony');
+    expect(cellOf('Ewa', 3)).toBe('3–2popr.wynik poprawiony');
+    expect(screen.getByText('popr.: wynik poprawiony.')).toBeTruthy();
+    expect(screen.queryByText('wo: walkower.')).toBeNull();
+  });
+
+  it('withdraws a player and shows wycofany and wo in the returned table', async () => {
+    wideScreen();
+    commandReply = () => json(201, withdrawnFilipView());
+    await renderScreen();
+    expect(screen.queryByText('wo: walkower.')).toBeNull();
+    fireEvent.click(incidentButton('Wycofaj gracza'));
+    const dialog = screen.getByRole('dialog', { name: 'Wycofać gracza?' });
+    fireEvent.click(within(dialog).getByRole('radio', { name: /Filip/ }));
+    expect(within(dialog).getByText('Filip przegra walkowerem 2 mecze.')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Wycofaj gracza' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(postCalls()).toEqual([{ url: '/api/tournaments/t1/withdrawals', method: 'POST', body: '{"playerId":"p6","expectedSeq":12}' }]);
+    expect(visibleText(within(table()).getByRole('rowheader', { name: /^Filip/ }))).toBe('Filipwycofany');
+    expect(cellOf('Darek', 5)).toBe('3–0wowalkower');
+    expect(cellOf('Filip', 3)).toBe('0–3wowalkower');
+    expect(screen.getByText('wo: walkower.')).toBeTruthy();
+    expect(screen.queryByText('popr.: wynik poprawiony.')).toBeNull();
+  });
+
+  it('marks the withdrawn player in the phone table', async () => {
+    reply = () => json(200, withdrawnFilipView());
+    await renderScreen();
+    expect(within(table()).getByRole('columnheader', { name: 'Wygrane i przegrane' })).toBeTruthy();
+    expect(visibleText(within(table()).getByRole('rowheader', { name: /^Filip/ }))).toBe('Filipwycofany');
+    expect(visibleText(within(table()).getByRole('rowheader', { name: /^Ewa/ }))).toBe('Ewa');
+  });
+
+  it('shows the error in the window and fetches the tournament again', async () => {
+    commandReply = () => json(409, { error: 'dependent_started', message: 'A dependent fixture has started' });
+    await renderScreen();
+    fireEvent.click(incidentButton('Popraw wynik'));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Mniej legów: Ewa' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Popraw wynik' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toBe(
+      'Zaczął się już mecz zależny od tego wyniku, więc wyniku nie da się poprawić.',
+    );
+    await waitFor(() => expect(calls.filter((call) => call.method === 'GET' && call.url === '/api/tournaments/t1')).toHaveLength(2));
+    expect(screen.getByRole('dialog')).toBe(dialog);
+  });
+
+  it('returns the focus to the opening button after Anuluj', async () => {
+    await renderScreen();
+    const withdraw = incidentButton('Wycofaj gracza');
+    withdraw.focus();
+    fireEvent.click(withdraw);
+    expect(screen.getByRole('dialog', { name: 'Wycofać gracza?' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(withdraw);
+    expect(postCalls()).toEqual([]);
+  });
+
+  it('opens one window at a time', async () => {
+    await renderScreen();
+    fireEvent.click(incidentButton('Popraw wynik'));
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+
+  it('marks a corrected result in the bracket', async () => {
+    const cup = tournamentConfig('cup', 4);
+    reply = () => json(200, computedView(cup, { 'p-sf-1': [3, 1] }, {}, { corrections: [{ fixtureId: 'p-sf-1', legs: [3, 2] }] }));
+    await renderScreen();
+    expect(within(bracketFrame()).getByText('Mecz #1 · zakończony, wynik poprawiony')).toBeTruthy();
+  });
+});
+
 describe('TournamentScreen: live updates', () => {
   it('shows a new result from tournament_updated', async () => {
     wideScreen();
