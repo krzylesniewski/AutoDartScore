@@ -34,6 +34,7 @@ interface FilterOption<T extends string> {
 const FILTERS: readonly FilterOption<StatsFilter>[] = [
   { value: 'all', label: pl.filterAll },
   { value: 'match', label: pl.filterMatch },
+  { value: 'tournament', label: pl.typeTournament },
   { value: 'casual', label: pl.typeCasual },
   { value: 'practice', label: pl.typePractice },
 ];
@@ -55,7 +56,7 @@ const label = 'font-display text-[15px] font-bold tracking-[0.18em] text-(--colo
 const title = 'font-display text-[length:clamp(2.5rem,10vw,4rem)] leading-[0.9] font-black tracking-[0.01em]';
 const panelHeading = 'font-display text-[26px] leading-tight font-extrabold';
 // Poniżej sm przyciski filtra dzielą szerokość paska. Bez min-w-0 przycisk nie jest węższy od etykiety,
-// a pięć przycisków przewija się w pasku zamiast przycinać.
+// a przyciski przewijają się w pasku zamiast przycinać.
 const segment = 'min-h-12 whitespace-nowrap rounded-(--radius-button) px-5 font-display text-xl max-sm:flex-1 max-sm:px-3 max-sm:text-lg';
 const selectedStyle = 'bg-(--color-text) font-extrabold text-(--color-text-inverse) shadow-(--shadow-selected)';
 

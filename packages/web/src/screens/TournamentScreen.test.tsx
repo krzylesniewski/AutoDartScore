@@ -1,4 +1,4 @@
-import type { Fixture, FixtureSlot, StandingRow, TournamentLiveMessage, TournamentView } from '@autoscore/schema';
+import type { Fixture, FixtureSlot, StandingRow, TournamentLiveMessage, TournamentStats, TournamentView } from '@autoscore/schema';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -10,6 +10,8 @@ import {
   standingRow,
   tournamentConfig,
   tournamentPlayer,
+  tournamentStats,
+  tournamentStatsPlayer,
   tournamentView,
 } from '../test/snapshots';
 import { TournamentScreen } from './TournamentScreen';
@@ -158,16 +160,21 @@ function updated(view: TournamentView): TournamentLiveMessage {
 let calls: Call[];
 let reply: () => Response;
 let matchReply: (url: string) => Response;
+let statsReply: () => Response;
 let commandReply: (call: Call) => Response;
 
 function getReply(url: string): Response {
-  return url.startsWith('/api/matches/') ? matchReply(url) : reply();
+  if (url.startsWith('/api/matches/')) {
+    return matchReply(url);
+  }
+  return url === '/api/tournaments/t1/stats' ? statsReply() : reply();
 }
 
 beforeEach(() => {
   calls = [];
   FakeWebSocket.instances = [];
   reply = () => json(200, groupView());
+  statsReply = () => json(200, tournamentStats({ players: PLAYERS.map((entry) => tournamentStatsPlayer(entry.id)) }));
   matchReply = () => json(404, { error: 'not_found', message: 'Match not found' });
   commandReply = () => json(201, { matchId: 'm 42', tournament: groupView({ eventSeq: 13 }) });
   vi.stubGlobal('WebSocket', FakeWebSocket);
@@ -240,8 +247,8 @@ describe('TournamentScreen: header', () => {
     expect(screen.getByRole('link', { name: 'Turniej' }).getAttribute('aria-current')).toBe('page');
     const tablist = screen.getByRole('tablist', { name: 'Widok turnieju' });
     const tabs = within(tablist).getAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Grupa', 'Play-off']);
-    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Grupa', 'Play-off', 'Statystyki']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
     expect(calls.map((call) => call.url)).toEqual(['/api/tournaments/t1']);
     expect(socket().url).toMatch(/\/api\/tournaments\/t1\/live$/);
   });
@@ -337,10 +344,10 @@ describe('TournamentScreen: tabs', () => {
         }),
       );
     await renderScreen();
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Tabela']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Tabela', 'Statystyki']);
     expect(screen.getByRole('table', { name: 'Tabela ligi' })).toBeTruthy();
     expect(screen.getByText('do 3 wygranych legów')).toBeTruthy();
-    expect(screen.getByText('W komórce: wynik w legach.')).toBeTruthy();
+    expect(screen.getByText('W komórce: wynik w legach i średnia gracza z tego meczu.')).toBeTruthy();
     expect(screen.queryByText('Strzałka: miejsce dające awans do play-off.')).toBeNull();
     expect(screen.queryByText('awans do play-off')).toBeNull();
   });
@@ -387,7 +394,7 @@ describe('TournamentScreen: tabs', () => {
         }),
       );
     await renderScreen();
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Drabinka']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Drabinka', 'Statystyki']);
     const frame = screen.getByRole('region', { name: 'Drabinka' });
     expect(
       within(frame)
@@ -1058,6 +1065,169 @@ describe('TournamentScreen: incidents', () => {
     reply = () => json(200, computedView(cup, { 'p-sf-1': [3, 1] }, {}, { corrections: [{ fixtureId: 'p-sf-1', legs: [3, 2] }] }));
     await renderScreen();
     expect(within(bracketFrame()).getByText('Mecz #1 · zakończony, wynik poprawiony')).toBeTruthy();
+  });
+});
+
+describe('TournamentScreen: averages', () => {
+  // Anna z Celiną z średnimi, Anna z Darkiem jako walkower i Bartek z Darkiem jako poprawiony wynik ze średnimi.
+  function averagesView(): TournamentView {
+    const fixtures = GROUP_FIXTURES.map((entry): Fixture => {
+      switch (entry.id) {
+        case 'g-8':
+          return { ...entry, averages: [52.5, 41.25] };
+        case 'g-2':
+          return { ...entry, status: 'walkover', matchId: null, averages: null };
+        case 'g-4':
+          return { ...entry, result: entry.result && { ...entry.result, corrected: true }, averages: [45, 39] };
+        default:
+          return entry;
+      }
+    });
+    const standings = STANDINGS.map((entry) => (entry.playerId === 'p1' ? { ...entry, average: 47.625 } : entry));
+    return groupView({ fixtures, standings });
+  }
+
+  function rowHeader(name: RegExp): HTMLElement {
+    return within(table()).getByRole('rowheader', { name });
+  }
+
+  it('shows the row player average in a finished cell and none in a walkover or corrected cell', async () => {
+    wideScreen();
+    reply = () => json(200, averagesView());
+    await renderScreen();
+    const annaRow = rowHeader(/^Anna/).closest('tr') as HTMLElement;
+    const celinaRow = rowHeader(/^Celina/).closest('tr') as HTMLElement;
+    const cell = (row: HTMLElement, column: number) => row.querySelectorAll('td')[1 + column]?.textContent ?? '';
+    expect(cell(annaRow, 2)).toBe('3–1średnia 52,50');
+    expect(cell(celinaRow, 0)).toBe('1–3średnia 41,25');
+    expect(cell(annaRow, 3)).toBe('3–0wowalkower');
+    expect(crossCellText('Bartek', 3)).toBe('3–2popr.wynik poprawiony');
+    expect(crossCellText('Bartek', 4)).toBe('3–2');
+  });
+
+  it('shows the group average under the name in the cross table', async () => {
+    wideScreen();
+    reply = () => json(200, averagesView());
+    await renderScreen();
+    const anna = rowHeader(/^Anna/);
+    expect(within(anna).getByText('śr.').getAttribute('aria-hidden')).toBe('true');
+    expect(visibleText(anna)).toBe('Annaśrednia 47,63');
+    expect(within(rowHeader(/^Bartek/)).queryByText('śr.')).toBeNull();
+  });
+
+  it('shows the group average under the name in the phone table', async () => {
+    reply = () => json(200, averagesView());
+    await renderScreen();
+    expect(within(table()).queryByRole('columnheader', { name: 'Anna' })).toBeNull();
+    const anna = rowHeader(/^Anna/);
+    expect(within(anna).getByText('śr.')).toBeTruthy();
+    expect(visibleText(anna)).toBe('Annaśrednia 47,63');
+    expect(visibleText(rowHeader(/^Ewa/))).toBe('Ewa');
+  });
+
+  it('shows the match averages in the slots of a finished bracket match and none in a running one', async () => {
+    reply = () =>
+      json(
+        200,
+        tournamentView({
+          format: 'cup',
+          players: PLAYERS.slice(0, 4),
+          fixtures: [
+            fixture({
+              id: 'p-sf-1',
+              number: 1,
+              phase: 'playoff',
+              bracketRound: 'sf',
+              slots: [
+                { kind: 'player', playerId: 'p1', seed: 1 },
+                { kind: 'player', playerId: 'p4', seed: 4 },
+              ],
+              status: 'finished',
+              matchId: 'm1',
+              result: { legs: [3, 1], winnerId: 'p1', corrected: false },
+              averages: [48.5, 36],
+            }),
+            fixture({
+              id: 'p-sf-2',
+              number: 2,
+              phase: 'playoff',
+              bracketRound: 'sf',
+              slots: [
+                { kind: 'player', playerId: 'p2', seed: 2 },
+                { kind: 'player', playerId: 'p3', seed: 3 },
+              ],
+              status: 'in_progress',
+              matchId: 'm2',
+            }),
+          ],
+          nextFixtureId: null,
+          liveFixtureId: 'p-sf-2',
+        }),
+      );
+    await renderScreen();
+    expect(visibleText(box('Mecz #1 · zakończony'))).toBe('1Annazwycięzcaśrednia 48,5034Darekśrednia 36,001Mecz #1 · zakończony');
+    const running = box('Mecz #2 · na żywo');
+    expect(running.textContent).not.toContain('średnia');
+  });
+});
+
+describe('TournamentScreen: stats tab', () => {
+  function statsView(): TournamentStats {
+    return tournamentStats({
+      players: PLAYERS.map((entry, index) => tournamentStatsPlayer(entry.id, { average: 40 + index, dartsThrown: 30 })),
+    });
+  }
+
+  it('fetches the stats only after the tab opens and shows the panel without the queue', async () => {
+    statsReply = () => json(200, statsView());
+    await renderScreen();
+    expect(screen.getByRole('region', { name: 'Kolejka' })).toBeTruthy();
+    expect(calls.map((call) => call.url)).toEqual(['/api/tournaments/t1']);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Statystyki' }));
+    expect(screen.getByRole('tab', { name: 'Statystyki' }).getAttribute('aria-selected')).toBe('true');
+    expect(within(screen.getByRole('tabpanel')).getByText('Ładowanie…')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Gracze w turnieju' })).toBeTruthy();
+    expect(calls.map((call) => call.url)).toEqual(['/api/tournaments/t1', '/api/tournaments/t1/stats']);
+    const panel = screen.getByRole('tabpanel');
+    expect(panel.getAttribute('aria-labelledby')).toBe(screen.getByRole('tab', { name: 'Statystyki' }).id);
+    expect(within(panel).getByRole('table', { name: 'Gracze w turnieju' })).toBeTruthy();
+    expect(within(panel).getByRole('heading', { name: 'Rekordy turnieju' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Kolejka' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Następny mecz' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Popraw wynik' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Grupa' }));
+    expect(screen.getByRole('region', { name: 'Kolejka' })).toBeTruthy();
+  });
+
+  it('fetches the stats again on tournament_updated while the tab is open', async () => {
+    statsReply = () => json(200, statsView());
+    await renderScreen();
+    fireEvent.click(screen.getByRole('tab', { name: 'Statystyki' }));
+    await screen.findByRole('heading', { name: 'Gracze w turnieju' });
+    socket().serverSend(updated(groupView({ eventSeq: 13 })));
+    await waitFor(() => expect(calls.filter((call) => call.url === '/api/tournaments/t1/stats')).toHaveLength(2));
+    expect(screen.getByRole('heading', { name: 'Gracze w turnieju' })).toBeTruthy();
+  });
+
+  it('shows an error when the stats fail to load', async () => {
+    statsReply = () => json(500, { error: 'internal_error', message: 'Internal server error' });
+    await renderScreen();
+    fireEvent.click(screen.getByRole('tab', { name: 'Statystyki' }));
+    expect(await screen.findByText('Nie udało się pobrać statystyk turnieju')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Gracze w turnieju' })).toBeNull();
+  });
+
+  it('keeps the last stats under the error after a failed refetch', async () => {
+    statsReply = () => json(200, statsView());
+    await renderScreen();
+    fireEvent.click(screen.getByRole('tab', { name: 'Statystyki' }));
+    await screen.findByRole('heading', { name: 'Gracze w turnieju' });
+    statsReply = () => json(500, { error: 'internal_error', message: 'Internal server error' });
+    socket().serverSend(updated(groupView({ eventSeq: 13 })));
+    expect(await screen.findByText('Nie udało się pobrać statystyk turnieju')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Gracze w turnieju' })).toBeTruthy();
   });
 });
 

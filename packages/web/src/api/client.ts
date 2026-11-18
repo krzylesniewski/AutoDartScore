@@ -17,6 +17,7 @@ import {
   StatsRankings,
   ThrowResult,
   TournamentListItem,
+  TournamentStats,
   TournamentView,
   UndoResult,
 } from '@autoscore/schema';
@@ -174,6 +175,10 @@ export function listTournaments(query: TournamentListQuery = {}): Promise<Tourna
 
 export function getTournament(id: string): Promise<TournamentView> {
   return request(`/tournaments/${encodeURIComponent(id)}`, TournamentView);
+}
+
+export function getTournamentStats(id: string): Promise<TournamentStats> {
+  return request(`/tournaments/${encodeURIComponent(id)}/stats`, TournamentStats);
 }
 
 export function startFixture(tournamentId: string, fixtureId: string, expectedSeq?: number): Promise<StartFixtureResult> {

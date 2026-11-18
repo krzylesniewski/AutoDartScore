@@ -70,6 +70,14 @@ for (const viewport of VIEWPORTS) {
     await expectNoHorizontalScroll(page);
     await expectInViewport(await boxOf(play), page);
   });
+
+  test(`tournament stats tab has no horizontal scroll at ${viewport.width}×${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto(`/#/tournaments/${encodeURIComponent(tournamentId)}`);
+    await page.getByRole('tab', { name: 'Statystyki' }).click();
+    await expect(page.getByRole('heading', { name: 'Gracze w turnieju' })).toBeVisible();
+    await expectNoHorizontalScroll(page);
+  });
 }
 
 test('plays a tournament match and returns to the tournament', async ({ page, request }) => {

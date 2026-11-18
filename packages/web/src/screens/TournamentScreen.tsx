@@ -4,6 +4,7 @@ import { redrawTournament, startFixture } from '../api/client';
 import { apiErrorText } from '../api/error-text';
 import { useRunningLegs } from '../api/use-running-legs';
 import { useTournament } from '../api/use-tournament';
+import { useTournamentStats } from '../api/use-tournament-stats';
 import type { Connection } from '../api/use-match';
 import { AppNav } from '../components/AppNav';
 import { CorrectResultDialog } from '../components/CorrectResultDialog';
@@ -15,6 +16,7 @@ import { PlacementsCard } from '../components/PlacementsCard';
 import { PlayoffBracket } from '../components/PlayoffBracket';
 import { RunningFixtures } from '../components/RunningFixtures';
 import { StandingsTable } from '../components/StandingsTable';
+import { TournamentStatsPanel } from '../components/TournamentStatsPanel';
 import { TournamentTabs, type TournamentTab } from '../components/TournamentTabs';
 import { WithdrawPlayerDialog } from '../components/WithdrawPlayerDialog';
 import { correctableFixtures, withdrawCandidates } from '../game/tournament-incidents';
@@ -26,7 +28,7 @@ export interface TournamentScreenProps {
   tournamentId: string;
 }
 
-type TabId = 'table' | 'playoff';
+type TabId = 'table' | 'playoff' | 'stats';
 
 type CommandSource = 'redraw' | 'next' | 'queue';
 
@@ -39,7 +41,7 @@ interface CommandError {
   readonly text: string;
 }
 
-function tabsFor(view: TournamentView): TournamentTab<TabId>[] {
+function formatTabs(view: TournamentView): TournamentTab<TabId>[] {
   switch (view.format) {
     case 'league':
       return [{ id: 'table', label: pl.tabTable }];
@@ -51,6 +53,10 @@ function tabsFor(view: TournamentView): TournamentTab<TabId>[] {
     default:
       return [{ id: 'playoff', label: pl.tabBracket }];
   }
+}
+
+function tabsFor(view: TournamentView): TournamentTab<TabId>[] {
+  return [...formatTabs(view), { id: 'stats', label: pl.tabStats }];
 }
 
 function defaultTab(view: TournamentView): TabId {
@@ -199,41 +205,61 @@ function Tournament({ view, connection, accept, reload }: TournamentProps) {
           {errorAt('redraw') && <Notice text={errorAt('redraw') ?? ''} appearance="soft" />}
         </div>
       )}
-      <div className="grid grid-cols-1 content-start gap-(--space-page) lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr]">
-        <div className="flex min-w-0 flex-col gap-(--space-page) lg:col-start-2 lg:row-start-1">
-          <RunningFixtures view={view} live={live} />
-          <NextFixtureCard view={view} busy={busy} error={errorAt('next')} onPlay={(fixture) => play('next', fixture)} />
+      {tab === 'stats' ? (
+        <div role="tabpanel" id={panelId(tab)} aria-labelledby={tabId(tab)} tabIndex={0} className="min-w-0">
+          <TournamentStatsTab view={view} />
         </div>
-        <div
-          role="tabpanel"
-          id={panelId(tab)}
-          aria-labelledby={tabId(tab)}
-          tabIndex={0}
-          className="min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1"
-        >
-          {tab === 'table' ? <StandingsTable view={view} /> : <PlayoffBracket view={view} live={live} />}
+      ) : (
+        <div className="grid grid-cols-1 content-start gap-(--space-page) lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr]">
+          <div className="flex min-w-0 flex-col gap-(--space-page) lg:col-start-2 lg:row-start-1">
+            <RunningFixtures view={view} live={live} />
+            <NextFixtureCard view={view} busy={busy} error={errorAt('next')} onPlay={(fixture) => play('next', fixture)} />
+          </div>
+          <div
+            role="tabpanel"
+            id={panelId(tab)}
+            aria-labelledby={tabId(tab)}
+            tabIndex={0}
+            className="min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1"
+          >
+            {tab === 'table' ? <StandingsTable view={view} /> : <PlayoffBracket view={view} live={live} />}
+          </div>
+          <div className="flex min-w-0 flex-col gap-(--space-page) lg:col-start-2 lg:row-start-2">
+            {tab === 'playoff' && <PlacementsCard view={view} />}
+            <FixtureQueue view={view} busy={busy} error={errorAt('queue')} onPlay={(fixture) => play('queue', fixture)} />
+            {(canCorrect || canWithdraw) && (
+              <div className="flex flex-wrap gap-2.5 lg:mt-auto">
+                {canCorrect && (
+                  <button type="button" disabled={busy} onClick={() => setIncident('correct')} className={incidentButton}>
+                    {pl.correctResult}
+                  </button>
+                )}
+                {canWithdraw && (
+                  <button type="button" disabled={busy} onClick={() => setIncident('withdraw')} className={incidentButton}>
+                    {pl.withdrawPlayer}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex min-w-0 flex-col gap-(--space-page) lg:col-start-2 lg:row-start-2">
-          {tab === 'playoff' && <PlacementsCard view={view} />}
-          <FixtureQueue view={view} busy={busy} error={errorAt('queue')} onPlay={(fixture) => play('queue', fixture)} />
-          {(canCorrect || canWithdraw) && (
-            <div className="flex flex-wrap gap-2.5 lg:mt-auto">
-              {canCorrect && (
-                <button type="button" disabled={busy} onClick={() => setIncident('correct')} className={incidentButton}>
-                  {pl.correctResult}
-                </button>
-              )}
-              {canWithdraw && (
-                <button type="button" disabled={busy} onClick={() => setIncident('withdraw')} className={incidentButton}>
-                  {pl.withdrawPlayer}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      )}
       {incident === 'correct' && <CorrectResultDialog view={view} onSaved={saved} onFailed={reload} onCancel={() => setIncident(null)} />}
       {incident === 'withdraw' && <WithdrawPlayerDialog view={view} onSaved={saved} onFailed={reload} onCancel={() => setIncident(null)} />}
     </>
+  );
+}
+
+// Montuje się dopiero na zakładce „Statystyki”, więc wcześniej nie idzie żadne zapytanie o statystyki.
+function TournamentStatsTab({ view }: { view: TournamentView }) {
+  const { status, stats } = useTournamentStats(view);
+  if (status === 'loading') {
+    return <p className="text-(--color-text-muted)">{pl.loading}</p>;
+  }
+  return (
+    <div className="flex flex-col gap-(--space-6)">
+      {status === 'error' && <Notice text={pl.loadTournamentStatsFailed} />}
+      {stats && <TournamentStatsPanel view={view} stats={stats} />}
+    </div>
   );
 }

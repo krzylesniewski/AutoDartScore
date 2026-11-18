@@ -1,6 +1,6 @@
 import { CreateTournamentRequest } from '@autoscore/schema';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { snapshot, tournamentListItem, tournamentView } from '../test/snapshots';
+import { snapshot, tournamentListItem, tournamentStats, tournamentStatsPlayer, tournamentView } from '../test/snapshots';
 import {
   ApiRequestError,
   REQUEST_TIMEOUT_MS,
@@ -10,6 +10,7 @@ import {
   createTournament,
   getMatch,
   getTournament,
+  getTournamentStats,
   listTournaments,
   redrawTournament,
   startFixture,
@@ -114,6 +115,18 @@ describe('tournament requests', () => {
     const fetch = stub(tournamentView({ id: 't 1' }));
     expect((await getTournament('t 1')).id).toBe('t 1');
     expect(fetch.mock.calls[0]?.[0]).toBe('/api/tournaments/t%201');
+  });
+
+  it('gets the tournament stats by the encoded id and parses them', async () => {
+    const stats = tournamentStats({ tournamentId: 't 1', players: [tournamentStatsPlayer('p1', { won: 2, legsFor: 6 })] });
+    const fetch = stub(stats);
+    expect(await getTournamentStats('t 1')).toEqual(stats);
+    expect(fetch.mock.calls[0]?.[0]).toBe('/api/tournaments/t%201/stats');
+  });
+
+  it('rejects tournament stats that do not match the schema', async () => {
+    stub({ ...tournamentStats(), players: [{ playerId: 'p1' }] });
+    await expect(getTournamentStats('t1')).rejects.toThrow();
   });
 
   it('rejects an unknown tournament with a 404 ApiRequestError', async () => {

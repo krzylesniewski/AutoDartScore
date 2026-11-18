@@ -25,6 +25,11 @@ export function formatDifference(value: number | null): string {
   return value >= 0 ? `+${formatDecimal(value, 2)}` : `−${formatDecimal(Math.abs(value), 2)}`;
 }
 
+// Bilans legów w tabelach turnieju: plus tylko nad zerem, minus jak w String().
+export function formatLegDifference(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
 export function formatNumber(value: number | null): string {
   return value === null ? NO_VALUE : String(value);
 }

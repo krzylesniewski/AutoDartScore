@@ -17,6 +17,7 @@ const finished = fixture({
   status: 'finished',
   matchId: 'm1',
   result: { legs: [3, 1], winnerId: 'p1', corrected: false },
+  averages: [52.5, 41.25],
 });
 const walkover = fixture({
   id: 'g-2',
@@ -35,16 +36,22 @@ describe('crossCell', () => {
   });
 
   it('gives the legs from the row player side', () => {
-    expect(crossCell(view, 'p1', 'p2')).toEqual({ kind: 'result', legs: [3, 1], fixture: finished });
+    expect(crossCell(view, 'p1', 'p2')).toEqual({ kind: 'result', legs: [3, 1], fixture: finished, average: 52.5 });
   });
 
   it('reverses the legs when the row player is in slot 1', () => {
-    expect(crossCell(view, 'p2', 'p1')).toEqual({ kind: 'result', legs: [1, 3], fixture: finished });
+    expect(crossCell(view, 'p2', 'p1')).toEqual({ kind: 'result', legs: [1, 3], fixture: finished, average: 41.25 });
   });
 
   it('shows the legs of a walkover', () => {
-    expect(crossCell(view, 'p1', 'p3')).toEqual({ kind: 'result', legs: [3, 0], fixture: walkover });
-    expect(crossCell(view, 'p3', 'p1')).toEqual({ kind: 'result', legs: [0, 3], fixture: walkover });
+    expect(crossCell(view, 'p1', 'p3')).toEqual({ kind: 'result', legs: [3, 0], fixture: walkover, average: null });
+    expect(crossCell(view, 'p3', 'p1')).toEqual({ kind: 'result', legs: [0, 3], fixture: walkover, average: null });
+  });
+
+  it('gives no average for a finished fixture without averages', () => {
+    const noAverages = tournamentView({ fixtures: [{ ...finished, averages: null }] });
+    expect(crossCell(noAverages, 'p1', 'p2')).toMatchObject({ kind: 'result', average: null });
+    expect(crossCell(noAverages, 'p2', 'p1')).toMatchObject({ kind: 'result', average: null });
   });
 
   it('gives a pending fixture in either order', () => {

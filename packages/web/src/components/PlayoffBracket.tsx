@@ -2,6 +2,7 @@ import type { BracketRound, Fixture, FixtureSlot, TournamentView } from '@autosc
 import { useId } from 'react';
 import type { RunningLegs } from '../api/use-running-legs';
 import { bracketColumns, fixtureTag, type BracketColumn } from '../game/bracket';
+import { formatAverage } from '../game/format-stat';
 import { slotPlayer, slotSourceText } from '../game/tournament-slot';
 import { pl } from '../i18n/pl';
 import { Avatar } from './Avatar';
@@ -31,10 +32,11 @@ interface SlotRowProps {
   view: TournamentView;
   slot: FixtureSlot;
   legs: number | null;
+  average: number | null;
   outcome: 'winner' | 'loser' | null;
 }
 
-function SlotRow({ view, slot, legs, outcome }: SlotRowProps) {
+function SlotRow({ view, slot, legs, average, outcome }: SlotRowProps) {
   const player = slotPlayer(view, slot);
   const winner = outcome === 'winner';
   let nameColor = 'text-(--color-text)';
@@ -53,10 +55,18 @@ function SlotRow({ view, slot, legs, outcome }: SlotRowProps) {
       ) : (
         <span aria-hidden="true" className="size-9 shrink-0 rounded-full border-2 border-dashed border-(--color-border)" />
       )}
-      <span className={`min-w-0 flex-1 truncate font-display text-[21px] ${winner ? 'font-extrabold' : 'font-semibold'} ${nameColor}`}>
-        {slotSourceText(view, slot)}
+      <span className="flex min-w-0 flex-1 items-baseline gap-2">
+        <span className={`min-w-0 truncate font-display text-[21px] ${winner ? 'font-extrabold' : 'font-semibold'} ${nameColor}`}>
+          {slotSourceText(view, slot)}
+        </span>
+        {winner && <span className="sr-only">{pl.bracketWinner}</span>}
+        {average !== null && (
+          <span className="shrink-0 text-[13px] text-(--color-text-muted) tabular-nums">
+            <span className="sr-only">{pl.averageSr} </span>
+            {formatAverage(average)}
+          </span>
+        )}
       </span>
-      {winner && <span className="sr-only">{pl.bracketWinner}</span>}
       <span
         className={`w-10 shrink-0 text-center font-display text-[26px] font-black tabular-nums ${winner ? 'border-l-3 border-(--color-accent) text-(--color-text)' : 'text-(--color-text-muted)'}`}
       >
@@ -87,7 +97,14 @@ function MatchBox({ view, fixture, live }: MatchBoxProps) {
         className={`flex flex-col overflow-hidden rounded-(--radius-card) bg-(--color-surface) ${running ? 'inset-ring-2 inset-ring-(--color-accent)' : 'shadow-(--shadow-inset-line)'}`}
       >
         {fixture.slots.map((slot, index) => (
-          <SlotRow key={index} view={view} slot={slot} legs={legs?.[index] ?? null} outcome={outcomeOf(slot)} />
+          <SlotRow
+            key={index}
+            view={view}
+            slot={slot}
+            legs={legs?.[index] ?? null}
+            average={fixture.averages?.[index] ?? null}
+            outcome={outcomeOf(slot)}
+          />
         ))}
       </div>
       <p className={`flex items-center gap-1.5 text-[13px] ${running ? 'text-(--color-text)' : 'text-(--color-text-muted)'}`}>
