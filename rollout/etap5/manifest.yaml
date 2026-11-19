@@ -273,3 +273,15 @@ prs:
     changeset: none
     scope: ['e2e/**', 'packages/web/**', 'README.md', 'packages/*/README.md']
     briefTags: [web]
+
+  # Poprawka zgłoszona przez T19 (decyzja autora 2026-11-19); T19 wraca do weryfikacji po jej scaleniu.
+  - id: T20
+    branch: fix/stats-ranking-low-height
+    title: 'fix(web): lower ranking places stay visible and clickable on a short xl screen'
+    brief: briefs/T20.md
+    deps: [T18]
+    priority: 35
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/layout.spec.ts']
+    briefTags: [web]

@@ -212,6 +212,8 @@ Trasy: `#/tournaments` (aktywny turniej albo lista zakończonych), `#/tournament
 
 **Zmiana:** trasa `#/tournaments/:id/matches/:matchId`: wynik w legach, etykieta i długość meczu, data i czas trwania, tabela statystyk obu graczy (lepsza wartość wyróżniona), przebieg lega z zakładkami legów (Zdobył / Zostało / Rzutki, zamknięcie oznaczone, zdanie podsumowujące leg). Wejście z komórki tabeli, pola drabinki, rekordów i kolejki zakończonych meczów. Mecz w toku pokazuje dotychczasowe legi i odświeża się na żywo.
 
+**Mecz z poprawionym wynikiem (decyzja autora 2026-11-18):** strona pokazuje oba wyniki. W nagłówku jest wynik poprawiony z oznaczeniem tekstowym „popr.” (jak w tabeli i drabince) oraz dopisek „rozegrano X:Y” z wynikiem z logu meczu; statystyki i przebieg legów zostają takie, jak rozegrano. Strona dociąga w tym celu widok turnieju. To samo dotyczy publicznej strony meczu w T17 (z publicznego widoku turnieju).
+
 **Testy:** dane z makiety; bust w przebiegu; mecz w toku; telefon 390 px.
 
 ### T16: publiczny podgląd, API tylko do odczytu (server, schema)
@@ -227,6 +229,8 @@ Trasy: `#/tournaments` (aktywny turniej albo lista zakończonych), `#/tournament
 **Zależy od:** T15, T16. **Makieta:** `T5Publiczny`.
 
 **Zmiana:** trasy `#/t/:id` i `#/t/:id/matches/:matchId` działające bez logowania (nie pokazują ekranu logowania, nie mają nawigacji aplikacji ani żadnej akcji zapisu), zakładki Wyniki / Grupa / Play-off / Statystyki, odświeżanie co 10 s, komunikat przy 404. Na ekranie turnieju „Udostępnij”: okno z adresem, „Kopiuj link”, kodem QR i przełącznikiem udostępniania. Kod QR generowany w przeglądarce (mała biblioteka bez zależności, bez wysyłania adresu na zewnątrz).
+
+**Adres lokalny (decyzja autora 2026-11-18):** gdy aplikacja jest otwarta pod `localhost` lub `127.0.0.1`, okno „Udostępnij” nie pokazuje linku, „Kopiuj link” ani kodu QR; zamiast nich jest komunikat z ikoną i tekstem, że udostępnianie wymaga otwarcia aplikacji po adresie w sieci. Przełącznik udostępniania zostaje.
 
 **Testy:** strona publiczna bez tokenu w pamięci przeglądarki; brak akcji zapisu; odświeżanie; okno udostępniania; wyłączenie udostępniania.
 
@@ -249,6 +253,16 @@ Trasy: `#/tournaments` (aktywny turniej albo lista zakończonych), `#/tournament
 **Zmiana:** scenariusze e2e na konfiguracji produkcyjnej: liga 3 graczy od kreatora do klasyfikacji; grupa + play-off 4 graczy z meczem o 3. miejsce, poprawką wyniku i wycofaniem; publiczny link bez logowania i po wyłączeniu udostępniania; sprawdzenia układu ekranu turnieju, drabinki i TV. README główne i pakietów: turnieje, API, trasy frontu.
 
 **Testy:** wszystkie joby CI zielone; czas joba `e2e` przed i po w opisie PR.
+
+### T20: ranking statystyk, dalsze miejsca widoczne na niskim ekranie (web)
+
+**Zależy od:** T18. Dodany decyzją autora 2026-11-19 po zgłoszeniu z T19 (PR #141).
+
+**Błąd:** na `#/stats` przy szerokości `xl` i wysokości okna do 800 px (zmierzone 1280×720 i 1280×800) lista `ol[aria-label="Dalsze miejsca"]` w `RankingBoard` ma wysokość 0: panel `.sc-panel` ucina zawartość, a lista (`xl:min-h-0 xl:flex-1 xl:overflow-y-auto`) nie dostaje miejsca. Miejsc 4 i niższych nie widać i nie da się ich kliknąć. Przy 1920×1080 działa.
+
+**Zmiana:** tylko układ `RankingBoard` i, jeśli trzeba, jego rodzica w `StatsScreen`: przy każdej wysokości okna dalsze miejsca są widoczne albo przewijane wewnątrz panelu, zgodnie z `design/rwd.md` (ranking nie ucina treści). Bez zmian treści, danych i wyglądu podium.
+
+**Testy:** sprawdzenie w `e2e/layout.spec.ts`: przy 1280×720 i 1280×800 z co najmniej 7 graczami w rankingu wiersz z miejsca 4 i ostatni wiersz da się przewinąć do widoku i kliknąć; 1920×1080 bez zmian. Poza `e2e/layout.spec.ts` PR nie zmienia plików w `e2e/` (T19 ma tam otwarty PR). Po scaleniu T20 T19 przechodzi `pnpm e2e --repeat-each=2`.
 
 ---
 
