@@ -20,23 +20,26 @@ Działa dziś:
 - Ustawienia urządzenia: układ klawiatury (koło albo siatka), głos, efekty i komentarze do tury za 0.
 - Podsumowanie po końcu gry. Mecz 1v1 ma karty legów z czasem, wykres zejścia z wyniku w ostatnim legu oraz przyciski „Rewanż” i „Nowy mecz”. Zabawa ma tabelę miejsc i ten sam wykres.
 - Opcjonalne logowanie wspólnym hasłem, gdy serwer ma ustawione `AUTOSCORE_PASSWORD`.
+- Turnieje w trzech formatach: liga (każdy z każdym), puchar (drabinka) oraz grupa z play-off. Puchar i play-off mogą mieć mecz o 3. miejsce, a grupa z play-off także pocieszenie dla graczy spoza play-off. Turniej zakłada kreator w formularzu nowej gry. Ekran turnieju ma tabelę, drabinkę i kolejkę meczów, a mecze turnieju gra się jak zwykłe mecze 1v1. Gracza da się wycofać (jego mecze stają się walkowerami), wynik meczu poprawić, a zakończony turniej zarchiwizować. Są też statystyki turnieju, strona meczu z przebiegiem legów, publiczny link tylko do odczytu z kodem QR i widok TV.
 
 Jeszcze nie ma:
 
 - Kamery i pakietu `vision`.
 - Statusu `pending` i weryfikacji rzutek. Serwer zapisuje `confidence`, ale go nie używa.
 - Przycisków „Nowa runda” i „Do weryfikacji”. Nie ma ich na ekranie gry, dopóki nie dostaną działania.
-- Widoku TV.
+- Widoku TV ani nakładki dla zwykłej gry. Widok TV ma tylko turniej.
+- W turniejach: kilku grup, kilku tarcz w interfejsie, drabinki podwójnej eliminacji i setów.
 
-Plan ma 7 etapów:
+Plan ma 8 etapów:
 
 1. Mac bez kamery: silnik, API, front z symulatorem, statystyki, audio.
 2. Mac i jedna kamera USB.
 3. Redesign wyglądu „Scena”.
 4. Wzmocnienie po audycie kodu.
-5. Dwie kamery USB.
-6. Mini PC.
-7. Wersja online.
+5. Turnieje.
+6. Dwie kamery USB.
+7. Mini PC.
+8. Wersja online.
 
 ## Wymagania
 
@@ -82,6 +85,26 @@ Konfiguracja idzie przez zmienne środowiskowe.
 ```sh
 PORT=3100 AUTOSCORE_API_URL=http://localhost:3100 pnpm dev
 ```
+
+## Trasy frontu
+
+Front ma trasy w hashu adresu. Nieznana trasa przekierowuje na `#/`. Kolumna „Logowanie” dotyczy serwera z hasłem (`AUTOSCORE_AUTH=on`). Przy `AUTOSCORE_AUTH=off` żadna trasa nie pyta o hasło. Szczegóły ekranów są w [README frontu](packages/web/README.md#ekrany).
+
+| Trasa | Ekran | Logowanie |
+|---|---|---|
+| `#/` | Nowa gra: formularz nowej gry i lista gier do dokończenia | tak |
+| `#/matches/:id` | Ekran gry | tak |
+| `#/stats` | Ranking graczy z kafelkami rekordów | tak |
+| `#/stats/:playerId` | Karta gracza | tak |
+| `#/history` | Historia gier | tak |
+| `#/settings` | Ustawienia urządzenia | tak |
+| `#/tournaments` | Zakończone turnieje. Trwający turniej przekierowuje na swój ekran | tak |
+| `#/tournaments/new` | Kreator turnieju | tak |
+| `#/tournaments/:id` | Turniej: tabela, drabinka, kolejka meczów i statystyki | tak |
+| `#/tournaments/:id/matches/:matchId` | Mecz turnieju ze statystykami i przebiegiem legów | tak |
+| `#/tournaments/:id/tv` | Widok TV turnieju | tak |
+| `#/t/:id` | Publiczny podgląd turnieju, tylko do odczytu | nie |
+| `#/t/:id/matches/:matchId` | Publiczny mecz turnieju | nie |
 
 ## API w skrócie
 
@@ -158,7 +181,7 @@ Kodowanie: miss to `segment: 0, multiplier: 0`. Outer Bull to `segment: 25, mult
 
 Ponowne wysłanie rzutki z tym samym `eventId` do tej samej gry daje 200 z zapisaną rzutką i `events: []`, jeśli `source`, `sequence`, `segment`, `multiplier`, `confidence` i `detectedAt` są takie same jak w zapisanej rzutce. Inna treść daje 409 `event_id_conflict`. W obu przypadkach serwer nic nie zapisuje i nic nie wysyła przez WebSocket. Ponowne wysłanie `rest-miss` z tym samym `eventId` działa tak samo i daje 200 z `throws: []`. Cofnięcie jest nowym wpisem w logu. Wiersz rzutki zostaje w bazie.
 
-Dwanaście komend przyjmuje opcjonalne `expectedSeq`: cofnięcie, próba i pominięcie checkoutu, `rest-miss`, porzucenie (`POST /matches/:id/abandon`, `AbandonMatchRequest`), wznowienie (`POST /matches/:id/resume`), koniec treningu (`POST /matches/:id/end`) oraz w turnieju ponowne losowanie, start meczu, archiwizacja, wycofanie gracza i korekta wyniku. `expectedSeq` to ostatni `eventSeq`, który widział klient. Inna wartość niż bieżący `eventSeq` gry daje 409 `stale_state` z bieżącym stanem, a serwer nic nie zapisuje i nic nie wysyła przez WebSocket. Bez `expectedSeq` komenda działa na bieżącym stanie, więc dwa cofnięcia z rzędu zdejmują dwie rzutki. Cofnięcie, wznowienie, koniec treningu, pominięcie checkoutu i trzy komendy turnieju czytają body jako JSON przy każdym `content-type`. Pusty albo niepoprawny JSON i wartość, która nie jest obiektem, znaczą brak body. Obiekt z niepoprawnym `expectedSeq`, na przykład `-1` albo `"3"`, daje 400 `invalid_request`. Kolejność sprawdzeń: błąd body (400), nieznana gra (404), błędy, które nie zależą od logu (`not_checkouts`, `not_practice`, `not_a_participant`, `throws_not_allowed`), w `rest-miss` ponowne wysłanie, potem `stale_state`, a na końcu błędy zależne od logu, na przykład `match_finished` albo `nothing_to_undo`. Dlatego powtórzony `rest-miss` daje 200 także z nieaktualnym `expectedSeq`.
+Trzynaście komend przyjmuje opcjonalne `expectedSeq`: cofnięcie, próba i pominięcie checkoutu, `rest-miss`, porzucenie (`POST /matches/:id/abandon`, `AbandonMatchRequest`), wznowienie (`POST /matches/:id/resume`), koniec treningu (`POST /matches/:id/end`) oraz w turnieju ponowne losowanie, start meczu, archiwizacja, wycofanie gracza, korekta wyniku i udostępnianie (`POST /tournaments/:id/sharing`, `SharingRequest`). `expectedSeq` to ostatni `eventSeq`, który widział klient. Inna wartość niż bieżący `eventSeq` gry daje 409 `stale_state` z bieżącym stanem, a serwer nic nie zapisuje i nic nie wysyła przez WebSocket. Bez `expectedSeq` komenda działa na bieżącym stanie, więc dwa cofnięcia z rzędu zdejmują dwie rzutki. Cofnięcie, wznowienie, koniec treningu, pominięcie checkoutu i trzy komendy turnieju czytają body jako JSON przy każdym `content-type`. Pusty albo niepoprawny JSON i wartość, która nie jest obiektem, znaczą brak body. Obiekt z niepoprawnym `expectedSeq`, na przykład `-1` albo `"3"`, daje 400 `invalid_request`. Kolejność sprawdzeń: błąd body (400), nieznana gra (404), błędy, które nie zależą od logu (`not_checkouts`, `not_practice`, `not_a_participant`, `throws_not_allowed`), w `rest-miss` ponowne wysłanie, potem `stale_state`, a na końcu błędy zależne od logu, na przykład `match_finished` albo `nothing_to_undo`. Dlatego powtórzony `rest-miss` daje 200 także z nieaktualnym `expectedSeq`.
 
 W komendach turnieju `expectedSeq` porównujemy z `eventSeq` widoku turnieju, czyli najwyższym `seq` logu turnieju. Rzutki w meczach turnieju go nie zmieniają. `stale_state` ma wtedy pole `tournament` z bieżącym widokiem zamiast `state` (`TournamentStaleStateError`). Kolejność sprawdzeń: błąd body (400), nieznany turniej (404), przy starcie meczu ponowny start, przy wycofaniu gracz spoza turnieju (400 `not_a_participant`), potem `stale_state`, `tournament_archived`, a na końcu pozostałe błędy. Dlatego powtórzony start meczu daje 200 także z nieaktualnym `expectedSeq`. Przy wycofaniu te pozostałe błędy to kolejno `tournament_finished` i `already_withdrawn`. Przy korekcie to nieznany mecz (404), `fixture_not_finished`, `invalid_result` i `dependent_started`.
 
@@ -192,6 +215,8 @@ Każdy błąd ma postać `{ "error": "<kod>", "message": "<opis>" }` (`ApiError`
 | `already_withdrawn` | 409 | Ponowne wycofanie tego samego gracza z turnieju. |
 | `tournament_finished` | 409 | Wycofanie gracza z zakończonego turnieju. |
 | `player_withdrawn` | 409 | Wznowienie porzuconego meczu turnieju, gdy jeden z jego graczy wycofał się z turnieju. |
+| `not_a_participant` | 400 | Porzucenie gry (`POST /matches/:id/abandon`) z `playerId` gracza, który w niej nie gra, albo wycofanie z turnieju gracza, który w nim nie gra. |
+| `too_many_requests` | 429 | Ponad 300 żądań na minutę z jednego adresu klienta do publicznych tras turnieju (`/public/tournaments/...`). Odpowiedź ma nagłówek `Retry-After` z liczbą sekund do ponownej próby. |
 | `internal_error` | 500 | Nieoczekiwany błąd serwera. |
 
 Żądania POST z body muszą mieć nagłówek `content-type: application/json`. Bez niego curl wysyła dane formularza, a serwer odpowiada 400 `invalid_request` („Unsupported Media Type”). Cofnięcie, wznowienie, koniec treningu, pominięcie checkoutu oraz ponowne losowanie, start meczu i archiwizacja turnieju działają z tym nagłówkiem i bez niego.
@@ -249,10 +274,10 @@ Serwer musi działać na `http://localhost:3000`. Identyfikatory z odpowiedzi ws
 
 ```
 packages/
-  engine/   silnik gry: czysta logika X01, zabawy i treningu
+  engine/   silnik gry: czysta logika X01, zabawy, treningu i turniejów
   schema/   kontrakt: schematy Zod i typy wspólne dla wszystkich pakietów
   server/   API REST i WebSocket, log zdarzeń w SQLite
-  web/      front React (ekran startowy, ekran gry z klawiaturą, statystyki, historia, ustawienia)
+  web/      front React (ekran startowy, ekran gry z klawiaturą, statystyki, historia, ustawienia, turnieje z widokiem TV i publicznym linkiem)
   audio/    głos i efekty dźwiękowe z wiadomości na żywo
 e2e/        testy end-to-end (Playwright) na konfiguracji produkcyjnej
 deploy/     skrypty wdrożenia i kopie zapasowe (opis w deploy/README.md)
