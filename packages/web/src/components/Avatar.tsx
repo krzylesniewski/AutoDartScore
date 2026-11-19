@@ -12,6 +12,8 @@ const SIZES = {
   waiting: 'size-8 text-sm lg:size-[46px] lg:text-xl',
   waitingDense: 'size-8 text-sm lg:size-10 lg:text-lg',
   placed: 'size-8 text-sm lg:size-[34px] lg:text-sm',
+  // Widok TV: 104 px w oknie 1600×900, mniejszy w niższym albo węższym oknie.
+  tv: 'size-[clamp(56px,min(6.5vw,11.5vh),128px)] text-[length:clamp(26px,min(3vw,5.3vh),58px)]',
 } as const;
 
 export type AvatarSize = keyof typeof SIZES;

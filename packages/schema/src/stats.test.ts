@@ -9,6 +9,9 @@ import {
   LegProgressPoint,
   MIN_GAMES_FOR_WIN_RATE,
   MIN_LEGS_FOR_AVERAGE,
+  MatchLeg,
+  MatchLegPlayer,
+  MatchLegs,
   MatchSummary,
   MatchSummaryLeg,
   OverallPlayer,
@@ -126,7 +129,7 @@ describe('PlayerStatsQuery', () => {
     expect(PlayerStatsQuery.parse({})).toEqual({ type: 'all', period: 'all' });
   });
 
-  it.each(['match', 'casual', 'practice'])('accepts %s', (type) => {
+  it.each(['match', 'casual', 'practice', 'tournament'])('accepts %s', (type) => {
     expect(PlayerStatsQuery.parse({ type })).toEqual({ type, period: 'all' });
   });
 
@@ -379,6 +382,10 @@ describe('RankingsQuery', () => {
     expect(RankingsQuery.parse({})).toEqual({ type: 'all', period: 'all' });
   });
 
+  it('accepts the tournament filter', () => {
+    expect(RankingsQuery.parse({ type: 'tournament' })).toEqual({ type: 'tournament', period: 'all' });
+  });
+
   it('rejects an unknown filter', () => {
     expect(RankingsQuery.safeParse({ type: 'bogus' }).success).toBe(false);
   });
@@ -451,6 +458,10 @@ describe('PlayerForm', () => {
     expect(FORM_GAMES).toBe(20);
     expect(PlayerFormQuery.parse({})).toEqual({ type: 'all', period: 'all' });
     expect(PlayerFormQuery.safeParse({ type: 'bogus' }).success).toBe(false);
+  });
+
+  it('accepts the tournament filter', () => {
+    expect(PlayerFormQuery.parse({ type: 'tournament' })).toEqual({ type: 'tournament', period: 'all' });
   });
 });
 
@@ -558,5 +569,67 @@ describe('FrequentHitsResponse', () => {
     const many = Array.from({ length: FREQUENT_HITS_LIMIT + 1 }, (_, index) => ({ segment: index + 1, multiplier: 1, count: 1 }));
     expect(parses(many)).toBe(false);
     expect(parses(many.slice(1))).toBe(true);
+  });
+});
+
+describe('MatchLegs', () => {
+  const won = {
+    legIndex: 0,
+    starterId: 'p1',
+    winnerId: 'p1',
+    checkout: 121,
+    dartsThrown: 6,
+    players: [
+      { playerId: 'p1', darts: 6, average: 150.5 },
+      { playerId: 'p2', darts: 3, average: 0 },
+    ],
+    turns: [
+      { playerId: 'p1', turnIndex: 0, darts: [{ segment: 20, multiplier: 3 }], points: 60, remainingAfter: 241, bust: false },
+      { playerId: 'p2', turnIndex: 1, darts: [{ segment: 0, multiplier: 0 }], points: 0, remainingAfter: 301, bust: true },
+    ],
+  };
+  const open = {
+    legIndex: 1,
+    starterId: 'p2',
+    winnerId: null,
+    checkout: null,
+    dartsThrown: null,
+    players: [
+      { playerId: 'p1', darts: 0, average: null },
+      { playerId: 'p2', darts: 0, average: null },
+    ],
+    turns: [],
+  };
+  const legs = {
+    matchId: 'm1',
+    finished: false,
+    eventSeq: 9,
+    startingScore: 301,
+    legsToWin: 2,
+    players: ['p1', 'p2'],
+    legs: [won, open],
+  };
+  const paths = (result: { error?: { issues: { path: PropertyKey[] }[] } }) => result.error?.issues.map((issue) => issue.path) ?? [];
+
+  it('parses a won leg and a leg without a winner', () => {
+    expect(MatchLegs.parse(legs)).toEqual(legs);
+  });
+
+  it('rejects a checkout without a winner', () => {
+    expect(paths(MatchLeg.safeParse({ ...open, checkout: 40 }))).toEqual([['winnerId']]);
+  });
+
+  it('rejects a winner without darts thrown', () => {
+    expect(paths(MatchLeg.safeParse({ ...won, dartsThrown: null }))).toEqual([['winnerId']]);
+  });
+
+  it('rejects a turn that breaks the bust rule and a negative dart count', () => {
+    expect(MatchLeg.safeParse({ ...won, turns: [{ ...won.turns[1], points: 20 }] }).success).toBe(false);
+    expect(MatchLegPlayer.safeParse({ playerId: 'p1', darts: -1, average: null }).success).toBe(false);
+  });
+
+  it('rejects legsToWin 0 and a starting score outside 301, 501 and 701', () => {
+    expect(MatchLegs.safeParse({ ...legs, legsToWin: 0 }).success).toBe(false);
+    expect(MatchLegs.safeParse({ ...legs, startingScore: 401 }).success).toBe(false);
   });
 });

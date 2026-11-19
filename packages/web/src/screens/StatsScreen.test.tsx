@@ -336,6 +336,7 @@ describe('StatsScreen: ranking', () => {
     expect(screen.getByRole('button', { name: 'Wszystkie' }).getAttribute('aria-pressed')).toBe('true');
     for (const [label, type] of [
       ['Mecze 1v1', 'match'],
+      ['Turniej', 'tournament'],
       ['Zabawa', 'casual'],
       ['Trening', 'practice'],
     ] as const) {
@@ -356,7 +357,7 @@ describe('StatsScreen: ranking', () => {
 });
 
 describe('StatsScreen: overall', () => {
-  const filterLabels = ['Wszystkie', 'Mecze 1v1', 'Zabawa', 'Trening'];
+  const filterLabels = ['Wszystkie', 'Mecze 1v1', 'Turniej', 'Zabawa', 'Trening'];
 
   function filterButtons(): string[] {
     const bar = screen.getByRole('button', { name: 'Wszystkie' }).parentElement as HTMLElement;
@@ -495,6 +496,7 @@ describe('StatsScreen: player card', () => {
     await vi.waitFor(() => expect(urls).toContain('/api/players/p2/stats?type=all&period=all'));
     for (const [label, type] of [
       ['Mecze 1v1', 'match'],
+      ['Turniej', 'tournament'],
       ['Zabawa', 'casual'],
       ['Trening', 'practice'],
     ] as const) {
@@ -696,6 +698,16 @@ describe('StatsScreen: form chart', () => {
     expect(chart.querySelector('path')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Mecze 1v1' }));
     await vi.waitFor(() => expect(urls).toContain('/api/players/p1/form?type=match&period=all'));
+  });
+
+  it('sends type=tournament for the Turniej filter', async () => {
+    render(<StatsScreen playerId="p1" />);
+    await vi.waitFor(() => expect(urls).toContain('/api/players/p1/form?type=all&period=all'));
+    // Rola button, bo w nawigacji jest też link „Turniej”.
+    fireEvent.click(screen.getByRole('button', { name: 'Turniej' }));
+    expect(screen.getByRole('button', { name: 'Turniej' }).getAttribute('aria-pressed')).toBe('true');
+    await vi.waitFor(() => expect(urls).toContain('/api/players/p1/form?type=tournament&period=all'));
+    expect(urls).toContain('/api/players/p1/stats?type=tournament&period=all');
   });
 });
 

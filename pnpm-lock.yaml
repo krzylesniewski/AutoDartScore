@@ -290,13 +290,16 @@ importers:
       react-dom:
         specifier: ^19.3.1
         version: 19.3.1(react@19.3.1)
+      uqr:
+        specifier: ^0.1.3
+        version: 0.1.3
     devDependencies:
       '@describe-me/react':
         specifier: 0.12.1
-        version: 0.12.1(@describe-me/vitest@0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0(@types/node@26.6.6)(jsdom@30.1.3)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))))(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.12.1(@describe-me/vitest@0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0))(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@describe-me/vitest':
         specifier: 0.12.1
-        version: 0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0(@types/node@26.6.6)(jsdom@30.1.3)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))
+        version: 0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0)
       '@tailwindcss/vite':
         specifier: ^4.3.5
         version: 4.3.5(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))
@@ -329,7 +332,7 @@ importers:
         version: 8.3.8(@types/node@26.6.6)(jiti@2.7.0)
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@26.6.6)(jsdom@30.1.3)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))
+        version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(jsdom@30.1.3)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))
 
 packages:
 
@@ -1865,6 +1868,9 @@ packages:
     peerDependencies:
       browserslist: '>= 4.21.0'
 
+  uqr@0.1.3:
+    resolution: {integrity: sha512-0rjE8iEJe4YmT9TOhwsZtqCMRLc5DXZUI2UEYUUg63ikBkqqE5EYWaI0etFe/5KUcmcYwLih2RND1kq+hrUJXA==}
+
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
@@ -2188,21 +2194,21 @@ snapshots:
     dependencies:
       rrweb-snapshot: 2.2.2
 
-  '@describe-me/react@0.12.1(@describe-me/vitest@0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0(@types/node@26.6.6)(jsdom@30.1.3)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))))(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@describe-me/react@0.12.1(@describe-me/vitest@0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0))(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@describe-me/core': 0.12.1
-      '@describe-me/vitest': 0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0(@types/node@26.6.6)(jsdom@30.1.3)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))
+      '@describe-me/vitest': 0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
     optionalDependencies:
       '@testing-library/react': 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
-  '@describe-me/vitest@0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0(@types/node@26.6.6)(jsdom@30.1.3)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))':
+  '@describe-me/vitest@0.12.1(describe-me@0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)))(typescript@6.0.3)(vitest@5.1.0)':
     dependencies:
       '@describe-me/core': 0.12.1
       picomatch: 4.0.7
       std-env: 4.3.0
-      vitest: 5.1.0(@types/node@26.6.6)(jsdom@30.1.3)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))
+      vitest: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(jsdom@30.1.3)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))
     optionalDependencies:
       describe-me: 0.12.1(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))
       typescript: 6.0.3
@@ -3489,6 +3495,8 @@ snapshots:
       browserslist: 4.29.5
       escalade: 3.2.0
       picocolors: 1.1.1
+
+  uqr@0.1.3: {}
 
   uri-js@4.4.1:
     dependencies:

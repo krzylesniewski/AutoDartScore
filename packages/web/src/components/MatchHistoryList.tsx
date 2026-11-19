@@ -105,6 +105,14 @@ function HistoryItem({ game, now, grouped, onAbandon, busy }: HistoryItemProps) 
             <time dateTime={game.updatedAt}>{when}</time>
           </span>
         </div>
+        {game.tournament !== null && (
+          <a
+            href={`#/tournaments/${encodeURIComponent(game.tournament.id)}`}
+            className="inline-flex min-h-11 max-w-full items-center self-start text-sm text-(--color-text-sub) underline underline-offset-4"
+          >
+            <span className="truncate">{pl.historyTournament(game.tournament.name, game.tournament.label)}</span>
+          </a>
+        )}
       </div>
       <span className="flex shrink-0 items-center gap-2 rounded-(--radius-pill) bg-(--color-surface-soft) px-3.5 py-2 font-display text-[17px] leading-tight font-bold whitespace-nowrap text-(--color-text) @max-xl:min-w-0 @max-xl:justify-self-start @max-xl:whitespace-normal @max-xl:wrap-anywhere">
         {STATUS_ICONS[row.status]}

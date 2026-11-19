@@ -20,23 +20,26 @@ Działa dziś:
 - Ustawienia urządzenia: układ klawiatury (koło albo siatka), głos, efekty i komentarze do tury za 0.
 - Podsumowanie po końcu gry. Mecz 1v1 ma karty legów z czasem, wykres zejścia z wyniku w ostatnim legu oraz przyciski „Rewanż” i „Nowy mecz”. Zabawa ma tabelę miejsc i ten sam wykres.
 - Opcjonalne logowanie wspólnym hasłem, gdy serwer ma ustawione `AUTOSCORE_PASSWORD`.
+- Turnieje w trzech formatach: liga (każdy z każdym), puchar (drabinka) oraz grupa z play-off. Puchar i play-off mogą mieć mecz o 3. miejsce, a grupa z play-off także pocieszenie dla graczy spoza play-off. Turniej zakłada kreator w formularzu nowej gry. Ekran turnieju ma tabelę, drabinkę i kolejkę meczów, a mecze turnieju gra się jak zwykłe mecze 1v1. Gracza da się wycofać (jego mecze stają się walkowerami), wynik meczu poprawić, a zakończony turniej zarchiwizować. Są też statystyki turnieju, strona meczu z przebiegiem legów, publiczny link tylko do odczytu z kodem QR i widok TV.
 
 Jeszcze nie ma:
 
 - Kamery i pakietu `vision`.
 - Statusu `pending` i weryfikacji rzutek. Serwer zapisuje `confidence`, ale go nie używa.
 - Przycisków „Nowa runda” i „Do weryfikacji”. Nie ma ich na ekranie gry, dopóki nie dostaną działania.
-- Widoku TV.
+- Widoku TV ani nakładki dla zwykłej gry. Widok TV ma tylko turniej.
+- W turniejach: kilku grup, kilku tarcz w interfejsie, drabinki podwójnej eliminacji i setów.
 
-Plan ma 7 etapów:
+Plan ma 8 etapów:
 
 1. Mac bez kamery: silnik, API, front z symulatorem, statystyki, audio.
 2. Mac i jedna kamera USB.
 3. Redesign wyglądu „Scena”.
 4. Wzmocnienie po audycie kodu.
-5. Dwie kamery USB.
-6. Mini PC.
-7. Wersja online.
+5. Turnieje.
+6. Dwie kamery USB.
+7. Mini PC.
+8. Wersja online.
 
 ## Wymagania
 
@@ -83,6 +86,26 @@ Konfiguracja idzie przez zmienne środowiskowe.
 PORT=3100 AUTOSCORE_API_URL=http://localhost:3100 pnpm dev
 ```
 
+## Trasy frontu
+
+Front ma trasy w hashu adresu. Nieznana trasa przekierowuje na `#/`. Kolumna „Logowanie” dotyczy serwera z hasłem (`AUTOSCORE_AUTH=on`). Przy `AUTOSCORE_AUTH=off` żadna trasa nie pyta o hasło. Szczegóły ekranów są w [README frontu](packages/web/README.md#ekrany).
+
+| Trasa | Ekran | Logowanie |
+|---|---|---|
+| `#/` | Nowa gra: formularz nowej gry i lista gier do dokończenia | tak |
+| `#/matches/:id` | Ekran gry | tak |
+| `#/stats` | Ranking graczy z kafelkami rekordów | tak |
+| `#/stats/:playerId` | Karta gracza | tak |
+| `#/history` | Historia gier | tak |
+| `#/settings` | Ustawienia urządzenia | tak |
+| `#/tournaments` | Zakończone turnieje. Trwający turniej przekierowuje na swój ekran | tak |
+| `#/tournaments/new` | Kreator turnieju | tak |
+| `#/tournaments/:id` | Turniej: tabela, drabinka, kolejka meczów i statystyki | tak |
+| `#/tournaments/:id/matches/:matchId` | Mecz turnieju ze statystykami i przebiegiem legów | tak |
+| `#/tournaments/:id/tv` | Widok TV turnieju | tak |
+| `#/t/:id` | Publiczny podgląd turnieju, tylko do odczytu | nie |
+| `#/t/:id/matches/:matchId` | Publiczny mecz turnieju | nie |
+
 ## API w skrócie
 
 Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schema](packages/schema/README.md) (Zod).
@@ -92,23 +115,39 @@ Typy żądań, odpowiedzi i wiadomości są zdefiniowane tylko w [packages/schem
 | `GET` | `/players` | Lista graczy bez gości, posortowana po imieniu. |
 | `POST` | `/players` | Nowy gracz (`CreatePlayerRequest`: `name` 1-40 znaków po obcięciu spacji, opcjonalny `avatar` (dokładnie jedno emoji, np. 🎯, 👍🏽 albo 🇵🇱; tekst daje 400), opcjonalny `color` 1-16, `guest` domyślnie `false`). Bez `color` gracz dostaje stały kolor wyliczony z `id`. Odpowiedź 201 z `Player`. Imię zajęte przez innego zapisanego, niezarchiwizowanego gracza daje 409 `player_name_taken` (nie dotyczy gości). |
 | `POST` | `/matches` | Nowa gra (`CreateMatchRequest`, rodzaj w polu `type`). Odpowiedź 201 z `MatchSnapshot`. |
+| `GET` | `/matches` | Lista gier (`MatchListItem`). Parametry: `status=unfinished`, `playerId`, `type` i `tournamentId`, łączone przez AND. Nieznany `tournamentId` daje pustą listę. Niepoprawna wartość parametru daje 400 `invalid_request`. |
 | `GET` | `/matches/:id` | Bieżący stan gry (`MatchSnapshot`). |
 | `POST` | `/matches/:id/throws` | Rzutka (`HitEvent`). Odpowiedź 201 z `{ throw, events, state }`. |
 | `POST` | `/matches/:id/checkout-attempts` | Próba w treningu checkoutów (`CheckoutAttemptRequest`: `{ success }`). Odpowiedź 201 z `MatchSnapshot`. Po udanej próbie `checkouts` ma nowy cel, po nieudanej ten sam. Sesje zapisane przed wprowadzeniem tej zasady dostają nowy cel po każdej próbie. Inna gra daje 409 `not_checkouts`, zakończony trening 409 `practice_ended`, a porzucony 409 `match_abandoned`. |
 | `POST` | `/matches/:id/checkout-skips` | Pominięcie celu w treningu checkoutów: nowy cel bez próby. Body jest opcjonalne (`CommandRequest`: `{ expectedSeq }`, patrz niżej). Odpowiedź 201 z `MatchSnapshot`, w którym `attempts`, `successes` i `history` się nie zmieniają, a `skips` rośnie o 1. Błędy jak przy próbie, nieznana gra daje 404 `not_found`. |
 | `POST` | `/matches/:id/rest-miss` | Miss na resztę tury rzucającego (`RestMissRequest`: `{ eventId, expectedSeq? }`). Zapisuje 3, 2 albo 1 rzutkę (przy 0, 1 albo 2 rzutkach w turze) w jednej transakcji, ze `source: "rest-miss"`. Pierwsza dostaje `eventId` z żądania. Odpowiedź 201 z `{ throws, events, state }` (`RestMissResult`). Ponowne wysłanie tego samego `eventId` daje 200 z `throws: []`. Błędy jak przy rzutce: zakończona gra daje 409 `match_finished`, trening checkoutów 409 `throws_not_allowed`. |
-| `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki. Body jest opcjonalne (`CommandRequest`: `{ expectedSeq }`, patrz niżej). Odpowiedź 200 z `{ undoneThrowId, state }`. W zakończonej grze działa do `editableUntil` ze stanu gry (`finishedAt` plus `AUTOSCORE_MATCH_LOCK_MINUTES`), potem daje 409 `match_locked`. W treningu checkoutów cofa ostatnią próbę albo ostatnie pominięcie, przywraca poprzedni cel i zwraca `undoneThrowId: null`. |
+| `POST` | `/matches/:id/undo` | Cofnięcie ostatniej rzutki. Body jest opcjonalne (`CommandRequest`: `{ expectedSeq }`, patrz niżej). Odpowiedź 200 z `{ undoneThrowId, state }`. W zakończonej grze działa do `editableUntil` ze stanu gry (`finishedAt` plus `AUTOSCORE_MATCH_LOCK_MINUTES`), potem daje 409 `match_locked`. W meczu turnieju cofnięcie rzutki, która zakończyła mecz, daje 409 `match_locked` także przed `editableUntil`, gdy zaczął się już mecz zależny od jego wyniku (w grupie z play-off każdy mecz drabinki, w pucharze kolejne mecze drabinki). `editableUntil` tego nie uwzględnia. W treningu checkoutów cofa ostatnią próbę albo ostatnie pominięcie, przywraca poprzedni cel i zwraca `undoneThrowId: null`. |
 | `GET` | `/matches/:id/summary` | Podsumowanie gry (`MatchSummary`). Każdy wygrany leg w `legs` ma `durationMs`: czas od pierwszej do zamykającej rzutki lega w milisekundach, bez przerw między porzuceniem a wznowieniem. Zabawa ma pustą listę `legs`. Nieznana gra daje 404 `not_found`. |
-| `GET` | `/players/:id/stats` | Statystyki gracza (`PlayerStats`), w tym `winRate` (procent wygranych z ukończonych meczów 1v1 i gier w zabawie, z jednym miejscem po przecinku, `null` bez ukończonych gier) i `t20Hits` (trafienia T20 w zamkniętych turach, także z bustem). Parametry: `type` (`all`, `match`, `casual` albo `practice`, domyślnie `all`) i `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. Odpowiedź ma pola `filter` i `period`. Nieznana wartość parametru daje 400 `invalid_request`, nieznany gracz 404 `not_found`. |
-| `GET` | `/players/:id/form` | Forma gracza (`PlayerForm`): średnia z ukończonych legów każdej z ostatnich 20 gier. Parametry: `type` (`all`, `match`, `casual` albo `practice`, domyślnie `all`) i `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. Odpowiedź ma pola `filter` i `period`. Nieznana wartość parametru daje 400 `invalid_request`. |
-| `GET` | `/players/:id/head-to-head/:opponentId` | Bilans dwóch graczy z ukończonych meczów 1v1 (`HeadToHead`). Parametr `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. Odpowiedź ma pole `period`. Nieznana wartość parametru albo ten sam gracz dwa razy daje 400 `invalid_request`. |
-| `GET` | `/stats/rankings` | Ranking graczy i rekordy (`StatsRankings`), w tym lista `winRate` (gracze z co najmniej 3 ukończonymi meczami 1v1 albo grami w zabawie, pusta dla `practice`) i lista `t20Hits` (bez graczy z 0 trafień). Parametry: `type` (`all`, `match`, `casual` albo `practice`, domyślnie `all`) i `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. Odpowiedź ma pola `filter` i `period`. Nieznana wartość parametru daje 400 `invalid_request`. |
+| `GET` | `/matches/:id/legs` | Historia legów meczu 1v1, także turniejowego (`MatchLegs`). Jeden leg na każdy `legIndex` od 0 do bieżącego lega: zaczynający (`starterId`, na przemian od wylosowanego gracza), zwycięzca, zamknięcie i rzutki zwycięzcy (`null` w legu bez zwycięzcy), średnia i rzutki obu graczy w legu oraz zamknięte tury (`LegTurn`). Średnia lega liczy zamknięte tury gracza, a bust liczy rzutki za 0 punktów, więc w wygranym legu równa się średniej z `GET /matches/:id/summary`. Otwarta tura jest tylko w `currentDarts` stanu gry. Po wygranym legu trwającego meczu następny leg ma `turns: []`. Porzucony mecz zwraca to, co ma, z `finished: false`. Zabawa i trening dają 409 `not_a_match`, nieznana gra 404 `not_found`. |
+| `GET` | `/players/:id/stats` | Statystyki gracza (`PlayerStats`), w tym `winRate` (procent wygranych z ukończonych meczów 1v1 i gier w zabawie, z jednym miejscem po przecinku, `null` bez ukończonych gier) i `t20Hits` (trafienia T20 w zamkniętych turach, także z bustem). Parametry: `type` (`all`, `match`, `casual`, `practice` albo `tournament`, domyślnie `all`) i `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. `match` obejmuje wszystkie mecze 1v1, także turniejowe, a `tournament` tylko mecze 1v1 z turniejów. Odpowiedź ma pola `filter` i `period`. Nieznana wartość parametru daje 400 `invalid_request`, nieznany gracz 404 `not_found`. |
+| `GET` | `/players/:id/form` | Forma gracza (`PlayerForm`): średnia z ukończonych legów każdej z ostatnich 20 gier. Parametry: `type` (`all`, `match`, `casual`, `practice` albo `tournament`, domyślnie `all`) i `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. `match` obejmuje wszystkie mecze 1v1, także turniejowe, a `tournament` tylko mecze 1v1 z turniejów. Odpowiedź ma pola `filter` i `period`. Nieznana wartość parametru daje 400 `invalid_request`. |
+| `GET` | `/players/:id/head-to-head/:opponentId` | Bilans dwóch graczy z ukończonych meczów 1v1 (`HeadToHead`). Liczą się też mecze turniejowe. Parametr `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. Odpowiedź ma pole `period`. Nieznana wartość parametru albo ten sam gracz dwa razy daje 400 `invalid_request`. |
+| `GET` | `/stats/rankings` | Ranking graczy i rekordy (`StatsRankings`), w tym lista `winRate` (gracze z co najmniej 3 ukończonymi meczami 1v1 albo grami w zabawie, pusta dla `practice`) i lista `t20Hits` (bez graczy z 0 trafień). Parametry: `type` (`all`, `match`, `casual`, `practice` albo `tournament`, domyślnie `all`) i `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. `match` obejmuje wszystkie mecze 1v1, także turniejowe, a `tournament` tylko mecze 1v1 z turniejów. Odpowiedź ma pola `filter` i `period`. Nieznana wartość parametru daje 400 `invalid_request`. |
 | `GET` | `/stats/overall` | Wszystkie gry liczone do statystyk razem, bez filtra po typie (`StatsOverall`). Parametr `period` (`30d`, `90d` albo `all`, domyślnie `all`). `30d` i `90d` liczą tylko gry z `createdAt` nie starszym niż zegar serwera minus 30 albo 90 dni. Odpowiedź ma pole `period`. Nieznana wartość parametru daje 400 `invalid_request`. |
+| `POST` | `/tournaments` | Nowy turniej (`CreateTournamentRequest`). Serwer losuje kolejność graczy. Odpowiedź 201 z `TournamentView` (`eventSeq: 1`). Nieznany gracz daje 400 `unknown_player`, zarchiwizowany 400 `archived_player` (goście są dozwoleni). Gdy inny turniej trwa i nie jest zarchiwizowany, 409 `tournament_active`. |
+| `GET` | `/tournaments` | Lista turniejów (`TournamentListItem`), od najnowszego. Parametry: `status` (`in_progress` albo `finished`) i `archived=include`. Bez `archived=include` zarchiwizowane turnieje są ukryte. |
+| `GET` | `/tournaments/:id` | Bieżący widok turnieju (`TournamentView`), także zarchiwizowanego. Średnie meczów (`Fixture.averages`) i tabeli (`StandingRow.average`) liczą zamknięte tury powiązanych meczów, a bust liczy rzutki za 0 punktów. Mecz ma średnie tylko w statusie `finished`, gdy obaj gracze mają zamkniętą turę. Walkower nie ma ich nigdy. Tabela sumuje mecze grupy bez walkowerów. Nieznany turniej daje 404 `not_found`. |
+| `GET` | `/tournaments/:id/stats` | Statystyki turnieju (`TournamentStats`), także zarchiwizowanego. Jeden wiersz na gracza w kolejności zgłoszenia, z gośćmi. Bilans i legi liczą każdy mecz z wynikiem w każdej fazie, także walkower (N:0) i korektę. Rzutki, średnia, First 9, 100+, 140+, 180, najwyższe zamknięcie i najlepszy leg liczą tylko mecze o statusie `finished`. Rekordy (`records`): najwyższa średnia meczu, najwyższe zamknięcie, najkrótszy leg i najwyższa tura, z graczem, meczem turnieju i grą, przy remisie pierwszy osiągnięty, `null` bez wartości. Nieznany turniej daje 404 `not_found`. |
+| `POST` | `/tournaments/:id/draw` | Ponowne losowanie kolejności. Body jest opcjonalne (`CommandRequest`). Odpowiedź 200 z `TournamentView`. Po starcie pierwszego meczu daje 409 `tournament_started`. |
+| `POST` | `/tournaments/:id/fixtures/:fixtureId/start` | Start meczu turnieju jako zwykłego meczu 1v1. Body jest opcjonalne (`CommandRequest`). Odpowiedź 201 z `StartFixtureResult` (`{ matchId, tournament }`). Ponowny start tego samego meczu daje 200 z tym samym `matchId` i niczego nie zapisuje. Mecz, który nie jest gotowy (czeka na wyniki albo jest wolnym losem), daje 409 `fixture_not_ready`, a nieznany mecz 404 `not_found`. |
+| `POST` | `/tournaments/:id/archive` | Archiwizacja zakończonego turnieju. Body jest opcjonalne (`CommandRequest`). Odpowiedź 200 z `TournamentView` z `archivedAt`. Trwający turniej daje 409 `tournament_not_finished`, a zarchiwizowany 409 `tournament_archived`. |
+| `POST` | `/tournaments/:id/withdrawals` | Wycofanie gracza (`WithdrawPlayerRequest`: `{ playerId, expectedSeq? }`). Jego pozostałe mecze stają się walkowerami (`legsToWin`:0 dla rywala), rozegrane zostają w tabeli. Jego trwający mecz turnieju zostaje porzucony w tym samym zapisie i nie da się go wznowić. Odpowiedź 201 z `TournamentView`. Gracz spoza turnieju daje 400 `not_a_participant`, zakończony turniej 409 `tournament_finished`, a ponowne wycofanie 409 `already_withdrawn`. |
+| `POST` | `/tournaments/:id/fixtures/:fixtureId/result` | Ręczna korekta wyniku zakończonego meczu turnieju (`CorrectResultRequest`: `{ legs, expectedSeq? }`, legi w kolejności slotów). Odpowiedź 200 z `TournamentView`, a wynik meczu ma `corrected: true`. Rzutki meczu się nie zmieniają. Działa też w zakończonym turnieju. Przy kilku korektach jednego meczu liczy się ostatnia. Nieznany mecz daje 404 `not_found`, mecz bez wyniku z gry (także walkower) 409 `fixture_not_finished`, zwycięzca bez dokładnie `legsToWin` legów albo przegrany z co najmniej tyloma 400 `invalid_result`, a mecz, od którego wyniku zależy mecz już rozpoczęty, 409 `dependent_started`. |
+| `POST` | `/tournaments/:id/sharing` | Włączenie albo wyłączenie publicznego linku (`SharingRequest`: `{ sharing, expectedSeq? }`). Odpowiedź 200 z `TournamentView` z nowym `sharing`. Zmiana dopisuje `sharing_changed` i wysyła `tournament_updated`, a ta sama wartość niczego nie zapisuje. Działa też w zakończonym turnieju. Zarchiwizowany turniej daje 409 `tournament_archived`, niepoprawne body 400 `invalid_request`, nieznany turniej 404 `not_found`. |
+| `GET` | `/public/tournaments/:id` | Publiczny widok turnieju (`PublicTournamentView`), bez tokenu. Gracze mają tylko imię, avatar emoji i kolor. Nieznane id, wyłączone udostępnianie i zarchiwizowany turniej dają tę samą odpowiedź 404 `not_found`. |
+| `GET` | `/public/tournaments/:id/stats` | Publiczne statystyki turnieju (`PublicTournamentStats`), bez tokenu. Ta sama odpowiedź 404 co wyżej. |
+| `GET` | `/public/tournaments/:id/matches/:matchId` | Publiczny mecz turnieju (`PublicTournamentMatch`: stan meczu, `MatchSummary` i `MatchLegs`), bez tokenu. Mecz spoza turnieju i nieznany mecz też dają tę samą odpowiedź 404. Trzy publiczne trasy mają limit 300 żądań na minutę z jednego adresu klienta, licząc też odpowiedzi 404. Ponad limit odpowiedź to 429 `too_many_requests` z `Retry-After`. Udane odpowiedzi są pamiętane do 5 s, a każda zmiana turnieju rozsyłana przez serwer od razu je czyści. |
 | WebSocket | `/matches/:id/live` | Strumień stanu i zdarzeń jednej gry. |
+| WebSocket | `/tournaments/:id/live` | Widok jednego turnieju (`tournament_updated`). |
 
 Rodzaje gry w `POST /matches`:
 
-- `match`: dokładnie 2 różnych graczy w `playerIds`, `startingScore` 301, 501 lub 701 (domyślnie 301), `bestOf` 1, 3 lub 5 (domyślnie 1),
+- `match`: dokładnie 2 różnych graczy w `playerIds`, `startingScore` 301, 501 lub 701 (domyślnie 301) i długość meczu: `bestOf` 1, 3 lub 5 albo `legsToWin` 1-9 (do N wygranych legów), nigdy oba naraz. Bez żadnego z nich mecz to best of 1. Oba pola naraz dają 400 `invalid_request`,
 - `casual`: 2-4 różnych graczy i `startingScore` (domyślnie 301),
 - `practice`: `practiceMode` `free_run`, `solo_501` albo `checkouts` i jeden gracz. `checkouts` wymaga `checkoutRange` (`2-50` albo `51-100`), a inne tryby go nie przyjmują.
 
@@ -142,28 +181,45 @@ Kodowanie: miss to `segment: 0, multiplier: 0`. Outer Bull to `segment: 25, mult
 
 Ponowne wysłanie rzutki z tym samym `eventId` do tej samej gry daje 200 z zapisaną rzutką i `events: []`, jeśli `source`, `sequence`, `segment`, `multiplier`, `confidence` i `detectedAt` są takie same jak w zapisanej rzutce. Inna treść daje 409 `event_id_conflict`. W obu przypadkach serwer nic nie zapisuje i nic nie wysyła przez WebSocket. Ponowne wysłanie `rest-miss` z tym samym `eventId` działa tak samo i daje 200 z `throws: []`. Cofnięcie jest nowym wpisem w logu. Wiersz rzutki zostaje w bazie.
 
-Siedem komend przyjmuje opcjonalne `expectedSeq`: cofnięcie, próba i pominięcie checkoutu, `rest-miss`, porzucenie (`POST /matches/:id/abandon`, `AbandonMatchRequest`), wznowienie (`POST /matches/:id/resume`) i koniec treningu (`POST /matches/:id/end`). `expectedSeq` to ostatni `eventSeq`, który widział klient. Inna wartość niż bieżący `eventSeq` gry daje 409 `stale_state` z bieżącym stanem, a serwer nic nie zapisuje i nic nie wysyła przez WebSocket. Bez `expectedSeq` komenda działa na bieżącym stanie, więc dwa cofnięcia z rzędu zdejmują dwie rzutki. Cofnięcie, wznowienie, koniec treningu i pominięcie checkoutu czytają body jako JSON przy każdym `content-type`. Pusty albo niepoprawny JSON i wartość, która nie jest obiektem, znaczą brak body. Obiekt z niepoprawnym `expectedSeq`, na przykład `-1` albo `"3"`, daje 400 `invalid_request`. Kolejność sprawdzeń: błąd body (400), nieznana gra (404), błędy, które nie zależą od logu (`not_checkouts`, `not_practice`, `not_a_participant`, `throws_not_allowed`), w `rest-miss` ponowne wysłanie, potem `stale_state`, a na końcu błędy zależne od logu, na przykład `match_finished` albo `nothing_to_undo`. Dlatego powtórzony `rest-miss` daje 200 także z nieaktualnym `expectedSeq`.
+Trzynaście komend przyjmuje opcjonalne `expectedSeq`: cofnięcie, próba i pominięcie checkoutu, `rest-miss`, porzucenie (`POST /matches/:id/abandon`, `AbandonMatchRequest`), wznowienie (`POST /matches/:id/resume`), koniec treningu (`POST /matches/:id/end`) oraz w turnieju ponowne losowanie, start meczu, archiwizacja, wycofanie gracza, korekta wyniku i udostępnianie (`POST /tournaments/:id/sharing`, `SharingRequest`). `expectedSeq` to ostatni `eventSeq`, który widział klient. Inna wartość niż bieżący `eventSeq` gry daje 409 `stale_state` z bieżącym stanem, a serwer nic nie zapisuje i nic nie wysyła przez WebSocket. Bez `expectedSeq` komenda działa na bieżącym stanie, więc dwa cofnięcia z rzędu zdejmują dwie rzutki. Cofnięcie, wznowienie, koniec treningu, pominięcie checkoutu i trzy komendy turnieju czytają body jako JSON przy każdym `content-type`. Pusty albo niepoprawny JSON i wartość, która nie jest obiektem, znaczą brak body. Obiekt z niepoprawnym `expectedSeq`, na przykład `-1` albo `"3"`, daje 400 `invalid_request`. Kolejność sprawdzeń: błąd body (400), nieznana gra (404), błędy, które nie zależą od logu (`not_checkouts`, `not_practice`, `not_a_participant`, `throws_not_allowed`), w `rest-miss` ponowne wysłanie, potem `stale_state`, a na końcu błędy zależne od logu, na przykład `match_finished` albo `nothing_to_undo`. Dlatego powtórzony `rest-miss` daje 200 także z nieaktualnym `expectedSeq`.
 
-Każdy błąd ma postać `{ "error": "<kod>", "message": "<opis>" }` (`ApiError`). `stale_state` ma dodatkowo pole `state` z bieżącym `MatchSnapshot` (`StaleStateError`).
+W komendach turnieju `expectedSeq` porównujemy z `eventSeq` widoku turnieju, czyli najwyższym `seq` logu turnieju. Rzutki w meczach turnieju go nie zmieniają. `stale_state` ma wtedy pole `tournament` z bieżącym widokiem zamiast `state` (`TournamentStaleStateError`). Kolejność sprawdzeń: błąd body (400), nieznany turniej (404), przy starcie meczu ponowny start, przy wycofaniu gracz spoza turnieju (400 `not_a_participant`), potem `stale_state`, `tournament_archived`, a na końcu pozostałe błędy. Dlatego powtórzony start meczu daje 200 także z nieaktualnym `expectedSeq`. Przy wycofaniu te pozostałe błędy to kolejno `tournament_finished` i `already_withdrawn`. Przy korekcie to nieznany mecz (404), `fixture_not_finished`, `invalid_result` i `dependent_started`.
+
+Każdy błąd ma postać `{ "error": "<kod>", "message": "<opis>" }` (`ApiError`). `stale_state` ma dodatkowo pole `state` z bieżącym `MatchSnapshot` (`StaleStateError`), a w komendach turnieju pole `tournament` z bieżącym `TournamentView` (`TournamentStaleStateError`).
 
 | Kod | HTTP | Kiedy |
 |---|---|---|
 | `invalid_request` | 400 | Body nie pasuje do schematu, niepoprawny JSON, brak lub zły `content-type`. |
-| `invalid_config` | 400 | Silnik odrzucił konfigurację gry. |
+| `invalid_config` | 400 | Silnik odrzucił konfigurację gry albo turnieju. |
 | `unknown_player` | 400 | `playerIds` zawiera nieznanego gracza. |
+| `archived_player` | 400 | `playerIds` nowego turnieju zawiera zarchiwizowanego gracza. |
 | `match_mismatch` | 400 | `matchId` w body różni się od `:id` w adresie. |
-| `not_found` | 404 | Nieznana gra (GET, rzutka, cofnięcie) albo nieznana ścieżka. |
+| `not_found` | 404 | Nieznana gra (GET, rzutka, cofnięcie), nieznany turniej albo mecz turnieju, albo nieznana ścieżka. |
+| `tournament_active` | 409 | Nowy turniej, gdy inny trwa i nie jest zarchiwizowany. |
+| `tournament_started` | 409 | Ponowne losowanie po starcie pierwszego meczu turnieju. |
+| `fixture_not_ready` | 409 | Start meczu turnieju, który czeka na wyniki innych meczów, jest wolnym losem albo już ma wynik. |
+| `tournament_not_finished` | 409 | Archiwizacja trwającego turnieju. |
+| `tournament_archived` | 409 | Komenda w zarchiwizowanym turnieju. |
 | `match_finished` | 409 | Rzutka po końcu gry. |
 | `throws_not_allowed` | 409 | Rzutka w treningu checkoutów. Ten tryb przyjmuje tylko próby. |
 | `not_checkouts` | 409 | Próba albo pominięcie checkoutu w grze, która nie jest treningiem checkoutów. |
+| `not_a_match` | 409 | Historia legów (`GET /matches/:id/legs`) gry, która nie jest meczem 1v1. |
 | `event_id_conflict` | 409 | `eventId` jest już użyty w innej grze albo w tej samej grze z innym trafieniem. |
-| `stale_state` | 409 | `expectedSeq` różni się od bieżącego `eventSeq` gry. Body ma pole `state` z bieżącym stanem. Serwer nic nie zapisuje. |
+| `stale_state` | 409 | `expectedSeq` różni się od bieżącego `eventSeq` gry albo turnieju. Body ma pole `state` z bieżącym stanem gry albo `tournament` z bieżącym widokiem turnieju. Serwer nic nie zapisuje. |
 | `nothing_to_undo` | 409 | W logu nie ma rzutki do cofnięcia, a w treningu checkoutów próby ani pominięcia. |
 | `player_name_taken` | 409 | Imię zajęte przez innego zapisanego, niezarchiwizowanego gracza. Wielkość liter i nadmiarowe spacje się nie liczą. |
-| `match_locked` | 409 | Cofnięcie w zakończonej grze po `editableUntil`. Serwer nic nie zapisuje. |
+| `match_locked` | 409 | Cofnięcie w zakończonej grze po `editableUntil` albo cofnięcie rzutki kończącej mecz turnieju, gdy zaczął się mecz zależny od jego wyniku. Serwer nic nie zapisuje. |
+| `fixture_not_finished` | 409 | Korekta wyniku meczu turnieju, który nie ma wyniku z gry (czeka, jest gotowy, trwa, jest walkowerem albo wolnym losem). |
+| `invalid_result` | 400 | Korekta, w której zwycięzca nie ma dokładnie `legsToWin` legów meczu albo przegrany ma ich tyle samo lub więcej. |
+| `dependent_started` | 409 | Korekta wyniku meczu turnieju, od którego zależy mecz już rozpoczęty. |
+| `already_withdrawn` | 409 | Ponowne wycofanie tego samego gracza z turnieju. |
+| `tournament_finished` | 409 | Wycofanie gracza z zakończonego turnieju. |
+| `player_withdrawn` | 409 | Wznowienie porzuconego meczu turnieju, gdy jeden z jego graczy wycofał się z turnieju. |
+| `not_a_participant` | 400 | Porzucenie gry (`POST /matches/:id/abandon`) z `playerId` gracza, który w niej nie gra, albo wycofanie z turnieju gracza, który w nim nie gra. |
+| `too_many_requests` | 429 | Ponad 300 żądań na minutę z jednego adresu klienta do publicznych tras turnieju (`/public/tournaments/...`). Odpowiedź ma nagłówek `Retry-After` z liczbą sekund do ponownej próby. |
 | `internal_error` | 500 | Nieoczekiwany błąd serwera. |
 
-Żądania POST z body muszą mieć nagłówek `content-type: application/json`. Bez niego curl wysyła dane formularza, a serwer odpowiada 400 `invalid_request` („Unsupported Media Type”). Cofnięcie, wznowienie, koniec treningu i pominięcie checkoutu działają z tym nagłówkiem i bez niego.
+Żądania POST z body muszą mieć nagłówek `content-type: application/json`. Bez niego curl wysyła dane formularza, a serwer odpowiada 400 `invalid_request` („Unsupported Media Type”). Cofnięcie, wznowienie, koniec treningu, pominięcie checkoutu oraz ponowne losowanie, start meczu i archiwizacja turnieju działają z tym nagłówkiem i bez niego.
 
 ### WebSocket
 
@@ -174,9 +230,12 @@ Adres bezpośredni: `ws://localhost:3000/matches/:id/live`. Przez proxy frontu: 
 - Po `rest-miss`: jedno `throw_registered` na każdą zapisaną rzutkę, każde z `eventSeq` swojej rzutki, potem zdarzenia domenowe i `state_updated` z `eventSeq` ostatniej rzutki. Wcześniejszy `eventSeq` mają tylko `throw_registered` poprzednich rzutek.
 - W meczu 1v1 po zdarzeniach domenowych, a przed `state_updated`, mogą przyjść wiadomości `achievement` (rekord gracza albo pierwsza tura 100+, 120+, 140+ lub 180), z tym samym `eventSeq` co `state_updated`.
 - Po cofnięciu: `throw_undone`, potem `state_updated`. W treningu checkoutów po próbie, pominięciu i cofnięciu tylko `state_updated`.
+- Po wycofaniu gracza z turnieju mecz, który to wycofanie porzuciło, dostaje `state_updated` z ustawionym `abandonment`. Mecz porzucony już wcześniej nie dostaje nic.
 - Nieznana gra: serwer zamyka połączenie z kodem 4404.
 
 Zdarzenia domenowe: `turn_completed`, `bust`, `leg_won`, `match_won`, `player_finished`, `casual_finished`. Pełna unia wiadomości to `LiveMessage`.
+
+Turniej ma osobny kanał: `ws://localhost:3000/tournaments/:id/live` (przez proxy frontu `/api/tournaments/:id/live`), z tymi samymi zasadami połączenia i hasła co kanał gry. Jedyna wiadomość to `tournament_updated` z pełnym `TournamentView` (`TournamentLiveMessage`). Serwer wysyła ją po połączeniu, po każdej komendzie turnieju, która coś zapisała, i po każdej zmianie wygranych legów w meczu turnieju (wygrany leg albo cofnięcie rzutki, która go wygrała). Nieznany turniej zamyka połączenie z kodem 4404.
 
 ### Przykład z curl
 
@@ -215,10 +274,10 @@ Serwer musi działać na `http://localhost:3000`. Identyfikatory z odpowiedzi ws
 
 ```
 packages/
-  engine/   silnik gry: czysta logika X01, zabawy i treningu
+  engine/   silnik gry: czysta logika X01, zabawy, treningu i turniejów
   schema/   kontrakt: schematy Zod i typy wspólne dla wszystkich pakietów
   server/   API REST i WebSocket, log zdarzeń w SQLite
-  web/      front React (ekran startowy, ekran gry z klawiaturą, statystyki, historia, ustawienia)
+  web/      front React (ekran startowy, ekran gry z klawiaturą, statystyki, historia, ustawienia, turnieje z widokiem TV i publicznym linkiem)
   audio/    głos i efekty dźwiękowe z wiadomości na żywo
 e2e/        testy end-to-end (Playwright) na konfiguracji produkcyjnej
 deploy/     skrypty wdrożenia i kopie zapasowe (opis w deploy/README.md)

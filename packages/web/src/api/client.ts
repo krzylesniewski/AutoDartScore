@@ -3,18 +3,26 @@ import {
   FrequentHitsResponse,
   HeadToHead,
   LoginResponse,
+  MatchLegs,
   MatchListItem,
   MatchSnapshot,
   MatchSummary,
   Player,
   PlayerForm,
   PlayerStats,
+  PublicTournamentMatch,
+  PublicTournamentStats,
+  PublicTournamentView,
   RestMissResult,
   STALE_STATE,
   StaleStateError,
   StatsOverall,
+  StartFixtureResult,
   StatsRankings,
   ThrowResult,
+  TournamentListItem,
+  TournamentStats,
+  TournamentView,
   UndoResult,
 } from '@autoscore/schema';
 import type {
@@ -23,14 +31,19 @@ import type {
   CommandRequest,
   CreateMatchRequest,
   CreatePlayerRequest,
+  CorrectResultRequest,
+  CreateTournamentRequest,
   HitEvent,
   ListPlayersQuery,
   LoginRequest,
   MatchListQuery,
   RestMissRequest,
+  SharingRequest,
   StatsFilter,
   StatsPeriod,
+  TournamentListQuery,
   UpdatePlayerRequest,
+  WithdrawPlayerRequest,
 } from '@autoscore/schema';
 import { resolveApiBase } from './api-url';
 import { handleUnauthorized, readToken } from './session';
@@ -75,11 +88,9 @@ function withToken(init: RequestInit, token: string): RequestInit {
   return { ...init, headers };
 }
 
-async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {}): Promise<T> {
-  const sentToken = readToken();
+async function send<T>(path: string, schema: Parser<T>, init: RequestInit, onUnauthorized: () => void): Promise<T> {
   // Przekroczenie czasu nie jest ApiRequestError, więc wywołujący traktują je jak błąd sieci.
-  const timed: RequestInit = { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) };
-  const response = await fetch(`${API_BASE}${path}`, sentToken === null ? timed : withToken(timed, sentToken));
+  const response = await fetch(`${API_BASE}${path}`, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     if (response.status === 409) {
@@ -91,13 +102,23 @@ async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {
     const error = ApiError.safeParse(body);
     if (error.success) {
       if (response.status === 401 && error.data.error === 'unauthorized') {
-        handleUnauthorized(sentToken);
+        onUnauthorized();
       }
       throw new ApiRequestError(response.status, error.data.error, error.data.message);
     }
     throw new ApiRequestError(response.status, 'http_error', `HTTP ${response.status}`);
   }
   return schema.parse(body);
+}
+
+async function request<T>(path: string, schema: Parser<T>, init: RequestInit = {}): Promise<T> {
+  const sentToken = readToken();
+  return send(path, schema, sentToken === null ? init : withToken(init, sentToken), () => handleUnauthorized(sentToken));
+}
+
+// Publiczny link działa bez logowania: żądanie idzie bez tokenu, a odpowiedź 401 nie otwiera ekranu logowania.
+function publicRequest<T>(path: string, schema: Parser<T>): Promise<T> {
+  return send(path, schema, {}, () => undefined);
 }
 
 function postJson(body: unknown): RequestInit {
@@ -157,6 +178,75 @@ export function getMatch(id: string): Promise<MatchSnapshot> {
   return request(`/matches/${encodeURIComponent(id)}`, MatchSnapshot);
 }
 
+export function createTournament(body: CreateTournamentRequest): Promise<TournamentView> {
+  return request('/tournaments', TournamentView, postJson(body));
+}
+
+export function listTournaments(query: TournamentListQuery = {}): Promise<TournamentListItem[]> {
+  return request(withQuery('/tournaments', query), TournamentListItem.array());
+}
+
+export function getTournament(id: string): Promise<TournamentView> {
+  return request(`/tournaments/${encodeURIComponent(id)}`, TournamentView);
+}
+
+export function getTournamentStats(id: string): Promise<TournamentStats> {
+  return request(`/tournaments/${encodeURIComponent(id)}/stats`, TournamentStats);
+}
+
+export function startFixture(tournamentId: string, fixtureId: string, expectedSeq?: number): Promise<StartFixtureResult> {
+  return request(
+    `/tournaments/${encodeURIComponent(tournamentId)}/fixtures/${encodeURIComponent(fixtureId)}/start`,
+    StartFixtureResult,
+    postCommand(expectedSeq),
+  );
+}
+
+export function redrawTournament(tournamentId: string, expectedSeq?: number): Promise<TournamentView> {
+  return request(`/tournaments/${encodeURIComponent(tournamentId)}/draw`, TournamentView, postCommand(expectedSeq));
+}
+
+export function withdrawPlayer(tournamentId: string, playerId: string, expectedSeq?: number): Promise<TournamentView> {
+  const body: WithdrawPlayerRequest = { playerId, ...withExpectedSeq(expectedSeq) };
+  return request(`/tournaments/${encodeURIComponent(tournamentId)}/withdrawals`, TournamentView, postJson(body));
+}
+
+// Legi w kolejności slotów meczu.
+export function correctResult(
+  tournamentId: string,
+  fixtureId: string,
+  legs: readonly [number, number],
+  expectedSeq?: number,
+): Promise<TournamentView> {
+  const body: CorrectResultRequest = { legs: [legs[0], legs[1]], ...withExpectedSeq(expectedSeq) };
+  return request(
+    `/tournaments/${encodeURIComponent(tournamentId)}/fixtures/${encodeURIComponent(fixtureId)}/result`,
+    TournamentView,
+    postJson(body),
+  );
+}
+
+export function setTournamentSharing(tournamentId: string, sharing: boolean, expectedSeq?: number): Promise<TournamentView> {
+  const body: SharingRequest = { sharing, ...withExpectedSeq(expectedSeq) };
+  return request(`/tournaments/${encodeURIComponent(tournamentId)}/sharing`, TournamentView, postJson(body));
+}
+
+export function getPublicTournament(id: string): Promise<PublicTournamentView> {
+  return publicRequest(`/public/tournaments/${encodeURIComponent(id)}`, PublicTournamentView);
+}
+
+export function getPublicTournamentStats(id: string): Promise<PublicTournamentStats> {
+  return publicRequest(`/public/tournaments/${encodeURIComponent(id)}/stats`, PublicTournamentStats);
+}
+
+export function getPublicTournamentMatch(id: string, matchId: string): Promise<PublicTournamentMatch> {
+  return publicRequest(`/public/tournaments/${encodeURIComponent(id)}/matches/${encodeURIComponent(matchId)}`, PublicTournamentMatch);
+}
+
+export function archiveTournament(tournamentId: string, expectedSeq?: number): Promise<TournamentView> {
+  return request(`/tournaments/${encodeURIComponent(tournamentId)}/archive`, TournamentView, postCommand(expectedSeq));
+}
+
 export function postThrow(matchId: string, hit: HitEvent): Promise<ThrowResult> {
   return request(`/matches/${encodeURIComponent(matchId)}/throws`, ThrowResult, postJson(hit));
 }
@@ -198,6 +288,10 @@ export function getOverall(period: StatsPeriod): Promise<StatsOverall> {
 
 export function getMatchSummary(matchId: string): Promise<MatchSummary> {
   return request(`/matches/${encodeURIComponent(matchId)}/summary`, MatchSummary);
+}
+
+export function getMatchLegs(matchId: string): Promise<MatchLegs> {
+  return request(`/matches/${encodeURIComponent(matchId)}/legs`, MatchLegs);
 }
 
 // Pusty powód (same spacje) nie idzie do serwera.

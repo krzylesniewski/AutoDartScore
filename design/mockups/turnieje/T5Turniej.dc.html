@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 5, ekran turnieju, grupa</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#fff7e6}
+</style>
+</helmet>
+<div style="width: 1600px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 1100px 650px at 22% -10%, #2b201a 0%, #16120f 45%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column;">
+  <header style="height: 68px; flex-shrink: 0; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid rgba(243,236,216,0.11);">
+    <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="#d8352a"></circle><circle cx="17" cy="17" r="10" fill="#0f0f0f"></circle><circle cx="17" cy="17" r="6" fill="#f3ecd8"></circle><circle cx="17" cy="17" r="2.4" fill="#d8352a"></circle></svg>
+    <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.08em; margin-right: 18px;">AUTO SCORE</span>
+    <nav aria-label="Główna nawigacja" style="display: flex; gap: 4px; align-self: stretch;">
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Nowa gra</a>
+      <a href="#" aria-current="page" style="position: relative; display: flex; align-items: center; padding: 0 16px; color: #f3ecd8; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Turniej<span style="position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px; background: #d8352a; box-shadow: 0 0 14px 2px rgba(216,53,42,0.5);"></span></a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Statystyki</a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Historia</a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Ustawienia</a>
+    </nav>
+  </header>
+
+  <main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 22px 28px 24px; display: flex; flex-direction: column; gap: 16px;">
+    <div style="display: flex; align-items: flex-end; gap: 18px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">TURNIEJ · GRUPA + PLAY-OFF · 501</span>
+        <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 56px; line-height: 0.9;">Jama jesień 16.11.2026</h1>
+      </div>
+      <span style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 4px; padding: 8px 14px; border-radius: 999px; background: rgba(216,53,42,0.14); box-shadow: 0 0 0 1px rgba(216,53,42,0.5) inset; font-size: 15px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #d8352a; box-shadow: 0 0 10px #d8352a;"></span>Faza grupowa · 9 z 15 meczów</span>
+      <span style="flex-grow: 1;"></span>
+      <div role="tablist" aria-label="Widok turnieju" style="display: flex; padding: 5px; gap: 4px; border-radius: 16px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;">
+        <button type="button" role="tab" aria-selected="true" style="height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: #f3ecd8; color: #0a0908; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 19px;">Grupa</button>
+        <button type="button" role="tab" aria-selected="false" style="height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px;">Play-off</button>
+        <button type="button" role="tab" aria-selected="false" style="height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px;">Statystyki</button>
+      </div>
+      <button type="button" style="height: 54px; padding: 0 18px; border: 0; border-radius: 14px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.2) inset; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; display: flex; align-items: center; gap: 10px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"></path></svg>Udostępnij</button>
+    </div>
+
+    <div style="flex-grow: 1; min-height: 0; display: flex; gap: 20px;">
+      <section aria-labelledby="group-h" style="flex-grow: 1; min-width: 0; box-sizing: border-box; border-radius: 22px; padding: 18px 20px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: baseline; gap: 14px;">
+          <h2 id="group-h" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px;">Faza grupowa</h2>
+          <span style="font-size: 15px; color: #a8a08a;">do 3 wygranych legów · 4 najlepszych do play-off</span>
+        </div>
+        <table style="width: 100%; border-collapse: separate; border-spacing: 0 6px; font-variant-numeric: tabular-nums;">
+          <thead>
+            <tr style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.1em; color: #a8a08a;">
+              <th scope="col" style="width: 34px; text-align: left; padding: 0 6px; font-weight: 700;">#</th>
+              <th scope="col" style="text-align: left; padding: 0 6px; font-weight: 700;">GRACZ</th>
+              <sc-for list="{{cols}}" as="c" hint-placeholder-count="6"><th scope="col" style="width: 86px; padding: 0 2px;"><span style="{{c.avatar}}" title="{{c.name}}">{{c.initial}}</span></th></sc-for>
+              <th scope="col" style="width: 44px; font-weight: 700;">M</th>
+              <th scope="col" style="width: 44px; font-weight: 700;">W</th>
+              <th scope="col" style="width: 44px; font-weight: 700;">P</th>
+              <th scope="col" style="width: 54px; font-weight: 700;">+/-</th>
+              <th scope="col" style="width: 54px; font-weight: 700; color: #f3ecd8;">PKT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+              <tr style="height: 64px;">
+                <td style="{{r.rankStyle}}">{{r.rank}}</td>
+                <th scope="row" style="text-align: left; padding: 0 6px; font-weight: 400;">
+                  <span style="display: flex; align-items: center; gap: 10px;">
+                    <span style="{{r.avatar}}">{{r.initial}}</span>
+                    <span style="display: flex; flex-direction: column;"><span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; line-height: 1.05;">{{r.name}}</span><span style="font-size: 13px; color: #a8a08a;">śr. {{r.avg}}</span></span>
+                  </span>
+                </th>
+                <sc-for list="{{r.cells}}" as="c" hint-placeholder-count="6">
+                  <td style="padding: 0 3px;"><span style="{{c.style}}"><span style="{{c.mainStyle}}">{{c.main}}</span><span style="font-size: 12px; color: #a8a08a;">{{c.sub}}</span></span></td>
+                </sc-for>
+                <td style="text-align: center; font-size: 18px;">{{r.m}}</td>
+                <td style="text-align: center; font-size: 18px;">{{r.w}}</td>
+                <td style="text-align: center; font-size: 18px;">{{r.l}}</td>
+                <td style="text-align: center; font-size: 18px;">{{r.diff}}</td>
+                <td style="text-align: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 28px;">{{r.pts}}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+        <span style="flex-grow: 1;"></span>
+        <p style="margin: 0; display: flex; gap: 22px; font-size: 14px; color: #a8a08a;">
+          <span>W komórce: wynik w legach i średnia gracza z tego meczu.</span>
+          <span>Numer w kółku: kolejność meczu.</span>
+          <span>Remis w punktach: bilans legów, mecz bezpośredni, średnia.</span>
+        </p>
+      </section>
+
+      <aside style="width: 400px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px;">
+        <section aria-labelledby="next-h" style="border-radius: 22px; padding: 20px 22px; background: linear-gradient(180deg, #3a2520 0%, #241815 100%); box-shadow: 0 0 0 2px #d8352a inset, 0 0 40px -6px rgba(216,53,42,0.45); display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between;">
+            <h2 id="next-h" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px;">Następny mecz</h2>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; color: #a8a08a;">#10</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <span style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 140px;"><span style="{{nextA.avatar}}">{{nextA.initial}}</span><span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px;">{{nextA.name}}</span><span style="font-size: 13px; color: #a8a08a;">{{nextA.place}}</span></span>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; color: #a8a08a;">vs</span>
+            <span style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 140px;"><span style="{{nextB.avatar}}">{{nextB.initial}}</span><span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px;">{{nextB.name}}</span><span style="font-size: 13px; color: #a8a08a;">{{nextB.place}}</span></span>
+          </div>
+          <p style="margin: 0; text-align: center; font-size: 15px; color: #a8a08a;">Do 3 wygranych legów · 501 · kto zaczyna: losowanie</p>
+          <button type="button" style="height: 64px; border: 0; border-radius: 18px; background: #d8352a; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; box-shadow: 0 14px 30px -10px rgba(216,53,42,0.7);">Zagraj mecz</button>
+        </section>
+
+        <section aria-labelledby="queue-h" style="flex-grow: 1; min-height: 0; border-radius: 22px; padding: 18px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 8px;">
+          <h2 id="queue-h" style="margin: 0 0 4px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">KOLEJKA</h2>
+          <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;">
+            <sc-for list="{{queue}}" as="q" hint-placeholder-count="5">
+              <li style="display: flex; align-items: center; gap: 10px; height: 46px; border-top: 1px solid rgba(243,236,216,0.07);">
+                <span style="width: 34px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 18px; color: #a8a08a;">#{{q.n}}</span>
+                <span style="{{q.a.avatar}}">{{q.a.initial}}</span>
+                <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px;">{{q.a.name}}</span>
+                <span style="font-size: 14px; color: #a8a08a;">vs</span>
+                <span style="{{q.b.avatar}}">{{q.b.initial}}</span>
+                <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px;">{{q.b.name}}</span>
+              </li>
+            </sc-for>
+          </ol>
+          <span style="flex-grow: 1;"></span>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" style="flex: 1; height: 48px; border: 0; border-radius: 14px; background: transparent; box-shadow: 0 0 0 1px rgba(243,236,216,0.2) inset; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;">Popraw wynik</button>
+            <button type="button" style="flex: 1; height: 48px; border: 0; border-radius: 14px; background: transparent; box-shadow: 0 0 0 1px rgba(243,236,216,0.2) inset; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;">Wycofaj gracza</button>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const PL = {
+S: ['Szymon', 'S', '#5aa9ff'], K: ['Krzysiek', 'XD', '#ff70b8'], G: ['Grzesiek', 'G', '#b28cff'],
+U: ['Kuba', 'K', '#4fd1c5'], M: ['Matek', 'M', '#ff8a3d'], D: ['Dzimi', 'D', '#f2b134']
+};
+const av = (id, size) => 'width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 50%; background: ' + PL[id][2] + '; color: #111111; display: inline-flex; align-items: center; justify-content: center; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: ' + Math.round(size * (PL[id][1].length > 1 ? 0.36 : 0.46)) + 'px;';
+const person = (id, size) => ({ name: PL[id][0], initial: PL[id][1], avatar: av(id, size) });
+// schedule: [no, a, b, legsA, legsB, avgA, avgB] ; played = first 9
+const sched = [
+[1, 'S', 'D', 3, 2, 40.33, 35.04], [2, 'G', 'M', 3, 0, 47.97, 41.07], [3, 'K', 'U', 3, 2, 40.78, 40.26],
+[4, 'S', 'M', 3, 2, 45.83, 45.11], [5, 'G', 'U', 3, 0, 43.78, 43.85], [6, 'K', 'D', 3, 0, 37.84, 34.33],
+[7, 'S', 'U', 3, 0, 51.24, 49.41], [8, 'G', 'K', 3, 1, 46.56, 40.99], [9, 'M', 'D', 3, 2, 34.20, 33.36],
+[10, 'S', 'K'], [11, 'G', 'D'], [12, 'U', 'M'], [13, 'S', 'G'], [14, 'K', 'M'], [15, 'U', 'D']
+];
+const ids = Object.keys(PL);
+const st = {};
+ids.forEach((id) => { st[id] = { id, m: 0, w: 0, l: 0, lf: 0, la: 0, avgs: [] }; });
+const cell = {};
+sched.forEach((s) => {
+const [n, a, b] = s;
+if (s.length > 3) {
+const [, , , la, lb, va, vb] = s;
+st[a].m++; st[b].m++; st[a].lf += la; st[a].la += lb; st[b].lf += lb; st[b].la += la;
+if (la > lb) { st[a].w++; st[b].l++; } else { st[b].w++; st[a].l++; }
+st[a].avgs.push(va); st[b].avgs.push(vb);
+cell[a + b] = { main: la + '–' + lb, sub: va.toFixed(2).replace('.', ','), won: la > lb };
+cell[b + a] = { main: lb + '–' + la, sub: vb.toFixed(2).replace('.', ','), won: lb > la };
+} else {
+cell[a + b] = { num: n }; cell[b + a] = { num: n };
+}
+});
+const avgOf = (x) => x.avgs.length ? x.avgs.reduce((p, c) => p + c, 0) / x.avgs.length : 0;
+const order = ids.map((id) => st[id]).sort((x, y) => (y.w * 2 - x.w * 2) || ((y.lf - y.la) - (x.lf - x.la)) || (avgOf(y) - avgOf(x)));
+const cols = order.map((x) => person(x.id, 34));
+const base = 'height: 54px; box-sizing: border-box; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;';
+const rows = order.map((x, i) => ({
+rank: String(i + 1),
+rankStyle: 'padding: 0 6px; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: 22px; color: ' + (i < 4 ? '#f2b134' : '#a8a08a') + ';',
+...person(x.id, 42), avg: avgOf(x).toFixed(2).replace('.', ','),
+m: String(x.m), w: String(x.w), l: String(x.l), diff: (x.lf - x.la > 0 ? '+' : '') + (x.lf - x.la), pts: String(x.w * 2),
+cells: order.map((y) => {
+if (y.id === x.id) return { style: base + ' background: repeating-linear-gradient(45deg, rgba(243,236,216,0.05) 0 6px, transparent 6px 12px);', main: '', sub: '', mainStyle: '' };
+const c = cell[x.id + y.id];
+if (c.num) {
+const next = c.num === 10;
+return { style: base + (next ? ' box-shadow: 0 0 0 2px #d8352a inset; background: rgba(216,53,42,0.12);' : ' box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;'), main: String(c.num), sub: next ? 'teraz' : '', mainStyle: 'width: 30px; height: 30px; border-radius: 50%; box-sizing: border-box; border: 1.5px solid ' + (next ? '#d8352a' : 'rgba(243,236,216,0.3)') + '; display: flex; align-items: center; justify-content: center; font-size: 15px; color: ' + (next ? '#f3ecd8' : '#a8a08a') + ';' };
+}
+return { style: base + ' background: ' + (c.won ? 'rgba(243,236,216,0.07)' : 'transparent') + '; box-shadow: 0 0 0 1px rgba(243,236,216,0.07) inset;', main: c.main, sub: c.sub, mainStyle: 'font-family: Barlow Condensed, sans-serif; font-weight: ' + (c.won ? 900 : 600) + '; font-size: 22px; line-height: 1; color: ' + (c.won ? '#f3ecd8' : '#c9bfa6') + ';' };
+})
+}));
+const placeOf = (id) => (order.findIndex((x) => x.id === id) + 1) + '. miejsce';
+const nextA = { ...person('S', 64), place: placeOf('S') };
+const nextB = { ...person('K', 64), place: placeOf('K') };
+const queue = sched.slice(10).map((s) => ({ n: String(s[0]), a: person(s[1], 30), b: person(s[2], 30) }));
+return { cols, rows, nextA, nextB, queue };
+}
+}
+</script>
+</body>
+</html>

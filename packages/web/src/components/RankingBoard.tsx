@@ -48,27 +48,34 @@ function tiles(rankings: StatsRankings): readonly Tile[] {
 }
 
 // Podium i dalsze miejsca po średniej oraz kafelki z pierwszą piątką.
-// Od xl kolumna kafelków przewija się sama, a panel średniej stoi w miejscu.
+// Od xl kolumna kafelków przewija się sama. W panelu średniej przewija się lista dalszych miejsc
+// z wysokością co najmniej dwóch wierszy, a gdy okno jest na to za niskie, przewija się cała treść panelu.
+// Pierścienie są poza przewijaną treścią, bo wystają z panelu i zawsze dawałyby pasek przewijania.
+// Ujemny margines z paddingiem zostawia poświacie podium szerokość całego panelu.
 export function RankingBoard({ rankings }: { rankings: StatsRankings }) {
   const { podium, rest } = podiumSlots(rankings.players);
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] xl:min-h-0 xl:flex-1">
       <section aria-labelledby="ranking-average" className="sc-panel @container min-h-0">
         <CardRings className="-right-15 -bottom-15 size-60" />
-        <h2 id="ranking-average" className="relative font-display text-[26px] leading-tight font-extrabold">
-          {pl.statAverage}
-        </h2>
-        {podium.length > 0 && <Podium slots={podium} />}
-        {rest.length > 0 && (
-          <ol aria-label={pl.furtherPlaces} className={`relative pr-2 xl:min-h-0 xl:flex-1 xl:overflow-y-auto ${scrollbar}`}>
-            {rest.map((player) => (
-              <li key={player.playerId}>
-                <RestRow player={player} />
-              </li>
-            ))}
-          </ol>
-        )}
-        <p className="relative mt-auto border-t border-(--color-border) pt-2.5 text-sm text-(--color-text-muted)">{pl.averageFootnote}</p>
+        <div
+          className={`relative flex min-h-0 flex-1 flex-col gap-(--space-5) xl:-mx-5.5 xl:overflow-x-hidden xl:overflow-y-auto xl:px-5.5 ${scrollbar}`}
+        >
+          <h2 id="ranking-average" className="relative font-display text-[26px] leading-tight font-extrabold">
+            {pl.statAverage}
+          </h2>
+          {podium.length > 0 && <Podium slots={podium} />}
+          {rest.length > 0 && (
+            <ol aria-label={pl.furtherPlaces} className={`relative pr-2 xl:min-h-28 xl:flex-1 xl:overflow-y-auto ${scrollbar}`}>
+              {rest.map((player) => (
+                <li key={player.playerId}>
+                  <RestRow player={player} />
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="relative mt-auto border-t border-(--color-border) pt-2.5 text-sm text-(--color-text-muted)">{pl.averageFootnote}</p>
+        </div>
       </section>
       <div
         role="region"

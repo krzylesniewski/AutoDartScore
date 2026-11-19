@@ -51,4 +51,6 @@ export function statsRoutes(app: FastifyInstance, stats: StatsService): void {
   });
 
   app.get<IdParams>('/matches/:id/summary', async (request) => stats.matchSummary(request.params.id));
+
+  app.get<IdParams>('/matches/:id/legs', async (request) => stats.matchLegs(request.params.id));
 }

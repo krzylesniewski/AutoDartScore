@@ -160,7 +160,8 @@
     cursor: pointer;
   }
 
-  .sc-seg button[aria-pressed="true"] {
+  .sc-seg button[aria-pressed="true"],
+  .sc-seg button[aria-selected="true"] {
     background: var(--color-text);
     color: var(--color-text-inverse);
     font-weight: 800;

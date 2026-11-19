@@ -1,16 +1,28 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import type { Insertable, Kysely, Selectable } from 'kysely';
-import type {
-  CheckoutRange,
-  CheckoutRule,
-  CreatePlayerRequest,
-  MatchType,
-  Player,
-  PracticeMode,
-  ThrowRecord,
-  UpdatePlayerRequest,
+import {
+  TournamentConfig,
+  TournamentEvent,
+  TournamentFormat,
+  type CheckoutRange,
+  type CheckoutRule,
+  type CreatePlayerRequest,
+  type MatchType,
+  type Player,
+  type PracticeMode,
+  type ThrowRecord,
+  type UpdatePlayerRequest,
 } from '@autoscore/schema';
-import type { Database, MatchEventsTable, MatchesTable, PlayerChangesTable, PlayersTable, ThrowsTable } from '../db/database.js';
+import type {
+  Database,
+  MatchEventsTable,
+  MatchesTable,
+  PlayerChangesTable,
+  PlayersTable,
+  ThrowsTable,
+  TournamentEventsTable,
+  TournamentsTable,
+} from '../db/database.js';
 import { playerNameTaken } from '../errors.js';
 import { defaultPlayerColor } from './player-color.js';
 import { normalizePlayerName } from './player-name.js';
@@ -31,9 +43,29 @@ export interface StoredMatch {
   readonly checkoutRule: CheckoutRule | null; // nie wychodzi poza serwer
   readonly createdAt: string;
   readonly players: readonly Player[]; // w kolejności position
+  readonly tournament: MatchTournamentLink | null;
 }
 
-export type NewMatch = Omit<StoredMatch, 'id' | 'createdAt' | 'players'> & { readonly playerIds: readonly string[] };
+export interface MatchTournamentLink {
+  readonly id: string;
+  readonly name: string;
+  readonly format: TournamentFormat;
+  readonly fixtureId: string;
+}
+
+// Powiązanie z turniejem zapisuje tylko startFixture.
+export type NewMatch = Omit<StoredMatch, 'id' | 'createdAt' | 'players' | 'tournament'> & { readonly playerIds: readonly string[] };
+
+export interface StoredTournament {
+  readonly id: string;
+  readonly name: string;
+  readonly format: TournamentFormat;
+  readonly config: TournamentConfig;
+  readonly players: readonly Player[]; // w kolejności zgłoszenia, z aktualnymi profilami
+  readonly createdAt: string;
+}
+
+export type TournamentLogEntry = TournamentEvent & { readonly seq: number; readonly createdAt: string };
 
 export type LogEntry =
   | { readonly seq: number; readonly type: 'throw' | 'undo'; readonly throwId: string; readonly createdAt: string }
@@ -64,6 +96,8 @@ export interface MatchFilter {
   readonly types?: readonly MatchType[] | undefined;
   readonly playerId?: string | undefined;
   readonly countsToStats?: boolean | undefined;
+  readonly tournamentId?: string | undefined;
+  readonly inTournament?: boolean | undefined;
 }
 
 export interface Store {
@@ -78,6 +112,7 @@ export interface Store {
   findMatch(id: string): Promise<StoredMatch | null>;
   // Gry w kolejności utworzenia. Gry gracza, które wchodzą do statystyk, to filtr z playerId, types i countsToStats: true.
   // createdFrom to najstarsze dozwolone created_at (ISO, włącznie). null albo brak znaczy bez dolnej granicy.
+  // inTournament true to tylko gry z dowolnego turnieju, false tylko gry spoza turniejów, brak to obie.
   listMatches(filter?: MatchFilter): Promise<StoredMatch[]>;
   loadLog(matchId: string): Promise<MatchLog>;
   // Najwyższy seq w logu każdej gry, 0 dla gry bez wpisów.
@@ -96,6 +131,17 @@ export interface Store {
   appendCheckoutUndo(matchId: string): Promise<number>;
   appendCheckoutSkip(matchId: string): Promise<number>;
   appendCheckoutSkipUndo(matchId: string): Promise<number>;
+  // Turniej, jego gracze i pierwsze losowanie (seq 1) w jednej transakcji.
+  createTournament(config: TournamentConfig, order: readonly string[]): Promise<string>;
+  findTournament(id: string): Promise<StoredTournament | null>;
+  // W kolejności utworzenia.
+  listTournaments(): Promise<StoredTournament[]>;
+  loadTournamentLog(id: string): Promise<TournamentLogEntry[]>;
+  appendTournamentEvent(id: string, event: TournamentEvent): Promise<number>;
+  // Mecz, jego gracze i wpis fixture_started w jednej transakcji, więc nie ma meczu bez wpisu ani wpisu bez meczu.
+  startFixture(tournamentId: string, fixtureId: string, match: NewMatch): Promise<{ matchId: string; seq: number }>;
+  // Porzucenie każdego z meczów przez wycofanego gracza i wpis player_withdrawn w jednej transakcji. Zwraca seq turnieju.
+  withdrawPlayer(tournamentId: string, playerId: string, abandonMatchIds: readonly string[]): Promise<number>;
 }
 
 // Najwyżej tyle wartości w jednym in (...), żeby zapytanie mieściło się w limicie parametrów SQLite i PostgreSQL.
@@ -153,7 +199,24 @@ function toThrow(row: Selectable<ThrowsTable>): ThrowRecord {
   } as ThrowRecord; // segment i mnożnik zapisał serwer po walidacji HitEvent
 }
 
-function toMatch(row: Selectable<MatchesTable>, players: readonly Player[]): StoredMatch {
+type MatchRow = Selectable<MatchesTable> & { tournament_name: string | null; tournament_format: string | null };
+
+function toTournamentLink(row: MatchRow): MatchTournamentLink | null {
+  if (row.tournament_id === null) {
+    return null;
+  }
+  if (row.fixture_id === null || row.tournament_name === null || row.tournament_format === null) {
+    throw new Error(`Corrupt match ${row.id}: tournament ${row.tournament_id} without a fixture`);
+  }
+  return {
+    id: row.tournament_id,
+    name: row.tournament_name,
+    format: TournamentFormat.parse(row.tournament_format),
+    fixtureId: row.fixture_id,
+  };
+}
+
+function toMatch(row: MatchRow, players: readonly Player[]): StoredMatch {
   return {
     id: row.id,
     type: row.type as MatchType,
@@ -167,7 +230,74 @@ function toMatch(row: Selectable<MatchesTable>, players: readonly Player[]): Sto
     checkoutRule: row.checkout_rule as CheckoutRule | null,
     createdAt: row.created_at,
     players,
+    tournament: toTournamentLink(row),
   };
+}
+
+// name, format i gracze mają własne kolumny i tabelę, więc config trzyma tylko resztę pól.
+function storedConfig({ startingScore, advance, thirdPlaceMatch, consolation, legsToWin, sharing }: TournamentConfig): string {
+  return JSON.stringify({ startingScore, advance, thirdPlaceMatch, consolation, legsToWin, sharing });
+}
+
+function toTournament(row: Selectable<TournamentsTable>, players: readonly Player[]): StoredTournament {
+  const config = TournamentConfig.parse({
+    ...(JSON.parse(row.config) as object),
+    name: row.name,
+    format: row.format,
+    playerIds: players.map((player) => player.id),
+  });
+  return { id: row.id, name: config.name, format: config.format, config, players, createdAt: row.created_at };
+}
+
+type TournamentEventColumns = Omit<Insertable<TournamentEventsTable>, 'tournament_id' | 'seq' | 'created_at'>;
+
+function tournamentEventColumns(event: TournamentEvent): TournamentEventColumns {
+  switch (event.type) {
+    case 'draw':
+      return { type: event.type, draw_order: JSON.stringify(event.order) };
+    case 'fixture_started':
+      return { type: event.type, fixture_id: event.fixtureId, match_id: event.matchId };
+    case 'player_withdrawn':
+      return { type: event.type, player_id: event.playerId };
+    case 'result_corrected':
+      return { type: event.type, fixture_id: event.fixtureId, legs_first: event.legs[0], legs_second: event.legs[1] };
+    case 'sharing_changed':
+      return { type: event.type, sharing: event.sharing ? 1 : 0 };
+    case 'archived':
+      return { type: event.type };
+  }
+}
+
+function parseOrder(text: string | null): unknown {
+  if (text === null) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+function toTournamentLogEntry(row: Selectable<TournamentEventsTable>): TournamentLogEntry {
+  const parsed = TournamentEvent.safeParse({
+    type: row.type,
+    order: parseOrder(row.draw_order),
+    fixtureId: row.fixture_id ?? undefined,
+    matchId: row.match_id ?? undefined,
+    playerId: row.player_id ?? undefined,
+    legs: row.legs_first === null || row.legs_second === null ? undefined : [row.legs_first, row.legs_second],
+    sharing: row.sharing === null ? undefined : row.sharing === 1,
+  });
+  if (!parsed.success) {
+    throw new Error(`Corrupt tournament log: ${row.type} at seq ${row.seq} of tournament ${row.tournament_id} is invalid`);
+  }
+  return { ...parsed.data, seq: row.seq, createdAt: row.created_at };
+}
+
+// 128 losowych bitów, bo to samo id posłuży za publiczny link do turnieju. Nie może wynikać z czasu ani licznika.
+function newTournamentId(): string {
+  return `t_${randomBytes(16).toString('base64url')}`;
 }
 
 const LOG_COLUMNS = ['seq', 'type', 'throw_id', 'player_id', 'reason', 'success', 'created_at'] as const;
@@ -207,6 +337,15 @@ export function createStore(db: Kysely<Database>): Store {
       .selectFrom('match_events')
       .select((eb) => eb.fn.max('seq').as('seq'))
       .where('match_id', '=', matchId)
+      .executeTakeFirst();
+    return Number(row?.seq ?? 0) + 1;
+  }
+
+  async function nextTournamentSeq(trx: Kysely<Database>, tournamentId: string): Promise<number> {
+    const row = await trx
+      .selectFrom('tournament_events')
+      .select((eb) => eb.fn.max('seq').as('seq'))
+      .where('tournament_id', '=', tournamentId)
       .executeTakeFirst();
     return Number(row?.seq ?? 0) + 1;
   }
@@ -290,6 +429,84 @@ export function createStore(db: Kysely<Database>): Store {
       players.set(row.match_id, list);
     }
     return players;
+  }
+
+  // Gracze każdego z turniejów w kolejności zgłoszenia, z jednym odczytem profili dla wszystkich.
+  async function tournamentPlayers(tournamentIds: readonly string[]): Promise<Map<string, Player[]>> {
+    const rows = [];
+    for (const chunk of chunks(tournamentIds)) {
+      rows.push(
+        ...(await db
+          .selectFrom('tournament_players')
+          .innerJoin('players', 'players.id', 'tournament_players.player_id')
+          .selectAll('players')
+          .select('tournament_players.tournament_id')
+          .where('tournament_players.tournament_id', 'in', chunk)
+          .orderBy('tournament_players.tournament_id')
+          .orderBy('tournament_players.position')
+          .execute()),
+      );
+    }
+    const changes = await latestChanges(
+      db,
+      rows.map((row) => row.id),
+    );
+    const players = new Map<string, Player[]>();
+    for (const row of rows) {
+      const list = players.get(row.tournament_id) ?? [];
+      list.push(toPlayer(row, changes.get(row.id)));
+      players.set(row.tournament_id, list);
+    }
+    return players;
+  }
+
+  // Kolumny turnieju mają aliasy, bo matches też ma id, name i created_at.
+  function selectMatches() {
+    return db
+      .selectFrom('matches')
+      .leftJoin('tournaments', 'tournaments.id', 'matches.tournament_id')
+      .selectAll('matches')
+      .select(['tournaments.name as tournament_name', 'tournaments.format as tournament_format']);
+  }
+
+  async function insertMatch(
+    trx: Kysely<Database>,
+    match: NewMatch,
+    link: { readonly tournamentId: string; readonly fixtureId: string } | null,
+  ): Promise<string> {
+    const id = randomUUID();
+    await trx
+      .insertInto('matches')
+      .values({
+        id,
+        type: match.type,
+        practice_mode: match.practiceMode,
+        starting_score: match.startingScore,
+        legs_to_win: match.legsToWin,
+        first_player_index: match.firstPlayerIndex,
+        counts_to_stats: match.countsToStats ? 1 : 0,
+        checkout_range: match.checkoutRange,
+        checkout_seed: match.checkoutSeed,
+        checkout_rule: match.checkoutRule,
+        tournament_id: link?.tournamentId ?? null,
+        fixture_id: link?.fixtureId ?? null,
+        created_at: now(),
+      })
+      .execute();
+    await trx
+      .insertInto('match_players')
+      .values(match.playerIds.map((playerId, position) => ({ match_id: id, player_id: playerId, position })))
+      .execute();
+    return id;
+  }
+
+  async function insertTournamentEvent(trx: Kysely<Database>, tournamentId: string, event: TournamentEvent): Promise<number> {
+    const seq = await nextTournamentSeq(trx, tournamentId);
+    await trx
+      .insertInto('tournament_events')
+      .values({ tournament_id: tournamentId, seq, ...tournamentEventColumns(event), created_at: now() })
+      .execute();
+    return seq;
   }
 
   function appendLifecycle(
@@ -431,52 +648,35 @@ export function createStore(db: Kysely<Database>): Store {
       });
     },
 
-    async createMatch(match) {
-      const id = randomUUID();
-      await db.transaction().execute(async (trx) => {
-        await trx
-          .insertInto('matches')
-          .values({
-            id,
-            type: match.type,
-            practice_mode: match.practiceMode,
-            starting_score: match.startingScore,
-            legs_to_win: match.legsToWin,
-            first_player_index: match.firstPlayerIndex,
-            counts_to_stats: match.countsToStats ? 1 : 0,
-            checkout_range: match.checkoutRange,
-            checkout_seed: match.checkoutSeed,
-            checkout_rule: match.checkoutRule,
-            created_at: now(),
-          })
-          .execute();
-        await trx
-          .insertInto('match_players')
-          .values(match.playerIds.map((playerId, position) => ({ match_id: id, player_id: playerId, position })))
-          .execute();
-      });
-      return id;
+    createMatch(match) {
+      return db.transaction().execute((trx) => insertMatch(trx, match, null));
     },
 
     async findMatch(id) {
-      const row = await db.selectFrom('matches').selectAll().where('id', '=', id).executeTakeFirst();
+      const row = await selectMatches().where('matches.id', '=', id).executeTakeFirst();
       return row ? toMatch(row, (await matchPlayers([id])).get(id) ?? []) : null;
     },
 
     async listMatches(filter = {}) {
-      const { createdFrom, types, playerId, countsToStats } = filter;
+      const { createdFrom, types, playerId, countsToStats, tournamentId, inTournament } = filter;
       if (types?.length === 0) {
         return [];
       }
-      let query = db.selectFrom('matches').selectAll();
+      let query = selectMatches();
       if (createdFrom !== undefined && createdFrom !== null) {
-        query = query.where('created_at', '>=', createdFrom);
+        query = query.where('matches.created_at', '>=', createdFrom);
       }
       if (types !== undefined) {
-        query = query.where('type', 'in', [...types]);
+        query = query.where('matches.type', 'in', [...types]);
       }
       if (countsToStats !== undefined) {
-        query = query.where('counts_to_stats', '=', countsToStats ? 1 : 0);
+        query = query.where('matches.counts_to_stats', '=', countsToStats ? 1 : 0);
+      }
+      if (tournamentId !== undefined) {
+        query = query.where('matches.tournament_id', '=', tournamentId);
+      }
+      if (inTournament !== undefined) {
+        query = query.where('matches.tournament_id', inTournament ? 'is not' : 'is', null);
       }
       if (playerId !== undefined) {
         // exists zamiast złączenia, żeby gra nigdy nie pojawiła się dwa razy.
@@ -490,7 +690,7 @@ export function createStore(db: Kysely<Database>): Store {
           ),
         );
       }
-      const rows = await query.orderBy('created_at').orderBy('id').execute();
+      const rows = await query.orderBy('matches.created_at').orderBy('matches.id').execute();
       const players = await matchPlayers(rows.map((row) => row.id));
       return rows.map((row) => toMatch(row, players.get(row.id) ?? []));
     },
@@ -609,6 +809,64 @@ export function createStore(db: Kysely<Database>): Store {
 
     appendCheckoutSkipUndo(matchId) {
       return appendLifecycle(matchId, { type: 'checkout_skip_undone' });
+    },
+
+    async createTournament(config, order) {
+      const id = newTournamentId();
+      await db.transaction().execute(async (trx) => {
+        await trx
+          .insertInto('tournaments')
+          .values({ id, name: config.name, format: config.format, config: storedConfig(config), created_at: now() })
+          .execute();
+        await trx
+          .insertInto('tournament_players')
+          .values(config.playerIds.map((playerId, position) => ({ tournament_id: id, player_id: playerId, position })))
+          .execute();
+        await insertTournamentEvent(trx, id, { type: 'draw', order: [...order] });
+      });
+      return id;
+    },
+
+    async findTournament(id) {
+      const row = await db.selectFrom('tournaments').selectAll().where('id', '=', id).executeTakeFirst();
+      return row ? toTournament(row, (await tournamentPlayers([id])).get(id) ?? []) : null;
+    },
+
+    async listTournaments() {
+      const rows = await db.selectFrom('tournaments').selectAll().orderBy('created_at').orderBy('id').execute();
+      const players = await tournamentPlayers(rows.map((row) => row.id));
+      return rows.map((row) => toTournament(row, players.get(row.id) ?? []));
+    },
+
+    async loadTournamentLog(id) {
+      const rows = await db.selectFrom('tournament_events').selectAll().where('tournament_id', '=', id).orderBy('seq').execute();
+      return rows.map(toTournamentLogEntry);
+    },
+
+    appendTournamentEvent(id, event) {
+      return db.transaction().execute((trx) => insertTournamentEvent(trx, id, event));
+    },
+
+    startFixture(tournamentId, fixtureId, match) {
+      return db.transaction().execute(async (trx) => {
+        const matchId = await insertMatch(trx, match, { tournamentId, fixtureId });
+        const seq = await insertTournamentEvent(trx, tournamentId, { type: 'fixture_started', fixtureId, matchId });
+        return { matchId, seq };
+      });
+    },
+
+    withdrawPlayer(tournamentId, playerId, abandonMatchIds) {
+      return db.transaction().execute(async (trx) => {
+        const createdAt = now();
+        for (const matchId of abandonMatchIds) {
+          const seq = await nextSeq(trx, matchId);
+          await trx
+            .insertInto('match_events')
+            .values({ match_id: matchId, seq, type: 'match_abandoned', player_id: playerId, reason: null, created_at: createdAt })
+            .execute();
+        }
+        return insertTournamentEvent(trx, tournamentId, { type: 'player_withdrawn', playerId });
+      });
     },
   };
 }

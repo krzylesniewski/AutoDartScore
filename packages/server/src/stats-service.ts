@@ -5,8 +5,8 @@ import type {
   HeadToHead,
   Hit,
   LegProgress,
+  MatchLegs,
   MatchSummary,
-  MatchType,
   PlayerForm,
   PlayerStats,
   StatsFilter,
@@ -24,15 +24,18 @@ import { buildFrequentHits } from './stats/frequent-hits.js';
 import { buildHeadToHead, type HeadToHeadGame } from './stats/head-to-head.js';
 import { legDurations } from './stats/leg-durations.js';
 import { buildLegProgress } from './stats/leg-progress.js';
+import { buildMatchLegs } from './stats/match-legs.js';
 import { buildOverall } from './stats/overall.js';
 import { periodStart } from './stats/period.js';
 import { buildRankings, type RankedGame } from './stats/rankings.js';
 import { EMPTY_TOTALS, mergeTotals, tallyGame, threeDartAverage, toStatLine, winRatePercent } from './stats/tally.js';
-import type { Store, StoredMatch } from './store/store.js';
+import type { MatchFilter, Store, StoredMatch } from './store/store.js';
 
 export interface StatsService {
   playerStats(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<PlayerStats>;
   matchSummary(matchId: string): Promise<MatchSummary>;
+  // Tylko mecz 1v1, także turniejowy. Zabawa i trening dają 409 not_a_match.
+  matchLegs(matchId: string): Promise<MatchLegs>;
   rankings(filter: StatsFilter, period: StatsPeriod): Promise<StatsRankings>;
   overall(period: StatsPeriod): Promise<StatsOverall>;
   headToHead(playerId: string, opponentId: string, period: StatsPeriod): Promise<HeadToHead>;
@@ -46,11 +49,13 @@ interface Dependencies {
   readonly now: () => number; // zegar serwera, od którego liczy się okres statystyk
 }
 
-const FILTER_TYPES: Record<StatsFilter, readonly MatchType[]> = {
-  all: ['match', 'casual', 'practice'],
-  match: ['match'],
-  casual: ['casual'],
-  practice: ['practice'],
+// Mecz turniejowy jest zapisany jako match, więc filtr match obejmuje też mecze z turniejów.
+const FILTER_MATCHES: Record<StatsFilter, Pick<MatchFilter, 'types' | 'inTournament'>> = {
+  all: { types: ['match', 'casual', 'practice'] },
+  match: { types: ['match'] },
+  casual: { types: ['casual'] },
+  practice: { types: ['practice'] },
+  tournament: { types: ['match'], inTournament: true },
 };
 
 // Po match_won silnik zostaje na ostatnim legu, a w trwającym meczu po wygranym legu legIndex wskazuje już nowy leg.
@@ -94,7 +99,7 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
   // Gry gracza, które wchodzą do statystyk, w kolejności utworzenia.
   // Okres filtruje już zapytanie, więc starsze gry nie są wczytywane ani odtwarzane.
   function statsMatches(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<StoredMatch[]> {
-    return store.listMatches({ playerId, types: FILTER_TYPES[filter], countsToStats: true, createdFrom: periodStart(period, now()) });
+    return store.listMatches({ playerId, ...FILTER_MATCHES[filter], countsToStats: true, createdFrom: periodStart(period, now()) });
   }
 
   async function statsGames(playerId: string, filter: StatsFilter, period: StatsPeriod): Promise<MatchReplay[]> {
@@ -103,7 +108,7 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
 
   // Gry wszystkich graczy liczone do statystyk, w przeciwieństwie do statsGames dla jednego gracza.
   async function rankedGames(filter: StatsFilter, period: StatsPeriod): Promise<RankedGame[]> {
-    const matches = await store.listMatches({ types: FILTER_TYPES[filter], countsToStats: true, createdFrom: periodStart(period, now()) });
+    const matches = await store.listMatches({ ...FILTER_MATCHES[filter], countsToStats: true, createdFrom: periodStart(period, now()) });
     return (await cache.many(matches)).map(({ match, replay }) => {
       const { finished, playerIds, events, tally } = replayed(match, replay);
       return { type: match.type, finished, legs: completedPlayerLegs(match.type, playerIds, events), tally };
@@ -168,6 +173,30 @@ export function createStatsService({ store, cache, now }: Dependencies): StatsSe
         }),
         lastLegProgress: lastLegProgress(state, playerIds, events),
         checkouts: state.type === 'practice' && state.practiceMode === 'checkouts' ? checkoutSession(state.state) : null,
+      };
+    },
+
+    async matchLegs(matchId) {
+      const match = await store.findMatch(matchId);
+      if (!match) {
+        throw notFound(`Match ${matchId}`);
+      }
+      if (match.type !== 'match') {
+        throw new HttpError(409, 'not_a_match', `Match ${matchId} is not a 1v1 match`);
+      }
+      const { seq, game, events } = await cache.one(match);
+      if (game.type !== 'match') {
+        throw new Error(`Corrupt match ${matchId}: a 1v1 match replays as ${game.type}`);
+      }
+      const { config } = game.state;
+      return {
+        matchId,
+        finished: isGameFinished(game),
+        eventSeq: seq,
+        startingScore: config.startingScore,
+        legsToWin: config.legsToWin,
+        players: [...config.playerIds],
+        legs: buildMatchLegs(game.state, events),
       };
     },
 

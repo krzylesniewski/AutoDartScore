@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 5, decyzje o turniejach</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#fff7e6}
+</style>
+</helmet>
+<div style="width: 1600px; height: 1200px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 1100px 650px at 22% -10%, #2b201a 0%, #16120f 45%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; padding: 40px 44px; display: flex; flex-direction: column; gap: 26px;">
+  <header style="display: flex; align-items: flex-end; gap: 24px;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: 0.18em; color: #a8a08a;">ETAP 5 · TURNIEJE</span>
+      <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 68px; line-height: 0.9;">Wszystkie decyzje w jednym miejscu</h1>
+      <p style="margin: 0; font-size: 18px; color: #a8a08a;">Stan rozmowy z 16.11.2026. Wzór: turniej „Jama jesień 09.11.2026” w n01 (grupa 6 graczy, play-off, mecz pocieszenia).</p>
+    </div>
+    <span style="flex-grow: 1;"></span>
+    <div style="display: flex; gap: 10px;">
+      <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; font-size: 15px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #f3ecd8;"></span>Ustalone z autorem</span>
+      <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; font-size: 15px;"><span style="width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box; border: 2px dashed #f2b134;"></span>Propozycja, do potwierdzenia</span>
+    </div>
+  </header>
+
+  <div style="flex-grow: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: min-content; gap: 18px;">
+    <sc-for list="{{cards}}" as="c" hint-placeholder-count="12">
+      <section aria-label="{{c.title}}" style="{{c.box}}">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 22px; color: {{c.numColor}}; font-variant-numeric: tabular-nums;">{{c.num}}</span>
+          <h2 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; line-height: 1.1;">{{c.title}}</h2>
+        </div>
+        <ul style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 16px; line-height: 1.4; color: #e9e1cc;">
+          <sc-for list="{{c.items}}" as="it" hint-placeholder-count="3">
+            <li>{{it}}</li>
+          </sc-for>
+        </ul>
+      </section>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() {
+const fixed = 'border-radius: 22px; padding: 20px 24px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); display: flex; flex-direction: column; gap: 10px;';
+const proposal = 'border-radius: 22px; padding: 20px 24px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(242,177,52,0.45) inset; display: flex; flex-direction: column; gap: 10px;';
+const raw = [
+['Formaty', false, [
+'Liga: każdy z każdym, wynik to tabela.',
+'Puchar: drabinka, przegrany odpada.',
+'Grupa + play-off: jak w n01, najpierw grupa, potem drabinka.',
+'Jedna grupa w pierwszej wersji; do play-off wychodzi 2, 4 albo 8 graczy, pary 1–4 i 2–3. Kilka grup później.'
+]],
+['Mecze', false, [
+'Długość: „do N wygranych legów”, osobno dla grupy, każdej rundy play-off, finału i meczów dodatkowych (domyślnie 3 / 3 / 4 / 2).',
+'Punkty startowe raz na turniej: 301, 501 albo 701, domyślnie 501.',
+'Kto zaczyna mecz: losowanie, potem legi na przemian. Zasady X01 bez zmian.'
+]],
+['Tabela grupy', false, [
+'2 pkt za wygraną, 0 za porażkę, bez remisów.',
+'Przy równych punktach: bilans legów, potem mecz bezpośredni, potem średnia z 3 rzutek.',
+'W komórce wynik meczu i średnia gracza z tego meczu; przy imieniu średnia z całej grupy.'
+]],
+['Drabinka i mecze dodatkowe', false, [
+'Puchar: drabinka losowana, losowanie można powtórzyć przed startem; wolne losy dopełniają drabinkę (np. przy 6 graczach).',
+'Dwa niezależne przełączniki w kreatorze: mecz o 3. miejsce (przegrani półfinałów) i pocieszenie dla graczy spoza play-off (jak w n01: 5. z 6.).'
+]],
+['Awarie', false, [
+'Wycofany gracz przegrywa pozostałe mecze walkowerem, bez wpływu na statystyki rzutów.',
+'Wynik zakończonego meczu można poprawić ręcznie w turnieju. Poprawka to zdarzenie w logu i przelicza tabelę oraz drabinkę.'
+]],
+['Gracze i statystyki', false, [
+'Grać może każdy: profile i goście (goście jak dziś bez statystyk).',
+'Mecze turniejowe liczą się do statystyk ogólnych i do statystyk gracza.',
+'Filtr „1v1” obejmuje turnieje, filtr „Turniej” pokazuje tylko je; head-to-head liczy mecze turniejowe.'
+]],
+['Widoki w pierwszej wersji', false, [
+'Ekran turnieju: tabela z kolejnością meczów, drabinka, „Zagraj następny mecz”.',
+'Mecz po ID: statystyki (legi, średnia, First 9, 100+/140+/180, najwyższe zamknięcie, najlepszy leg) i przebieg legów tura po turze.',
+'Statystyki całego turnieju i widok na TV na żywo.'
+]],
+['Publiczny link', false, [
+'Podgląd turnieju i meczów po losowym, trudnym do zgadnięcia ID, bez logowania, tylko do odczytu, z kodem QR.',
+'Udostępnianie można wyłączyć.'
+]],
+['Tarcze', false, [
+'Model danych od razu na kilka tarcz.',
+'Interfejs i kolejka meczów na start dla jednej tarczy.'
+]],
+['Przyjęte domyślnie', true, [
+'Turniej ma nazwę i datę, np. „Jama jesień 09.11.2026”.',
+'Jeden aktywny turniej naraz; zakończone zostają do podglądu.',
+'Publiczny link pokazuje imiona, emoji i kolory awatarów, bez zdjęć profilowych.'
+]],
+['Jak to zbudować', true, [
+'Moduł turnieju w silniku: czysta logika z testami (tabela, remisy, wolne losy, mecze dodatkowe, walkower, poprawka).',
+'Turniej to log zdarzeń; tabela i drabinka wynikają z odtworzenia, nic nie liczymy osobno.',
+'Mecz turniejowy to zwykły mecz 1v1 z odnośnikiem do turnieju i rundy; „best of 1/3/5” zmienia się w „do N legów”.'
+]],
+['Kamienie milowe', true, [
+'T1 rdzeń: silnik, zapis, kreator, ekran turnieju; da się rozegrać cały turniej przy jednej tarczy.',
+'T2 podgląd: publiczny link z QR, mecz po ID z przebiegiem legów, statystyki turnieju, filtry.',
+'T3 na żywo: widok TV z trwającym meczem, tabelą lub drabinką i następnym meczem.'
+]]
+];
+const cards = raw.map((r, i) => ({
+num: String(i + 1).padStart(2, '0'), title: r[0], items: r[2],
+box: r[1] ? proposal : fixed, numColor: r[1] ? '#f2b134' : '#d8352a'
+}));
+return { cards };
+}
+}
+</script>
+</body>
+</html>

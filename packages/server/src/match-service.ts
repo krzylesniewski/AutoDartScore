@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { applyGameThrow, countsToStats, createGame, isGameFinished, MAX_CHECKOUT_SEED } from '@autoscore/engine';
+import { applyGameThrow, countsToStats, createGame, isGameFinished, MAX_CHECKOUT_SEED, type GameState } from '@autoscore/engine';
 import {
   DARTS_PER_TURN,
   HitEvent,
@@ -18,6 +18,7 @@ import {
   type ThrowResult,
   type UndoResult,
 } from '@autoscore/schema';
+import type { FastifyBaseLogger } from 'fastify';
 import { createAchievementReference } from './achievement-reference.js';
 import { HttpError, invalidRequest, notFound, StaleStateHttpError } from './errors.js';
 import { sendTo, type LiveHub, type LiveSocket } from './live-hub.js';
@@ -43,6 +44,8 @@ export interface MatchService {
   list(query: MatchListQuery): Promise<MatchListItem[]>;
   // null, gdy gry nie ma. Inaczej funkcja do wypisania gniazda.
   subscribe(id: string, socket: LiveSocket): Promise<(() => void) | null>;
+  // Rozsyła state_updated ze świeżą migawką bez brania kolejki. Wołający musi trzymać klucz gry.
+  publishState(id: string): Promise<void>;
 }
 
 interface Dependencies {
@@ -53,10 +56,42 @@ interface Dependencies {
   readonly now: () => number;
   readonly matchLockMs: number; // tyle po rzutce kończącej grę da się jeszcze cofać
   readonly cache: ReplayCache; // tylko dla listy gier i rekordów do osiągnięć
+  readonly logger: Pick<FastifyBaseLogger, 'error'>;
+  // Po zmianie legów w meczu turnieju, gdy wiadomości samej gry są już wysłane.
+  readonly onLegsChanged?: (match: StoredMatch) => Promise<void>;
+  // Obejmuje zapis cofnięcia rzutki, która zakończyła mecz turnieju. Może go odrzucić błędem.
+  readonly guardTournamentUndo?: <T>(match: StoredMatch, write: () => Promise<T>) => Promise<T>;
 }
 
-export function createMatchService({ store, hub, queue, random, now, matchLockMs, cache }: Dependencies): MatchService {
+function legsWon(game: GameState): string {
+  return game.type === 'match' ? game.state.legsWon.join(':') : '';
+}
+
+export function createMatchService({
+  store,
+  hub,
+  queue,
+  random,
+  now,
+  matchLockMs,
+  cache,
+  logger,
+  onLegsChanged,
+  guardTournamentUndo,
+}: Dependencies): MatchService {
   const references = createAchievementReference({ store, cache });
+
+  // Błąd turnieju nie może zmienić odpowiedzi gry, bo rzutka jest już zapisana.
+  async function legsChanged(match: StoredMatch, before: GameState, after: GameState): Promise<void> {
+    if (match.tournament === null || onLegsChanged === undefined || legsWon(before) === legsWon(after)) {
+      return;
+    }
+    try {
+      await onLegsChanged(match);
+    } catch (error) {
+      logger.error({ matchId: match.id, tournamentId: match.tournament.id, err: error }, 'Tournament update after a leg change failed');
+    }
+  }
 
   async function requireMatch(id: string): Promise<StoredMatch> {
     const match = await store.findMatch(id);
@@ -129,7 +164,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           type: request.type,
           practiceMode: null,
           startingScore: request.startingScore,
-          legsToWin: (request.bestOf + 1) / 2,
+          legsToWin: request.legsToWin ?? ((request.bestOf ?? 1) + 1) / 2,
           firstPlayerIndex: draw(request.playerIds.length),
           checkoutRange: null,
           checkoutSeed: null,
@@ -332,6 +367,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           ...detected.map((achievement): LiveMessage => ({ ...achievement, ...meta })),
           { type: 'state_updated', ...meta, state },
         ]);
+        await legsChanged(match, game, applied.state);
         return { statusCode: 201 as const, result: { throw: record, events: [...applied.events], state } };
       });
     },
@@ -414,6 +450,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           ...detected.map((achievement): LiveMessage => ({ ...achievement, ...meta })),
           { type: 'state_updated', ...meta, state },
         ]);
+        await legsChanged(match, game, after);
         return { statusCode: 201 as const, result: { throws: appended.throws, events: newEvents, state } };
       });
     },
@@ -450,7 +487,12 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           throw new HttpError(409, 'nothing_to_undo', `Match ${id} has no throw to undo`);
         }
         const remaining = throws.slice(0, -1);
-        const seq = await store.appendUndo(id, last.id);
+        const append = () => store.appendUndo(id, last.id);
+        // Tylko sam zapis pod kluczem turnieju. legsChanged niżej bierze ten klucz, a kolejka nie jest wielowejściowa.
+        const seq =
+          match.tournament !== null && isGameFinished(before) && guardTournamentUndo !== undefined
+            ? await guardTournamentUndo(match, append)
+            : await append();
         if (match.type === 'match' && isGameFinished(before)) {
           references.invalidate();
         }
@@ -469,6 +511,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           { type: 'throw_undone', ...meta, throwId: last.id },
           { type: 'state_updated', ...meta, state },
         ]);
+        await legsChanged(match, before, game);
         return { undoneThrowId: last.id, state };
       });
     },
@@ -506,6 +549,15 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         const { abandonment } = replayed;
         if (!abandonment) {
           throw new HttpError(409, 'match_not_abandoned', `Match ${id} is not abandoned`);
+        }
+        // Wznowienie zamieniłoby walkower z powrotem w rozgrywany mecz. Wycofanie zapisuje pod kluczem tego meczu,
+        // więc nie wejdzie między to sprawdzenie a zapis.
+        if (match.tournament !== null) {
+          const players = new Set(match.players.map((player) => player.id));
+          const log = await store.loadTournamentLog(match.tournament.id);
+          if (log.some((entry) => entry.type === 'player_withdrawn' && players.has(entry.playerId))) {
+            throw new HttpError(409, 'player_withdrawn', `A player of match ${id} has withdrawn from the tournament`);
+          }
         }
         await store.appendResume(id);
         const state = await snapshot(match);
@@ -548,7 +600,11 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
 
     async list(query) {
       const items: MatchListItem[] = [];
-      const matches = await store.listMatches({ types: query.type === undefined ? undefined : [query.type], playerId: query.playerId });
+      const matches = await store.listMatches({
+        types: query.type === undefined ? undefined : [query.type],
+        playerId: query.playerId,
+        tournamentId: query.tournamentId,
+      });
       // Status wynika z odtworzenia, więc ten filtr działa dopiero po nim.
       for (const { match, replay } of await cache.many(matches)) {
         const { abandonment, endedAt, updatedAt } = replay;
@@ -571,6 +627,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           checkouts,
           winnerId,
           placements,
+          tournament,
         } = state;
         items.push({
           id,
@@ -589,6 +646,7 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
           winnerId,
           placements,
           endedAt,
+          tournament,
           updatedAt,
         });
       }
@@ -607,6 +665,10 @@ export function createMatchService({ store, hub, queue, random, now, matchLockMs
         sendTo(socket, [{ type: 'state_updated', matchId: id, eventSeq: state.eventSeq, state }]);
         return unsubscribe;
       });
+    },
+
+    async publishState(id) {
+      publishState(id, await snapshot(await requireMatch(id)));
     },
   };
 }

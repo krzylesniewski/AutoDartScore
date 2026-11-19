@@ -9,3 +9,16 @@ export class EngineError extends Error {
     this.name = 'EngineError';
   }
 }
+
+export type TournamentErrorCode = 'invalid_withdrawal' | 'invalid_correction' | 'dependent_started';
+
+// Odrzucona komenda turnieju. Nie dziedziczy po EngineError, bo serwer mapuje kody EngineError zamkniętą listą.
+export class TournamentError extends Error {
+  constructor(
+    readonly code: TournamentErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'TournamentError';
+  }
+}

@@ -25,7 +25,7 @@ VITE_BASE=/autoscore/ VITE_API_URL=https://api.example.com pnpm --filter @autosc
 
 ## Ekrany
 
-Routing przez hash w `src/App.tsx`, z sześcioma trasami opisanymi niżej.
+Routing przez hash w `src/App.tsx`, z trasami opisanymi niżej.
 
 Każdy inny adres przekierowuje na `#/`.
 
@@ -33,12 +33,23 @@ Każdy inny adres przekierowuje na `#/`.
 
 Po lewej formularz nowej gry:
 
-- Najpierw typ: „Mecz 1v1”, „Zabawa” albo „Trening”.
+- Najpierw typ: „Mecz 1v1”, „Zabawa”, „Trening” albo „Turniej”.
 - Potem gracze, od ostatnio aktywnego, z przyciskiem „+ Nowy gracz”. Nowy gracz ma imię, avatar emoji i jeden z 16 kolorów. Bez wyboru kolor jest dobrany automatycznie.
 - Emoji wybiera się z siatki 3 grup po 10: „Film i gry”, „Sport”, „Postaci”. Można też wpisać jedno własne w polu „Inne emoji”, a „Bez emoji” zostawia inicjał.
 - Opcje zależne od typu: punkty startowe, liczba legów albo tryb treningu (Free run, Solo 501, Końcówki). Przy „Końcówkach” dochodzi przedział „2-50” albo „51-100” (domyślnie 2-50).
+- Turniej ma własny wybór graczy, osobny od pozostałych typów, więc przełączanie kafli go nie zmienia. „Mecz 1v1”, „Zabawa” i „Trening” dzielą jeden wybór, a zmiana typu przycina go do limitu nowego typu.
 
-Po prawej podsumowanie wybranych ustawień i lista gier do dokończenia (w trakcie i porzuconych, od najnowszej):
+„Turniej” ma własne pola:
+
+- „Nazwa turnieju”, domyślnie „Turniej DD.MM.YYYY” z dzisiejszą datą, do 60 znaków. Pusta nazwa blokuje start.
+- „Format”: „Liga”, „Puchar” albo „Grupa + play-off” (domyślnie). Liga i grupa mają od 3 do 10 graczy, puchar od 3 do 16. Zmiana formatu przycina wybór do nowego limitu.
+- „Zasady”: punkty startowe 301, 501 (domyślnie) albo 701, a w „Grupa + play-off” także „Do play-off” 2, 4 (domyślnie) albo 8 z podpowiedzią par.
+- „Mecze dodatkowe” (poza ligą): „Mecz o 3. miejsce” w pucharze i w grupie, „Pocieszenie” tylko w grupie. Przełącznik, którego format nie rozegra (na przykład puchar 3 graczy), jest nieaktywny i pokazuje powód.
+- „Długość meczów”: liczba wygranych legów od 1 do 9 dla każdej fazy, która się odbędzie, z przyciskami „−” i „+”.
+
+Po prawej, zamiast podsumowania, panel „Plan turnieju” z liczbą meczów w każdej fazie i sumą „Razem meczów”. Liczy je silnik (`computeTournament` z `@autoscore/engine`), więc wolne losy i mecze, których format nie rozegra, nie wchodzą do sumy. Przy błędnych ustawieniach panel pokazuje pierwszy powód. Pod planem jest przełącznik „Publiczny link z kodem QR” (domyślnie włączony) i przycisk „Rozpocznij turniej”: od lg na dole panelu, poniżej lg w pasku pod ekranem. Start wysyła `POST /tournaments` i otwiera `#/tournaments/:id`. Gdy trwa już inny turniej, obok błędu jest link „Przejdź do turnieju”.
+
+Po prawej (przy pozostałych typach) podsumowanie wybranych ustawień, a przy każdym typie lista gier do dokończenia (w trakcie i porzuconych, od najnowszej):
 
 - Każdy wiersz ma przycisk „Dokończ”.
 - „Porzuć” pojawia się po co najmniej jednym ukończonym legu.
@@ -62,6 +73,7 @@ Ekran ma:
 #### Nagłówek i układ
 
 - Nagłówek pokazuje „Kolejka N”, czyli kolejkę rzucającego w bieżącym legu. Free run nie ma kolejki.
+- W meczu turnieju pierwsza pozycja ustawień w nagłówku to etykieta meczu, np. „Grupa, mecz 7” albo „Półfinał 2”, zamiast „Mecz 1v1”.
 - Obok stoi zegar lega liczony od pierwszej rzutki lega, bez przerw między porzuceniem a wznowieniem. W Free run to zegar sesji.
 - „Cofnij” stoi w klawiaturze. Po końcu Solo 501, gdy klawiatury już nie ma, stoi osobno pod slotami rzutek.
 - Od lg karta zamknięcia stoi na dole prawej kolumny i wypełnia całą wolną wysokość pod klawiaturą, co najmniej 80 px. Trasa i etykieta rosną razem z kartą, a klawiatura nie zmienia przez to rozmiaru ani miejsca. Poniżej lg karta stoi pod slotami, nad klawiaturą.
@@ -115,7 +127,7 @@ Skróty na klawiaturze komputera:
 - Po końcu gry podsumowanie pokazuje zamiast kolejki i zegara „Czas gry” jako osobny element z dużą wartością.
 - Podsumowanie meczu 1v1 pokazuje przy każdym legu jego czas z ikoną zegara. Trening nie pokazuje czasu lega.
 - Podsumowanie pokazuje przy każdym gościu przycisk „Zapisz gracza”.
-- Zakończony mecz 1v1 otwiera widok podsumowania z przyciskami „Rewanż” i „Nowy mecz”. Rewanż ma tych samych graczy, punkty i liczbę legów, a kto zaczyna, losuje serwer.
+- Zakończony mecz 1v1 otwiera widok podsumowania z przyciskami „Rewanż” i „Nowy mecz”. Rewanż ma tych samych graczy, punkty i liczbę legów, a kto zaczyna, losuje serwer. W meczu turnieju zamiast „Rewanż” jest link „Wróć do turnieju”, a obok tytułu etykieta meczu z ustawieniami.
 - Podsumowanie meczu 1v1 (pod kartami legów) i zabawy (pod tabelą) ma wykres „Leg N · zejście z wyniku”. Wykres pokazuje pozostały wynik po każdej rzutce ostatniego lega, jedną linię na gracza w kolorze avatara i z własnym wzorem. Bust jest oznaczony ikoną i tekstem „Bust”.
 - Siatka wykresu ma linię co kolejkę (3 lotki) i co 50 punktów (301) albo 100 punktów (501, 701), a obie osie mają liczby. Trening nie ma wykresu.
 - W zakończonej grze „Cofnij” odlicza czas do `editableUntil`, np. „Cofnij (4:12)”. Potem przycisk jest nieaktywny, a obok stoi kłódka i tekst „Mecz zamknięty, nie można go już zmienić”. Odliczanie idzie z zegara urządzenia, a o zamknięciu decyduje serwer.
@@ -129,7 +141,8 @@ Osiągnięcie meczu 1v1 (na przykład rekord tury albo najkrótszy leg) pokazuje
 
 - Ranking graczy po średniej z ukończonych legów.
 - Sześć kafelków z pierwszą piątką: „Win rate”, rekordowy leg, najwyższe zamknięcie, najkrótszy leg, najwyższa tura z meczów 1v1 i „Trafienia T20”.
-- Filtr typu gier i filtr „Okres”: „30 dni”, „Kwartał” albo „Cały czas”, domyślnie „Cały czas”. Okres liczy się wstecz od zegara serwera, więc „Kwartał” to ostatnie 90 dni.
+- Filtr typu gier: „Wszystkie”, „Mecze 1v1”, „Turniej”, „Zabawa” i „Trening”. „Turniej” to tylko mecze 1v1 rozegrane w turniejach (`type=tournament`), a „Mecze 1v1” nadal je obejmuje.
+- Filtr „Okres”: „30 dni”, „Kwartał” albo „Cały czas”, domyślnie „Cały czas”. Okres liczy się wstecz od zegara serwera, więc „Kwartał” to ostatnie 90 dni.
 - Podtytuł rankingu nazywa okres, np. „Ranking graczy z ostatnich 30 dni”.
 - Wybór okresu jest wspólny dla rankingu i karty gracza. Zostaje na urządzeniu w `localStorage` pod kluczem `autoscore.statsPeriod`.
 - „Win rate” liczy graczy z co najmniej 3 ukończonymi grami, a przy filtrze „Trening” pokazuje „Tylko mecze i zabawa”.
@@ -146,7 +159,7 @@ Przycisk „Overall” za „Trening” pokazuje wszystkie gry z wybranego okres
 
 - Profil z avatarem i przyciskiem „Edytuj profil”: imię, avatar z tej samej siatki emoji i kolor. Niezmieniony avatar nie jest wysyłany, więc starszy avatar z tekstem zostaje.
 - „Archiwizuj” (z potwierdzeniem) albo „Przywróć”. Na liście graczy są też zarchiwizowani, z napisem „Zarchiwizowany”.
-- Pod profilem statystyki z filtrem typu gier. Obejmują też „Win rate” („—” bez ukończonych gier) i „Trafienia T20”.
+- Pod profilem statystyki z tym samym filtrem typu gier co w rankingu, z „Turniej”, ale bez „Overall”. Obejmują też „Win rate” („—” bez ukończonych gier) i „Trafienia T20”.
 - Wykres formy: średnia z ukończonych legów w każdej z ostatnich 20 gier, dla tego samego filtra, z liniami siatki na okrągłych średnich i numerami gier na osi poziomej.
 - Bilans 1v1 z wybranym rywalem z ukończonych meczów 1v1.
 - Historia gier gracza.
@@ -160,41 +173,127 @@ Przycisk „Overall” za „Trening” pokazuje wszystkie gry z wybranego okres
 
 ### `#/history`: historia
 
-Historia wszystkich gier, od ostatnio aktywnej, z filtrem typu (trening obejmuje też Free run). Każdy wiersz ma datę, typ, graczy z wynikiem, status z ikoną i tekstem oraz link „Szczegóły” do `#/matches/:id`.
+Historia wszystkich gier, od ostatnio aktywnej, z filtrem typu (trening obejmuje też Free run). Każdy wiersz ma datę, typ, graczy z wynikiem, status z ikoną i tekstem oraz link „Szczegóły” do `#/matches/:id`. Mecz turniejowy ma pod typem link do `#/tournaments/:id` z nazwą turnieju i etykietą meczu, np. „Liga jesień · Półfinał 2”. Ten sam link jest w historii gier na karcie gracza.
+
+### `#/tournaments`: turnieje
+
+Wpis „Turniej” w nawigacji. Gdy trwa turniej, adres zmienia się na `#/tournaments/:id` przez `location.replace`, więc „Wstecz” nie wraca na listę. Bez trwającego turnieju lista zakończonych, od najnowszego: nazwa, format, data i zwycięzca, każdy z linkiem do turnieju. Link „Nowy turniej” jest zawsze.
+
+Obok każdego zakończonego turnieju (poza linkiem) jest przycisk „Archiwizuj” z ikoną. Otwiera okno „Zarchiwizować turniej?” z informacją, że turniej zniknie z listy, a publiczny link przestanie działać, i że archiwizacji nie da się cofnąć. „Archiwizuj” w oknie wysyła `POST /tournaments/:id/archive` bez `eventSeq`, bo lista go nie zna. Po sukcesie wiersz znika bez ponownego pobierania listy, a po ostatnim pojawia się „Brak zakończonych turniejów.”. Błąd zostaje w oknie, a wiersz na liście.
+
+### `#/tournaments/new`: nowy turniej
+
+Ekran startowy z wybranym typem „Turniej”. W nawigacji zaznaczona jest „Nowa gra”.
+
+### `#/tournaments/:id`: turniej
+
+Ekran turnieju. Stan bierze z `GET /tournaments/:id`, a potem śledzi `tournament_updated` z WebSocketa `/tournaments/:id/live`, z tym samym logowaniem i ponownym łączeniem co ekran gry. Starszy `eventSeq` niczego nie zmienia, a równy wygrywa, bo zmiana legów w meczu turnieju przychodzi z tym samym `eventSeq`. Nieznany turniej pokazuje „Nie znaleziono turnieju.” z linkiem do `#/tournaments`.
+
+- Nagłówek: „Turniej · format · punkty”, nazwa, stan fazy (np. „Faza grupowa · 9 z 15 meczów”, „Liga”, „Play-off” albo „Turniej zakończony”) i zakładki. Liga ma „Tabela”, grupa + play-off „Grupa” i „Play-off”, puchar „Drabinka”, a każdy format na końcu „Statystyki”. Domyślna zakładka (nigdy „Statystyki”) wynika z pierwszego widoku, a aktualizacje jej nie zmieniają. Strzałki w lewo i w prawo przechodzą między zakładkami.
+- „Losuj ponownie” jest tylko przed startem pierwszego meczu (`POST /tournaments/:id/draw`).
+- „Udostępnij” stoi w nagłówku obok zakładek w trwającym i zakończonym turnieju, a w zarchiwizowanym go nie ma. Otwiera okno „Udostępnij turniej” z przełącznikiem „Publiczny link z kodem QR”, który wysyła `POST /tournaments/:id/sharing` z bieżącym `eventSeq`. W trakcie zapisu przełącznik, Escape i „Zamknij” nic nie robią. Po sukcesie okno zostaje otwarte, a przełącznik idzie za widokiem turnieju, więc zmiana z innego urządzenia też go przestawia. Błąd pokazuje polski tekst w oknie, a turniej pobiera się jeszcze raz.
+- W oknie „Udostępnij turniej” przy włączonym udostępnianiu jest pole „Adres publicznego linku” (adres strony ze ścieżką i `#/t/:id`), przycisk „Kopiuj link” i kod QR liczony w przeglądarce (`uqr`), więc adres nie trafia do żadnej usługi. Kopiowanie idzie przez schowek i kończy się „Skopiowano link.”. Bez schowka (np. `http://` po adresie IP nie jest bezpiecznym kontekstem) albo gdy schowek odmówi, okno zaznacza adres w polu i prosi o ręczne skopiowanie. Przy wyłączonym udostępnianiu zamiast linku i kodu jest „Udostępnianie jest wyłączone. Link i kod QR pojawią się po włączeniu.”. Pod adresem `localhost` albo `127.0.0.1` okno nie pokazuje linku, przycisku „Kopiuj link” ani kodu QR, bo taki link działa tylko na tym urządzeniu. Zamiast nich jest ikona ostrzeżenia i informacja, że udostępnianie wymaga otwarcia aplikacji po adresie w sieci (adres IP komputera albo adres publiczny). Przełącznik zostaje.
+- „Widok TV” stoi w nagłówku obok „Udostępnij” w każdym turnieju, także w zarchiwizowanym, i otwiera `#/tournaments/:id/tv`.
+- „Tabela” i „Grupa”: od sm tabela krzyżowa z wynikiem w legach od strony gracza z wiersza, numerem meczu w kółku dla meczu do rozegrania i kolumnami M, W, P, +/- i PKT. Zakończony mecz ma pod wynikiem średnią gracza z wiersza z tego meczu (dla czytników ekranu „średnia 40,33”), a walkower i poprawiony wynik mają w tym miejscu swoje oznaczenie. Legenda mówi „W komórce: wynik w legach i średnia gracza z tego meczu.”. Pod imieniem gracza w obu tabelach jest jego średnia z grupy („śr. 47,62”), gdy gracz ma rzutki. Mecz trwający, a bez niego następny, ma ramkę w kolorze akcentu i napis „trwa” albo „teraz”. Tabela przewija się w poziomie we własnej ramce. Poniżej sm krótka tabela: miejsce, gracz, W–P, +/- i PKT. W grupie + play-off miejsca dające awans mają strzałkę i tekst „awans do play-off” dla czytników ekranu.
+- „Play-off” i „Drabinka”: drabinka z rundami w kolumnach od lewej do finału, z nazwą rundy i długością meczu („Półfinały · do 3”). W kolumnie mecze stoją w kolejności z drabinki, nie w kolejności gry. Pole meczu ma dwa wiersze: rozstawienie, avatar i imię albo źródło pustego miejsca („Zwycięzca półfinału 2”, „Przegrany półfinału 2”, „3. miejsce w grupie”, „Wolny los”), a po prawej legi. W zakończonym meczu (także o 3. miejsce i w pocieszeniu) zaraz za imieniem stoi średnia gracza z tego meczu, trwający mecz jej nie pokazuje. Zwycięzca ma pogrubione imię, jaśniejszy wiersz, pasek akcentu przy legach i tekst „zwycięzca” dla czytników ekranu. Trwający mecz ma ramkę w kolorze akcentu i legi z `GET /matches/:id`. Pod polem linia stanu, np. „Mecz #16 · zakończony”, „Mecz #17 · na żywo, leg 3”, „Mecz #20 · po półfinałach” albo „Awans bez meczu” przy wolnym losie. Drabinka przewija się w poziomie we własnej ramce, a strona nie. Pod kreską mecz o 3. miejsce i pocieszenie, gdy turniej je ma. Pocieszenie z jednym meczem ma tytuł z miejscami („Pocieszenie · 5. z 6. · do 2”), a dłuższe ma własną drabinkę.
+- Prawa kolumna od lg, a poniżej lg nad tabelą albo drabinką: karta każdego trwającego meczu i karta „Następny mecz” z graczami, miejscem w tabeli, długością meczu i przyciskiem „Zagraj mecz”. Karta trwającego meczu ma nazwę meczu („Trwa: półfinał 2”), wynik w legach i numer lega z `GET /matches/:id` (bez nich „vs”) oraz link „Wróć do meczu”. Legi pobierają się przy każdym `tournament_updated`. Pod tabelą albo drabinką (od lg pod kartami) na zakładkach „Play-off” i „Drabinka” jest „Klasyfikacja końcowa”: znane miejsca z imieniem i meczem, w którym gracz skończył turniej (np. „pocieszenie 2–0”), a w trakcie turnieju też miejsca do rozstrzygnięcia („rozstrzygnie finał”). Pod nią „Kolejka” z pozostałymi gotowymi meczami, każdy z przyciskiem „Zagraj”, a pod kolejką „Rozegrane mecze”.
+- „Statystyki”: zakładka na całą szerokość, bez kart meczów, kolejki i przycisków incydentów. Pobiera `GET /tournaments/:id/stats` dopiero po otwarciu i jeszcze raz przy każdym `tournament_updated`, a liczy się tylko ostatnia odpowiedź. Przed pierwszą odpowiedzią „Ładowanie…”, przy błędzie „Nie udało się pobrać statystyk turnieju” nad ostatnimi pobranymi statystykami. Od lg po lewej „Podium” (tylko w zakończonym turnieju, z numerem miejsca, imieniem i meczem, a bez meczu o 3. miejsce z dwoma 3. miejscami) i „Rekordy turnieju”: najwyższa średnia w meczu, najwyższe zamknięcie, najkrótszy leg i najwyższa tura, każdy z graczem, meczem i rywalem albo numerem lega oraz linkiem do strony meczu `#/tournaments/:id/matches/:matchId`. Brak rekordu to „—” bez linku. Po prawej „Gracze w turnieju”: miejsce, mecze, legi, +/-, średnia, First 9, 100+, 140+, 180, najwyższe zamknięcie i najlepszy leg. Nagłówki kolumn (poza graczem) sortują tabelę, drugie kliknięcie odwraca kierunek, a `aria-sort` ma tylko posortowana kolumna. Na start sortowanie po średniej malejąco. Brak wartości jest zawsze na końcu. Najlepsza wartość w kolumnie ma gwiazdkę, złoty kolor i tekst „najlepszy wynik” dla czytników ekranu, przy remisie u każdego gracza, a kolumna samych zer nie ma wyróżnienia. Tabela przewija się w poziomie we własnej ramce. Poniżej lg podium, rekordy i tabela stoją jedno pod drugim.
+- Strona meczu `#/tournaments/:id/matches/:matchId` otwiera się z komórki zakończonego meczu w tabeli krzyżowej, z pola zakończonego albo trwającego meczu w drabince, z rekordów na zakładce „Statystyki” i z listy „Rozegrane mecze”. Komórka i pole mają dla czytników ekranu tekst „Szczegóły meczu #N”. Walkower i mecz do rozegrania nie mają linku. „Wróć do meczu” na karcie trwającego meczu prowadzi do ekranu gry `#/matches/:id`.
+- „Rozegrane mecze”: zakończone mecze od ostatnio rozegranego, każdy z numerem, graczami, wynikiem turnieju w legach („3 : 1”, z „popr.” przy poprawionym wyniku) i linkiem „Szczegóły” (dla czytników ekranu „Szczegóły meczu #N”). Bez zakończonych meczów lista się nie pokazuje. Na telefonie krótka tabela nie ma komórek z wynikami, więc to jest tam droga do strony meczu.
+- „Zagraj mecz” i „Zagraj” wysyłają `POST /tournaments/:id/fixtures/:fixtureId/start` z bieżącym `eventSeq` i otwierają `#/matches/:id`. W trakcie komendy przyciski są nieaktywne. Błąd pokazuje polski tekst przy przycisku i pobiera turniej jeszcze raz.
+- Na końcu prawej kolumny, pod kolejką (poniżej lg pod tabelą albo drabinką), są dwa przyciski obok siebie: „Popraw wynik” i „Wycofaj gracza”. Nagłówek nie ma tych akcji. „Popraw wynik” jest widoczny w niezarchiwizowanym turnieju z co najmniej jednym zakończonym meczem, także w zakończonym turnieju. „Wycofaj gracza” jest widoczny tylko w trwającym, niezarchiwizowanym turnieju, gdy jest kogo wycofać. Bez obu przycisków wiersz się nie pokazuje. W trakcie komendy ekranu przyciski są nieaktywne.
+- Okno „Popraw wynik”: lista „Mecz” z zakończonymi meczami (walkowerów nie ma), domyślnie ostatnio rozegrany, i „Nowy wynik w legach” z −/+ dla każdego gracza w zakresie od 0 do liczby legów meczu. Pod nimi zasada meczu, co się przeliczy (tabela ligi, tabela grupy i obsada play-off albo drabinka i klasyfikacja końcowa), nowy zwycięzca, gdy się zmienia, i informacja, że rzutki i statystyki rzutów zostają. Przycisk „Popraw wynik” jest nieaktywny przy błędnym albo niezmienionym wyniku. Wysyła `POST /tournaments/:id/fixtures/:fixtureId/result` z legami w kolejności slotów i bieżącym `eventSeq`.
+- Okno „Wycofać gracza?”: karty graczy do wyboru, bez wycofanych i przegranych walkowerem, a w pucharze też bez odpadłych. Nic nie jest wybrane na start. Po wyborze okno mówi, ile meczów gracz przegra walkowerem, albo że nie ma już meczów do rozegrania, a przy trwającym meczu, że zostanie porzucony. Wysyła `POST /tournaments/:id/withdrawals` z bieżącym `eventSeq`.
+- Po sukcesie okno się zamyka, a ekran pokazuje zwrócony widok. Błąd zostaje w oknie jako polski tekst, a turniej pobiera się jeszcze raz. Aktualizacja na żywo przy otwartym oknie zachowuje wybór, gdy wciąż jest dostępny, więc ponowna próba po `stale_state` idzie z nowym `eventSeq`.
+- Oznaczenia: w tabeli krzyżowej komórka walkowera ma pod wynikiem „wo”, a poprawionego wyniku „popr.”, z pełnym tekstem („walkower”, „wynik poprawiony”) dla czytników ekranu. Legenda tłumaczy skrót tylko wtedy, gdy występuje w grupie. Wycofany gracz ma „wycofany” przy imieniu w obu tabelach. W drabince poprawiony mecz ma linię stanu „Mecz #N · zakończony, wynik poprawiony”, a walkower „Mecz #N · walkower”. Puchar nie ma tabeli, więc wycofanego gracza widać tam tylko po walkowerach.
+
+### `#/tournaments/:id/matches/:matchId`: mecz turnieju
+
+Strona jednego meczu turnieju, tylko do odczytu: bez Cofnij, bez komend i bez linku do ekranu gry. Jedyne przyciski to zakładki legów.
+
+- Dane: widok turnieju z `GET /tournaments/:id` i `tournament_updated` (poprawki wyniku), stan meczu z WebSocketa `/matches/:id/live`, statystyki z `GET /matches/:id/summary` i przebieg legów z `GET /matches/:id/legs`. Podsumowanie i legi pobierają się przy każdym nowym `eventSeq` meczu, a zostaje odpowiedź z najwyższym `eventSeq`, więc trwający mecz aktualizuje się na żywo.
+- Stany: „Ładowanie…” do pierwszego widoku turnieju i stanu meczu. Nieznany turniej, nieznany mecz albo mecz innego turnieju to „Nie znaleziono meczu w tym turnieju.” z linkiem „Wróć do turnieju”. Błąd turnieju to tylko „Nie udało się pobrać turnieju”, bo wynik w nagłówku zależy od widoku. W kartach „Ładowanie…” do pierwszej odpowiedzi, a błąd („Nie udało się pobrać podsumowania”, „Nie udało się pobrać przebiegu legów”) stoi nad ostatnimi danymi. Zamknięty kanał trwającego meczu pokazuje „Brak połączenia z serwerem. Łączę ponownie…”.
+- Na górze link „‹ nazwa turnieju” do `#/tournaments/:id`, dla czytników ekranu z „Wróć do turnieju”.
+- Nagłówek: etykieta meczu (np. „Finał · Mecz #20”, a w grupie i lidze sama etykieta, np. „Grupa, mecz 7”), długość meczu („do 4 wygranych legów · 501”), gracze z wynikiem w legach („4 : 2”) i data „16.11.2026 · 21:14 · 38 min” ze startu meczu i czasu gry bez przerw. Zwycięzca ma złoty pierścień przy avatarze, puchar i tekst „zwycięzca” dla czytników ekranu. Trwający mecz nie ma zwycięzcy, ma znacznik „na żywo, leg N” i nie ma czasu gry. Porzucony mecz bez walkowera ma „Porzucony”.
+- Poprawiony wynik: nagłówek pokazuje wynik turnieju w kolejności graczy meczu, z „popr.” („wynik poprawiony” dla czytników ekranu) i dopiskiem „rozegrano X:Y” z legów z logu meczu. Walkower, który zachował id porzuconego meczu, pokazuje wynik walkowera z „wo” i „rozegrano X:Y”. Statystyki i przebieg legów zawsze pokazują mecz tak, jak go rozegrano.
+- „Statystyki meczu”: tabela gracz A, statystyka, gracz B. Wiersze: wygrane legi, średnia, First 9, 100+, 140+, 180, najwyższe zamknięcie, najlepszy leg (mniej rzutek jest lepiej) i % doubli. Lepsza wartość jest większa i grubsza, z tekstem „lepszy wynik” dla czytników ekranu. Remis, także 0 i 0, nie ma wyróżnienia.
+- „Przebieg lega”: zakładki „Leg N” ze zwycięzcą lega albo „trwa”. Strzałki w lewo i w prawo przechodzą między zakładkami. Na start wybrany jest ostatni leg i wybór idzie za nowym legiem na żywo, aż gracz sam wybierze zakładkę. Pod zakładkami zdanie, np. „Leg 4: zaczyna Anna, zamyka D20 w 26. rzutce (średnia lega 57,81).”, albo „Leg N: zaczyna X, leg trwa.”.
+- Tabela tur: kolumny Zdobył, Zostało, Rzutki, Zdobył, Zostało i drugi wiersz nagłówka z imionami. Wiersz łączy kolejne zamknięte tury obu graczy. Rzutki to większa z sum rzuconych rzutek obu graczy do tego wiersza, a w wierszu zamknięcia rzutki zwycięzcy. Bust ma „Bust” i wynik sprzed tury, a liczy tyle rzutek, ile rzucono. Zamknięcie ma „40 · D20” w złotym kolorze z tekstem „zamknięcie” dla czytników ekranu. Tura 100+ jest grubsza. Leg bez zamkniętych tur ma „Brak zamkniętych tur.”. Otwartej tury tabela nie pokazuje. Tabela przewija się w poziomie we własnej ramce.
+- Układ: poniżej lg jedna kolumna (nagłówek, statystyki, legi). Od lg nagłówek na całą szerokość, pod nim statystyki (do 560 px) i przebieg lega obok. Imiona się skracają, a strona nie przewija się w poziomie.
+
+### `#/tournaments/:id/tv`: widok TV
+
+Ekran tylko do odczytu na duży ekran przy tarczy. Wymaga logowania jak ekran turnieju. Nie ma nawigacji aplikacji, klawiatury, głosu, efektów, komunikatów ani żadnego przycisku. Jedyne wyjście to link „Wróć do turnieju” w nagłówku.
+
+- Dane: widok turnieju z `GET /tournaments/:id` i `tournament_updated` z `/tournaments/:id/live`, stan trwającego meczu z WebSocketa `/matches/:id/live` i średnie z `GET /matches/:id/summary`, pobierane przy każdym nowym `eventSeq` meczu. Legi trwających meczów w liście play-off i w drabince idą z `GET /matches/:id`.
+- Trwający mecz to `liveFixtureId` z widoku turnieju. Gdy `tournament_updated` przyniesie inny mecz, ekran sam zamyka kanał poprzedniego meczu i otwiera kanał nowego. Gdy trwającego meczu nie ma, ekran sam przechodzi do układu bez meczu. Porzucony mecz bez walkowera zostaje na ekranie z „Porzucony” zamiast „na żywo” i bez rzucającego.
+- Nagłówek: znak aplikacji, nazwa turnieju, przy meczu jego etykieta z długością („Półfinał 2 · do 3 wygranych legów”), a bez meczu stan fazy („Liga · 1 z 3 meczów”, „Turniej zakończony”). Przy trwającym meczu znacznik „na żywo” z kropką, przy porzuconym ikona pauzy i „Porzucony”. Zamknięty kanał turnieju albo meczu pokazuje pod nagłówkiem „Brak połączenia z serwerem. Łączę ponownie…”.
+- Układ z meczem: od lg po lewej „Trwający mecz”, a po prawej kolumna szeroka na 400 px przy oknie 1280 px i 470 px od 1600 px. Dwie karty graczy w kolejności slotów, które się nie zamieniają: avatar, imię, „Rzuca” u rzucającego, linia „średnia meczu 41,72 · ostatnia tura 85” („bust” po turze z bustem, „—” bez danych), „Legi” i pozostały wynik jako największy tekst ekranu. Karta rzucającego ma ramkę w kolorze akcentu i jaśniejszy wynik. Pod kartami „Ta tura” z trzema miejscami na rzutki i sumą oraz karta „Zamknięcie” z trasą („T19 · D12”) albo „—”. Rozmiary rosną z oknem, więc panel mieści się bez przewijania od 1280×720 do 1920×1080.
+- Prawa kolumna: w lidze i w fazie grupowej krótka tabela, a w play-off lista „Play-off” albo „Drabinka” z najwyżej 6 meczami wokół trwającego (bez niego wokół następnego), od dwóch meczów przed nim, chyba że lista dochodzi do końca. Wiersz ma etykietę, parę i legi, z „wo” przy walkowerze i „popr.” przy poprawionym wyniku. Trwający mecz ma ramkę w kolorze akcentu, ikonę i „na żywo”. Pod listą „Następny mecz”: etykieta i para („Finał: Anna – Zwycięzca tego meczu”) z długością. Gdy żaden mecz nie jest gotowy, karta pokazuje pierwszy czekający mecz w kolejności gry. Zakończony turniej ma puchar i „Turniej zakończony”.
+- Układ bez meczu: „Następny mecz” na górze, a pod nim pełna tabela (liga i faza grupowa) albo drabinka, przewijana we własnej ramce.
+- Karta „Śledź turniej na telefonie” z kodem QR publicznego linku `#/t/:id` pokazuje się tylko przy włączonym udostępnianiu, w niezarchiwizowanym turnieju i pod adresem innym niż `localhost` albo `127.0.0.1`. W innym przypadku nie ma ani karty, ani komunikatu.
+- Poniżej lg jedna kolumna, która przewija się w pionie, a w poziomie nie.
+
+### `#/t/:id`: publiczny podgląd turnieju
+
+Podgląd turnieju dla każdego z linkiem, tylko do odczytu. Nie wymaga logowania, nie ma nawigacji aplikacji ani żadnej komendy, nie wysyła tokenu i nie otwiera WebSocketa. Na górze jest znak aplikacji z oznaczeniem „podgląd publiczny”.
+
+- Dane: `GET /public/tournaments/:id` od razu, a potem 10 s po każdej odpowiedzi, więc zapytania nie nachodzą na siebie. Zakładka „Statystyki” pobiera `GET /public/tournaments/:id/stats` po otwarciu i przy każdym odpytanym widoku.
+- Nagłówek: nazwa, linia „Zakończony · Grupa + play-off · 6 graczy · 501” (w trwającym turnieju „W toku”) i zakładki. Pierwsza jest „Wyniki”, potem zakładki formatu jak na ekranie turnieju („Tabela”, „Grupa” i „Play-off” albo „Drabinka”), a na końcu „Statystyki”. Na start wybrane są „Wyniki”.
+- „Wyniki”: w zakończonym turnieju „Podium” z miejscami 1-3, numerem miejsca jako tekstem (dzielone miejsce ma dwa wiersze), avatarem, imieniem i średnią z tabeli grupy („śr. 47,62”), gdy gracz ją ma. Dalej „Mecze · dotknij, by zobaczyć mecz”: zakończone i trwające mecze od ostatniego, bez walkowerów. Każdy wiersz to link do `#/t/:id/matches/:matchId` z etykietą meczu, imionami i wynikiem turnieju w legach w kolejności slotów, z „popr.” przy poprawionym wyniku. Zwycięzca jest pogrubiony, z tekstem „zwycięzca” dla czytników ekranu. Trwający mecz ma „na żywo” zamiast legów. Bez takich meczów lista mówi „Żaden mecz jeszcze się nie zaczął.”. W lidze i grupie + play-off pod spodem jest krótka tabela.
+- „Tabela”, „Grupa”, „Play-off”, „Drabinka” i „Statystyki” używają tych samych komponentów co ekran turnieju. Każdy link do meczu (komórka tabeli krzyżowej, pole drabinki, rekord) prowadzi do `#/t/:id/matches/:matchId`. Drabinka nie pokazuje legów trwającego meczu, bo wynik na żywo jest na publicznej stronie meczu.
+- Stany: „Ładowanie…” do pierwszej odpowiedzi. `404` (nieznany, nieudostępniony albo zarchiwizowany turniej) pokazuje tylko „Ten turniej nie istnieje albo nie jest udostępniony.” i kończy odpytywanie. Inny błąd przed pierwszymi danymi to „Nie udało się pobrać turnieju”, a odpytywanie trwa dalej. Nieudane odświeżenie (np. `429` albo brak sieci) zostawia ostatnie dane z komunikatem „Nie udało się odświeżyć wyników. Spróbuję ponownie za chwilę.” nad nimi.
+- Układ: na telefonie jedna kolumna bez przewijania strony w poziomie. Tabela krzyżowa i drabinka przewijają się we własnej ramce.
+
+### `#/t/:id/matches/:matchId`: publiczny mecz
+
+Publiczna wersja strony meczu turnieju. Tak jak podgląd turnieju nie wymaga logowania, nie ma nawigacji aplikacji, komend ani WebSocketa.
+
+- Dane: `GET /public/tournaments/:id/matches/:matchId` (mecz, podsumowanie i legi) i `GET /public/tournaments/:id` (wynik turnieju i nazwa), każde co 10 s jak na podglądzie turnieju.
+- Na górze link „‹ nazwa turnieju” do `#/t/:id`, dla czytników ekranu z „Wróć do turnieju”.
+- Nagłówek, „Statystyki meczu” i „Przebieg lega” wyglądają jak na stronie meczu turnieju. Numer trwającego lega to liczba legów w odpowiedzi. Poprawiony wynik pokazuje wynik turnieju z „popr.” i „rozegrano X:Y”, a walkower, który zachował id meczu, „wo”. Statystyki i przebieg legów zawsze pokazują mecz tak, jak go rozegrano.
+- Stany: „Ładowanie…” do obu pierwszych odpowiedzi. `404` turnieju to „Ten turniej nie istnieje albo nie jest udostępniony.”, a `404` meczu to „Nie znaleziono meczu w tym turnieju.” z linkiem „Wróć do turnieju” do `#/t/:id`. Inny błąd przed pierwszymi danymi to „Nie udało się pobrać turnieju” albo „Nie udało się pobrać meczu”. Nieudane odświeżenie zostawia ostatnie dane z tym samym komunikatem co podgląd turnieju.
 
 ## Pierwsze ładowanie
 
-Kod ekranów statystyk, historii i ustawień wczytuje się dopiero po wejściu na nie (`React.lazy` w `src/App.tsx`). W trakcie `LazyScreen` pokazuje „Ładowanie…”, a gdy kod się nie wczyta, na przykład po wdrożeniu nowej wersji przy otwartej karcie, „Nie udało się wczytać ekranu.” z przyciskiem „Odśwież stronę”. Fonty Barlow i Barlow Condensed idą tylko w podzbiorach `latin` i `latin-ext`, w którym są polskie litery.
+Kod ekranów statystyk, historii, ustawień i turniejów (`#/tournaments`, `#/tournaments/:id`, `#/tournaments/:id/matches/:matchId` i `#/tournaments/:id/tv`) oraz publicznego podglądu (`#/t/:id` i `#/t/:id/matches/:matchId`) wczytuje się dopiero po wejściu na nie (`React.lazy` w `src/App.tsx`). W trakcie `LazyScreen` pokazuje „Ładowanie…”, a gdy kod się nie wczyta, na przykład po wdrożeniu nowej wersji przy otwartej karcie, „Nie udało się wczytać ekranu.” z przyciskiem „Odśwież stronę”. Fonty Barlow i Barlow Condensed idą tylko w podzbiorach `latin` i `latin-ext`, w którym są polskie litery.
 
 ## Okna i komunikaty
 
-- Okna (nowy gracz, edycja i archiwizacja gracza, porzucenie meczu, koniec treningu) otwierają się jako natywny modalny `<dialog>`. Fokus zostaje w oknie, a strona pod spodem nie reaguje.
+- Okna (nowy gracz, edycja i archiwizacja gracza, porzucenie meczu, koniec treningu, poprawa wyniku, wycofanie gracza i udostępnianie w turnieju, archiwizacja turnieju) otwierają się jako natywny modalny `<dialog>`. Fokus zostaje w oknie, a strona pod spodem nie reaguje.
 - Po zamknięciu fokus wraca do przycisku, który okno otworzył. Przy oknie otwartym z menu gry wraca do przycisku „Menu gry”.
-- Gdy okno nowego gracza albo edycji gracza zapisuje dane, Escape i „Anuluj” nic nie robią.
-- Czytniki ekranu ogłaszają od razu (`role="alert"`) komunikaty `Notice` o błędach i utracie połączenia, błąd startu gry i błędy w oknach gracza. Komunikaty o grze tylko do odczytu i zamkniętym meczu idą jako `role="status"`.
-- Błędy API przy starcie gry i w oknach gracza pokazują polski tekst wybrany po kodzie błędu, nigdy angielski komunikat serwera.
+- Gdy okno nowego gracza, edycji gracza, poprawy wyniku, wycofania gracza albo archiwizacji turnieju wysyła dane, Escape i „Anuluj” nic nie robią. W oknie udostępniania w trakcie zapisu przełącznika Escape i „Zamknij” nic nie robią.
+- Czytniki ekranu ogłaszają od razu (`role="alert"`) komunikaty `Notice` o błędach i utracie połączenia, błąd startu gry, błędy w oknach gracza i błędy w oknach poprawy wyniku, wycofania gracza, udostępniania i archiwizacji turnieju. Komunikaty o grze tylko do odczytu i zamkniętym meczu, wynik kopiowania linku i nieudane odświeżenie publicznego podglądu idą jako `role="status"`.
+- Błędy API przy starcie gry, w oknach gracza, przy komendach ekranu turnieju i w oknach poprawy wyniku, wycofania gracza, udostępniania i archiwizacji turnieju pokazują polski tekst wybrany po kodzie błędu (np. `dependent_started`, `already_withdrawn`, `tournament_not_finished`), nigdy angielski komunikat serwera.
 
 ## Logowanie
 
 - Ekran logowania pojawia się tylko wtedy, gdy serwer ma ustawione hasło i odpowiada `401` z kodem `unauthorized`. Zastępuje bieżący ekran, a po zalogowaniu ten sam ekran wraca.
 - Bez hasła na serwerze front działa jak wcześniej, bez logowania.
 - Token zostaje w `localStorage` pod kluczem `autoscore.token`.
-- Każde żądanie REST wysyła token w nagłówku `Authorization: Bearer <token>`. Połączenie na żywo wysyła najpierw wiadomość `{ "type": "auth", "token": "…" }`.
+- Każde żądanie REST poza publicznym API wysyła token w nagłówku `Authorization: Bearer <token>`. Połączenie na żywo wysyła najpierw wiadomość `{ "type": "auth", "token": "…" }`.
 - Wygasły token albo zmieniony klucz serwera kończy się odrzuceniem tokenu (`401` albo zamknięcie WebSocketa kodem `4401`). Front usuwa wtedy token i znów pokazuje ekran logowania.
+- Publiczne trasy `#/t/:id` i `#/t/:id/matches/:matchId` nigdy nie pokazują ekranu logowania, także po `401` z innego żądania. Ich żądania do `/public/...` nie wysyłają tokenu, nawet zapisanego, a ich `401` nie usuwa tokenu.
 
 ## Struktura
 
-- `src/api/`: klient REST, token i sygnał logowania (`session.ts`), generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook podsumowania meczu.
+- `src/api/`: klient REST, token i sygnał logowania (`session.ts`), generowanie `eventId`, hook stanu gry z WebSocketem i ponownym połączeniem, hook turnieju z tym samym kanałem na żywo (`use-tournament.ts`), hook legów trwających meczów turnieju (`use-running-legs.ts`), hook statystyk turnieju z wymiennym źródłem (`use-tournament-stats.ts`), hook odpytywania publicznego API co 10 s (`use-public-poll.ts`), hook podsumowania meczu i hook przebiegu legów meczu (`use-match-legs.ts`).
 - `src/audio/`: głos z nagrań (`recorded-speaker.ts`) z Web Speech API jako zapasem, efekty przez Web Audio API, hook `useAnnouncer`.
 - `src/components/`:
-  - wspólne okno modalne (`Dialog`), komunikat (`Notice`) i ekran wczytywany na żądanie (`LazyScreen`),
+  - wspólne okno modalne (`Dialog`), komunikat (`Notice`), skrót z pełnym tekstem dla czytników ekranu (`Abbreviation`) i ekran wczytywany na żądanie (`LazyScreen`),
   - górna nawigacja, avatar, przełączniki, ikony,
   - formularz nowej gry z podsumowaniem, okno nowego gracza, lista gier do dokończenia,
   - historia gier (`MatchHistoryList`), ranking, profil gracza (`PlayerProfile`) z oknami edycji i archiwizacji,
   - wykres formy (`FormChart`), wykres zejścia z wyniku w ostatnim legu (`ScoreProgressChart`), bilans 1v1 (`HeadToHeadPanel`), panele statystyk i podsumowania meczu,
-  - pasek wyników, panel tury, klawiatura, nagłówek gry, komunikaty osiągnięć (`AchievementNotices`), okna porzucenia meczu i zakończenia treningu.
-- `src/game/`: podpowiedź zamknięcia i jej trasa dla bieżącej tury (`checkout-route.ts`), skróty klawiatury (`keypad-shortcut.ts`) i składanie cyfr w liczbę (`shortcut-number.ts`), etykiety trafień, kolejność paska wyników, formatowanie statystyk, stan formularza nowej gry, teksty i data aktywności na liście gier do dokończenia, teksty wiersza historii (`history-row.ts`), współrzędne, siatka i etykiety osi wykresu formy (`form-chart.ts`) i wykresu zejścia z wyniku (`score-progress-chart.ts`), teksty osiągnięć (`achievement-text.ts`), reguły porzucenia i zakończenia treningu.
-- `src/screens/`: `HomeScreen`, `GameScreen`, `StatsScreen`, `HistoryScreen`, `SettingsScreen` i `LoginScreen`.
+  - pasek wyników, panel tury, klawiatura, nagłówek gry, komunikaty osiągnięć (`AchievementNotices`), okna porzucenia meczu i zakończenia treningu,
+  - ekran turnieju: zakładki (`TournamentTabs`), tabela krzyżowa i krótka (`StandingsTable`), karta następnego meczu (`NextFixtureCard`), kolejka (`FixtureQueue`), trwające mecze (`RunningFixtures`), drabinka z meczami dodatkowymi (`PlayoffBracket`), klasyfikacja końcowa (`PlacementsCard`), zakładka statystyk z podium, rekordami i sortowaną tabelą graczy (`TournamentStatsPanel`), lista rozegranych meczów (`PlayedFixtures`) oraz okna poprawy wyniku (`CorrectResultDialog`) i wycofania gracza (`WithdrawPlayerDialog`),
+  - lista turniejów: okno archiwizacji turnieju (`ArchiveTournamentDialog`),
+  - okno udostępniania turnieju (`ShareTournamentDialog`) z kodem QR jako SVG (`QrCode`, biblioteka `uqr`),
+  - widok TV: trwający mecz z kartami graczy, turą i zamknięciem (`TvLiveMatch`), prawa kolumna (`TvSideColumn`) z listą play-off (`TvBracketList`), następny mecz (`TvNextFixture`) i karta z kodem QR publicznego linku (`TvFollowCard`),
+  - strona meczu turnieju: nagłówek z wynikiem (`TournamentMatchHeader`), porównanie statystyk (`MatchComparisonTable`) i przebieg legów z zakładkami (`LegHistory`),
+  - publiczny podgląd: pasek ze znakiem aplikacji (`PublicBrand`), podium (`PublicPodium`), lista meczów (`PublicMatchList`) i kontekst adresów stron meczów (`match-href-context.ts`), przez który tabela, drabinka i rekordy linkują do `#/t/...`.
+- `src/game/`: podpowiedź zamknięcia i jej trasa dla bieżącej tury (`checkout-route.ts`), skróty klawiatury (`keypad-shortcut.ts`) i składanie cyfr w liczbę (`shortcut-number.ts`), etykiety trafień, kolejność paska wyników, formatowanie statystyk, stan formularza nowej gry, teksty i data aktywności na liście gier do dokończenia, teksty wiersza historii (`history-row.ts`), współrzędne, siatka i etykiety osi wykresu formy (`form-chart.ts`) i wykresu zejścia z wyniku (`score-progress-chart.ts`), teksty osiągnięć (`achievement-text.ts`), reguły porzucenia i zakończenia treningu, stan fazy turnieju i jego tekst (`tournament-progress.ts`), okno listy play-off i następny mecz na widoku TV (`tv-bracket-rows.ts`, `tv-next-fixture.ts`), komórki tabeli krzyżowej (`cross-table.ts`), strony meczu turnieju (`tournament-slot.ts`), etykiety meczów turnieju (`fixture-label.ts`), kolumny i linie stanu drabinki (`bracket.ts`), wiersze klasyfikacji końcowej (`placement-rows.ts`), kolor numeru miejsca (`place-color.ts`), sortowanie, najlepsze wartości i opisy rekordów w statystykach turnieju (`tournament-stats-table.ts`) reguły poprawy wyniku i wycofania gracza (`tournament-incidents.ts`), adresy strony meczu turnieju i publicznego podglądu (`tournament-match-href.ts`), mecze na liście publicznego podglądu (`public-matches.ts`), publiczny link i rozpoznanie adresu lokalnego (`share-url.ts`), ścieżka SVG kodu QR (`qr-path.ts`), wynik w jej nagłówku (`tournament-match-result.ts`), lepsza strona porównania (`better-side.ts`) oraz wiersze tur i zdanie o legu (`leg-rows.ts`).
+- `src/screens/`: `HomeScreen`, `GameScreen`, `StatsScreen`, `HistoryScreen`, `SettingsScreen`, `TournamentsScreen`, `TournamentScreen`, `TournamentMatchScreen`, `TournamentTvScreen`, `PublicTournamentScreen`, `PublicMatchScreen` i `LoginScreen`.
 - `src/i18n/`: teksty po polsku.
 
 ## Ikony i kolor przeglądarki

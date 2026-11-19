@@ -30,6 +30,12 @@ describe('rematchRequest', () => {
     });
   });
 
+  it('keeps a first to 4 match as legs to win without best of', () => {
+    const result = rematchRequest(snapshot({ startingScore: 501, legsToWin: 4 }));
+    expect(result).toEqual({ type: 'match', playerIds: ['p1', 'p2'], startingScore: 501, legsToWin: 4 });
+    expect(result !== null && 'bestOf' in result).toBe(false);
+  });
+
   it('keeps the player order of the finished match', () => {
     const state = snapshot({ players: [player('p2', 'Bartek'), player('p1', 'Anna')] });
     expect(rematchRequest(state)?.playerIds).toEqual(['p2', 'p1']);

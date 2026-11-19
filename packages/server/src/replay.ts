@@ -134,7 +134,7 @@ function required<T>(value: T | null, field: string, matchId: string): T {
 }
 
 // Tylko pola, z których powstaje konfiguracja silnika. Dzięki temu da się ją sprawdzić przed zapisem gry.
-export type MatchSetup = Omit<StoredMatch, 'countsToStats' | 'createdAt'>;
+export type MatchSetup = Omit<StoredMatch, 'countsToStats' | 'createdAt' | 'tournament'>;
 
 export function gameConfig(match: MatchSetup): GameConfig {
   const playerIds = match.players.map((player) => player.id);

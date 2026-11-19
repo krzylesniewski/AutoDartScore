@@ -134,6 +134,11 @@ describe('MatchEndView', () => {
     ]);
   });
 
+  it('shows a first to 4 match as Do 4 legów in the setup line', () => {
+    view({ state: { ...finished, legsToWin: 4 } });
+    expect(screen.getByText('501 · Double-out · Do 4 legów')).toBeTruthy();
+  });
+
   it('shows the achievement notices in a status region and keeps Cofnij working', () => {
     const props = view({
       achievements: [
@@ -397,6 +402,32 @@ describe('MatchEndView: winner glow', () => {
     const card = screen.getByText('Mecz zakończony').closest('section') as HTMLElement;
     expect(within(card).getByText('Bartek wygrywa')).toBeTruthy();
     expect(within(card).queryByText('Anna wygrywa')).toBeNull();
+  });
+});
+
+describe('MatchEndView: tournament match', () => {
+  const inTournament = { ...finished, tournament: { id: 't1', name: 'Liga czwartkowa', fixtureId: 'g-7', label: 'Grupa, mecz 7' } };
+
+  it('offers Wróć do turnieju instead of Rewanż', () => {
+    view({ state: inTournament });
+    const back = screen.getByRole('link', { name: 'Wróć do turnieju' });
+    expect(back.getAttribute('href')).toBe('#/tournaments/t1');
+    expect(screen.queryByRole('button', { name: 'Rewanż' })).toBeNull();
+    expect(screen.getByRole('link', { name: /Zapisz i wyjdź/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Nowy mecz' })).toBeTruthy();
+    expect(undoButton()).toBeTruthy();
+  });
+
+  it('shows the fixture label with the setup next to the title', () => {
+    view({ state: inTournament });
+    expect(screen.getByText('Grupa, mecz 7 · 501 · Double-out · Best of 3')).toBeTruthy();
+  });
+
+  it('keeps Rewanż and no tournament link in a plain 1v1', () => {
+    view();
+    expect(rematchButton()).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Wróć do turnieju' })).toBeNull();
+    expect(screen.queryByText(/Grupa, mecz/)).toBeNull();
   });
 });
 

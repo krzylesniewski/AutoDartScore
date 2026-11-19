@@ -13,7 +13,16 @@ import {
   postThrowsByApi,
 } from './helpers/api';
 import { currentThrower, keypadKey, scoreboard, throwerRow, waitForKeypad } from './helpers/game';
-import { boxOf, expectInViewport, expectNoHorizontalScroll, expectNoOverlap, expectSameBox, keypadBox, type Box } from './helpers/layout';
+import {
+  boxOf,
+  expectInViewport,
+  expectNoHorizontalScroll,
+  expectNoOverlap,
+  expectNoVerticalScroll,
+  expectSameBox,
+  keypadBox,
+  type Box,
+} from './helpers/layout';
 import { uniqueName, useToken } from './helpers/session';
 
 const VIEWPORTS = [
@@ -145,6 +154,40 @@ for (const viewport of VIEWPORTS) {
       await page.goto('/#/');
       await expectReadable(page.getByRole('heading', { level: 1, name: 'Nowa gra' }));
       await expect(page.getByRole('button', { name: 'Start gry' })).toBeVisible();
+      await expectNoHorizontalScroll(page);
+    });
+
+    // Tylko otwiera kreator. Utworzony turniej przekierowałby #/tournaments w innych testach tej samej bazy.
+    test('tournament wizard keeps Rozpocznij turniej in view without horizontal scroll', async ({ page }) => {
+      await page.goto('/#/tournaments/new');
+      await expect(page.getByRole('button', { name: 'Turniej', exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('button', { name: players[0].name, exact: true })).toBeVisible();
+      await fontsReady(page);
+      await expectBoxInViewport(page, page.getByRole('button', { name: 'Rozpocznij turniej' }));
+      await expect(page.getByRole('button', { name: 'Start gry' })).toHaveCount(0);
+      await expectNoHorizontalScroll(page);
+    });
+
+    test('tournaments screen shows Nowy turniej without horizontal scroll', async ({ page }) => {
+      await page.goto('/#/tournaments');
+      await expect(page.getByRole('heading', { level: 1, name: 'Turnieje' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Nowy turniej' })).toBeVisible();
+      await expect(page.getByText('Ładowanie…')).toBeHidden();
+      await expectNoHorizontalScroll(page);
+    });
+
+    test('main navigation keeps its five links in one row, each at least 44 px tall', async ({ page }) => {
+      await page.goto('/#/');
+      const links = page.getByRole('navigation', { name: 'Główna nawigacja' }).getByRole('link');
+      await expect(links).toHaveText(['Nowa gra', 'Turniej', 'Statystyki', 'Historia', 'Ustawienia']);
+      await fontsReady(page);
+      const boxes = await Promise.all((await links.all()).map((link) => boxOf(link)));
+      const top = boxes[0]?.y ?? 0;
+      for (const box of boxes) {
+        expect(Math.abs(box.y - top)).toBeLessThanOrEqual(1);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        await expectInViewport(box, page);
+      }
       await expectNoHorizontalScroll(page);
     });
 
@@ -589,20 +632,6 @@ async function placeholderBox(page: Page): Promise<Box> {
   });
 }
 
-async function expectNoVerticalScroll(page: Page): Promise<void> {
-  const measured = await page.evaluate(() => {
-    const scrolling = document.scrollingElement;
-    const main = document.querySelector('main');
-    return [
-      ...(scrolling ? [{ name: 'document.scrollingElement', overflow: scrolling.scrollHeight - scrolling.clientHeight }] : []),
-      ...(main ? [{ name: 'main', overflow: main.scrollHeight - main.clientHeight }] : []),
-    ];
-  });
-  for (const { name, overflow } of measured) {
-    expect(overflow, name).toBeLessThanOrEqual(1);
-  }
-}
-
 function expectNear(actual: number, expected: number, what: string): void {
   expect(Math.abs(actual - expected), `${what}: ${actual}, expected ${expected}`).toBeLessThanOrEqual(1);
 }
@@ -763,4 +792,90 @@ test.describe('checkout card fills the free height from lg', () => {
       await expectNoVerticalScroll(page);
     });
   });
+});
+
+// Od xl panel średniej nie może zgnieść dalszych miejsc pod podium, gdy okno jest niskie.
+test.describe('stats ranking keeps further places reachable', () => {
+  // Czterech graczy każdy z każdym ma po trzy legi, więc trafiają do rankingu i dają pełne podium.
+  // Czterech kolejnych ma po jednym legu, więc stoją w dalszych miejscach bez pozycji.
+  test.beforeAll(async ({ playwright }, testInfo) => {
+    const { baseURL } = testInfo.project.use;
+    const api = await playwright.request.newContext(baseURL === undefined ? {} : { baseURL });
+    try {
+      const ranked: Player[] = [];
+      for (const name of ['Ada', 'Bob', 'Cyp', 'Dan']) {
+        ranked.push(await createPlayerByApi(api, token, uniqueName(name)));
+      }
+      const unranked: Player[] = [];
+      for (const name of ['Edi', 'Fil', 'Gab', 'Hel']) {
+        unranked.push(await createPlayerByApi(api, token, uniqueName(name)));
+      }
+      const pairs: [string, string][] = ranked.flatMap((first, index) =>
+        ranked.slice(index + 1).map((second): [string, string] => [first.id, second.id]),
+      );
+      for (let index = 0; index + 1 < unranked.length; index += 2) {
+        pairs.push([unranked[index]?.id ?? '', unranked[index + 1]?.id ?? '']);
+      }
+      for (const pair of pairs) {
+        const match = await createMatchByApi(api, token, pair);
+        await postThrowsByApi(api, token, match.id, FINISHING_DARTS);
+      }
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  function averagePanel(page: Page): Locator {
+    return page.locator('section[aria-labelledby="ranking-average"]');
+  }
+
+  async function openRanking(page: Page): Promise<Locator> {
+    await page.goto('/#/stats');
+    await fontsReady(page);
+    await expect(page.getByRole('list', { name: 'Podium średniej' }).getByRole('listitem')).toHaveCount(3);
+    return page.getByRole('list', { name: 'Dalsze miejsca' });
+  }
+
+  // Panel przycina treść, więc link musi leżeć w jego pudełku, a nie tylko w oknie.
+  async function expectReachable(page: Page, link: Locator): Promise<void> {
+    const href = await link.getAttribute('href');
+    expect(href).toMatch(/^#\/stats\/.+/);
+    await link.scrollIntoViewIfNeeded();
+    const box = await boxOf(link);
+    await expectInViewport(box, page);
+    expectInside(box, await boxOf(averagePanel(page)));
+    await link.click();
+    await expect.poll(() => page.url().endsWith(href ?? '')).toBe(true);
+  }
+
+  for (const viewport of [
+    { width: 1280, height: 720 },
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+  ]) {
+    test(`${viewport.width}×${viewport.height}: first and last further place are visible and clickable`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      const list = await openRanking(page);
+      const links = list.getByRole('link');
+      expect(await links.count()).toBeGreaterThanOrEqual(4);
+      expect((await boxOf(list)).height).toBeGreaterThanOrEqual(56);
+
+      // Liczą się tylko pudełka, które użytkownik może przewinąć. Panel przycina wystające pierścienie, a tekst z leading-none wystaje poza swój wiersz.
+      if (viewport.height === 1080) {
+        await expectNoVerticalScroll(page);
+        const scrolling = await averagePanel(page).evaluate((panel) =>
+          [panel, ...panel.querySelectorAll('*')]
+            .filter((node) => node.getAttribute('aria-label') !== 'Dalsze miejsca')
+            .filter((node) => ['auto', 'scroll'].includes(getComputedStyle(node).overflowY))
+            .filter((node) => node.scrollHeight - node.clientHeight > 1)
+            .map((node) => `${node.tagName.toLowerCase()} ${node.getAttribute('class') ?? ''}`),
+        );
+        expect(scrolling).toEqual([]);
+      }
+
+      await expectReachable(page, links.first());
+      await openRanking(page);
+      await expectReachable(page, links.last());
+    });
+  }
 });

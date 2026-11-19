@@ -1,0 +1,159 @@
+import {
+  computeTournament,
+  EngineError,
+  type FixtureFact,
+  type FixtureScoring,
+  type ResultCorrection,
+  type TournamentInput,
+} from '@autoscore/engine';
+import type { TournamentView } from '@autoscore/schema';
+import type { ReplayCache } from '../replay-cache.js';
+import type { ReplayedMatch } from '../replay.js';
+import { EMPTY_TOTALS, tallyGame } from '../stats/tally.js';
+import type { Store, StoredTournament, TournamentLogEntry } from '../store/store.js';
+
+export interface TournamentSource {
+  readonly tournament: StoredTournament;
+  readonly log: readonly TournamentLogEntry[];
+  readonly replays: ReadonlyMap<string, ReplayedMatch>; // odtworzenia powiązanych meczów po id meczu
+}
+
+// Daty ISO w UTC porównują się jak tekst.
+function latest(dates: readonly string[]): string | null {
+  return dates.reduce<string | null>((max, date) => (max === null || date > max ? date : max), null);
+}
+
+function corrupt(tournament: StoredTournament, problem: string): Error {
+  return new Error(`Corrupt tournament ${tournament.id}: ${problem}`);
+}
+
+function fact(source: TournamentSource, fixtureId: string, matchId: string): FixtureFact {
+  const replay = source.replays.get(matchId);
+  if (!replay) {
+    throw corrupt(source.tournament, `match ${matchId} of fixture ${fixtureId} was not loaded`);
+  }
+  if (replay.game.type !== 'match') {
+    throw corrupt(source.tournament, `match ${matchId} of fixture ${fixtureId} is not a 1v1 match`);
+  }
+  const { legsWon, config } = replay.game.state;
+  // Gracze meczu są zapisani w kolejności slotów, więc legsWon i playerIds są już w tej kolejności.
+  // Silnik sam decyduje, kiedy użyć sum rzutów, więc idą z każdym rozpoczętym meczem.
+  const tally = tallyGame('match', config.playerIds, replay.events);
+  const side = (playerId: string): FixtureScoring => {
+    const { points, darts } = tally.players.get(playerId) ?? EMPTY_TOTALS;
+    return { points, darts };
+  };
+  const [first, second] = config.playerIds;
+  return { fixtureId, matchId, legs: [legsWon[0], legsWon[1]], scoring: [side(first), side(second)] };
+}
+
+// Wejście silnika: konfiguracja, ostatnie losowanie, fakty meczów, wycofania i korekty z logu.
+export function tournamentInput(source: TournamentSource): TournamentInput {
+  const { tournament, log } = source;
+  let order: readonly string[] | null = null;
+  const matches: FixtureFact[] = [];
+  const withdrawals: string[] = [];
+  const corrections: ResultCorrection[] = [];
+  for (const entry of log) {
+    switch (entry.type) {
+      case 'draw':
+        order = entry.order;
+        break;
+      case 'fixture_started':
+        matches.push(fact(source, entry.fixtureId, entry.matchId));
+        break;
+      case 'player_withdrawn':
+        withdrawals.push(entry.playerId);
+        break;
+      case 'result_corrected':
+        corrections.push({ fixtureId: entry.fixtureId, legs: entry.legs });
+        break;
+    }
+  }
+  if (order === null) {
+    throw corrupt(tournament, 'the log has no draw');
+  }
+  return { config: tournament.config, order, matches, withdrawals, corrections };
+}
+
+// Widoku nie zapisujemy. Każdy odczyt liczy go od nowa z konfiguracji, logu turnieju i legów powiązanych meczów.
+export function buildTournamentView(source: TournamentSource): TournamentView {
+  return viewOf(source, tournamentInput(source));
+}
+
+function viewOf(source: TournamentSource, input: TournamentInput): TournamentView {
+  const { tournament, log } = source;
+  let sharing = tournament.config.sharing;
+  let archivedAt: string | null = null;
+  const withdrawnAt: string[] = [];
+  for (const entry of log) {
+    switch (entry.type) {
+      case 'player_withdrawn':
+        withdrawnAt.push(entry.createdAt);
+        break;
+      case 'sharing_changed':
+        sharing = entry.sharing;
+        break;
+      case 'archived':
+        archivedAt = entry.createdAt;
+        break;
+    }
+  }
+
+  let state;
+  try {
+    state = computeTournament(input);
+  } catch (error) {
+    // Zapisane dane przeszły walidację przy zapisie, więc odrzucenie przez silnik to uszkodzony log, a nie błąd klienta.
+    if (error instanceof EngineError) {
+      throw new Error(`Corrupt tournament ${tournament.id}: ${error.message}`, { cause: error });
+    }
+    throw error;
+  }
+
+  let finishedAt: string | null = null;
+  if (state.status === 'finished') {
+    const matchFinishes = input.matches.flatMap(({ matchId }) => source.replays.get(matchId)?.finishedAt ?? []);
+    finishedAt = latest([...matchFinishes, ...withdrawnAt]) ?? log.at(-1)?.createdAt ?? tournament.createdAt;
+  }
+
+  return {
+    id: tournament.id,
+    name: tournament.name,
+    format: tournament.format,
+    config: tournament.config,
+    status: state.status,
+    createdAt: tournament.createdAt,
+    finishedAt,
+    players: tournament.players.map(({ id, name, avatar, color, guest }) => ({ id, name, avatar, color, guest })),
+    fixtures: [...state.fixtures],
+    standings: [...state.standings],
+    nextFixtureId: state.nextFixtureId,
+    liveFixtureId: state.liveFixtureId,
+    placements: [...state.placements],
+    sharing,
+    canRedraw: state.canRedraw,
+    eventSeq: log.at(-1)?.seq ?? 0,
+    archivedAt,
+  };
+}
+
+export interface LoadedTournament {
+  readonly view: TournamentView;
+  readonly log: readonly TournamentLogEntry[];
+  readonly input: TournamentInput;
+  readonly replays: ReadonlyMap<string, ReplayedMatch>; // odtworzenia powiązanych meczów po id meczu
+}
+
+// Mecz, którego nie da się wczytać ani odtworzyć, przerywa odczyt. Pominięcie go zmieniłoby wynik turnieju.
+export async function loadTournament(
+  { store, cache }: { readonly store: Pick<Store, 'loadTournamentLog' | 'listMatches'>; readonly cache: ReplayCache },
+  tournament: StoredTournament,
+): Promise<LoadedTournament> {
+  const log = await store.loadTournamentLog(tournament.id);
+  const linked = await cache.many(await store.listMatches({ tournamentId: tournament.id }));
+  const replays = new Map(linked.map(({ match, replay }) => [match.id, replay]));
+  const source = { tournament, log, replays };
+  const input = tournamentInput(source);
+  return { view: viewOf(source, input), log, input, replays };
+}

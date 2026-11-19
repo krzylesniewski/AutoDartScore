@@ -3,10 +3,11 @@ import { readVoiceEnabled } from '../audio/use-announcer';
 import { pl } from '../i18n/pl';
 import { AppMark } from './AppMark';
 
-export type AppPage = 'new-game' | 'stats' | 'history' | 'settings';
+export type AppPage = 'new-game' | 'tournament' | 'stats' | 'history' | 'settings';
 
 const LINKS: readonly { page: AppPage; href: string; label: string }[] = [
   { page: 'new-game', href: '#/', label: pl.newGame },
+  { page: 'tournament', href: '#/tournaments', label: pl.tournament },
   { page: 'stats', href: '#/stats', label: pl.stats },
   { page: 'history', href: '#/history', label: pl.history },
   { page: 'settings', href: '#/settings', label: pl.settings },
@@ -19,6 +20,7 @@ export interface AppNavProps {
 }
 
 // Od lg jeden wiersz 68 px. Poniżej lg nawigacja przechodzi do drugiego wiersza, a statusy stają w kolumnie bez tła.
+// Poniżej sm linki mają mniejszy odstęp i tekst, żeby pięć zmieściło się w jednym wierszu od 375 px.
 export function AppNav({ current, voiceEnabled: shownVoice }: AppNavProps) {
   const [storedVoice] = useState(readVoiceEnabled);
   const voiceEnabled = shownVoice ?? storedVoice;
@@ -38,7 +40,7 @@ export function AppNav({ current, voiceEnabled: shownVoice }: AppNavProps) {
             key={link.page}
             href={link.href}
             aria-current={current === link.page ? 'page' : undefined}
-            className={`min-h-11 px-2.5 text-[18px] whitespace-nowrap lg:px-4 lg:text-[20px] ${current === link.page ? 'font-bold text-(--color-text)' : 'font-semibold text-(--color-text-muted)'}`}
+            className={`min-h-11 px-1.5 text-[16px] whitespace-nowrap sm:px-2.5 sm:text-[18px] lg:px-4 lg:text-[20px] ${current === link.page ? 'font-bold text-(--color-text)' : 'font-semibold text-(--color-text-muted)'}`}
           >
             {link.label}
           </a>

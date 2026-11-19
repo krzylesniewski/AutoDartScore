@@ -10,6 +10,7 @@ import {
   ExpectedSeq,
   HealthResponse,
   LegTurn,
+  LegsToWin,
   MatchListItem,
   MatchListQuery,
   MatchSnapshot,
@@ -44,14 +45,35 @@ describe('BestOf', () => {
   });
 });
 
+describe('LegsToWin', () => {
+  it.each([1, 9])('accepts %i', (value) => {
+    expect(LegsToWin.parse(value)).toBe(value);
+  });
+
+  it.each([0, 10, 2.5])('rejects %d', (value) => {
+    expect(LegsToWin.safeParse(value).success).toBe(false);
+  });
+});
+
 describe('CreateMatchRequest', () => {
-  it('defaults a 1v1 match to 301 and best of 1', () => {
-    expect(CreateMatchRequest.parse({ type: 'match', playerIds: ['p1', 'p2'] })).toEqual({
+  it('defaults a 1v1 match to 301 and leaves the length to the server', () => {
+    expect(CreateMatchRequest.parse({ type: 'match', playerIds: ['p1', 'p2'] })).toStrictEqual({
       type: 'match',
       playerIds: ['p1', 'p2'],
       startingScore: 301,
-      bestOf: 1,
     });
+  });
+
+  it('accepts a match length as legs to win', () => {
+    const parsed = CreateMatchRequest.parse({ type: 'match', playerIds: ['p1', 'p2'], legsToWin: 4 });
+    expect(parsed).toStrictEqual({ type: 'match', playerIds: ['p1', 'p2'], startingScore: 301, legsToWin: 4 });
+    expect('bestOf' in parsed).toBe(false);
+  });
+
+  it('rejects bestOf and legsToWin together', () => {
+    const result = CreateMatchRequest.safeParse({ type: 'match', playerIds: ['p1', 'p2'], bestOf: 3, legsToWin: 2 });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([['legsToWin']]);
   });
 
   it('keeps an explicit starting score and best of', () => {
@@ -120,6 +142,8 @@ describe('CreateMatchRequest', () => {
   it.each([
     ['startingScore 401', { type: 'match', playerIds: ['p1', 'p2'], startingScore: 401 }],
     ['bestOf 2', { type: 'match', playerIds: ['p1', 'p2'], bestOf: 2 }],
+    ['legsToWin 0', { type: 'match', playerIds: ['p1', 'p2'], legsToWin: 0 }],
+    ['legsToWin 10', { type: 'match', playerIds: ['p1', 'p2'], legsToWin: 10 }],
     ['startingScore 401 in casual', { type: 'casual', playerIds: ['p1', 'p2'], startingScore: 401 }],
     ['an unknown practice mode', { type: 'practice', practiceMode: 'around_the_clock', playerIds: ['p1'] }],
     ['an unknown type', { type: 'tournament', playerIds: ['p1', 'p2'] }],
@@ -174,6 +198,7 @@ const snapshot = {
   placements: [],
   freeRun: null,
   checkouts: null,
+  tournament: null,
 };
 
 const checkoutSession = {
@@ -316,6 +341,10 @@ describe('MatchSnapshot', () => {
     expect(MatchSnapshot.parse(withTurns)).toEqual(withTurns);
   });
 
+  it('rejects a snapshot with more than 9 legs to win', () => {
+    expect(MatchSnapshot.safeParse({ ...snapshot, legsToWin: 10 }).success).toBe(false);
+  });
+
   it('rejects a snapshot without legTurns', () => {
     expect(MatchSnapshot.safeParse({ ...snapshot, legTurns: undefined }).success).toBe(false);
   });
@@ -360,6 +389,15 @@ describe('MatchSnapshot', () => {
 
   it('rejects a negative eventSeq', () => {
     expect(MatchSnapshot.safeParse({ ...snapshot, eventSeq: -1 }).success).toBe(false);
+  });
+
+  it('accepts a tournament match and requires the tournament key', () => {
+    const tournamentMatch = { ...snapshot, tournament: { id: 't1', name: 'Liga listopad', fixtureId: 'p-sf-2', label: 'Półfinał 2' } };
+    expect(MatchSnapshot.parse(tournamentMatch)).toEqual(tournamentMatch);
+    expect(MatchSnapshot.safeParse({ ...snapshot, tournament: undefined }).success).toBe(false);
+    expect(MatchSnapshot.safeParse({ ...snapshot, tournament: { id: 't1', name: 'Liga', fixtureId: 'g-1', label: '' } }).success).toBe(
+      false,
+    );
   });
 
   it.each([
@@ -485,6 +523,7 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament,
     } = snapshot;
     const item = {
       id,
@@ -503,6 +542,7 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament,
       updatedAt: '2026-10-15T18:31:00.000Z',
     };
     expect(MatchListItem.parse(item)).toEqual(item);
@@ -530,6 +570,7 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament: null,
       updatedAt: '2026-10-15T18:31:00.000Z',
     };
     expect(MatchListItem.parse(item)).toEqual(item);
@@ -554,6 +595,7 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament,
     } = snapshot;
     const item = {
       id,
@@ -572,11 +614,40 @@ describe('MatchListItem and MatchListQuery', () => {
       winnerId,
       placements,
       endedAt,
+      tournament,
       updatedAt: '2026-10-15T18:31:00.000Z',
     };
     expect(MatchListItem.safeParse({ ...item, winnerId: undefined }).success).toBe(false);
     expect(MatchListItem.safeParse({ ...item, placements: undefined }).success).toBe(false);
     expect(MatchListItem.safeParse({ ...item, endedAt: undefined }).success).toBe(false);
+    expect(MatchListItem.safeParse({ ...item, tournament: undefined }).success).toBe(false);
+  });
+
+  it('keeps the tournament of a list item', () => {
+    const { id, type, practiceMode, startingScore, legsToWin, createdAt, status, abandonment } = snapshot;
+    const { currentPlayerId, legIndex, players, freeRun, checkouts, winnerId, placements, endedAt } = snapshot;
+    const tournament = { id: 't1', name: 'Puchar', fixtureId: 'c-f', label: 'Finał' };
+    const item = {
+      id,
+      type,
+      practiceMode,
+      startingScore,
+      legsToWin,
+      createdAt,
+      status,
+      abandonment,
+      currentPlayerId,
+      legIndex,
+      players,
+      freeRun,
+      checkouts,
+      winnerId,
+      placements,
+      endedAt,
+      tournament,
+      updatedAt: '2026-10-15T18:31:00.000Z',
+    };
+    expect(MatchListItem.parse(item).tournament).toStrictEqual(tournament);
   });
 
   it('accepts only the unfinished status filter', () => {
@@ -593,6 +664,17 @@ describe('MatchListItem and MatchListQuery', () => {
     });
     expect(MatchListQuery.safeParse({ type: 'bogus' }).success).toBe(false);
     expect(MatchListQuery.safeParse({ playerId: '' }).success).toBe(false);
+  });
+
+  it('filters by tournament alone and together with the other filters', () => {
+    expect(MatchListQuery.parse({ tournamentId: 't_abc' })).toEqual({ tournamentId: 't_abc' });
+    expect(MatchListQuery.parse({ status: 'unfinished', playerId: 'p1', type: 'match', tournamentId: 't_abc' })).toEqual({
+      status: 'unfinished',
+      playerId: 'p1',
+      type: 'match',
+      tournamentId: 't_abc',
+    });
+    expect(MatchListQuery.safeParse({ tournamentId: '' }).success).toBe(false);
   });
 });
 

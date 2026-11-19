@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 5, publiczny link na telefonie</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#fff7e6}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 500px 360px at 30% -10%, #2b201a 0%, #16120f 50%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column;">
+  <header style="flex-shrink: 0; box-sizing: border-box; padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid rgba(243,236,216,0.11);">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <svg width="24" height="24" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="#d8352a"></circle><circle cx="17" cy="17" r="10" fill="#0f0f0f"></circle><circle cx="17" cy="17" r="6" fill="#f3ecd8"></circle><circle cx="17" cy="17" r="2.4" fill="#d8352a"></circle></svg>
+      <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: 0.08em;">AUTO SCORE</span>
+      <span style="flex-grow: 1;"></span>
+      <span style="font-size: 12px; color: #a8a08a;">podgląd publiczny</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 36px; line-height: 0.95;">Jama jesień 16.11.2026</h1>
+      <span style="font-size: 14px; color: #a8a08a;">Zakończony · grupa + play-off · 6 graczy · 501</span>
+    </div>
+    <div role="tablist" aria-label="Widok turnieju" style="display: flex; padding: 4px; gap: 3px; border-radius: 14px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;">
+      <button type="button" role="tab" aria-selected="true" style="flex: 1; height: 44px; border: 0; border-radius: 10px; background: #f3ecd8; color: #0a0908; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 17px;">Wyniki</button>
+      <button type="button" role="tab" aria-selected="false" style="flex: 1; height: 44px; border: 0; border-radius: 10px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px;">Grupa</button>
+      <button type="button" role="tab" aria-selected="false" style="flex: 1; height: 44px; border: 0; border-radius: 10px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px;">Play-off</button>
+      <button type="button" role="tab" aria-selected="false" style="flex: 1; height: 44px; border: 0; border-radius: 10px; background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px;">Statystyki</button>
+    </div>
+  </header>
+
+  <main style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px 16px; display: flex; flex-direction: column; gap: 14px;">
+    <section aria-labelledby="pub-podium" style="border-radius: 18px; padding: 14px 16px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 4px;">
+      <h2 id="pub-podium" style="margin: 0 0 2px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.18em; color: #a8a08a;">PODIUM</h2>
+      <ol style="list-style: none; margin: 0; padding: 0;">
+        <sc-for list="{{podium}}" as="p" hint-placeholder-count="3">
+          <li style="display: flex; align-items: center; gap: 12px; height: 48px;">
+            <span style="{{p.placeStyle}}">{{p.place}}</span>
+            <span style="{{p.avatar}}">{{p.initial}}</span>
+            <span style="flex-grow: 1; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 21px;">{{p.name}}</span>
+            <span style="font-size: 13px; color: #a8a08a;">śr. {{p.avg}}</span>
+          </li>
+        </sc-for>
+      </ol>
+    </section>
+
+    <section aria-labelledby="pub-matches" style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 id="pub-matches" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.18em; color: #a8a08a;">PLAY-OFF · DOTKNIJ, BY ZOBACZYĆ MECZ</h2>
+      <sc-for list="{{matches}}" as="m" hint-placeholder-count="5">
+        <a href="#" style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border-radius: 14px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; color: #f3ecd8; text-decoration: none;">
+          <span style="width: 74px; font-size: 12px; color: #a8a08a; line-height: 1.2;">{{m.stage}}</span>
+          <span style="flex-grow: 1; display: flex; flex-direction: column; font-family: 'Barlow Condensed', sans-serif; font-size: 18px; line-height: 1.15;"><span style="{{m.aStyle}}">{{m.a}}</span><span style="{{m.bStyle}}">{{m.b}}</span></span>
+          <span style="display: flex; flex-direction: column; align-items: flex-end; font-family: 'Barlow Condensed', sans-serif; font-size: 20px; line-height: 1.1; font-variant-numeric: tabular-nums;"><span style="{{m.aStyle}}">{{m.la}}</span><span style="{{m.bStyle}}">{{m.lb}}</span></span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a8a08a" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </a>
+      </sc-for>
+    </section>
+
+    <section aria-labelledby="pub-group" style="display: flex; flex-direction: column; gap: 6px;">
+      <h2 id="pub-group" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.18em; color: #a8a08a;">FAZA GRUPOWA</h2>
+      <table style="width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 15px;">
+        <thead><tr style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.08em; color: #a8a08a; height: 26px;"><th scope="col" style="text-align: left; font-weight: 700;">#</th><th scope="col" style="text-align: left; font-weight: 700;">GRACZ</th><th scope="col" style="text-align: right; font-weight: 700;">W–P</th><th scope="col" style="text-align: right; font-weight: 700;">+/-</th><th scope="col" style="text-align: right; font-weight: 700;">PKT</th></tr></thead>
+        <tbody>
+          <sc-for list="{{group}}" as="g" hint-placeholder-count="6">
+            <tr style="height: 34px; border-top: 1px solid rgba(243,236,216,0.07);"><td style="{{g.rankStyle}}">{{g.rank}}</td><th scope="row" style="text-align: left; font-weight: 600;">{{g.name}}</th><td style="text-align: right;">{{g.wl}}</td><td style="text-align: right;">{{g.diff}}</td><td style="text-align: right; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 18px;">{{g.pts}}</td></tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const PL = {
+S: ['Szymon', 'S', '#5aa9ff'], K: ['Krzysiek', 'XD', '#ff70b8'], G: ['Grzesiek', 'G', '#b28cff'],
+U: ['Kuba', 'K', '#4fd1c5'], M: ['Matek', 'M', '#ff8a3d'], D: ['Dzimi', 'D', '#f2b134']
+};
+const medal = ['#f2b134', '#c9ced6', '#d08a4a'];
+const podium = [['S', '47,62'], ['K', '42,31'], ['G', '46,08']].map((p, i) => ({
+place: String(i + 1), name: PL[p[0]][0], initial: PL[p[0]][1], avg: p[1],
+avatar: 'width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: ' + PL[p[0]][2] + '; color: #111111; display: inline-flex; align-items: center; justify-content: center; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: ' + (PL[p[0]][1].length > 1 ? 12 : 16) + 'px;',
+placeStyle: 'width: 18px; font-family: Barlow Condensed, sans-serif; font-weight: 900; font-size: 24px; color: ' + medal[i] + ';'
+}));
+const win = 'font-weight: 800; color: #f3ecd8;', lose = 'font-weight: 600; color: #a8a08a;';
+const matches = [['Finał', 'S', 'K', 4, 2], ['Półfinał 1', 'S', 'U', 3, 1], ['Półfinał 2', 'G', 'K', 2, 3], ['O 3. miejsce', 'G', 'U', 2, 0], ['Pocieszenie', 'M', 'D', 0, 2]]
+.map((m) => ({ stage: m[0], a: PL[m[1]][0], b: PL[m[2]][0], la: String(m[3]), lb: String(m[4]), aStyle: m[3] > m[4] ? win : lose, bStyle: m[4] > m[3] ? win : lose }));
+const group = [['S', '5–0', '+9', '10'], ['G', '4–1', '+9', '8'], ['K', '3–2', '+2', '6'], ['U', '2–3', '−3', '4'], ['M', '1–4', '−6', '2'], ['D', '0–5', '−11', '0']]
+.map((g, i) => ({ rank: String(i + 1), name: PL[g[0]][0], wl: g[1], diff: g[2], pts: g[3], rankStyle: 'text-align: left; font-family: Barlow Condensed, sans-serif; font-weight: 800; color: ' + (i < 4 ? '#f2b134' : '#a8a08a') + ';' }));
+return { podium, matches, group };
+}
+}
+</script>
+</body>
+</html>

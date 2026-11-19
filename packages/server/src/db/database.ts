@@ -22,6 +22,8 @@ export interface MatchesTable {
   checkout_range: string | null; // tylko w treningu checkoutów
   checkout_seed: number | null; // tylko w treningu checkoutów, od 0 do MAX_CHECKOUT_SEED
   checkout_rule: string | null; // tylko w treningu checkoutów, CheckoutRule z @autoscore/schema
+  tournament_id: string | null; // tylko w meczu turnieju
+  fixture_id: string | null; // tylko w meczu turnieju
   created_at: string;
 }
 
@@ -81,6 +83,40 @@ export interface PlayerChangesTable {
   created_at: string;
 }
 
+// Pola konfiguracji poza name, format i playerIds trzymamy w config jako JSON. Gracze są w tournament_players.
+export interface TournamentsTable {
+  id: string;
+  name: string;
+  format: string;
+  config: string;
+  created_at: string;
+}
+
+export interface TournamentPlayersTable {
+  tournament_id: string;
+  player_id: string;
+  position: number; // kolejność zgłoszenia
+}
+
+export type TournamentEventType = 'draw' | 'fixture_started' | 'player_withdrawn' | 'result_corrected' | 'sharing_changed' | 'archived';
+
+// Log turnieju: tylko dopisywanie. Widok turnieju wynika z konfiguracji, tego logu i legów powiązanych meczów.
+// draw_order (JSON z listą id graczy) ma tylko draw. fixture_id ma fixture_started i result_corrected, match_id tylko fixture_started.
+// player_id ma tylko player_withdrawn, legs_first i legs_second tylko result_corrected, sharing (0 albo 1) tylko sharing_changed.
+export interface TournamentEventsTable {
+  tournament_id: string;
+  seq: number;
+  type: TournamentEventType;
+  draw_order: string | null;
+  fixture_id: string | null;
+  match_id: string | null;
+  player_id: string | null;
+  legs_first: number | null;
+  legs_second: number | null;
+  sharing: number | null;
+  created_at: string;
+}
+
 export interface Database {
   players: PlayersTable;
   player_changes: PlayerChangesTable;
@@ -88,6 +124,9 @@ export interface Database {
   match_players: MatchPlayersTable;
   throws: ThrowsTable;
   match_events: MatchEventsTable;
+  tournaments: TournamentsTable;
+  tournament_players: TournamentPlayersTable;
+  tournament_events: TournamentEventsTable;
 }
 
 export function openDatabase(path: string): Kysely<Database> {

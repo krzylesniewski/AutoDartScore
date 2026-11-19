@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Etap 5, kreator turnieju</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&amp;family=Barlow:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f3ecd8}a:hover{color:#fff7e6}
+</style>
+</helmet>
+<div style="width: 1600px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; background: radial-gradient(ellipse 1100px 650px at 22% -10%, #2b201a 0%, #16120f 45%, #0a0908 100%); color: #f3ecd8; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column;">
+  <header style="height: 68px; flex-shrink: 0; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid rgba(243,236,216,0.11);">
+    <svg width="32" height="32" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="#d8352a"></circle><circle cx="17" cy="17" r="10" fill="#0f0f0f"></circle><circle cx="17" cy="17" r="6" fill="#f3ecd8"></circle><circle cx="17" cy="17" r="2.4" fill="#d8352a"></circle></svg>
+    <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.08em; margin-right: 18px;">AUTO SCORE</span>
+    <nav aria-label="Główna nawigacja" style="display: flex; gap: 4px; align-self: stretch;">
+      <a href="#" aria-current="page" style="position: relative; display: flex; align-items: center; padding: 0 16px; color: #f3ecd8; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Nowa gra<span style="position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px; background: #d8352a; box-shadow: 0 0 14px 2px rgba(216,53,42,0.5);"></span></a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Turniej</a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Statystyki</a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Historia</a>
+      <a href="#" style="display: flex; align-items: center; padding: 0 16px; color: #a8a08a; text-decoration: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 20px;">Ustawienia</a>
+    </nav>
+  </header>
+
+  <main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 24px 28px 26px; display: flex; gap: 22px;">
+    <section aria-labelledby="type-h" style="width: 230px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px;">
+      <h2 id="type-h" style="margin: 0 0 4px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">TYP GRY</h2>
+      <sc-for list="{{types}}" as="t" hint-placeholder-count="4">
+        <button type="button" aria-pressed="{{t.pressed}}" style="{{t.style}}">
+          <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; line-height: 1;">{{t.name}}</span>
+          <span style="font-size: 14px; opacity: 0.75;">{{t.hint}}</span>
+        </button>
+      </sc-for>
+    </section>
+
+    <div style="flex-grow: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto auto 1fr; gap: 18px;">
+      <section aria-labelledby="name-h" style="border-radius: 22px; padding: 18px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 10px;">
+        <label id="name-h" for="t-name" style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">NAZWA TURNIEJU</label>
+        <input id="t-name" value="Jama jesień 16.11.2026" style="height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; border: 0; background: #1b1714; box-shadow: 0 0 0 1px rgba(243,236,216,0.2) inset; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 24px;">
+      </section>
+
+      <section aria-labelledby="format-h" style="border-radius: 22px; padding: 18px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 10px;">
+        <h2 id="format-h" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">FORMAT</h2>
+        <div style="display: flex; padding: 5px; gap: 4px; border-radius: 16px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;">
+          <sc-for list="{{formats}}" as="f" hint-placeholder-count="3">
+            <button type="button" aria-pressed="{{f.pressed}}" style="{{f.style}}">{{f.name}}</button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-labelledby="players-h" style="grid-column: 1 / span 2; border-radius: 22px; padding: 18px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <h2 id="players-h" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">GRACZE · 6</h2>
+          <span style="font-size: 14px; color: #a8a08a;">Kolejność meczów w grupie układa się sama, każdy z każdym.</span>
+        </div>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px;">
+          <sc-for list="{{players}}" as="p" hint-placeholder-count="6">
+            <li style="display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 8px 0 6px; border-radius: 999px; background: #1b1714; box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset;">
+              <span style="{{p.avatar}}">{{p.initial}}</span>
+              <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 21px;">{{p.name}}</span>
+              <button type="button" aria-label="Usuń {{p.name}}" style="width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: #a8a08a; font-size: 20px;">×</button>
+            </li>
+          </sc-for>
+          <li><button type="button" style="height: 52px; padding: 0 20px; border-radius: 999px; border: 2px dashed rgba(243,236,216,0.3); background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">+ Dodaj gracza</button></li>
+          <li><button type="button" style="height: 52px; padding: 0 20px; border-radius: 999px; border: 2px dashed rgba(243,236,216,0.3); background: transparent; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">+ Gość</button></li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="rules-h" style="border-radius: 22px; padding: 18px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 14px;">
+        <h2 id="rules-h" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">ZASADY</h2>
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span style="width: 150px; font-size: 17px;">Punkty startowe</span>
+          <div style="display: flex; gap: 6px;">
+            <sc-for list="{{starts}}" as="s" hint-placeholder-count="3"><button type="button" aria-pressed="{{s.pressed}}" style="{{s.style}}">{{s.name}}</button></sc-for>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span style="width: 150px; font-size: 17px;">Do play-off</span>
+          <div style="display: flex; gap: 6px;">
+            <sc-for list="{{advance}}" as="s" hint-placeholder-count="3"><button type="button" aria-pressed="{{s.pressed}}" style="{{s.style}}">{{s.name}}</button></sc-for>
+          </div>
+          <span style="font-size: 14px; color: #a8a08a;">pary 1–4 i 2–3</span>
+        </div>
+        <div style="height: 1px; background: rgba(243,236,216,0.11);"></div>
+        <h3 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">MECZE DODATKOWE</h3>
+        <sc-for list="{{extras}}" as="e" hint-placeholder-count="2">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <button type="button" role="switch" aria-checked="true" aria-label="{{e.name}}" style="width: 58px; height: 34px; flex-shrink: 0; border: 0; border-radius: 999px; background: #d8352a; position: relative; box-shadow: 0 0 14px rgba(216,53,42,0.45);"><span style="position: absolute; right: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%; background: #f3ecd8;"></span></button>
+            <span style="display: flex; flex-direction: column;"><span style="font-size: 17px;">{{e.name}}</span><span style="font-size: 14px; color: #a8a08a;">{{e.hint}}</span></span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section aria-labelledby="legs-h" style="border-radius: 22px; padding: 18px 22px; background: rgba(243,236,216,0.035); box-shadow: 0 0 0 1px rgba(243,236,216,0.11) inset; display: flex; flex-direction: column; gap: 8px;">
+        <h2 id="legs-h" style="margin: 0 0 4px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.18em; color: #a8a08a;">DŁUGOŚĆ MECZÓW · DO N WYGRANYCH LEGÓW</h2>
+        <sc-for list="{{legs}}" as="l" hint-placeholder-count="5">
+          <div style="display: flex; align-items: center; gap: 12px; height: 48px; border-top: 1px solid rgba(243,236,216,0.07);">
+            <span style="flex-grow: 1; font-size: 17px;">{{l.name}}</span>
+            <button type="button" aria-label="Mniej legów: {{l.name}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: #1b1714; box-shadow: 0 0 0 1px rgba(243,236,216,0.2) inset; color: #f3ecd8; font-size: 22px;">−</button>
+            <span style="width: 44px; text-align: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 30px; font-variant-numeric: tabular-nums;">{{l.n}}</span>
+            <button type="button" aria-label="Więcej legów: {{l.name}}" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: #1b1714; box-shadow: 0 0 0 1px rgba(243,236,216,0.2) inset; color: #f3ecd8; font-size: 22px;">+</button>
+          </div>
+        </sc-for>
+      </section>
+    </div>
+
+    <aside aria-labelledby="plan-h" style="width: 330px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; padding: 22px 24px; background: linear-gradient(180deg, #2a2420 0%, #1b1714 100%); box-shadow: 0 1px 0 rgba(243,236,216,0.11) inset, 0 30px 60px -24px rgba(0,0,0,0.85); display: flex; flex-direction: column; gap: 14px;">
+      <h2 id="plan-h" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 28px;">Plan turnieju</h2>
+      <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;">
+        <sc-for list="{{plan}}" as="r" hint-placeholder-count="5">
+          <li style="display: flex; align-items: baseline; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(243,236,216,0.07);">
+            <span style="flex-grow: 1; font-size: 16px;">{{r.name}}</span>
+            <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; font-variant-numeric: tabular-nums;">{{r.n}}</span>
+          </li>
+        </sc-for>
+      </ol>
+      <div style="display: flex; align-items: baseline; gap: 10px;">
+        <span style="flex-grow: 1; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px;">Razem meczów</span>
+        <span style="font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 44px; line-height: 1;">20</span>
+      </div>
+      <p style="margin: 0; font-size: 14px; color: #a8a08a; line-height: 1.4;">501, double-out. Kto zaczyna mecz: losowanie, potem legi na przemian. Mecze idą po kolei na jednej tarczy.</p>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(243,236,216,0.035);">
+        <button type="button" role="switch" aria-checked="true" aria-label="Publiczny link" style="width: 58px; height: 34px; flex-shrink: 0; border: 0; border-radius: 999px; background: #d8352a; position: relative;"><span style="position: absolute; right: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%; background: #f3ecd8;"></span></button>
+        <span style="display: flex; flex-direction: column;"><span style="font-size: 16px;">Publiczny link z kodem QR</span><span style="font-size: 13px; color: #a8a08a;">podgląd bez logowania, tylko do odczytu</span></span>
+      </div>
+      <span style="flex-grow: 1;"></span>
+      <button type="button" style="height: 64px; border: 0; border-radius: 18px; background: #d8352a; color: #f3ecd8; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; box-shadow: 0 14px 30px -10px rgba(216,53,42,0.7);">Rozpocznij turniej</button>
+    </aside>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const PL = [
+['Szymon', 'S', '#5aa9ff'], ['Krzysiek', 'XD', '#ff70b8'], ['Grzesiek', 'G', '#b28cff'],
+['Kuba', 'K', '#4fd1c5'], ['Matek', 'M', '#ff8a3d'], ['Dzimi', 'D', '#f2b134']
+];
+const av = (c, ini, size) => 'width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 50%; background: ' + c + '; color: #111111; display: flex; align-items: center; justify-content: center; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: ' + Math.round(size * (ini.length > 1 ? 0.36 : 0.46)) + 'px;';
+const seg = (on) => 'flex: 1; height: 46px; padding: 0 18px; border: 0; border-radius: 12px; background: ' + (on ? '#f3ecd8' : 'transparent') + '; color: ' + (on ? '#0a0908' : '#f3ecd8') + '; font-family: Barlow Condensed, sans-serif; font-weight: ' + (on ? 800 : 700) + '; font-size: 20px;';
+const pill = (on) => 'height: 44px; min-width: 64px; padding: 0 16px; border: 0; border-radius: 12px; background: ' + (on ? '#f3ecd8' : '#1b1714') + '; color: ' + (on ? '#0a0908' : '#f3ecd8') + '; box-shadow: ' + (on ? 'none' : '0 0 0 1px rgba(243,236,216,0.2) inset') + '; font-family: Barlow Condensed, sans-serif; font-weight: 800; font-size: 20px;';
+const tile = (on) => 'display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 16px 18px; border: 0; border-radius: 18px; text-align: left; background: ' + (on ? 'linear-gradient(180deg, #3a2520 0%, #241815 100%)' : 'rgba(243,236,216,0.035)') + '; color: #f3ecd8; box-shadow: ' + (on ? '0 0 0 2px #d8352a inset, 0 0 24px rgba(216,53,42,0.35)' : '0 0 0 1px rgba(243,236,216,0.11) inset') + ';';
+const types = [['Mecz 1v1', 'dwóch graczy, do N legów'], ['Zabawa', '3–4 graczy, ranking miejsc'], ['Trening', 'Free run, Solo 501, końcówki'], ['Turniej', 'liga, puchar, grupa + play-off']]
+.map((t, i) => ({ name: t[0], hint: t[1], pressed: i === 3 ? 'true' : 'false', style: tile(i === 3) }));
+const formats = ['Liga', 'Puchar', 'Grupa + play-off'].map((n, i) => ({ name: n, pressed: i === 2 ? 'true' : 'false', style: seg(i === 2) }));
+const starts = ['301', '501', '701'].map((n) => ({ name: n, pressed: n === '501' ? 'true' : 'false', style: pill(n === '501') }));
+const advance = ['2', '4', '8'].map((n) => ({ name: n, pressed: n === '4' ? 'true' : 'false', style: pill(n === '4') }));
+const players = PL.map((p) => ({ name: p[0], initial: p[1], avatar: av(p[2], p[1], 40) }));
+const extras = [
+{ name: 'Mecz o 3. miejsce', hint: 'przegrani półfinałów' },
+{ name: 'Pocieszenie', hint: 'gracze spoza play-off: 5. z 6.' }
+];
+const legs = [['Faza grupowa', 3], ['Półfinały', 3], ['Finał', 4], ['Mecz o 3. miejsce', 2], ['Pocieszenie', 2]].map((l) => ({ name: l[0], n: String(l[1]) }));
+const plan = [['Faza grupowa, każdy z każdym', '15'], ['Półfinały', '2'], ['Finał', '1'], ['Mecz o 3. miejsce', '1'], ['Pocieszenie', '1']].map((r) => ({ name: r[0], n: r[1] }));
+return { types, formats, starts, advance, players, extras, legs, plan };
+}
+}
+</script>
+</body>
+</html>

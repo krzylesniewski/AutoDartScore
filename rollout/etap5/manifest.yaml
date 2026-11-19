@@ -1,0 +1,287 @@
+# AutoScore Dart: Etap 5 (turnieje) jako seria PR-ów T1-T19.
+# Źródło: CLAUDE.md, design/plan-etap5.md, design/mockups/turnieje/ (makiety).
+# Opis pól: ~/.claude/skills/rollout/docs/manifest.html
+# Ten plik jest w repo; ~/.rollouts/autoscore-etap5/manifest.yaml to dowiązanie do niego.
+# Stan rolloutu (ledger, logi, inbox, briefy) zostaje w ~/.rollouts/autoscore-etap5/.
+rollout: autoscore-etap5
+model: opus
+claudeBin: ~/.nvm/versions/node/v24.22.2/bin/claude
+
+repo:
+  path: ~/Documents/00_Nauka/AutoScoreDart
+  github: krzylesniewski/AutoDartScore
+  # Gałąź integracyjna etapu 5: do main wchodzi PR-em autora po każdym kamieniu milowym.
+  base: feat/tournaments
+  public: true
+  pathPrepend: [~/.nvm/versions/node/v24.22.0/bin]
+  install: pnpm install --frozen-lockfile
+  requiredChecks: ['test', 'typecheck', 'lint', 'build', 'smoke', 'e2e'] # joby z .github/workflows/ci.yml
+  maintainers: [KrzysztofLesniewski]
+  merge: { method: squash, admin: false }
+  # Plan, decyzje i źródła wyglądu trzyma człowiek; agenci ich nie zmieniają.
+  forbid:
+    - auto-score-dart-pomysly.md
+    - CLAUDE.md
+    - 'rollout/**'
+    - 'fixtures/**'
+    - design/plan-etap5.md
+    - 'design/scena/**'
+    - 'design/mockups/**'
+  alwaysInScope:
+    - pnpm-lock.yaml
+  denylist: [/Users/]
+  verify:
+    common:
+      - pnpm install --frozen-lockfile
+      - pnpm test
+      - pnpm typecheck
+      - pnpm lint
+
+briefing:
+  sources:
+    - title: CLAUDE.md (zasady, stack, reguły X01, front, konwencje; wiążące)
+      path: ~/Documents/00_Nauka/AutoScoreDart/CLAUDE.md
+      kind: markdown
+    - title: Etap 5, decyzje o turniejach i plan PR-ów T1-T19 (wiążący)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/plan-etap5.md
+      kind: markdown
+    # Tylko dla PR-ów z briefTags: [web].
+    - title: Makiety etapu 5, spis ekranów i co makiety wiążą (pliki .dc.html w tym samym katalogu)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/mockups/turnieje/README.md
+      kind: markdown
+      tag: web
+    - title: RWD ekranów, wspólne zasady układu (wiążące dla zmian we froncie)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/rwd.md
+      kind: markdown
+      tag: web
+    - title: Design system „Scena”, zasady użycia tokenów i komponentów (wiążące dla wyglądu)
+      path: ~/Documents/00_Nauka/AutoScoreDart/design/scena/README.md
+      kind: markdown
+      tag: web
+
+policy:
+  concurrency: 4
+  # Do potwierdzenia przez autora (pytanie 3 w planie): auto jak w etapach 3 i 4 czy akceptacja każdego PR-a.
+  merge: auto
+  # Agent odpowiada na pytania z briefu tylko tym, co rozstrzyga plan; reszta trafia do autora.
+  delegate: {}
+
+# Małe kroki: plik spoza zakresu PR-a wraca do implementera przed weryfikacją.
+gates:
+  preVerify:
+    scope: true
+
+# K1 (T1-T11): rdzeń. K2 (T12-T17): podgląd. K3 (T18-T19): na żywo. Po kamieniu feat/tournaments → main PR-em autora.
+prs:
+  # K1: rdzeń
+  - id: T1
+    branch: feat/legs-to-win
+    title: 'feat: match length as first to N legs in the engine and the match contract'
+    brief: briefs/T1.md
+    priority: 90
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/engine/**', 'packages/schema/**', 'packages/server/**', 'packages/web/**', 'README.md', 'packages/*/README.md']
+
+  - id: T2
+    branch: feat/schema-tournament
+    title: 'feat(schema): tournament contract (config, fixtures, standings, view, commands)'
+    brief: briefs/T2.md
+    deps: [T1]
+    priority: 90
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/schema/**', 'packages/server/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'packages/*/README.md']
+
+  - id: T3
+    branch: feat/engine-round-robin
+    title: 'feat(engine): round robin schedule and standings with tie-breaks'
+    brief: briefs/T3.md
+    deps: [T2]
+    priority: 85
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/engine/**', 'packages/schema/**']
+
+  - id: T4
+    branch: feat/engine-brackets
+    title: 'feat(engine): cup and play-off brackets, byes, extra matches and final placements'
+    brief: briefs/T4.md
+    deps: [T3]
+    priority: 85
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/engine/**', 'packages/schema/**']
+
+  - id: T5
+    branch: feat/engine-walkover-correction
+    title: 'feat(engine): withdrawal by walkover and hand correction of a result'
+    brief: briefs/T5.md
+    deps: [T4]
+    priority: 85
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/engine/**', 'packages/schema/**']
+
+  - id: T6
+    branch: feat/server-tournaments
+    title: 'feat(server): tournament storage, lifecycle, fixture matches and live updates'
+    brief: briefs/T6.md
+    deps: [T5]
+    priority: 80
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'packages/schema/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
+
+  - id: T7
+    branch: feat/server-tournament-incidents
+    title: 'feat(server): player withdrawal, result correction and undo lock in tournaments'
+    brief: briefs/T7.md
+    deps: [T6]
+    priority: 75
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'packages/schema/**', 'README.md', 'packages/*/README.md']
+
+  - id: T8
+    branch: feat/web-tournament-wizard
+    title: 'feat(web): tournament wizard and the Tournament entry in the navigation'
+    brief: briefs/T8.md
+    deps: [T6]
+    priority: 75
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  - id: T9
+    branch: feat/web-tournament-screen
+    title: 'feat(web): tournament screen with the group table, next match and queue'
+    brief: briefs/T9.md
+    deps: [T8]
+    priority: 70
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  - id: T10
+    branch: feat/web-tournament-bracket
+    title: 'feat(web): play-off tab with the bracket, extra matches and final placements'
+    brief: briefs/T10.md
+    deps: [T9]
+    priority: 70
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  - id: T11
+    branch: feat/web-tournament-incidents
+    title: 'feat(web): withdraw a player, correct a result and archive a tournament'
+    brief: briefs/T11.md
+    deps: [T7, T10]
+    priority: 65
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  # K2: podgląd
+  - id: T12
+    branch: feat/stats-tournament-filter
+    title: 'feat(server): tournament filter in stats, tournament matches in 1v1 and head-to-head'
+    brief: briefs/T12.md
+    deps: [T7]
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'packages/schema/**', 'packages/web/src/test/**', 'packages/web/src/**/*.test.tsx', 'README.md', 'packages/*/README.md']
+
+  - id: T13
+    branch: feat/server-tournament-stats
+    title: 'feat(server): averages in the tournament view, tournament stats and leg history of a match'
+    brief: briefs/T13.md
+    deps: [T12]
+    priority: 60
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'packages/schema/**', 'packages/engine/**', 'README.md', 'packages/*/README.md']
+
+  - id: T14
+    branch: feat/web-tournament-stats
+    title: 'feat(web): averages in the table and bracket, tournament stats tab and the Tournament filter'
+    brief: briefs/T14.md
+    deps: [T11, T13]
+    priority: 55
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  - id: T15
+    branch: feat/web-tournament-match
+    title: 'feat(web): tournament match page with stats and leg-by-leg history'
+    brief: briefs/T15.md
+    deps: [T14]
+    priority: 55
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  - id: T16
+    branch: feat/server-public-tournament
+    title: 'feat(server): public read-only tournament API with a sharing switch'
+    brief: briefs/T16.md
+    deps: [T13]
+    priority: 50
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/server/**', 'packages/schema/**', 'deploy/**', 'README.md', 'packages/*/README.md']
+
+  - id: T17
+    branch: feat/web-public-tournament
+    title: 'feat(web): public tournament page and sharing with a QR code'
+    brief: briefs/T17.md
+    deps: [T15, T16]
+    priority: 50
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  # K3: na żywo
+  - id: T18
+    branch: feat/web-tournament-tv
+    title: 'feat(web): live TV view of a tournament'
+    brief: briefs/T18.md
+    deps: [T17]
+    priority: 40
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/**']
+    briefTags: [web]
+
+  - id: T19
+    branch: test/e2e-tournaments
+    title: 'test: end-to-end tournament runs and tournament docs'
+    brief: briefs/T19.md
+    deps: [T18]
+    priority: 30
+    effort: { brief: high, implement: high, verify: high }
+    changeset: none
+    scope: ['e2e/**', 'packages/web/**', 'README.md', 'packages/*/README.md']
+    briefTags: [web]
+
+  # Poprawka zgłoszona przez T19 (decyzja autora 2026-11-19); T19 wraca do weryfikacji po jej scaleniu.
+  - id: T20
+    branch: fix/stats-ranking-low-height
+    title: 'fix(web): lower ranking places stay visible and clickable on a short xl screen'
+    brief: briefs/T20.md
+    deps: [T18]
+    priority: 35
+    effort: { brief: medium, implement: medium, verify: medium }
+    changeset: none
+    scope: ['packages/web/**', 'e2e/layout.spec.ts']
+    briefTags: [web]

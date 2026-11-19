@@ -1,8 +1,8 @@
 import { CreateMatchRequest, type MatchListItem } from '@autoscore/schema';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pl } from '../i18n/pl';
-import { player, snapshot } from '../test/snapshots';
+import { player, snapshot, tournamentView } from '../test/snapshots';
 import { HomeScreen } from './HomeScreen';
 
 interface Call {
@@ -50,6 +50,7 @@ function item(overrides: Partial<MatchListItem>): MatchListItem {
     winnerId: null,
     placements: [],
     endedAt: null,
+    tournament: null,
     updatedAt: '2026-10-18T10:05:00.000Z',
     ...overrides,
   };
@@ -825,5 +826,348 @@ describe('HomeScreen: Scena look', () => {
     const unpicked = button('Anna');
     expect(unpicked.getAttribute('aria-pressed')).toBe('false');
     expect(badges(unpicked)).toHaveLength(0);
+  });
+});
+
+describe('HomeScreen: tournament wizard', () => {
+  const sixPlayers = [...players, { ...players[0], id: 'p6', name: 'Franek', color: 6 }];
+
+  function useSixPlayers(): void {
+    const previous = respond;
+    respond = (call) => (call.url === '/api/players' && call.method === 'GET' ? Promise.resolve(json(200, sixPlayers)) : previous(call));
+  }
+
+  function plan(): HTMLElement {
+    return screen.getByRole('region', { name: 'Plan turnieju' });
+  }
+
+  function planRows(): [string, string][] {
+    const values = within(plan()).queryAllByRole('definition');
+    return within(plan())
+      .queryAllByRole('term')
+      .map((term, index) => [term.textContent ?? '', values[index]?.textContent ?? '']);
+  }
+
+  function legsRows(): string[] {
+    return screen.getAllByRole('button', { name: /^Mniej legów: / }).map((stepper) => (stepper.getAttribute('aria-label') ?? '').slice(13));
+  }
+
+  function tournamentPosts(): Call[] {
+    return calls.filter((call) => call.url === '/api/tournaments' && call.method === 'POST');
+  }
+
+  async function openTournament(): Promise<void> {
+    render(<HomeScreen />);
+    await chips();
+    fireEvent.click(button('Turniej'));
+  }
+
+  function pickAll(names: readonly string[]): void {
+    for (const name of names) {
+      fireEvent.click(button(name));
+    }
+  }
+
+  it('offers Turniej as the fourth type tile with its description', async () => {
+    render(<HomeScreen />);
+    await chips();
+    const tiles = within(screen.getByRole('group', { name: 'Typ gry' })).getAllByRole('button');
+    expect(tiles.map((tile) => tile.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false', 'false']);
+    expect(screen.getByRole('button', { name: 'Turniej', description: 'Liga, puchar, grupa + play-off' })).toBe(tiles[3]);
+  });
+
+  it('opens with Turniej selected from initialKind', async () => {
+    render(<HomeScreen initialKind="tournament" />);
+    await chips();
+    expect(pressed('Turniej')).toBe('true');
+    expect(pressed('Mecz 1v1')).toBe('false');
+    expect(screen.getByLabelText('Nazwa turnieju')).toBeTruthy();
+  });
+
+  it('swaps the form, the summary and the start button for the tournament ones', async () => {
+    await openTournament();
+    expect(pressed('Turniej')).toBe('true');
+    expect(screen.queryByRole('button', { name: 'Start gry' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Rozpoczęcie gry' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Podsumowanie' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Rozpocznij turniej' })).toHaveLength(1);
+    expect(plan()).toBeTruthy();
+    expect(unfinished()).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Nowa gra' })).toBeTruthy();
+  });
+
+  it('prefills the name with the date and shows the tournament defaults', async () => {
+    await openTournament();
+    const name = screen.getByLabelText<HTMLInputElement>('Nazwa turnieju');
+    expect(name.value).toMatch(/^Turniej \d{2}\.\d{2}\.\d{4}$/);
+    expect(name.maxLength).toBe(60);
+    expect(pressed('Grupa + play-off')).toBe('true');
+    expect(pressed('501')).toBe('true');
+    expect(
+      within(screen.getByRole('group', { name: 'Do play-off' }))
+        .getByRole('button', { name: '4' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(pressed('Publiczny link z kodem QR')).toBe('true');
+  });
+
+  it('shows Do play-off with the pairing hint only in Grupa + play-off', async () => {
+    await openTournament();
+    const advance = screen.getByRole('group', { name: 'Do play-off', description: 'pary 1-4 i 2-3' });
+    fireEvent.click(within(advance).getByRole('button', { name: '8' }));
+    expect(screen.getByRole('group', { name: 'Do play-off', description: 'pary 1-8, 4-5, 2-7 i 3-6' })).toBeTruthy();
+    fireEvent.click(within(advance).getByRole('button', { name: '2' }));
+    expect(screen.getByRole('group', { name: 'Do play-off', description: 'od razu finał 1-2' })).toBeTruthy();
+    fireEvent.click(button('Liga'));
+    expect(screen.queryByRole('group', { name: 'Do play-off' })).toBeNull();
+    fireEvent.click(button('Puchar'));
+    expect(screen.queryByRole('group', { name: 'Do play-off' })).toBeNull();
+  });
+
+  it('shows no extras in Liga and Pocieszenie only in Grupa + play-off', async () => {
+    await openTournament();
+    expect(screen.getByRole('heading', { name: 'Mecze dodatkowe' })).toBeTruthy();
+    expect(button('Mecz o 3. miejsce')).toBeTruthy();
+    expect(button('Pocieszenie')).toBeTruthy();
+
+    fireEvent.click(button('Liga'));
+    expect(screen.queryByRole('heading', { name: 'Mecze dodatkowe' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Mecz o 3. miejsce' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Pocieszenie' })).toBeNull();
+
+    fireEvent.click(button('Puchar'));
+    expect(button('Mecz o 3. miejsce')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Pocieszenie' })).toBeNull();
+  });
+
+  it('disables an extra that the format cannot play and shows the reason', async () => {
+    await openTournament();
+    fireEvent.click(button('Puchar'));
+    pickAll(['Anna', 'Bartek', 'Celina']);
+    const third = button('Mecz o 3. miejsce');
+    expect(third.disabled).toBe(true);
+    expect(third.getAttribute('aria-pressed')).toBe('false');
+    expect(third.getAttribute('aria-describedby')).toBeTruthy();
+    expect(screen.getByText('Wymaga dwóch półfinałów.')).toBeTruthy();
+    fireEvent.click(button('Darek'));
+    expect(button('Mecz o 3. miejsce').disabled).toBe(false);
+    expect(screen.queryByText('Wymaga dwóch półfinałów.')).toBeNull();
+    fireEvent.click(button('Mecz o 3. miejsce'));
+    expect(pressed('Mecz o 3. miejsce')).toBe('true');
+    expect(within(button('Mecz o 3. miejsce')).getByText('włączony')).toBeTruthy();
+  });
+
+  it('shows one stepper row per phase of the format', async () => {
+    await openTournament();
+    expect(legsRows()).toEqual(['Faza grupowa', 'Półfinały', 'Finał']);
+    fireEvent.click(button('Liga'));
+    expect(legsRows()).toEqual(['Mecze ligi']);
+    fireEvent.click(button('Puchar'));
+    expect(legsRows()).toEqual(['Półfinały', 'Finał']);
+    pickAll(['Anna', 'Bartek', 'Celina', 'Darek', 'Ela']);
+    expect(legsRows()).toEqual(['Ćwierćfinały', 'Półfinały', 'Finał']);
+    fireEvent.click(button('Mecz o 3. miejsce'));
+    expect(legsRows()).toEqual(['Ćwierćfinały', 'Półfinały', 'Finał', 'Mecz o 3. miejsce']);
+  });
+
+  it('disables − at 1 and + at 9', async () => {
+    await openTournament();
+    const fewer = button('Mniej legów: Faza grupowa');
+    const more = button('Więcej legów: Faza grupowa');
+    const row = fewer.closest('li') as HTMLElement;
+    expect(row.textContent).toContain('3');
+    fireEvent.click(fewer);
+    fireEvent.click(fewer);
+    expect(row.textContent).toContain('1');
+    expect(fewer.disabled).toBe(true);
+    expect(more.disabled).toBe(false);
+    for (let step = 0; step < 8; step += 1) {
+      fireEvent.click(more);
+    }
+    expect(row.textContent).toContain('9');
+    expect(more.disabled).toBe(true);
+    expect(fewer.disabled).toBe(false);
+  });
+
+  it('counts 20 matches for 6 players, advance 4 and both extras', async () => {
+    useSixPlayers();
+    await openTournament();
+    pickAll(['Anna', 'Bartek', 'Celina', 'Darek', 'Ela', 'Franek']);
+    fireEvent.click(button('Mecz o 3. miejsce'));
+    fireEvent.click(button('Pocieszenie'));
+    expect(planRows()).toEqual([
+      ['Faza grupowa, każdy z każdym', '15'],
+      ['Półfinały', '2'],
+      ['Finał', '1'],
+      ['Mecz o 3. miejsce', '1'],
+      ['Pocieszenie', '1'],
+      ['Razem meczów', '20'],
+    ]);
+    expect(within(plan()).getByText(/^501, double-out\. Kto zaczyna mecz: losowanie/)).toBeTruthy();
+  });
+
+  it('explains why the plan is missing and blocks the start', async () => {
+    await openTournament();
+    expect(within(plan()).getByText('Wybierz od 3 do 10 graczy.')).toBeTruthy();
+    expect(button('Rozpocznij turniej').disabled).toBe(true);
+
+    pickAll(['Anna', 'Bartek', 'Celina']);
+    fireEvent.click(within(screen.getByRole('group', { name: 'Do play-off' })).getByRole('button', { name: '8' }));
+    expect(within(plan()).getByText('Do play-off nie może wyjść więcej graczy, niż gra w turnieju.')).toBeTruthy();
+    expect(button('Rozpocznij turniej').disabled).toBe(true);
+
+    fireEvent.click(within(screen.getByRole('group', { name: 'Do play-off' })).getByRole('button', { name: '2' }));
+    fireEvent.change(screen.getByLabelText('Nazwa turnieju'), { target: { value: '   ' } });
+    expect(screen.getAllByText('Podaj nazwę turnieju.')).toHaveLength(2);
+    expect(screen.getByLabelText('Nazwa turnieju').getAttribute('aria-invalid')).toBe('true');
+    expect(button('Rozpocznij turniej').disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('Nazwa turnieju'), { target: { value: 'Puchar' } });
+    expect(button('Rozpocznij turniej').disabled).toBe(false);
+    expect(planRows().at(-1)).toEqual(['Razem meczów', '4']);
+  });
+
+  it('keeps the tournament selection separate from the match selection', async () => {
+    render(<HomeScreen />);
+    await chips();
+    pickAll(['Anna', 'Bartek']);
+    fireEvent.click(button('Turniej'));
+    expect(chipNames(false)).toEqual(['Anna', 'Bartek', 'Celina', 'Darek', 'Ela']);
+    pickAll(['Celina', 'Darek', 'Ela']);
+    fireEvent.click(button('Mecz 1v1'));
+    expect(chipNames(true)).toEqual(['Anna', 'Bartek']);
+    fireEvent.click(button('Turniej'));
+    expect(chipNames(true)).toEqual(['Celina', 'Darek', 'Ela']);
+  });
+
+  it('picks a player created in the dialog into the tournament', async () => {
+    await openTournament();
+    fireEvent.click(button('+ Nowy gracz'));
+    const dialog = screen.getByRole('dialog', { name: 'Nowy gracz' });
+    fireEvent.change(within(dialog).getByLabelText('Imię'), { target: { value: 'Gosia' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Dodaj' }));
+    await screen.findByRole('button', { name: 'Gosia', pressed: true });
+    expect(chipNames(true)).toEqual(['Gosia']);
+    fireEvent.click(button('Mecz 1v1'));
+    expect(chipNames(false)).toEqual(['Gosia', 'Anna', 'Bartek', 'Celina', 'Darek', 'Ela']);
+  });
+
+  it('posts the tournament once and opens it', async () => {
+    useSixPlayers();
+    const previous = respond;
+    respond = (call) => (call.url === '/api/tournaments' ? Promise.resolve(json(201, tournamentView({ id: 't 7' }))) : previous(call));
+    await openTournament();
+    const name = screen.getByLabelText<HTMLInputElement>('Nazwa turnieju').value;
+    pickAll(['Celina', 'Anna', 'Bartek', 'Darek', 'Ela', 'Franek']);
+    fireEvent.click(button('Mecz o 3. miejsce'));
+    fireEvent.click(button('Pocieszenie'));
+    fireEvent.click(button('Więcej legów: Finał'));
+    fireEvent.click(button('701'));
+    fireEvent.click(button('Publiczny link z kodem QR'));
+    fireEvent.click(button('Rozpocznij turniej'));
+    await vi.waitFor(() => expect(window.location.hash).toBe('#/tournaments/t%207'));
+    expect(tournamentPosts()).toHaveLength(1);
+    expect(tournamentPosts()[0]?.body).toEqual({
+      name,
+      format: 'group_playoff',
+      playerIds: ['p3', 'p1', 'p2', 'p4', 'p5', 'p6'],
+      startingScore: 701,
+      advance: 4,
+      thirdPlaceMatch: true,
+      consolation: true,
+      legsToWin: { group: 3, r16: 3, qf: 3, sf: 3, final: 5, thirdPlace: 2, consolation: 2 },
+      sharing: false,
+    });
+  });
+
+  it('sends a league without advance and with the extras off', async () => {
+    const previous = respond;
+    respond = (call) => (call.url === '/api/tournaments' ? Promise.resolve(json(201, tournamentView())) : previous(call));
+    await openTournament();
+    fireEvent.click(button('Mecz o 3. miejsce'));
+    fireEvent.click(button('Liga'));
+    fireEvent.change(screen.getByLabelText('Nazwa turnieju'), { target: { value: '  Liga  ' } });
+    pickAll(['Anna', 'Bartek', 'Celina']);
+    fireEvent.click(button('Rozpocznij turniej'));
+    await vi.waitFor(() => expect(tournamentPosts()).toHaveLength(1));
+    expect(tournamentPosts()[0]?.body).toEqual({
+      name: 'Liga',
+      format: 'league',
+      playerIds: ['p1', 'p2', 'p3'],
+      startingScore: 501,
+      thirdPlaceMatch: false,
+      consolation: false,
+      legsToWin: { group: 3, r16: 3, qf: 3, sf: 3, final: 4, thirdPlace: 2, consolation: 2 },
+      sharing: true,
+    });
+  });
+
+  it('disables the button while the request is in flight', async () => {
+    let reply: (response: Response) => void = () => {};
+    const previous = respond;
+    respond = (call) =>
+      call.url === '/api/tournaments'
+        ? new Promise<Response>((resolve) => {
+            reply = resolve;
+          })
+        : previous(call);
+    await openTournament();
+    pickAll(['Anna', 'Bartek', 'Celina', 'Darek']);
+    fireEvent.click(button('Rozpocznij turniej'));
+    await vi.waitFor(() => expect(tournamentPosts()).toHaveLength(1));
+    expect(button('Rozpocznij turniej').disabled).toBe(true);
+    fireEvent.click(button('Rozpocznij turniej'));
+    expect(tournamentPosts()).toHaveLength(1);
+    reply(json(500, { error: 'internal_error', message: 'Internal server error' }));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(button('Rozpocznij turniej').disabled).toBe(false);
+  });
+
+  it('shows the Polish tournament_active text with a link to the tournament', async () => {
+    const previous = respond;
+    respond = (call) =>
+      call.url === '/api/tournaments'
+        ? Promise.resolve(json(409, { error: 'tournament_active', message: 'Another tournament is in progress' }))
+        : previous(call);
+    await openTournament();
+    pickAll(['Anna', 'Bartek', 'Celina', 'Darek']);
+    fireEvent.click(button('Rozpocznij turniej'));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Trwa już inny turniej. Dokończ go, zanim zaczniesz nowy.');
+    expect(alert.textContent).not.toContain('Another tournament');
+    expect(within(alert).getByRole('link', { name: 'Przejdź do turnieju' }).getAttribute('href')).toBe('#/tournaments');
+    expect(button('Rozpocznij turniej').disabled).toBe(false);
+    expect(window.location.hash).toBe('#/');
+  });
+
+  it('shows no link for other start errors', async () => {
+    const previous = respond;
+    respond = (call) =>
+      call.url === '/api/tournaments'
+        ? Promise.resolve(json(400, { error: 'archived_player', message: 'Player p2 is archived' }))
+        : previous(call);
+    await openTournament();
+    pickAll(['Anna', 'Bartek', 'Celina', 'Darek']);
+    fireEvent.click(button('Rozpocznij turniej'));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain(pl.archivedPlayer);
+    expect(within(alert).queryByRole('link')).toBeNull();
+  });
+
+  it('keeps the start button in the bottom bar below lg and in the plan panel from lg', async () => {
+    await openTournament();
+    const bar = screen.getByRole('region', { name: 'Rozpoczęcie turnieju' });
+    expect(within(bar).getByRole('button', { name: 'Rozpocznij turniej' })).toBeTruthy();
+    expect(within(plan()).queryByRole('button', { name: 'Rozpocznij turniej' })).toBeNull();
+    cleanup();
+
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => Object.assign(new EventTarget(), { matches: true })),
+    );
+    await openTournament();
+    expect(screen.queryByRole('region', { name: 'Rozpoczęcie turnieju' })).toBeNull();
+    expect(within(plan()).getByRole('button', { name: 'Rozpocznij turniej' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Rozpocznij turniej' })).toHaveLength(1);
   });
 });

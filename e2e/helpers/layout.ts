@@ -25,6 +25,21 @@ export async function expectNoHorizontalScroll(page: Page): Promise<void> {
   }
 }
 
+// Dokument i main każdego ekranu. Wewnętrzne ramki mogą przewijać się w pionie same.
+export async function expectNoVerticalScroll(page: Page): Promise<void> {
+  const measured = await page.evaluate(() => {
+    const scrolling = document.scrollingElement;
+    const mains = Array.from(document.querySelectorAll('main'));
+    return [
+      ...(scrolling ? [{ name: 'document.scrollingElement', overflow: scrolling.scrollHeight - scrolling.clientHeight }] : []),
+      ...mains.map((main, index) => ({ name: `main #${index + 1}`, overflow: main.scrollHeight - main.clientHeight })),
+    ];
+  });
+  for (const { name, overflow } of measured) {
+    expect(overflow, `${name} at ${page.url()}`).toBeLessThanOrEqual(1);
+  }
+}
+
 export function keypadRegion(page: Page): Locator {
   return page.getByRole('region', { name: 'Klawiatura rzutek' });
 }

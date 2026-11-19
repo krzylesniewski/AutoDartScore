@@ -4,6 +4,7 @@ import { createMatch } from '../api/client';
 import type { AchievementNotice } from '../api/use-match';
 import { casualPlaces } from '../game/casual-places';
 import { formatAverage } from '../game/format-stat';
+import { matchLengthLabel } from '../game/match-length-label';
 import { rematchRequest } from '../game/rematch-request';
 import { pl } from '../i18n/pl';
 import { AchievementNotices } from './AchievementNotices';
@@ -73,6 +74,9 @@ export function MatchEndView({
         <h1 className="font-display text-[26px] leading-tight font-extrabold">{pl.matchEndTitle}</h1>
         {isCasual && (
           <span className="font-display text-[19px] text-(--color-text-sub)">{[pl.typeCasual, setupLine(state)].join(' · ')}</span>
+        )}
+        {state.tournament !== null && (
+          <span className="font-display text-[19px] text-(--color-text-sub)">{[state.tournament.label, setupLine(state)].join(' · ')}</span>
         )}
         <div className="ml-auto flex flex-wrap gap-2">
           <VoiceToggle enabled={voiceEnabled} onChange={onVoiceChange} />
@@ -156,7 +160,7 @@ function setupLine(state: MatchSnapshot): string {
     parts.push(String(state.startingScore), pl.doubleOut);
   }
   if (state.legsToWin !== null) {
-    parts.push(pl.bestOfOption(state.legsToWin * 2 - 1));
+    parts.push(matchLengthLabel(state.legsToWin));
   }
   return parts.join(' · ');
 }
@@ -375,15 +379,24 @@ function ActionBar({ state, busy, undoLocked, undoCountdown, onUndo }: ActionBar
               <a href={HOME_HREF} className="sc-btn h-[60px] flex-1 text-[22px] font-bold shadow-(--shadow-key) lg:flex-none">
                 {pl.newMatch}
               </a>
-              {request && (
-                <button
-                  type="button"
-                  disabled={status === 'pending'}
-                  onClick={() => void rematch(request)}
+              {state.tournament !== null ? (
+                <a
+                  href={`#/tournaments/${encodeURIComponent(state.tournament.id)}`}
                   className="sc-btn sc-btn--primary h-[60px] flex-1 px-8 lg:flex-none"
                 >
-                  {pl.rematch}
-                </button>
+                  {pl.backToTournament}
+                </a>
+              ) : (
+                request && (
+                  <button
+                    type="button"
+                    disabled={status === 'pending'}
+                    onClick={() => void rematch(request)}
+                    className="sc-btn sc-btn--primary h-[60px] flex-1 px-8 lg:flex-none"
+                  >
+                    {pl.rematch}
+                  </button>
+                )
               )}
             </>
           )}
