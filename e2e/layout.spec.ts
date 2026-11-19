@@ -793,3 +793,89 @@ test.describe('checkout card fills the free height from lg', () => {
     });
   });
 });
+
+// Od xl panel średniej nie może zgnieść dalszych miejsc pod podium, gdy okno jest niskie.
+test.describe('stats ranking keeps further places reachable', () => {
+  // Czterech graczy każdy z każdym ma po trzy legi, więc trafiają do rankingu i dają pełne podium.
+  // Czterech kolejnych ma po jednym legu, więc stoją w dalszych miejscach bez pozycji.
+  test.beforeAll(async ({ playwright }, testInfo) => {
+    const { baseURL } = testInfo.project.use;
+    const api = await playwright.request.newContext(baseURL === undefined ? {} : { baseURL });
+    try {
+      const ranked: Player[] = [];
+      for (const name of ['Ada', 'Bob', 'Cyp', 'Dan']) {
+        ranked.push(await createPlayerByApi(api, token, uniqueName(name)));
+      }
+      const unranked: Player[] = [];
+      for (const name of ['Edi', 'Fil', 'Gab', 'Hel']) {
+        unranked.push(await createPlayerByApi(api, token, uniqueName(name)));
+      }
+      const pairs: [string, string][] = ranked.flatMap((first, index) =>
+        ranked.slice(index + 1).map((second): [string, string] => [first.id, second.id]),
+      );
+      for (let index = 0; index + 1 < unranked.length; index += 2) {
+        pairs.push([unranked[index]?.id ?? '', unranked[index + 1]?.id ?? '']);
+      }
+      for (const pair of pairs) {
+        const match = await createMatchByApi(api, token, pair);
+        await postThrowsByApi(api, token, match.id, FINISHING_DARTS);
+      }
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  function averagePanel(page: Page): Locator {
+    return page.locator('section[aria-labelledby="ranking-average"]');
+  }
+
+  async function openRanking(page: Page): Promise<Locator> {
+    await page.goto('/#/stats');
+    await fontsReady(page);
+    await expect(page.getByRole('list', { name: 'Podium średniej' }).getByRole('listitem')).toHaveCount(3);
+    return page.getByRole('list', { name: 'Dalsze miejsca' });
+  }
+
+  // Panel przycina treść, więc link musi leżeć w jego pudełku, a nie tylko w oknie.
+  async function expectReachable(page: Page, link: Locator): Promise<void> {
+    const href = await link.getAttribute('href');
+    expect(href).toMatch(/^#\/stats\/.+/);
+    await link.scrollIntoViewIfNeeded();
+    const box = await boxOf(link);
+    await expectInViewport(box, page);
+    expectInside(box, await boxOf(averagePanel(page)));
+    await link.click();
+    await expect.poll(() => page.url().endsWith(href ?? '')).toBe(true);
+  }
+
+  for (const viewport of [
+    { width: 1280, height: 720 },
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+  ]) {
+    test(`${viewport.width}×${viewport.height}: first and last further place are visible and clickable`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      const list = await openRanking(page);
+      const links = list.getByRole('link');
+      expect(await links.count()).toBeGreaterThanOrEqual(4);
+      expect((await boxOf(list)).height).toBeGreaterThanOrEqual(56);
+
+      // Liczą się tylko pudełka, które użytkownik może przewinąć. Panel przycina wystające pierścienie, a tekst z leading-none wystaje poza swój wiersz.
+      if (viewport.height === 1080) {
+        await expectNoVerticalScroll(page);
+        const scrolling = await averagePanel(page).evaluate((panel) =>
+          [panel, ...panel.querySelectorAll('*')]
+            .filter((node) => node.getAttribute('aria-label') !== 'Dalsze miejsca')
+            .filter((node) => ['auto', 'scroll'].includes(getComputedStyle(node).overflowY))
+            .filter((node) => node.scrollHeight - node.clientHeight > 1)
+            .map((node) => `${node.tagName.toLowerCase()} ${node.getAttribute('class') ?? ''}`),
+        );
+        expect(scrolling).toEqual([]);
+      }
+
+      await expectReachable(page, links.first());
+      await openRanking(page);
+      await expectReachable(page, links.last());
+    });
+  }
+});
