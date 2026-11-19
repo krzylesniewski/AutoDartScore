@@ -254,6 +254,16 @@ Trasy: `#/tournaments` (aktywny turniej albo lista zakończonych), `#/tournament
 
 **Testy:** wszystkie joby CI zielone; czas joba `e2e` przed i po w opisie PR.
 
+### T20: ranking statystyk, dalsze miejsca widoczne na niskim ekranie (web)
+
+**Zależy od:** T18. Dodany decyzją autora 2026-11-19 po zgłoszeniu z T19 (PR #141).
+
+**Błąd:** na `#/stats` przy szerokości `xl` i wysokości okna do 800 px (zmierzone 1280×720 i 1280×800) lista `ol[aria-label="Dalsze miejsca"]` w `RankingBoard` ma wysokość 0: panel `.sc-panel` ucina zawartość, a lista (`xl:min-h-0 xl:flex-1 xl:overflow-y-auto`) nie dostaje miejsca. Miejsc 4 i niższych nie widać i nie da się ich kliknąć. Przy 1920×1080 działa.
+
+**Zmiana:** tylko układ `RankingBoard` i, jeśli trzeba, jego rodzica w `StatsScreen`: przy każdej wysokości okna dalsze miejsca są widoczne albo przewijane wewnątrz panelu, zgodnie z `design/rwd.md` (ranking nie ucina treści). Bez zmian treści, danych i wyglądu podium.
+
+**Testy:** sprawdzenie w `e2e/layout.spec.ts`: przy 1280×720 i 1280×800 z co najmniej 7 graczami w rankingu wiersz z miejsca 4 i ostatni wiersz da się przewinąć do widoku i kliknąć; 1920×1080 bez zmian. Poza `e2e/layout.spec.ts` PR nie zmienia plików w `e2e/` (T19 ma tam otwarty PR). Po scaleniu T20 T19 przechodzi `pnpm e2e --repeat-each=2`.
+
 ---
 
 ## Poza zakresem etapu 5
