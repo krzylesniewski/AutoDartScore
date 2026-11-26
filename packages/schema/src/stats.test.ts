@@ -467,8 +467,8 @@ describe('PlayerForm', () => {
 
 describe('StatsPeriod', () => {
   it('maps each period to its length in days', () => {
-    expect(StatsPeriod.options).toEqual(['30d', '90d', 'all']);
-    expect(STATS_PERIOD_DAYS).toEqual({ '30d': 30, '90d': 90, all: null });
+    expect(StatsPeriod.options).toEqual(['7d', '30d', 'all']);
+    expect(STATS_PERIOD_DAYS).toEqual({ '7d': 7, '30d': 30, all: null });
   });
 
   describe.each([
@@ -482,11 +482,11 @@ describe('StatsPeriod', () => {
       expect(query.parse({}).period).toBe('all');
     });
 
-    it.each(['30d', '90d', 'all'])('accepts the period %s', (period) => {
+    it.each(['7d', '30d', 'all'])('accepts the period %s', (period) => {
       expect(query.parse({ period }).period).toBe(period);
     });
 
-    it.each(['7d', 'quarter'])('rejects the period %s', (period) => {
+    it.each(['90d', 'quarter'])('rejects the period %s', (period) => {
       expect(query.safeParse({ period }).success).toBe(false);
     });
   });

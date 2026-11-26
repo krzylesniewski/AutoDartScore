@@ -130,17 +130,17 @@ describe.each(routes)('$name with period', (route) => {
     return route.included(await getOk(`${route.path()}${query(period)}`));
   }
 
-  it('leaves a 31-day-old game out of 30d and keeps it in 90d', async () => {
-    await playGame(31 * DAY_MS);
-    expect(await count('30d')).toBe(0);
-    expect(await count('90d')).toBe(1);
+  it('leaves an 8-day-old game out of 7d and keeps it in 30d', async () => {
+    await playGame(8 * DAY_MS);
+    expect(await count('7d')).toBe(0);
+    expect(await count('30d')).toBe(1);
     expect(await count('all')).toBe(1);
   });
 
-  it('keeps a 91-day-old game only in all', async () => {
-    await playGame(91 * DAY_MS);
+  it('keeps a 31-day-old game only in all', async () => {
+    await playGame(31 * DAY_MS);
+    expect(await count('7d')).toBe(0);
     expect(await count('30d')).toBe(0);
-    expect(await count('90d')).toBe(0);
     expect(await count('all')).toBe(1);
     expect(await count()).toBe(1);
   });
@@ -157,14 +157,14 @@ describe.each(routes)('$name with period', (route) => {
     route.empty(await getOk(`${route.path()}?period=30d`));
   });
 
-  it.each(['7d', 'quarter', ''])('rejects the period %j with 400 invalid_request', async (period) => {
+  it.each(['90d', 'quarter', ''])('rejects the period %j with 400 invalid_request', async (period) => {
     const response = await get(`${route.path()}?period=${period}`);
     expect(response.statusCode).toBe(400);
     expect(ApiError.parse(response.json()).error).toBe('invalid_request');
   });
 
   it('echoes the requested period, and all without the parameter', async () => {
-    for (const period of ['30d', '90d', 'all'] as const) {
+    for (const period of ['7d', '30d', 'all'] as const) {
       expect(await getOk(`${route.path()}?period=${period}`)).toMatchObject({ period });
     }
     expect(await getOk(route.path())).toMatchObject({ period: 'all' });
@@ -184,14 +184,14 @@ describe.each(routes.filter((route) => route.name !== 'GET /players/:id/head-to-
   (route) => {
     it('combines type and period', async () => {
       await playGame(DAY_MS, 'casual');
-      await playGame(45 * DAY_MS, 'match');
-      const recentMatch = await getOk(`${route.path()}${query('30d', 'match')}`);
-      expect(recentMatch).toMatchObject({ filter: 'match', period: '30d' });
+      await playGame(15 * DAY_MS, 'match');
+      const recentMatch = await getOk(`${route.path()}${query('7d', 'match')}`);
+      expect(recentMatch).toMatchObject({ filter: 'match', period: '7d' });
       expect(route.included(recentMatch)).toBe(0);
-      expect(route.included(await getOk(`${route.path()}${query('30d', 'casual')}`))).toBe(1);
-      expect(route.included(await getOk(`${route.path()}${query('90d', 'match')}`))).toBe(1);
-      expect(route.included(await getOk(`${route.path()}${query('30d', 'all')}`))).toBe(1);
-      expect(route.included(await getOk(`${route.path()}${query('90d', 'all')}`))).toBe(2);
+      expect(route.included(await getOk(`${route.path()}${query('7d', 'casual')}`))).toBe(1);
+      expect(route.included(await getOk(`${route.path()}${query('30d', 'match')}`))).toBe(1);
+      expect(route.included(await getOk(`${route.path()}${query('7d', 'all')}`))).toBe(1);
+      expect(route.included(await getOk(`${route.path()}${query('30d', 'all')}`))).toBe(2);
     });
   },
 );
@@ -203,20 +203,20 @@ describe('GET /stats/rankings win rate and T20 hits with period', () => {
   }
 
   // Jedna gra nie wystarcza do rankingu wygranych, więc gracze potrzebują trzech.
-  it('leaves 31-day-old games out of 30d and keeps them in 90d', async () => {
+  it('leaves 8-day-old games out of 7d and keeps them in 30d', async () => {
     for (let game = 0; game < 3; game += 1) {
-      await playGame(31 * DAY_MS);
+      await playGame(8 * DAY_MS);
     }
-    expect(await lists('30d')).toEqual({ winRate: [], t20Hits: [] });
-    expect(await lists('90d')).toEqual({ winRate: [anna, bartek], t20Hits: [anna] });
+    expect(await lists('7d')).toEqual({ winRate: [], t20Hits: [] });
+    expect(await lists('30d')).toEqual({ winRate: [anna, bartek], t20Hits: [anna] });
   });
 });
 
 describe('GET /players/:id/head-to-head/:opponentId with period', () => {
   it('takes lastPlayedAt only from games inside the period', async () => {
-    await playGame(31 * DAY_MS);
-    expect(HeadToHead.parse(await getOk(`/players/${anna}/head-to-head/${bartek}?period=30d`)).lastPlayedAt).toBeNull();
-    expect(HeadToHead.parse(await getOk(`/players/${anna}/head-to-head/${bartek}?period=90d`)).lastPlayedAt).not.toBeNull();
+    await playGame(8 * DAY_MS);
+    expect(HeadToHead.parse(await getOk(`/players/${anna}/head-to-head/${bartek}?period=7d`)).lastPlayedAt).toBeNull();
+    expect(HeadToHead.parse(await getOk(`/players/${anna}/head-to-head/${bartek}?period=30d`)).lastPlayedAt).not.toBeNull();
   });
 });
 

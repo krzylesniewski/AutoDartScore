@@ -11,12 +11,12 @@ describe('readStatsPeriod', () => {
     expect(readStatsPeriod()).toBe('all');
   });
 
-  it.each(['30d', '90d', 'all'] as const)('gives the stored %s', (period) => {
+  it.each(['7d', '30d', 'all'] as const)('gives the stored %s', (period) => {
     localStorage.setItem(STATS_PERIOD_STORAGE_KEY, period);
     expect(readStatsPeriod()).toBe(period);
   });
 
-  it.each(['7d', 'quarter', ''])('gives all time for %j', (value) => {
+  it.each(['90d', 'quarter', ''])('gives all time for %j', (value) => {
     localStorage.setItem(STATS_PERIOD_STORAGE_KEY, value);
     expect(readStatsPeriod()).toBe('all');
   });
@@ -33,8 +33,8 @@ describe('writeStatsPeriod', () => {
   it('stores the period under autoscore.statsPeriod', () => {
     writeStatsPeriod('30d');
     expect(localStorage.getItem('autoscore.statsPeriod')).toBe('30d');
-    writeStatsPeriod('90d');
-    expect(localStorage.getItem('autoscore.statsPeriod')).toBe('90d');
+    writeStatsPeriod('7d');
+    expect(localStorage.getItem('autoscore.statsPeriod')).toBe('7d');
   });
 
   it('does not throw when localStorage throws', () => {

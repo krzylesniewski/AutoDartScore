@@ -45,8 +45,8 @@ type RankingView = StatsFilter | 'overall';
 const RANKING_VIEWS: readonly FilterOption<RankingView>[] = [...FILTERS, { value: 'overall', label: pl.filterOverall }];
 
 const PERIODS: readonly FilterOption<StatsPeriod>[] = [
+  { value: '7d', label: pl.period7d },
   { value: '30d', label: pl.period30d },
-  { value: '90d', label: pl.period90d },
   { value: 'all', label: pl.periodAll },
 ];
 
