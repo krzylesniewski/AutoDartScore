@@ -142,7 +142,7 @@ Osiągnięcie meczu 1v1 (na przykład rekord tury albo najkrótszy leg) pokazuje
 - Ranking graczy po średniej z ukończonych legów.
 - Sześć kafelków z pierwszą piątką: „Win rate”, rekordowy leg, najwyższe zamknięcie, najkrótszy leg, najwyższa tura z meczów 1v1 i „Trafienia T20”.
 - Filtr typu gier: „Wszystkie”, „Mecze 1v1”, „Turniej”, „Zabawa” i „Trening”. „Turniej” to tylko mecze 1v1 rozegrane w turniejach (`type=tournament`), a „Mecze 1v1” nadal je obejmuje.
-- Filtr „Okres”: „30 dni”, „Kwartał” albo „Cały czas”, domyślnie „Cały czas”. Okres liczy się wstecz od zegara serwera, więc „Kwartał” to ostatnie 90 dni.
+- Filtr „Okres”: „7 dni”, „30 dni” albo „Cały czas”, domyślnie „Cały czas”. Okres liczy się wstecz od zegara serwera, więc „7 dni” to ostatnie 7 dób, nie dni kalendarzowe.
 - Podtytuł rankingu nazywa okres, np. „Ranking graczy z ostatnich 30 dni”.
 - Wybór okresu jest wspólny dla rankingu i karty gracza. Zostaje na urządzeniu w `localStorage` pod kluczem `autoscore.statsPeriod`.
 - „Win rate” liczy graczy z co najmniej 3 ukończonymi grami, a przy filtrze „Trening” pokazuje „Tylko mecze i zabawa”.

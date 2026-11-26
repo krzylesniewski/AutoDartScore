@@ -56,8 +56,8 @@ function inTurns(count: number): string {
 
 // Dopełnienie po „Ranking graczy” i „Wszystkie gry”.
 const periodPhrase: Record<StatsPeriod, string> = {
+  '7d': 'z ostatnich 7 dni',
   '30d': 'z ostatnich 30 dni',
-  '90d': 'z ostatniego kwartału',
   all: 'z całej historii',
 };
 
@@ -286,8 +286,8 @@ export const pl = {
   recordsRegion: 'Rekordy',
   noGamesInFilter: 'Brak gier w tym filtrze.',
   statsPeriod: 'Okres',
+  period7d: '7 dni',
   period30d: '30 dni',
-  period90d: 'Kwartał',
   periodAll: 'Cały czas',
   periodPhrase,
   filterOverall: 'Overall',

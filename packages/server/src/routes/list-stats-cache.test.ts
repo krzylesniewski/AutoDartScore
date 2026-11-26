@@ -36,7 +36,7 @@ afterEach(async () => {
 });
 
 const TYPES = ['all', 'match', 'casual', 'practice'];
-const PERIODS = ['30d', '90d', 'all'];
+const PERIODS = ['7d', '30d', 'all'];
 
 function endpoints(playerIds: readonly string[], matchIds: readonly string[]): string[] {
   const [anna, bartek] = playerIds;

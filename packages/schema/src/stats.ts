@@ -13,10 +13,10 @@ export const StatsFilter = z.enum(['all', 'match', 'casual', 'practice', 'tourna
 export type StatsFilter = z.infer<typeof StatsFilter>;
 
 // Okres liczony wstecz od zegara serwera. Gra wchodzi, gdy createdAt >= teraz minus N dni. all nie ma granicy.
-export const StatsPeriod = z.enum(['30d', '90d', 'all']);
+export const StatsPeriod = z.enum(['7d', '30d', 'all']);
 export type StatsPeriod = z.infer<typeof StatsPeriod>;
 
-export const STATS_PERIOD_DAYS: Record<StatsPeriod, number | null> = { '30d': 30, '90d': 90, all: null };
+export const STATS_PERIOD_DAYS: Record<StatsPeriod, number | null> = { '7d': 7, '30d': 30, all: null };
 
 export const PlayerStatsQuery = z.object({
   type: StatsFilter.default('all'),

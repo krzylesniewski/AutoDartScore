@@ -28,6 +28,14 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-11-26: okresy w statystykach: 7 dni zamiast kwartału
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / statystyki
+- **Co powiedział:** „w statystykach zamieniłbym 30 dni, kwartał, all time na 7 dni, 30 dni, all time”
+- **Kontekst:** ekran „Statystyki”, filtr okresu z R11 i R14
+- **Status:** nowy
+- **Uwagi:** okresy są w `StatsPeriod` w `packages/schema/src/stats.ts` (`30d`, `90d`, `all`) i w `STATS_PERIOD_DAYS`; przyciski w `StatsScreen.tsx`, opisy w `i18n/pl.ts` („Kwartał”, „z ostatniego kwartału”). Kierunek: `7d` w miejsce `90d` w kontrakcie, na serwerze i we froncie, kolejność przycisków „7 dni / 30 dni / Cały czas”. Wybrany okres jest zapamiętywany na urządzeniu (`readStatsPeriod`), więc zapisane `90d` musi wrócić do domyślnego. Do ustalenia: czy domyślny okres zostaje „Cały czas”.
+
 ### 2026-11-16: karta zakończenia za mała na dużych ekranach
 - **Zgłosił:** autor
 - **Rodzaj / obszar:** utrudnienie / ekran gry

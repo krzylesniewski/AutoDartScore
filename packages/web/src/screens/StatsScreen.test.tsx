@@ -807,12 +807,12 @@ describe('StatsScreen: period', () => {
       within(screen.getByRole('region', { name: 'Okres' }))
         .getAllByRole('button')
         .map((button) => button.textContent),
-    ).toEqual(['30 dni', 'Kwartał', 'Cały czas']);
+    ).toEqual(['7 dni', '30 dni', 'Cały czas']);
     expect(pressed('Cały czas')).toBe('true');
     expect(urls).toContain('/api/stats/rankings?type=all&period=all');
     for (const [label, period] of [
+      ['7 dni', '7d'],
       ['30 dni', '30d'],
-      ['Kwartał', '90d'],
     ] as const) {
       fireEvent.click(periodButton(label));
       expect(pressed(label)).toBe('true');
