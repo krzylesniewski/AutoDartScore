@@ -135,11 +135,15 @@ function matchSockets(): FakeWebSocket[] {
   return FakeWebSocket.instances.filter((entry) => entry.url.includes('/matches/'));
 }
 
-function sendState(state: MatchSnapshot): void {
-  const socket = matchSockets().find((entry) => entry.url.includes(`/matches/${encodeURIComponent(state.id)}/live`));
-  if (!socket) {
-    throw new Error(`No socket for ${state.id}`);
-  }
+// Gniazdo meczu otwiera się efekt po widoku turnieju, więc nagłówek ekranu bywa wcześniej niż gniazdo.
+async function sendState(state: MatchSnapshot): Promise<void> {
+  const socket = await vi.waitFor(() => {
+    const found = matchSockets().find((entry) => entry.url.includes(`/matches/${encodeURIComponent(state.id)}/live`));
+    if (!found) {
+      throw new Error(`No socket for ${state.id}`);
+    }
+    return found;
+  });
   socket.serverSend({ type: 'state_updated', matchId: state.id, eventSeq: state.eventSeq, state });
 }
 
@@ -162,7 +166,7 @@ async function renderTv(page = NETWORK_PAGE): Promise<void> {
 
 async function renderLive(state: MatchSnapshot = liveState(cupView(SEMIFINAL_LIVE))): Promise<HTMLElement> {
   await renderTv();
-  sendState(state);
+  await sendState(state);
   return screen.getByRole('region', { name: 'Trwający mecz' });
 }
 
@@ -228,7 +232,7 @@ describe('TournamentTvScreen', () => {
     expect(sockets[1]?.closed).toBe(false);
     expect(within(header()).getByText('Mecz o 3. miejsce · do 2 wygranych legów')).toBeTruthy();
 
-    sendState(liveState(cupView(THIRD_PLACE_LIVE)));
+    await sendState(liveState(cupView(THIRD_PLACE_LIVE)));
     expect(screen.getByText('Rzuca')).toBeTruthy();
 
     sendView(cupView(FINAL_NEXT));
