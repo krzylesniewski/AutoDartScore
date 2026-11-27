@@ -1,7 +1,8 @@
 import type { MatchLeg, MatchLegs } from '@autoscore/schema';
-import { useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useId, useState } from 'react';
 import { legRows, legStory, type LegRow, type LegRowSide } from '../game/leg-rows';
 import { pl } from '../i18n/pl';
+import { LegTabList } from './LegTabList';
 import { Notice } from './Notice';
 
 export interface LegHistoryProps {
@@ -83,10 +84,6 @@ function TurnsTable({ rows, names, labelledBy }: { rows: readonly LegRow[]; name
   );
 }
 
-function tabText(leg: MatchLeg, names: ReadonlyMap<string, string>): string {
-  return leg.winnerId === null ? pl.fixtureLive : (names.get(leg.winnerId) ?? '');
-}
-
 export function LegHistory({ legs, error, names }: LegHistoryProps) {
   const titleId = useId();
   return (
@@ -105,57 +102,14 @@ export function LegHistory({ legs, error, names }: LegHistoryProps) {
 function LegTabs({ legs, names }: { legs: MatchLegs; names: ReadonlyMap<string, string> }) {
   const baseId = useId();
   const [picked, setPicked] = useState<number | null>(null);
-  const buttons = useRef(new Map<number, HTMLButtonElement>());
-  const last = legs.legs.at(-1);
-  const selected = legs.legs.find((leg) => leg.legIndex === picked) ?? last;
+  const selected = legs.legs.find((leg) => leg.legIndex === picked) ?? legs.legs.at(-1);
   const playerIds: [string, string] = [legs.players[0] ?? '', legs.players[1] ?? ''];
   const tabId = (legIndex: number) => `${baseId}-tab-${legIndex}`;
   const panelId = `${baseId}-panel`;
 
-  function move(event: KeyboardEvent<HTMLButtonElement>, index: number): void {
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-    if (step === 0) {
-      return;
-    }
-    event.preventDefault();
-    const next = legs.legs[(index + step + legs.legs.length) % legs.legs.length];
-    if (next) {
-      setPicked(next.legIndex);
-      buttons.current.get(next.legIndex)?.focus();
-    }
-  }
-
   return (
     <>
-      <div role="tablist" aria-label={pl.legTabs} className="flex flex-wrap gap-2">
-        {legs.legs.map((leg, index) => {
-          const isSelected = leg === selected;
-          return (
-            <button
-              key={leg.legIndex}
-              ref={(element) => {
-                if (element) {
-                  buttons.current.set(leg.legIndex, element);
-                } else {
-                  buttons.current.delete(leg.legIndex);
-                }
-              }}
-              type="button"
-              role="tab"
-              id={tabId(leg.legIndex)}
-              aria-selected={isSelected}
-              aria-controls={isSelected ? panelId : undefined}
-              tabIndex={isSelected ? 0 : -1}
-              onClick={() => setPicked(leg.legIndex)}
-              onKeyDown={(event) => move(event, index)}
-              className={`flex min-h-11 min-w-20 flex-col items-center justify-center rounded-(--radius-chip) px-3 py-1.5 leading-tight ${isSelected ? 'bg-(--color-surface-soft) text-(--color-text) inset-ring-2 inset-ring-(--color-accent)' : 'text-(--color-text-sub) shadow-(--shadow-inset-line)'}`}
-            >
-              <span className="font-display text-lg font-bold">{pl.legNumber(leg.legIndex + 1)}</span>{' '}
-              <span className="max-w-28 truncate text-[13px]">{tabText(leg, names)}</span>
-            </button>
-          );
-        })}
-      </div>
+      <LegTabList legs={legs.legs} selected={selected} names={names} panelId={panelId} tabId={tabId} onSelect={setPicked} />
       {selected && (
         <div role="tabpanel" id={panelId} aria-labelledby={tabId(selected.legIndex)} className="flex min-w-0 flex-col gap-3">
           <p className="text-[17px] text-(--color-text-sub)">{legStory(selected, names)}</p>
