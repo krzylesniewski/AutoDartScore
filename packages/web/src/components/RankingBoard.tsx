@@ -36,6 +36,7 @@ function tiles(rankings: StatsRankings): readonly Tile[] {
     { title: pl.tileBestLeg, unit: pl.tileBestLegUnit, entries: rankings.bestLegAverage, format: formatAverage },
     { title: pl.statHighestCheckout, unit: pl.tileCheckoutUnit, entries: rankings.highestCheckout, format: String },
     { title: pl.tileShortestLeg, unit: pl.tileShortestLegUnit, entries: rankings.shortestLeg, format: String, lowerIsBetter: true },
+    { title: pl.tileLongestLeg, unit: pl.tileLongestLegUnit, entries: rankings.longestLeg, format: String },
     {
       title: pl.tileHighestTurn,
       unit: pl.tileHighestTurnUnit,
@@ -43,7 +44,12 @@ function tiles(rankings: StatsRankings): readonly Tile[] {
       format: String,
       empty: rankings.filter === 'casual' || rankings.filter === 'practice' ? pl.tileOnlyMatches : undefined,
     },
+    { title: pl.tileDoubles, unit: pl.tileDoublesUnit, entries: rankings.doublesPercent, format: formatPercent },
     { title: pl.statT20Hits, unit: pl.tileT20HitsUnit, entries: rankings.t20Hits, format: String },
+    { title: pl.tileT19Hits, unit: pl.tileT19HitsUnit, entries: rankings.t19Hits, format: String },
+    { title: pl.tileT18Hits, unit: pl.tileT18HitsUnit, entries: rankings.t18Hits, format: String },
+    { title: pl.tileT5Hits, unit: pl.tileT5HitsUnit, entries: rankings.t5Hits, format: String },
+    { title: pl.tileT1Hits, unit: pl.tileT1HitsUnit, entries: rankings.t1Hits, format: String },
   ];
 }
 

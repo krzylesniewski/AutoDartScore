@@ -145,6 +145,9 @@ export const MIN_LEGS_FOR_AVERAGE = 3;
 // Do rankingu wygranych wchodzi gracz z co najmniej tyloma ukończonymi grami (1v1 albo zabawa) w filtrze i okresie.
 export const MIN_GAMES_FOR_WIN_RATE = 3;
 
+// Do rankingu skuteczności na double wchodzi gracz z co najmniej tyloma rzutkami na double w filtrze i okresie.
+export const MIN_DOUBLE_ATTEMPTS_FOR_RANKING = 10;
+
 export const RankingsQuery = z.object({ type: StatsFilter.default('all'), period: StatsPeriod.default('all') });
 export type RankingsQuery = z.infer<typeof RankingsQuery>;
 
@@ -181,6 +184,12 @@ export const StatsRankings = z.object({
   highestTurn: z.array(RankingEntry), // tylko mecze 1v1
   winRate: z.array(RankingEntry), // pusta dla filtra practice
   t20Hits: z.array(RankingEntry), // bez graczy z 0 trafień
+  t19Hits: z.array(RankingEntry), // jak t20Hits, tak samo t18Hits, t5Hits i t1Hits
+  t18Hits: z.array(RankingEntry),
+  t5Hits: z.array(RankingEntry),
+  t1Hits: z.array(RankingEntry),
+  doublesPercent: z.array(RankingEntry), // procent 0-100, gracze z co najmniej MIN_DOUBLE_ATTEMPTS_FOR_RANKING próbami
+  longestLeg: z.array(RankingEntry), // najwięcej rzutek w wygranym legu, te same legi co shortestLeg
 });
 export type StatsRankings = z.infer<typeof StatsRankings>;
 

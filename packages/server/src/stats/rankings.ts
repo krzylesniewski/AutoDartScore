@@ -1,4 +1,5 @@
 import {
+  MIN_DOUBLE_ATTEMPTS_FOR_RANKING,
   MIN_GAMES_FOR_WIN_RATE,
   MIN_LEGS_FOR_AVERAGE,
   type MatchType,
@@ -8,7 +9,7 @@ import {
   type StatsRankings,
 } from '@autoscore/schema';
 import type { PlayerLeg } from './completed-legs.js';
-import { EMPTY_TOTALS, mergeTotals, threeDartAverage, winRatePercent, type GameTally, type PlayerTotals } from './tally.js';
+import { EMPTY_TOTALS, doublesPercent, mergeTotals, threeDartAverage, winRatePercent, type GameTally, type PlayerTotals } from './tally.js';
 
 // Czysta logika rankingu graczy, bez I/O. Średnie liczą tylko ukończone legi, rekordy biorą wynik z tallyGame.
 
@@ -125,6 +126,13 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
       return value === null ? [] : [{ player, value }];
     });
 
+  // Gracz bez trafień nie wchodzi na listę.
+  const hits = (key: 't20Hits' | 't19Hits' | 't18Hits' | 't5Hits' | 't1Hits'): RankingEntry[] =>
+    top(
+      fromTotals((own) => (own[key] > 0 ? own[key] : null)),
+      'desc',
+    );
+
   return {
     games: gameCount,
     legs: legCount,
@@ -156,8 +164,19 @@ export function buildRankings({ players, games }: RankingsInput): Omit<StatsRank
       }),
       'desc',
     ),
-    t20Hits: top(
-      fromTotals((own) => (own.t20Hits > 0 ? own.t20Hits : null)),
+    t20Hits: hits('t20Hits'),
+    t19Hits: hits('t19Hits'),
+    t18Hits: hits('t18Hits'),
+    t5Hits: hits('t5Hits'),
+    t1Hits: hits('t1Hits'),
+    doublesPercent: top(
+      fromTotals((own) =>
+        own.doubleAttempts >= MIN_DOUBLE_ATTEMPTS_FOR_RANKING ? doublesPercent(own.doublesHit, own.doubleAttempts) : null,
+      ),
+      'desc',
+    ),
+    longestLeg: top(
+      fromTotals((own) => own.longestLegDarts),
       'desc',
     ),
   };

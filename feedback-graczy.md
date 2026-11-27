@@ -28,6 +28,14 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-11-27: więcej kafelków w rankingu statystyk: T19, T18, T5, T1, double, najdłuższy leg
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / statystyki
+- **Co powiedział:** „dodajemy jeszcze więcej statystyk na główną stronę: 1. ilość rzuconych T19, T18, T5, T1. 2. Procent skuteczności na double. 3. mamy najkrótszy leg, to teraz dodaj najdłuższy wygrany leg”
+- **Kontekst:** ekran „Statystyki”, ranking z kafelkami rekordów (R12)
+- **Status:** zaplanowany (wdrażane poza rolloutem na prośbę autora)
+- **Uwagi:** kafelki biorą listy ze `StatsRankings` (`packages/schema/src/stats.ts`), liczone w `packages/server/src/stats/rankings.ts` z sum z `tally.ts`; front to `RankingBoard.tsx`. Decyzje autora 2026-11-27: cztery osobne kafelki trafień (jak T20, bez graczy z 0 trafień); skuteczność na double od 10 rzutek na double w filtrze i okresie (`MIN_DOUBLE_ATTEMPTS_FOR_RANKING`); zmiana tylko w rankingu, strona gracza bez zmian. Najdłuższy wygrany leg liczy te same legi co najkrótszy (wygrane legi meczów, zamknięcia w zabawie i Solo 501).
+
 ### 2026-11-26: okresy w statystykach: 7 dni zamiast kwartału
 - **Zgłosił:** autor
 - **Rodzaj / obszar:** pomysł / statystyki

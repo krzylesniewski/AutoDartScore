@@ -192,7 +192,7 @@ Uszkodzona gra (log, którego nie da się odtworzyć, albo brak wymaganego pola 
 - `src/stats-service.ts` i `src/stats/`: statystyki liczone z odtworzenia logu. Gry spoza okresu odrzuca już zapytanie w `store.ts`, więc nie są odtwarzane. Średnia na 3 rzutki na karcie gracza, w rankingu, w bilansie i na wykresie formy liczy tylko ukończone legi. W `src/stats/` są:
   - `tally.ts`: sumy gracza w grze, także trafienia T20.
   - `completed-legs.ts`: punkty i rzutki w ukończonych legach.
-  - `rankings.ts`: ranking graczy, rekordy oraz listy procentu wygranych i trafień T20.
+  - `rankings.ts`: ranking graczy, rekordy oraz listy procentu wygranych, skuteczności na double i trafień T20, T19, T18, T5 i T1.
   - `overall.ts`: łączna liczba lotek, średnia ze średnich graczy, gracze powyżej i poniżej niej.
   - `head-to-head.ts`: bilans dwóch graczy z ukończonych meczów 1v1, także turniejowych.
   - `form.ts`: średnia z każdej z ostatnich gier.

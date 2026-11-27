@@ -1,4 +1,4 @@
-import { FORM_GAMES, MIN_GAMES_FOR_WIN_RATE, MIN_LEGS_FOR_AVERAGE } from '@autoscore/schema';
+import { FORM_GAMES, MIN_DOUBLE_ATTEMPTS_FOR_RANKING, MIN_GAMES_FOR_WIN_RATE, MIN_LEGS_FOR_AVERAGE } from '@autoscore/schema';
 import type { StatsPeriod } from '@autoscore/schema';
 
 // Polska odmiana po liczbie: 1, 2-4 (bez 12-14), reszta.
@@ -275,6 +275,10 @@ export const pl = {
   tileCheckoutUnit: 'checkout',
   tileShortestLeg: 'Najkrótszy leg',
   tileShortestLegUnit: 'liczba rzutek',
+  tileLongestLeg: 'Najdłuższy wygrany leg',
+  tileLongestLegUnit: 'liczba rzutek',
+  tileDoubles: 'Skuteczność na double',
+  tileDoublesUnit: `min. ${MIN_DOUBLE_ATTEMPTS_FOR_RANKING} prób`,
   tileHighestTurn: 'Najwyższa tura',
   tileHighestTurnUnit: '3 lotki, mecze 1v1',
   tileOnlyMatches: 'Tylko mecze 1v1',
@@ -283,6 +287,14 @@ export const pl = {
   tileOnlyMatchesAndCasual: 'Tylko mecze i zabawa',
   statT20Hits: 'Trafienia T20',
   tileT20HitsUnit: 'rzutki za 60',
+  tileT19Hits: 'Trafienia T19',
+  tileT19HitsUnit: 'rzutki za 57',
+  tileT18Hits: 'Trafienia T18',
+  tileT18HitsUnit: 'rzutki za 54',
+  tileT5Hits: 'Trafienia T5',
+  tileT5HitsUnit: 'rzutki za 15',
+  tileT1Hits: 'Trafienia T1',
+  tileT1HitsUnit: 'rzutki za 3',
   recordsRegion: 'Rekordy',
   noGamesInFilter: 'Brak gier w tym filtrze.',
   statsPeriod: 'Okres',

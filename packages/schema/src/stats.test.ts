@@ -7,6 +7,7 @@ import {
   HeadToHeadQuery,
   LegProgress,
   LegProgressPoint,
+  MIN_DOUBLE_ATTEMPTS_FOR_RANKING,
   MIN_GAMES_FOR_WIN_RATE,
   MIN_LEGS_FOR_AVERAGE,
   MatchLeg,
@@ -301,27 +302,42 @@ describe('StatsRankings', () => {
         { ...bartek, position: 2, value: 0 },
       ],
       t20Hits: [{ ...anna, position: 1, value: 12 }],
+      t19Hits: [],
+      t18Hits: [],
+      t5Hits: [],
+      t1Hits: [],
+      doublesPercent: [],
+      longestLeg: [],
     };
     expect(StatsRankings.parse(rankings)).toEqual(rankings);
   });
 
-  it.each(['winRate', 't20Hits'])('requires the %s list', (key) => {
-    const rankings = {
-      filter: 'all',
-      period: 'all',
-      games: 0,
-      legs: 0,
-      players: [],
-      bestLegAverage: [],
-      highestCheckout: [],
-      shortestLeg: [],
-      highestTurn: [],
-      winRate: [],
-      t20Hits: [],
-    };
-    expect(StatsRankings.safeParse(rankings).success).toBe(true);
-    expect(StatsRankings.safeParse({ ...rankings, [key]: undefined }).success).toBe(false);
-  });
+  it.each(['winRate', 't20Hits', 't19Hits', 't18Hits', 't5Hits', 't1Hits', 'doublesPercent', 'longestLeg'])(
+    'requires the %s list',
+    (key) => {
+      const rankings = {
+        filter: 'all',
+        period: 'all',
+        games: 0,
+        legs: 0,
+        players: [],
+        bestLegAverage: [],
+        highestCheckout: [],
+        shortestLeg: [],
+        highestTurn: [],
+        winRate: [],
+        t20Hits: [],
+        t19Hits: [],
+        t18Hits: [],
+        t5Hits: [],
+        t1Hits: [],
+        doublesPercent: [],
+        longestLeg: [],
+      };
+      expect(StatsRankings.safeParse(rankings).success).toBe(true);
+      expect(StatsRankings.safeParse({ ...rankings, [key]: undefined }).success).toBe(false);
+    },
+  );
 
   it('accepts position null only for a ranked player', () => {
     expect(RankedPlayer.safeParse({ ...anna, position: null, average: 50, legs: 1 }).success).toBe(true);
@@ -348,6 +364,10 @@ describe('StatsRankings', () => {
 
   it('needs 3 finished games for a win rate', () => {
     expect(MIN_GAMES_FOR_WIN_RATE).toBe(3);
+  });
+
+  it('needs 10 double attempts for the doubles ranking', () => {
+    expect(MIN_DOUBLE_ATTEMPTS_FOR_RANKING).toBe(10);
   });
 });
 
@@ -512,6 +532,12 @@ describe('StatsPeriod', () => {
         highestTurn: [],
         winRate: [],
         t20Hits: [],
+        t19Hits: [],
+        t18Hits: [],
+        t5Hits: [],
+        t1Hits: [],
+        doublesPercent: [],
+        longestLeg: [],
       },
     ],
     ['StatsOverall', StatsOverall, { games: 0, legs: 0, darts: 0, average: null, players: [] }],
