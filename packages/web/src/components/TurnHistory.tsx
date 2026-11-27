@@ -12,6 +12,8 @@ export interface TurnHistoryProps {
   action?: ReactNode;
   // Kafelki: poniżej lg między tytułem a tabelą, od lg pod tabelą.
   children?: ReactNode;
+  // Na podsumowaniu tabela nie dzieli ekranu z klawiaturą, więc dostaje własną, większą wysokość zamiast wysokości panelu.
+  tall?: boolean;
 }
 
 const headCell = 'pb-1 font-display text-base leading-tight font-bold';
@@ -21,8 +23,9 @@ const points = 'font-body text-[13px] font-normal text-(--color-text-muted)';
 const bustMark = 'inline-flex items-center gap-1 font-body text-[13px] font-semibold text-(--color-text)';
 // Tabela przewija się sama. Odwrócony kierunek zaczyna przewijanie od końca, czyli od bieżącej tury, bez JavaScriptu.
 const verticalScroll = 'flex min-h-0 flex-col-reverse overflow-y-auto max-lg:max-h-24 lg:flex-1';
+const tallScroll = 'flex min-h-0 flex-col-reverse overflow-y-auto max-h-80';
 
-export function TurnHistory({ state, action, children }: TurnHistoryProps) {
+export function TurnHistory({ state, action, children, tall = false }: TurnHistoryProps) {
   const titleId = useId();
   if (state.practiceMode === 'checkouts') {
     return null;
@@ -46,7 +49,7 @@ export function TurnHistory({ state, action, children }: TurnHistoryProps) {
       ) : state.practiceMode === 'free_run' ? (
         <FreeRunTable state={state} titleId={titleId} />
       ) : (
-        <PlayersTable model={model} state={state} />
+        <PlayersTable model={model} state={state} tall={tall} />
       )}
     </section>
   );
@@ -81,12 +84,14 @@ function VerticalTable({
   head,
   caption,
   labelledBy,
+  tall = false,
   children,
 }: {
   colgroup: ReactNode;
   head: (scoped: boolean) => ReactNode;
   caption?: string;
   labelledBy?: string;
+  tall?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -97,7 +102,7 @@ function VerticalTable({
           <tr>{head(false)}</tr>
         </thead>
       </table>
-      <div className={verticalScroll}>
+      <div className={tall ? tallScroll : verticalScroll}>
         {/* mb-auto trzyma krótką tabelę pod nagłówkami, bo w odwróconej kolumnie wolne miejsce byłoby nad nią. */}
         <table aria-labelledby={labelledBy} className="mb-auto w-full table-fixed border-collapse tabular-nums">
           {caption && <caption className="sr-only">{caption}</caption>}
@@ -112,7 +117,7 @@ function VerticalTable({
   );
 }
 
-function PlayersTable({ model, state }: { model: TurnHistoryModel; state: MatchSnapshot }) {
+function PlayersTable({ model, state, tall }: { model: TurnHistoryModel; state: MatchSnapshot; tall: boolean }) {
   // Przy 4 graczach w wąskiej kolumnie punkty i bust schodzą pod wynik.
   const stack = model.columns.length >= 4 ? STACKED : INLINE;
   const tone = (playerId: string) => (playerId === state.currentPlayerId ? 'text-(--color-text)' : 'text-(--color-text-sub)');
@@ -128,6 +133,7 @@ function PlayersTable({ model, state }: { model: TurnHistoryModel; state: MatchS
     <VerticalTable
       colgroup={colgroup}
       caption={pl.turnHistoryCaption}
+      tall={tall}
       head={(scoped) => (
         <>
           <th scope={scoped ? 'col' : undefined} className={`${headCell} text-left text-(--color-text-muted)`}>

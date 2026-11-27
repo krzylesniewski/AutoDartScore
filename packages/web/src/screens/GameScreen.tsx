@@ -2,6 +2,7 @@ import type { Hit } from '@autoscore/schema';
 import { useCallback, useId, useRef, useState } from 'react';
 import { useFrequentHits } from '../api/use-frequent-hits';
 import { useMatch } from '../api/use-match';
+import { useMatchLegs } from '../api/use-match-legs';
 import { useMatchSummary } from '../api/use-match-summary';
 import { useAnnouncer } from '../audio/use-announcer';
 import { AbandonDialog } from '../components/AbandonDialog';
@@ -57,6 +58,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
   } = useMatch(matchId, audio.onLiveMessage);
   // Zabawa i trening potrzebują podsumowania dopiero po końcu gry. Free run nigdy się nie kończy.
   const stats = useMatchSummary(matchId, state?.eventSeq ?? null, state !== null && (state.type === 'match' || state.finished));
+  // Historia legów jest potrzebna dopiero na podsumowaniu meczu 1v1, do wyboru lega w przebiegu.
+  const legs = useMatchLegs(matchId, state?.type === 'match' && state.finished ? state.eventSeq : null);
   const checkoutMode = state?.practiceMode === 'checkouts';
   // Trening końcówek nie ma klawiatury, więc podpowiedzi trafień są zbędne.
   const frequentHits = useFrequentHits(state && !state.finished && !checkoutMode ? state.currentPlayerId : null);
@@ -156,6 +159,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
         state={state}
         summary={stats.summary}
         summaryError={stats.error}
+        legs={legs.legs}
         error={shownError}
         connectionLost={connection === 'closed'}
         busy={busy}

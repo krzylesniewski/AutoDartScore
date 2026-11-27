@@ -1,4 +1,4 @@
-import type { CreateMatchRequest, MatchSnapshot, MatchSnapshotPlayer, MatchSummary } from '@autoscore/schema';
+import type { CreateMatchRequest, MatchLegs, MatchSnapshot, MatchSnapshotPlayer, MatchSummary } from '@autoscore/schema';
 import { useRef, useState, type ReactNode } from 'react';
 import { createMatch } from '../api/client';
 import type { AchievementNotice } from '../api/use-match';
@@ -14,9 +14,9 @@ import { EffectsToggle } from './EffectsToggle';
 import { GameTime } from './GameTime';
 import { CheckIcon, LockIcon, PlusIcon, TrophyIcon, UndoIcon, WarningIcon } from './icons';
 import { LegDuration } from './LegDuration';
+import { LegReview } from './LegReview';
 import { Notice } from './Notice';
 import { SaveGuest, SUMMARY_ROWS } from './MatchSummaryPanel';
-import { ScoreProgressChart } from './ScoreProgressChart';
 import { VoiceToggle } from './VoiceToggle';
 
 const HOME_HREF = '#/';
@@ -29,6 +29,7 @@ export interface MatchEndViewProps {
   state: MatchSnapshot;
   summary: MatchSummary | null;
   summaryError: boolean;
+  legs?: MatchLegs | null; // historia legów meczu 1v1 do wyboru lega w przebiegu, null w zabawie
   error: string | null;
   connectionLost: boolean;
   busy: boolean;
@@ -46,6 +47,7 @@ export function MatchEndView({
   state,
   summary,
   summaryError,
+  legs = null,
   error,
   connectionLost,
   busy,
@@ -63,7 +65,9 @@ export function MatchEndView({
   const isCasual = state.type === 'casual';
   const pending = <p className="font-display text-xl text-(--color-text-muted)">{summaryError ? pl.summaryFailed : pl.loading}</p>;
   const guests = state.players.filter((player) => player.guest).map((player) => <SaveGuest key={player.id} player={player} />);
-  const chart = current?.lastLegProgress && <ScoreProgressChart progress={current.lastLegProgress} players={state.players} />;
+  // Jak podsumowanie: historia legów sprzed ostatniej rzutki nie ma zamykającej tury.
+  const currentLegs = legs && legs.eventSeq >= state.eventSeq ? legs : null;
+  const chart = current && <LegReview state={state} lastLegProgress={current.lastLegProgress} legs={isCasual ? null : currentLegs} />;
 
   return (
     <div className="flex h-full flex-col">

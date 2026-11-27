@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatCountdown } from '../game/undo-window';
 import { useUndoWindow } from '../game/use-undo-window';
 import { pl } from '../i18n/pl';
-import { casual, legProgress, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
+import { casual, legProgress, legTurn, matchLeg, matchLegs, player, snapshot, summary, summaryPlayer } from '../test/snapshots';
 import { LockIcon } from './icons';
 import { MatchEndView, type MatchEndViewProps } from './MatchEndView';
 
@@ -379,6 +379,37 @@ describe('MatchEndView: score progress chart', () => {
   it('shows no chart without the progress of the last leg', () => {
     view();
     expect(screen.queryByRole('img', { name: /^Zejście z wyniku/ })).toBeNull();
+  });
+
+  it('shows the turn table of the last leg next to the chart', () => {
+    view({ summary: withProgress });
+    expect(screen.getByRole('heading', { name: `Historia tur · Leg ${finished.legIndex + 1}` })).toBeTruthy();
+    expect(screen.queryByRole('tablist')).toBeNull();
+  });
+
+  it('lets the leg tabs switch the chart and the turn table', () => {
+    const legs = matchLegs(
+      [
+        matchLeg({ legIndex: 0, winnerId: 'p1', checkout: 40, dartsThrown: 3, turns: [legTurn('p1')] }),
+        matchLeg({ legIndex: 1, winnerId: 'p2', checkout: 40, dartsThrown: 3, turns: [legTurn('p2')] }),
+      ],
+      { matchId: finished.id, finished: true, eventSeq: finished.eventSeq },
+    );
+    view({ summary: withProgress, legs });
+    expect(screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    fireEvent.click(screen.getAllByRole('tab')[0] as HTMLElement);
+    expect(screen.getByRole('heading', { name: 'Historia tur · Leg 1' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: /^Zejście z wyniku w legu 1/ })).toBeTruthy();
+  });
+
+  it('ignores a leg history older than the state', () => {
+    const legs = matchLegs([matchLeg({ legIndex: 0, turns: [legTurn('p1')] }), matchLeg({ legIndex: 1, turns: [legTurn('p2')] })], {
+      matchId: finished.id,
+      eventSeq: finished.eventSeq - 1,
+    });
+    view({ summary: withProgress, legs });
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.getByRole('img', { name: /^Zejście z wyniku w legu 3/ })).toBeTruthy();
   });
 
   it('shows no chart from a summary older than the state', () => {

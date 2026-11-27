@@ -10,6 +10,8 @@ import {
   legTurn,
   player,
   snapshot,
+  matchLeg,
+  matchLegs,
   summary,
   summaryPlayer,
 } from '../test/snapshots';
@@ -112,6 +114,8 @@ let respond: (call: Call) => Promise<Response>;
 // GET .../summary idzie osobno, żeby asercje na calls dotyczyły tylko komend.
 let summaryCalls: string[];
 let respondSummary: (url: string) => Promise<Response>;
+// GET .../legs też osobno: podsumowanie meczu 1v1 pobiera historię legów.
+let legsCalls: string[];
 // GET /players/:id/frequent-hits też osobno, z tego samego powodu.
 let frequentCalls: string[];
 let respondFrequent: (playerId: string) => Promise<Response>;
@@ -160,6 +164,7 @@ beforeEach(() => {
   FakeWebSocket.instances = [];
   calls = [];
   summaryCalls = [];
+  legsCalls = [];
   frequentCalls = [];
   respond = (call) => Promise.resolve(json(201, throwResult(call, initial)));
   respondSummary = () => Promise.resolve(json(200, summary({ matchId: MATCH_ID, eventSeq: initial.eventSeq })));
@@ -177,6 +182,10 @@ beforeEach(() => {
       if (url.endsWith('/summary')) {
         summaryCalls.push(url);
         return respondSummary(url);
+      }
+      if (url.endsWith('/legs')) {
+        legsCalls.push(url);
+        return json(200, matchLegs([matchLeg()], { matchId: MATCH_ID, eventSeq: initial.eventSeq }));
       }
       const frequent = /\/players\/([^/]+)\/frequent-hits$/.exec(url);
       if (frequent) {
@@ -461,6 +470,7 @@ describe('GameScreen', () => {
     tap('Cofnij');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: { expectedSeq: 4 } });
+    expect(legsCalls).toEqual([`/api/matches/${MATCH_ID}/legs`]);
     expect(await screen.findByRole('region', { name: 'Klawiatura rzutek' })).toBeTruthy();
     expect(screen.queryByText('Mecz zakończony')).toBeNull();
   });
@@ -498,6 +508,7 @@ describe('GameScreen', () => {
     tap('Cofnij');
     await vi.waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toEqual({ url: `/api/matches/${MATCH_ID}/undo`, body: { expectedSeq: 4 } });
+    expect(legsCalls).toEqual([]);
     expect(await screen.findByRole('region', { name: 'Klawiatura rzutek' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Zabawa zakończona · ranking miejsc' })).toBeNull();
   });
