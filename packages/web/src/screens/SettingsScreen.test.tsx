@@ -55,6 +55,7 @@ describe('SettingsScreen', () => {
     expect(screen.getByText('Zapisane na tym urządzeniu')).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Klawiatura' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Dźwięk' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Gra' })).toBeTruthy();
   });
 
   it('marks the settings page in the nav', () => {
@@ -193,6 +194,23 @@ describe('SettingsScreen', () => {
     expect(toggle('Komentarze do zera').hasAttribute('disabled')).toBe(false);
     expect(toggle('Komentarze do zera').getAttribute('aria-pressed')).toBe('true');
     expect(localStorage.getItem('autoscore.zeroComments')).toBe('on');
+  });
+
+  it('turns checkout hints on by default and stores off and on', () => {
+    render(<SettingsScreen />);
+    expect(toggle('Podpowiedzi zamknięcia').getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(toggle('Podpowiedzi zamknięcia'));
+    expect(toggle('Podpowiedzi zamknięcia').getAttribute('aria-pressed')).toBe('false');
+    expect(toggle('Podpowiedzi zamknięcia').textContent).toContain('wyłączone');
+    expect(localStorage.getItem('autoscore.checkoutHints')).toBe('off');
+    fireEvent.click(toggle('Podpowiedzi zamknięcia'));
+    expect(localStorage.getItem('autoscore.checkoutHints')).toBe('on');
+  });
+
+  it('shows stored off checkout hints as not pressed', () => {
+    localStorage.setItem('autoscore.checkoutHints', 'off');
+    render(<SettingsScreen />);
+    expect(toggle('Podpowiedzi zamknięcia').getAttribute('aria-pressed')).toBe('false');
   });
 
   it('shows the defaults and still changes on screen when localStorage throws', () => {

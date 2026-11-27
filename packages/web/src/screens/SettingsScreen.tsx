@@ -8,11 +8,13 @@ import {
   writeZeroCommentsEnabled,
 } from '../audio/use-announcer';
 import { AppNav } from '../components/AppNav';
+import { CheckoutHintsToggle } from '../components/CheckoutHintsToggle';
 import { EffectsToggle } from '../components/EffectsToggle';
 import { GridIcon, RingIcon } from '../components/icons';
 import { KeypadLayoutPreview } from '../components/KeypadLayoutPreview';
 import { VoiceToggle } from '../components/VoiceToggle';
 import { ZeroCommentsToggle } from '../components/ZeroCommentsToggle';
+import { readCheckoutHintsEnabled, writeCheckoutHintsEnabled } from '../game/checkout-hints';
 import { readKeypadLayout, writeKeypadLayout, type KeypadLayout } from '../game/keypad-layout';
 import { pl } from '../i18n/pl';
 
@@ -36,6 +38,7 @@ export function SettingsScreen() {
   const [voice, setVoice] = useState(readVoiceEnabled);
   const [effects, setEffects] = useState(readEffectsEnabled);
   const [zeroComments, setZeroComments] = useState(readZeroCommentsEnabled);
+  const [checkoutHints, setCheckoutHints] = useState(readCheckoutHintsEnabled);
 
   function changeLayout(next: KeypadLayout): void {
     writeKeypadLayout(next);
@@ -55,6 +58,11 @@ export function SettingsScreen() {
   function changeZeroComments(next: boolean): void {
     writeZeroCommentsEnabled(next);
     setZeroComments(next);
+  }
+
+  function changeCheckoutHints(next: boolean): void {
+    writeCheckoutHintsEnabled(next);
+    setCheckoutHints(next);
   }
 
   return (
@@ -108,16 +116,24 @@ export function SettingsScreen() {
               })}
             </div>
           </section>
-          <section aria-labelledby={`${group}-sound`} className="flex flex-col gap-3.5">
-            <h2 id={`${group}-sound`} className={sectionTitle}>
-              {pl.settingsSound}
-            </h2>
-            <div className="flex flex-col gap-3.5">
-              <VoiceToggle enabled={voice} onChange={changeVoice} variant="card" />
-              <EffectsToggle enabled={effects} onChange={changeEffects} variant="card" />
-              <ZeroCommentsToggle enabled={zeroComments} disabled={!voice} onChange={changeZeroComments} />
-            </div>
-          </section>
+          <div className="flex flex-col gap-7">
+            <section aria-labelledby={`${group}-sound`} className="flex flex-col gap-3.5">
+              <h2 id={`${group}-sound`} className={sectionTitle}>
+                {pl.settingsSound}
+              </h2>
+              <div className="flex flex-col gap-3.5">
+                <VoiceToggle enabled={voice} onChange={changeVoice} variant="card" />
+                <EffectsToggle enabled={effects} onChange={changeEffects} variant="card" />
+                <ZeroCommentsToggle enabled={zeroComments} disabled={!voice} onChange={changeZeroComments} />
+              </div>
+            </section>
+            <section aria-labelledby={`${group}-game`} className="flex flex-col gap-3.5">
+              <h2 id={`${group}-game`} className={sectionTitle}>
+                {pl.settingsGame}
+              </h2>
+              <CheckoutHintsToggle enabled={checkoutHints} onChange={changeCheckoutHints} />
+            </section>
+          </div>
         </div>
       </main>
     </div>
