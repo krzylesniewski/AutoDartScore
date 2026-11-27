@@ -50,6 +50,12 @@ beforeEach(() => {
             highestTurn: [],
             winRate: [],
             t20Hits: [],
+            t19Hits: [],
+            t18Hits: [],
+            t5Hits: [],
+            t1Hits: [],
+            doublesPercent: [],
+            longestLeg: [],
           }),
         );
       }

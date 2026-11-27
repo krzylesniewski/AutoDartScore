@@ -188,6 +188,35 @@ describe('tallyGame', () => {
     expect(line('practice', ['anna'], events, 'anna').t20Hits).toBe(1);
   });
 
+  it('counts T19, T18, T5 and T1 apart, also in a bust turn, and not singles or doubles', () => {
+    const events: DomainEvent[] = [
+      turn('anna', 0, [T(19), T(19), T(18)], 168, 333),
+      turn('anna', 0, [T(5), T(1), T(1)], 21, 312),
+      turn('anna', 0, [S(19), D(18), S(5)], 60, 252),
+      bust('anna', 0, [T(1), T(5), T(20)], 6),
+    ];
+    expect(tallyGame('practice', ['anna'], events).players.get('anna')).toMatchObject({
+      t20Hits: 1,
+      t19Hits: 2,
+      t18Hits: 1,
+      t5Hits: 2,
+      t1Hits: 3,
+    });
+  });
+
+  it('keeps the shortest and the longest won leg', () => {
+    const events: DomainEvent[] = [
+      legWon('anna', 0, 40, 21),
+      legWon('bartek', 1, 32, 45),
+      legWon('anna', 2, 40, 12),
+      legWon('anna', 3, 16, 33),
+    ];
+    const players = tallyGame('match', ['anna', 'bartek'], events).players;
+    expect(players.get('anna')).toMatchObject({ bestLegDarts: 12, longestLegDarts: 33 });
+    expect(players.get('bartek')).toMatchObject({ bestLegDarts: 45, longestLegDarts: 45 });
+    expect(tallyGame('match', ['anna', 'bartek'], []).players.get('anna')?.longestLegDarts).toBeNull();
+  });
+
   it('counts T20 per player', () => {
     expect(tallyGame('match', ['anna', 'bartek'], leg301).players.get('bartek')?.t20Hits).toBe(0);
   });
@@ -238,6 +267,13 @@ describe('mergeTotals', () => {
     expect(mergeTotals(a, b)).toMatchObject({ points: 160, darts: 9, highestCheckout: 121, bestLegDarts: 15, legsWon: 3 });
     expect(mergeTotals(EMPTY_TOTALS, a)).toEqual(a);
     expect(mergeTotals(a, EMPTY_TOTALS)).toEqual(a);
+  });
+
+  it('adds the other treble hits and keeps the longest leg', () => {
+    const a = { ...EMPTY_TOTALS, t19Hits: 1, t18Hits: 2, t5Hits: 3, t1Hits: 4, longestLegDarts: 30 };
+    const b = { ...EMPTY_TOTALS, t19Hits: 10, t18Hits: 20, t5Hits: 30, t1Hits: 40, longestLegDarts: 24 };
+    expect(mergeTotals(a, b)).toMatchObject({ t19Hits: 11, t18Hits: 22, t5Hits: 33, t1Hits: 44, longestLegDarts: 30 });
+    expect(mergeTotals(EMPTY_TOTALS, b).longestLegDarts).toBe(24);
   });
 
   it('adds T20 hits', () => {

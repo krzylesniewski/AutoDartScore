@@ -63,6 +63,12 @@ describe('buildRankings', () => {
       highestTurn: [],
       winRate: [],
       t20Hits: [],
+      t19Hits: [],
+      t18Hits: [],
+      t5Hits: [],
+      t1Hits: [],
+      doublesPercent: [],
+      longestLeg: [],
     });
   });
 
@@ -289,6 +295,57 @@ describe('buildRankings', () => {
     expect(rankings.t20Hits.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
       ['Celina', 1, 7],
       ['Anna', 2, 4],
+    ]);
+  });
+
+  it.each(['t19Hits', 't18Hits', 't5Hits', 't1Hits'] as const)('lists %s descending and leaves out players with 0', (key) => {
+    const rankings = buildRankings({
+      players: [anna, bartek, celina],
+      games: [
+        game([], { anna: { [key]: 4 }, bartek: { [key]: 0, t20Hits: 9 }, celina: { [key]: 2 } }),
+        game([], { celina: { [key]: 5 } }, 'practice'),
+      ],
+    });
+    expect(rankings[key].map((entry) => [entry.name, entry.position, entry.value])).toEqual([
+      ['Celina', 1, 7],
+      ['Anna', 2, 4],
+    ]);
+  });
+
+  it('ranks the doubles percent from summed attempts and needs 10 attempts', () => {
+    const rankings = buildRankings({
+      players: [anna, bartek, celina, darek],
+      games: [
+        game([], {
+          anna: { doubleAttempts: 6, doublesHit: 1 },
+          bartek: { doubleAttempts: 9, doublesHit: 9 },
+          celina: { doubleAttempts: 30, doublesHit: 10 },
+        }),
+        game([], { anna: { doubleAttempts: 4, doublesHit: 3 }, darek: { doubleAttempts: 10, doublesHit: 0 } }, 'practice'),
+      ],
+    });
+    expect(rankings.doublesPercent.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
+      ['Anna', 1, 40],
+      ['Celina', 2, 33.3],
+      ['Darek', 3, 0],
+    ]);
+  });
+
+  it('lists the longest won leg with the most darts first and skips players without a won leg', () => {
+    const rankings = buildRankings({
+      players: [anna, bartek, celina],
+      games: [
+        game([], { anna: { bestLegDarts: 15, longestLegDarts: 15 }, bartek: { bestLegDarts: 30, longestLegDarts: 48 }, celina: {} }),
+        game([], { anna: { bestLegDarts: 27, longestLegDarts: 27 } }),
+      ],
+    });
+    expect(rankings.longestLeg.map((entry) => [entry.name, entry.position, entry.value])).toEqual([
+      ['Bartek', 1, 48],
+      ['Anna', 2, 27],
+    ]);
+    expect(rankings.shortestLeg.map((entry) => [entry.name, entry.value])).toEqual([
+      ['Anna', 15],
+      ['Bartek', 30],
     ]);
   });
 

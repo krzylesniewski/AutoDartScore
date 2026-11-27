@@ -87,6 +87,12 @@ const rankingsFixture: StatsRankings = {
   highestTurn: [entry('p2', 'Bartek', 1, 180)],
   winRate: [entry('p1', 'Anna', 1, 66.7), entry('p2', 'Bartek', 2, 33.3)],
   t20Hits: [entry('p2', 'Bartek', 1, 42), entry('p1', 'Anna', 2, 17)],
+  t19Hits: [entry('p1', 'Anna', 1, 9)],
+  t18Hits: [],
+  t5Hits: [entry('p2', 'Bartek', 1, 30), entry('p1', 'Anna', 2, 12)],
+  t1Hits: [entry('p2', 'Bartek', 1, 25)],
+  doublesPercent: [entry('p1', 'Anna', 1, 41.7), entry('p2', 'Bartek', 2, 20)],
+  longestLeg: [entry('p2', 'Bartek', 1, 57), entry('p1', 'Anna', 2, 33)],
 };
 
 const overallFixture: StatsOverall = {
@@ -235,17 +241,29 @@ describe('StatsScreen: ranking', () => {
     expect(within(list).getByText('Średnia od 3 ukończonych legów.')).toBeTruthy();
   });
 
-  it('shows exactly 6 top 5 tiles and no doubles tile', async () => {
+  it('shows exactly 12 top 5 tiles', async () => {
     render(<StatsScreen playerId={null} />);
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
-    const tiles = ['Win rate', 'Rekordowy leg (średnia)', 'Najwyższe zamknięcie', 'Najkrótszy leg', 'Najwyższa tura', 'Trafienia T20'];
+    const tiles = [
+      'Win rate',
+      'Rekordowy leg (średnia)',
+      'Najwyższe zamknięcie',
+      'Najkrótszy leg',
+      'Najdłuższy wygrany leg',
+      'Najwyższa tura',
+      'Skuteczność na double',
+      'Trafienia T20',
+      'Trafienia T19',
+      'Trafienia T18',
+      'Trafienia T5',
+      'Trafienia T1',
+    ];
     const records = screen.getByRole('region', { name: 'Rekordy' });
     expect(
       within(records)
         .getAllByRole('region')
         .map((region) => region.getAttribute('aria-label')),
     ).toEqual(tiles);
-    expect(screen.queryByText('% doubli')).toBeNull();
     expect(within(tile('Rekordowy leg (średnia)')).getByText('3 rzutki')).toBeTruthy();
     expect(rows(tile('Rekordowy leg (średnia)'))).toEqual(['1.AAnna98,33', '2.🎯Bartek86,50', '3.CCelina74,20']);
     expect(within(tile('Najwyższe zamknięcie')).getByText('checkout')).toBeTruthy();
@@ -267,6 +285,34 @@ describe('StatsScreen: ranking', () => {
     await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
     expect(within(tile('Trafienia T20')).getByText('rzutki za 60')).toBeTruthy();
     expect(rows(tile('Trafienia T20'))).toEqual(['1.🎯Bartek42', '2.AAnna17']);
+  });
+
+  it('shows the T19, T18, T5 and T1 tiles with plain counts', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(within(tile('Trafienia T19')).getByText('rzutki za 57')).toBeTruthy();
+    expect(rows(tile('Trafienia T19'))).toEqual(['1.AAnna9']);
+    expect(within(tile('Trafienia T18')).getByText('rzutki za 54')).toBeTruthy();
+    expect(within(tile('Trafienia T18')).queryAllByRole('listitem')).toEqual([]);
+    expect(within(tile('Trafienia T18')).getByText('Za mało graczy w tej kategorii.')).toBeTruthy();
+    expect(within(tile('Trafienia T5')).getByText('rzutki za 15')).toBeTruthy();
+    expect(rows(tile('Trafienia T5'))).toEqual(['1.🎯Bartek30', '2.AAnna12']);
+    expect(within(tile('Trafienia T1')).getByText('rzutki za 3')).toBeTruthy();
+    expect(rows(tile('Trafienia T1'))).toEqual(['1.🎯Bartek25']);
+  });
+
+  it('shows the doubles tile in percent with the minimum number of attempts', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(within(tile('Skuteczność na double')).getByText('min. 10 prób')).toBeTruthy();
+    expect(rows(tile('Skuteczność na double'))).toEqual(['1.AAnna41,7%', '2.🎯Bartek20,0%']);
+  });
+
+  it('shows the longest won leg tile with the most darts first', async () => {
+    render(<StatsScreen playerId={null} />);
+    await screen.findByText('Ranking graczy z całej historii · 23 gry, 61 legów');
+    expect(within(tile('Najdłuższy wygrany leg')).getByText('liczba rzutek')).toBeTruthy();
+    expect(rows(tile('Najdłuższy wygrany leg'))).toEqual(['1.🎯Bartek57', '2.AAnna33']);
   });
 
   it('says the win rate counts only matches and casual games under the practice filter', async () => {
@@ -321,6 +367,12 @@ describe('StatsScreen: ranking', () => {
       highestTurn: [],
       winRate: [],
       t20Hits: [],
+      t19Hits: [],
+      t18Hits: [],
+      t5Hits: [],
+      t1Hits: [],
+      doublesPercent: [],
+      longestLeg: [],
     };
     render(<StatsScreen playerId={null} />);
     expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
@@ -915,6 +967,12 @@ describe('StatsScreen: period', () => {
       highestTurn: [],
       winRate: [],
       t20Hits: [],
+      t19Hits: [],
+      t18Hits: [],
+      t5Hits: [],
+      t1Hits: [],
+      doublesPercent: [],
+      longestLeg: [],
     };
     fireEvent.click(periodButton('30 dni'));
     expect(await screen.findByText('Brak gier w tym filtrze.')).toBeTruthy();
