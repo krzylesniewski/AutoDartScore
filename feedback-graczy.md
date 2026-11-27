@@ -28,6 +28,14 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-11-27: przebieg meczu w tabeli tur na podsumowaniu
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / podsumowanie meczu
+- **Co powiedział:** „w podsumowaniu meczu fajnie by było mieć opcję też zobaczyć przebieg meczu w tabeli takiej samej jak podczas gry. Może być obok wykresu”
+- **Kontekst:** ekran końca meczu 1v1 i zabawy (`MatchEndView.tsx`), obok wykresu przebiegu lega
+- **Status:** nowy
+- **Uwagi:** tabela z gry to `TurnHistory.tsx` (w panelu `LegInfo.tsx`), zasilana przez `state.legTurns`, czyli tury bieżącego lega ze stanu gry. Podsumowanie pokazuje dziś tylko wykres ostatniego lega (`ScoreProgressChart` z `summary.lastLegProgress`). Kierunek: ta sama tabela na podsumowaniu obok wykresu, od `lg` w jednym rzędzie, poniżej pod wykresem. Dla ostatniego lega dane są już w stanie gry; wcześniejsze legi meczu 1v1 daje `GET /matches/:id/legs` (`useMatchLegs`, używane na stronie meczu turniejowego), więc da się dodać wybór lega bez zmian na serwerze. Do rozstrzygnięcia: tylko ostatni leg czy wybór lega (wtedy wykres powinien iść za wyborem, a serwer daje dziś postęp tylko ostatniego lega); czy tabela ma być widoczna od razu, czy pod przyciskiem.
+
 ### 2026-11-27: wyłączanie podpowiedzi zamknięcia w ustawieniach
 - **Zgłosił:** gracze (przekazał autor)
 - **Rodzaj / obszar:** pomysł / ekran gry, ustawienia
