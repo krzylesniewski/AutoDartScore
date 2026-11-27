@@ -167,7 +167,7 @@ Przycisk „Overall” za „Trening” pokazuje wszystkie gry z wybranego okres
 
 ### `#/settings`: ustawienia
 
-- Ustawienia tego urządzenia: układ klawiatury („Koło” albo „Siatka”) oraz przełączniki „Głos”, „Efekty dźwiękowe” i „Komentarze do zera”.
+- Ustawienia tego urządzenia: układ klawiatury („Koło” albo „Siatka”), przełączniki „Głos”, „Efekty dźwiękowe” i „Komentarze do zera” oraz w sekcji „Gra” przełącznik „Podpowiedzi zamknięcia” (domyślnie włączony, `localStorage` pod kluczem `autoscore.checkoutHints`). Wyłączony chowa kartę zamknięcia na ekranie gry i wyłącza skrót Enter, a klawiatura bierze wolne miejsce. Widok TV i trening końcówek pokazują trasę bez zmian.
 - „Komentarze do zera” są domyślnie wyłączone. Przy wyłączonym głosie przełącznik jest nieaktywny i pokazuje zapisany wybór.
 - Wybór zostaje na urządzeniu w `localStorage` pod kluczami `autoscore.keypadLayout`, `autoscore.voice`, `autoscore.effects` i `autoscore.zeroComments`.
 

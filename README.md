@@ -17,7 +17,7 @@ Działa dziś:
 - Statystyki: ranking graczy z kafelkami rekordów, karta gracza z profilem, wykres formy, bilans 1v1 (head-to-head) i widok „Overall” ze wszystkimi grami liczonymi do statystyk razem. Ranking i karta gracza mają filtr typu gier, a wszystkie te widoki filtr okresu.
 - Historia wszystkich gier z filtrem typu.
 - Porzucanie i wznawianie gry.
-- Ustawienia urządzenia: układ klawiatury (koło albo siatka), głos, efekty i komentarze do tury za 0.
+- Ustawienia urządzenia: układ klawiatury (koło albo siatka), głos, efekty, komentarze do tury za 0 i podpowiedzi zamknięcia na ekranie gry.
 - Podsumowanie po końcu gry. Mecz 1v1 ma karty legów z czasem, wykres zejścia z wyniku w ostatnim legu oraz przyciski „Rewanż” i „Nowy mecz”. Zabawa ma tabelę miejsc i ten sam wykres.
 - Opcjonalne logowanie wspólnym hasłem, gdy serwer ma ustawione `AUTOSCORE_PASSWORD`.
 - Turnieje w trzech formatach: liga (każdy z każdym), puchar (drabinka) oraz grupa z play-off. Puchar i play-off mogą mieć mecz o 3. miejsce, a grupa z play-off także pocieszenie dla graczy spoza play-off. Turniej zakłada kreator w formularzu nowej gry. Ekran turnieju ma tabelę, drabinkę i kolejkę meczów, a mecze turnieju gra się jak zwykłe mecze 1v1. Gracza da się wycofać (jego mecze stają się walkowerami), wynik meczu poprawić, a zakończony turniej zarchiwizować. Są też statystyki turnieju, strona meczu z przebiegiem legów, publiczny link tylko do odczytu z kodem QR i widok TV.

@@ -8,6 +8,7 @@ const DOM_TESTS = [
   'src/api/session.test.ts',
   'src/api/use-match.test.ts',
   'src/components/shortcut-target.test.ts',
+  'src/game/checkout-hints.test.ts',
   'src/game/keypad-layout.test.ts',
   'src/game/stats-period.test.ts',
   'src/game/use-now.test.ts',

@@ -544,6 +544,22 @@ describe('keyboard shortcuts and checkout entry', () => {
     expect(HitEvent.parse(calls[0]?.body)).toMatchObject({ matchId: MATCH_ID, source: 'keypad', confidence: 1 });
   });
 
+  it('hides the checkout card and ignores Enter when hints are turned off in settings', async () => {
+    localStorage.setItem('autoscore.checkoutHints', 'off');
+    try {
+      connect(onForty);
+      expect(screen.queryByRole('button', { name: /Zamknięcie/ })).toBeNull();
+      fireEvent.keyDown(window, { key: 'Enter' });
+      await flush();
+      expect(calls).toHaveLength(0);
+      fireEvent.keyDown(window, { key: ' ' });
+      await vi.waitFor(() => expect(calls).toHaveLength(1));
+      expect(posted()).toEqual([{ url: `/api/matches/${MATCH_ID}/throws`, segment: 0, multiplier: 0 }]);
+    } finally {
+      localStorage.removeItem('autoscore.checkoutHints');
+    }
+  });
+
   it('posts the first route dart on a click on the checkout panel', async () => {
     connect(onForty);
     fireEvent.click(screen.getByRole('button', { name: /Zamknięcie/ }));

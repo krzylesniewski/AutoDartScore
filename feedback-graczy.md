@@ -28,12 +28,28 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 
 ## Wpisy
 
+### 2026-11-27: przebieg meczu w tabeli tur na podsumowaniu
+- **Zgłosił:** autor
+- **Rodzaj / obszar:** pomysł / podsumowanie meczu
+- **Co powiedział:** „w podsumowaniu meczu fajnie by było mieć opcję też zobaczyć przebieg meczu w tabeli takiej samej jak podczas gry. Może być obok wykresu”
+- **Kontekst:** ekran końca meczu 1v1 i zabawy (`MatchEndView.tsx`), obok wykresu przebiegu lega
+- **Status:** nowy
+- **Uwagi:** tabela z gry to `TurnHistory.tsx` (w panelu `LegInfo.tsx`), zasilana przez `state.legTurns`, czyli tury bieżącego lega ze stanu gry. Podsumowanie pokazuje dziś tylko wykres ostatniego lega (`ScoreProgressChart` z `summary.lastLegProgress`). Kierunek: ta sama tabela na podsumowaniu obok wykresu, od `lg` w jednym rzędzie, poniżej pod wykresem. Dla ostatniego lega dane są już w stanie gry; wcześniejsze legi meczu 1v1 daje `GET /matches/:id/legs` (`useMatchLegs`, używane na stronie meczu turniejowego), więc da się dodać wybór lega bez zmian na serwerze. Do rozstrzygnięcia: tylko ostatni leg czy wybór lega (wtedy wykres powinien iść za wyborem, a serwer daje dziś postęp tylko ostatniego lega); czy tabela ma być widoczna od razu, czy pod przyciskiem.
+
+### 2026-11-27: wyłączanie podpowiedzi zamknięcia w ustawieniach
+- **Zgłosił:** gracze (przekazał autor)
+- **Rodzaj / obszar:** pomysł / ekran gry, ustawienia
+- **Co powiedział:** gracze „chcieliby mieć opcję w ustawieniach, żeby można było wyłączyć podpowiedzi w trakcie gry”
+- **Kontekst:** ekran gry, karta zamknięcia pod klawiaturą; ekran „Ustawienia”
+- **Status:** zaplanowany (wdrażane poza rolloutem na prośbę autora)
+- **Uwagi:** podpowiedź to karta zamknięcia (`CheckoutCard.tsx`, trasa z `game/checkout-route.ts`) i skrót Enter w `Keypad.tsx`, który wpisuje pierwszą rzutkę trasy. Kierunek: przełącznik „Podpowiedzi zamknięcia” w nowej sekcji „Gra” na ekranie „Ustawienia”, zapis na urządzeniu jak układ klawiatury (`autoscore.checkoutHints`), domyślnie włączony. Wyłączony chowa kartę i skrót Enter na ekranie gry. Bez zmian zostają widok TV, trening końcówek i najczęstsze trafienia przy klawiaturze. Do potwierdzenia z graczami, czy chodziło też o najczęstsze trafienia.
+
 ### 2026-11-27: więcej kafelków w rankingu statystyk: T19, T18, T5, T1, double, najdłuższy leg
 - **Zgłosił:** autor
 - **Rodzaj / obszar:** pomysł / statystyki
 - **Co powiedział:** „dodajemy jeszcze więcej statystyk na główną stronę: 1. ilość rzuconych T19, T18, T5, T1. 2. Procent skuteczności na double. 3. mamy najkrótszy leg, to teraz dodaj najdłuższy wygrany leg”
 - **Kontekst:** ekran „Statystyki”, ranking z kafelkami rekordów (R12)
-- **Status:** zaplanowany (wdrażane poza rolloutem na prośbę autora)
+- **Status:** zrobiony (PR #148, poza rolloutem na prośbę autora)
 - **Uwagi:** kafelki biorą listy ze `StatsRankings` (`packages/schema/src/stats.ts`), liczone w `packages/server/src/stats/rankings.ts` z sum z `tally.ts`; front to `RankingBoard.tsx`. Decyzje autora 2026-11-27: cztery osobne kafelki trafień (jak T20, bez graczy z 0 trafień); skuteczność na double od 10 rzutek na double w filtrze i okresie (`MIN_DOUBLE_ATTEMPTS_FOR_RANKING`); zmiana tylko w rankingu, strona gracza bez zmian. Najdłuższy wygrany leg liczy te same legi co najkrótszy (wygrane legi meczów, zamknięcia w zabawie i Solo 501).
 
 ### 2026-11-26: okresy w statystykach: 7 dni zamiast kwartału
@@ -41,7 +57,7 @@ Uwagi z prawdziwych gier: co przeszkadza, czego brakuje, co się podoba. Plik zb
 - **Rodzaj / obszar:** pomysł / statystyki
 - **Co powiedział:** „w statystykach zamieniłbym 30 dni, kwartał, all time na 7 dni, 30 dni, all time”
 - **Kontekst:** ekran „Statystyki”, filtr okresu z R11 i R14
-- **Status:** zaplanowany (PR #146, wdrożone poza rolloutem na prośbę autora)
+- **Status:** zrobiony (PR #146, poza rolloutem na prośbę autora)
 - **Uwagi:** okresy są w `StatsPeriod` w `packages/schema/src/stats.ts` (`30d`, `90d`, `all`) i w `STATS_PERIOD_DAYS`; przyciski w `StatsScreen.tsx`, opisy w `i18n/pl.ts` („Kwartał”, „z ostatniego kwartału”). Kierunek: `7d` w miejsce `90d` w kontrakcie, na serwerze i we froncie, kolejność przycisków „7 dni / 30 dni / Cały czas”. Wybrany okres jest zapamiętywany na urządzeniu (`readStatsPeriod`), więc zapisane `90d` musi wrócić do domyślnego. Domyślny okres zostaje „Cały czas”.
 
 ### 2026-11-16: karta zakończenia za mała na dużych ekranach

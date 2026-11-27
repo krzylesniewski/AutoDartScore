@@ -24,6 +24,7 @@ import { LockIcon, WarningIcon } from '../components/icons';
 import { canEndPractice } from '../game/can-end-practice';
 import { checkoutCardShown } from '../game/checkout-card-shown';
 import { checkoutControls } from '../game/checkout-practice';
+import { readCheckoutHintsEnabled } from '../game/checkout-hints';
 import { checkoutRoute } from '../game/checkout-route';
 import { formatCountdown } from '../game/undo-window';
 import { useUndoWindow } from '../game/use-undo-window';
@@ -60,6 +61,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const checkoutMode = state?.practiceMode === 'checkouts';
   // Trening końcówek nie ma klawiatury, więc podpowiedzi trafień są zbędne.
   const frequentHits = useFrequentHits(state && !state.finished && !checkoutMode ? state.currentPlayerId : null);
+  // Podpowiedzi wyłącza się na ekranie „Ustawienia”, który nigdy nie stoi obok gry, więc wystarcza odczyt przy montowaniu.
+  const [checkoutHints] = useState(readCheckoutHintsEnabled);
   const [abandoning, setAbandoning] = useState(false);
   const closeDialog = useCallback(() => setAbandoning(false), []);
   const [ending, setEnding] = useState(false);
@@ -120,7 +123,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
     setEnding(false);
   }
   const keypadDisabled = !state || abandoned || ended || connection !== 'open';
-  const checkout = state ? (checkoutRoute(state)?.[0] ?? null) : null;
+  const checkout = state && checkoutHints ? (checkoutRoute(state)?.[0] ?? null) : null;
   const thrower = state?.players.find((player) => player.id === state.currentPlayerId);
   const frequent = thrower && frequentHits && frequentHits.length > 0 ? { playerName: thrower.name, hits: frequentHits } : null;
 
@@ -141,7 +144,8 @@ export function GameScreen({ matchId }: { matchId: string }) {
   const legInfoShown = state !== null && !checkoutMode;
   // Z kartą zamknięcia pierwszy wiersz kończy się pod klawiaturą, a karta dostaje resztę wysokości.
   // Bez niej resztę dostaje pierwszy wiersz, bo stoi w nim cel treningu końcówek albo podsumowanie Solo 501.
-  const gridRows = state !== null && !checkoutMode && checkoutCardShown(state) ? 'lg:grid-rows-[auto_1fr]' : 'lg:grid-rows-[1fr_auto]';
+  const cardShown = state !== null && !checkoutMode && checkoutHints && checkoutCardShown(state);
+  const gridRows = cardShown ? 'lg:grid-rows-[auto_1fr]' : 'lg:grid-rows-[1fr_auto]';
   // Poniżej lg otwarty panel lega zajmuje miejsce paska wyników, panelu tury i karty zamknięcia. Od lg przełącznik nic nie zmienia.
   const hiddenByTurns = turnsOpen ? 'max-lg:hidden' : '';
 
@@ -211,7 +215,7 @@ export function GameScreen({ matchId }: { matchId: string }) {
               />
             )}
           </div>
-          {state && !checkoutMode && (
+          {state && !checkoutMode && checkoutHints && (
             <div className={`empty:hidden max-lg:order-1 max-lg:has-[>.invisible]:hidden lg:col-start-2 lg:row-start-2 ${hiddenByTurns}`}>
               <CheckoutCard state={state} onCheckout={enterCheckout} disabled={keypadDisabled} />
             </div>
